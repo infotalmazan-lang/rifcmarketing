@@ -1,0 +1,41 @@
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import HeroSection from "@/components/landing/HeroSection";
+import PhilosophySection from "@/components/landing/PhilosophySection";
+import EquationSection from "@/components/landing/EquationSection";
+import MethodologySection from "@/components/landing/MethodologySection";
+import RelevanceGateSection from "@/components/landing/RelevanceGateSection";
+import ApplicationSection from "@/components/landing/ApplicationSection";
+import ArchetypesSection from "@/components/landing/ArchetypesSection";
+import ComparisonSection from "@/components/landing/ComparisonSection";
+import ImplementationSection from "@/components/landing/ImplementationSection";
+import CaseStudiesSection from "@/components/landing/CaseStudiesSection";
+import AIPromptsSection from "@/components/landing/AIPromptsSection";
+import ResourcesSection from "@/components/landing/ResourcesSection";
+import AuthorSection from "@/components/landing/AuthorSection";
+import CTASection from "@/components/landing/CTASection";
+
+export default function HomePage() {
+  return (
+    <>
+      <Navbar />
+      <main>
+        <HeroSection />
+        <PhilosophySection />
+        <EquationSection />
+        <MethodologySection />
+        <RelevanceGateSection />
+        <ApplicationSection />
+        <ArchetypesSection />
+        <ComparisonSection />
+        <ImplementationSection />
+        <CaseStudiesSection />
+        <AIPromptsSection />
+        <ResourcesSection />
+        <AuthorSection />
+        <CTASection />
+      </main>
+      <Footer />
+    </>
+  );
+}
