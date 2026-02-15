@@ -151,6 +151,55 @@ export interface Dictionary {
     titleBold: string;
     description: string;
     tableHeaders: { score: string; clarity: string; status: string; impact: string };
+    /* PUNCT 1 — new intro */
+    introChallenge: string;
+    introScoreGenerous: string;
+    introScoreHarsh: string;
+    introBody: string;
+    /* PUNCT 2 — scoring guide per variable */
+    scoringGuideTitle: string;
+    scoringGuides: {
+      letter: string;
+      color: string;
+      title: string;
+      levels: { range: string; percent: number; desc: string }[];
+      warning?: string;
+    }[];
+    /* PUNCT 3 — live example */
+    exampleTitle: string;
+    exampleScenario: string;
+    exampleR: string;
+    exampleI: string;
+    exampleF: string;
+    exampleResult: string;
+    exampleResultZone: string;
+    exampleDiagnostic: string;
+    exampleImproved: string;
+    exampleLift: string;
+    /* PUNCT 4 — progress bar labels */
+    progressLabels: string[];
+    /* PUNCT 5 — action per zone */
+    zoneActions: {
+      actionLabel: string;
+      actionText: string;
+    }[];
+    /* PUNCT 6 — relevance gate rule */
+    gateRuleTitle: string;
+    gateRuleIntro: string;
+    gateRuleExample: string;
+    gateRuleOnPaper: string;
+    gateRuleInReality: string;
+    gateRuleConclusion: string;
+    gateRuleFinal: string;
+    /* PUNCT 7 — CTA + transition */
+    ctaTitle: string;
+    ctaBody: string;
+    ctaButton: string;
+    ctaOr: string;
+    ctaSecondaryLink: string;
+    transitionText: string;
+    transitionCta: string;
+    transitionTarget: string;
   };
   relevanceGate: {
     chapter: string;
