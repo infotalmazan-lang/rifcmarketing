@@ -1,91 +1,78 @@
-import { ZONES } from "@/lib/constants/rifc";
+"use client";
+
+import { useTranslation } from "@/lib/i18n";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { GradientBorderBlock, WatermarkNumber, StampBadge } from "@/components/ui/V2Elements";
 
 export default function ApplicationSection() {
-  return (
-    <section id="application" className="py-[120px] px-6 md:px-10 max-w-content mx-auto relative">
-      <span className="block font-mono text-[11px] tracking-[6px] uppercase text-rifc-red mb-5">
-        Chapter 04
-      </span>
-      <h2 className="text-[clamp(32px,4vw,56px)] font-light leading-[1.2] tracking-[-1px] mb-10">
-        Application <strong className="font-semibold">Matrix</strong>
-      </h2>
-      <p className="text-lg leading-[1.9] text-text-secondary max-w-prose mb-8 font-light">
-        R IF C is not a theory for one channel. It&apos;s a universal diagnostic
-        language that works from an Instagram story to a &euro;10 million pitch
-        deck. Here&apos;s what each variable means across every major marketing
-        touchpoint.
-      </p>
+  const { t } = useTranslation();
 
+  return (
+    <section id="application" className="pt-[120px] pb-[40px] px-6 md:px-10 max-w-content mx-auto relative">
+      <SectionHeader
+        chapter={t.application.chapter}
+        titlePlain={t.application.titlePlain}
+        titleBold={t.application.titleBold}
+        description={t.application.description}
+        watermarkNumber="05"
+        watermarkColor="#DC2626"
+      />
+
+      {/* V2 Zone cards — GradientBorderBlock per zone */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 my-10">
-        {ZONES.map((z) => (
-          <div
+        {t.data.zones.map((z) => (
+          <GradientBorderBlock
             key={z.name}
-            className="border border-border-light rounded-sm p-8 relative overflow-hidden transition-all duration-400 hover:-translate-y-[3px]"
-            style={{ borderColor: `${z.color}20` }}
+            gradientFrom={z.color}
+            gradientTo={z.color}
+            bgTint="transparent"
           >
-            <div
-              className="absolute top-0 left-0 right-0 h-[3px]"
-              style={{ background: z.color }}
-            />
-            <div
-              className="font-mono text-[13px] font-semibold tracking-[1px] mb-5 uppercase"
-              style={{ color: z.color }}
-            >
-              {z.name}
+            <div className="flex items-center justify-between mb-3">
+              <div
+                className="font-mono text-[13px] font-semibold tracking-[1px] uppercase"
+                style={{ color: z.color }}
+              >
+                {z.name}
+              </div>
+              <StampBadge text={z.archetype} color={z.color} />
+            </div>
+            <div className="font-body text-[13px] leading-[1.7] text-text-secondary mb-4">
+              {z.description}
             </div>
             <div className="font-body text-[13px] leading-[1.7] text-text-muted mb-1.5">
-              <b className="text-text-secondary">R:</b> {z.r}
+              <b className="text-rifc-red">R:</b> {z.r}
             </div>
             <div className="font-body text-[13px] leading-[1.7] text-text-muted mb-1.5">
-              <b className="text-text-secondary">I:</b> {z.i}
+              <b className="text-rifc-blue">I:</b> {z.i}
             </div>
-            <div className="font-body text-[13px] leading-[1.7] text-text-muted mb-1.5">
-              <b className="text-text-secondary">F:</b> {z.f}
+            <div className="font-body text-[13px] leading-[1.7] text-text-muted">
+              <b className="text-rifc-amber">F:</b> {z.f}
             </div>
-            <div
-              className="font-mono text-[11px] mt-4 pt-4 border-t border-border-light tracking-[1px]"
-              style={{ color: z.color }}
-            >
-              Common archetype: {z.archetype}
-            </div>
-          </div>
+          </GradientBorderBlock>
         ))}
       </div>
 
       {/* Divider */}
       <div className="w-[60px] h-px bg-border-red-medium my-20" />
 
-      {/* 3 Steps */}
+      {/* 3 Steps — V2 watermark step numbers */}
       <h3 className="font-mono text-[13px] tracking-[3px] uppercase text-rifc-red mb-6">
-        Universal Diagnostic: 3 Steps
+        {t.application.diagnosticTitle}
       </h3>
 
-      <div className="my-10">
-        {[
-          {
-            num: "01",
-            title: "Identify the Weak Variable",
-            desc: "Don\u2019t try to fix everything simultaneously. Use the scoring grid and find the variable with the lowest score. That\u2019s your leverage point.",
-          },
-          {
-            num: "02",
-            title: "Apply Priority Rule: R > I > F",
-            desc: "If R is below threshold, don\u2019t invest in I or F. If R is solid but I is weak, don\u2019t compensate through F. The hierarchy matters.",
-          },
-          {
-            num: "03",
-            title: "Re-score After Optimization",
-            desc: "Calculate the new C. If it hasn\u2019t moved to the upper Clarity zone, repeat the process on the next weak variable.",
-          },
-        ].map((step) => (
+      <div className="space-y-4 my-10">
+        {t.application.steps.map((step) => (
           <div
             key={step.num}
-            className="grid grid-cols-[60px_1fr] gap-6 py-6 border-b border-border-subtle"
+            className="border border-border-light rounded-sm p-6 bg-surface-card relative overflow-hidden"
           >
-            <div className="font-mono text-[32px] font-light text-[rgba(220,38,38,0.3)]">
-              {step.num}
-            </div>
-            <div>
+            <WatermarkNumber
+              value={step.num}
+              color="#DC2626"
+              size="sm"
+              className="-top-[10px] -right-[10px]"
+            />
+            <div className="relative z-[1]">
               <div className="font-medium text-text-primary mb-2 text-[17px]">
                 {step.title}
               </div>
@@ -95,6 +82,15 @@ export default function ApplicationSection() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Visual connector to 05b — dashed continuation */}
+      <div className="flex flex-col items-center mt-16 gap-2">
+        <div className="w-px h-[40px] border-l border-dashed border-border-light" />
+        <span className="font-mono text-[9px] tracking-[3px] uppercase text-text-ghost">
+          05b
+        </span>
+        <div className="w-px h-[20px] border-l border-dashed border-border-light" />
       </div>
     </section>
   );

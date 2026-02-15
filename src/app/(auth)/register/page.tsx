@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/lib/i18n";
 import { Mail, Lock, User, ArrowRight, AlertTriangle } from "lucide-react";
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,9 +50,9 @@ export default function RegisterPage() {
           </span>
         </Link>
 
-        <h1 className="text-2xl font-light text-center mb-2">Create account</h1>
+        <h1 className="text-2xl font-light text-center mb-2">{t.register.title}</h1>
         <p className="font-body text-sm text-text-muted text-center mb-8">
-          Save calculations, bookmark articles, and more
+          {t.register.subtitle}
         </p>
 
         <form onSubmit={handleRegister} className="space-y-5">
@@ -62,7 +64,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-              Full Name
+              {t.register.nameLabel}
             </label>
             <div className="relative">
               <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
@@ -72,14 +74,14 @@ export default function RegisterPage() {
                 onChange={(e) => setName(e.target.value)}
                 required
                 className="w-full bg-surface-card border border-border-light rounded-sm pl-10 pr-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                placeholder="Your name"
+                placeholder={t.register.namePlaceholder}
               />
             </div>
           </div>
 
           <div>
             <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-              Email
+              {t.register.emailLabel}
             </label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
@@ -89,14 +91,14 @@ export default function RegisterPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full bg-surface-card border border-border-light rounded-sm pl-10 pr-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                placeholder="you@example.com"
+                placeholder={t.register.emailPlaceholder}
               />
             </div>
           </div>
 
           <div>
             <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-              Password
+              {t.register.passwordLabel}
             </label>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
@@ -107,7 +109,7 @@ export default function RegisterPage() {
                 required
                 minLength={6}
                 className="w-full bg-surface-card border border-border-light rounded-sm pl-10 pr-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                placeholder="Min. 6 characters"
+                placeholder={t.register.passwordPlaceholder}
               />
             </div>
           </div>
@@ -117,14 +119,14 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 font-mono text-xs tracking-[3px] uppercase px-6 py-4 bg-rifc-red text-surface-bg border border-rifc-red rounded-sm transition-all duration-300 hover:bg-rifc-red-light disabled:opacity-50"
           >
-            {loading ? "Creating..." : "Create Account"} <ArrowRight size={14} />
+            {loading ? t.register.creating : t.register.createAccount} <ArrowRight size={14} />
           </button>
         </form>
 
         <p className="font-body text-sm text-text-muted text-center mt-8">
-          Already have an account?{" "}
+          {t.register.hasAccount}{" "}
           <Link href="/login" className="text-rifc-red hover:underline">
-            Sign in
+            {t.register.signIn}
           </Link>
         </p>
       </div>

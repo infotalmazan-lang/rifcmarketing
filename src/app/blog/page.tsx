@@ -1,16 +1,11 @@
-import type { Metadata } from "next";
-import { createMetadata } from "@/lib/seo";
+"use client";
+
+import { useTranslation } from "@/lib/i18n";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import BlogCard from "@/components/blog/BlogCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import type { BlogPost } from "@/types";
-
-export const metadata: Metadata = createMetadata({
-  title: "Blog — R IF C Marketing Insights",
-  description:
-    "Articles on marketing clarity, the R IF C framework, case studies, and practical guides for measuring and improving your marketing effectiveness.",
-  path: "/blog",
-});
 
 // Placeholder posts until Supabase is connected
 const PLACEHOLDER_POSTS: BlogPost[] = [
@@ -74,30 +69,22 @@ const PLACEHOLDER_POSTS: BlogPost[] = [
   },
 ];
 
-export default async function BlogPage() {
+export default function BlogPage() {
+  const { t } = useTranslation();
   // TODO: Replace with Supabase fetch
-  // const supabase = createServerSupabase();
-  // const { data: posts } = await supabase
-  //   .from('blog_posts')
-  //   .select('*, category:blog_categories(*)')
-  //   .eq('is_published', true)
-  //   .order('published_at', { ascending: false });
   const posts = PLACEHOLDER_POSTS;
 
   return (
     <>
       <Navbar />
       <main className="pt-[120px] pb-[80px] px-6 md:px-10 max-w-content mx-auto">
-        <span className="block font-mono text-[11px] tracking-[6px] uppercase text-rifc-red mb-5">
-          Insights
-        </span>
-        <h1 className="text-[clamp(32px,4vw,56px)] font-light leading-[1.2] tracking-[-1px] mb-4">
-          <strong className="font-semibold">Blog</strong>
-        </h1>
-        <p className="text-lg leading-[1.9] text-text-secondary max-w-prose mb-12 font-light">
-          Deep dives into marketing clarity, framework applications, and
-          practical guides for measuring your marketing effectiveness.
-        </p>
+        <SectionHeader
+          chapter={t.blog.chapter}
+          titleBold={t.blog.titleBold}
+          description={t.blog.description}
+          watermarkNumber="B"
+          watermarkColor="#DC2626"
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {posts.map((post) => (
@@ -108,7 +95,7 @@ export default async function BlogPage() {
         {posts.length === 0 && (
           <div className="text-center py-20">
             <p className="font-mono text-text-ghost tracking-[2px]">
-              No articles yet. Check back soon.
+              {t.blog.noArticles}
             </p>
           </div>
         )}

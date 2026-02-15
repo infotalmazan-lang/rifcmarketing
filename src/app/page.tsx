@@ -1,11 +1,14 @@
+"use client";
+
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import HeroSection from "@/components/landing/HeroSection";
 import PhilosophySection from "@/components/landing/PhilosophySection";
 import EquationSection from "@/components/landing/EquationSection";
+import AnatomySection from "@/components/landing/AnatomySection";
 import MethodologySection from "@/components/landing/MethodologySection";
 import RelevanceGateSection from "@/components/landing/RelevanceGateSection";
-import ApplicationSection from "@/components/landing/ApplicationSection";
+import OmnichannelSection from "@/components/landing/OmnichannelSection";
 import ArchetypesSection from "@/components/landing/ArchetypesSection";
 import ComparisonSection from "@/components/landing/ComparisonSection";
 import ImplementationSection from "@/components/landing/ImplementationSection";
@@ -23,9 +26,10 @@ export default function HomePage() {
         <HeroSection />
         <PhilosophySection />
         <EquationSection />
+        <AnatomySection />
         <MethodologySection />
         <RelevanceGateSection />
-        <ApplicationSection />
+        <OmnichannelSection />
         <ArchetypesSection />
         <ComparisonSection />
         <ImplementationSection />

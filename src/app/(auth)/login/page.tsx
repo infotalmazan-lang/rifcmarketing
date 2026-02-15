@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/lib/i18n";
 import { Mail, Lock, ArrowRight, AlertTriangle } from "lucide-react";
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -44,9 +46,9 @@ export default function LoginPage() {
           </span>
         </Link>
 
-        <h1 className="text-2xl font-light text-center mb-2">Welcome back</h1>
+        <h1 className="text-2xl font-light text-center mb-2">{t.login.title}</h1>
         <p className="font-body text-sm text-text-muted text-center mb-8">
-          Sign in to access your dashboard
+          {t.login.subtitle}
         </p>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -58,7 +60,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-              Email
+              {t.login.emailLabel}
             </label>
             <div className="relative">
               <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
@@ -68,14 +70,14 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full bg-surface-card border border-border-light rounded-sm pl-10 pr-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                placeholder="you@example.com"
+                placeholder={t.login.emailPlaceholder}
               />
             </div>
           </div>
 
           <div>
             <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-              Password
+              {t.login.passwordLabel}
             </label>
             <div className="relative">
               <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
@@ -85,7 +87,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="w-full bg-surface-card border border-border-light rounded-sm pl-10 pr-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                placeholder="Your password"
+                placeholder={t.login.passwordPlaceholder}
               />
             </div>
           </div>
@@ -95,14 +97,14 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full flex items-center justify-center gap-2 font-mono text-xs tracking-[3px] uppercase px-6 py-4 bg-rifc-red text-surface-bg border border-rifc-red rounded-sm transition-all duration-300 hover:bg-rifc-red-light disabled:opacity-50"
           >
-            {loading ? "Signing in..." : "Sign In"} <ArrowRight size={14} />
+            {loading ? t.login.signingIn : t.login.signIn} <ArrowRight size={14} />
           </button>
         </form>
 
         <p className="font-body text-sm text-text-muted text-center mt-8">
-          Don&apos;t have an account?{" "}
+          {t.login.noAccount}{" "}
           <Link href="/register" className="text-rifc-red hover:underline">
-            Create one
+            {t.login.createOne}
           </Link>
         </p>
       </div>

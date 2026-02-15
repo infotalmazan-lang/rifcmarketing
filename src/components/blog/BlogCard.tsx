@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Calendar, Clock } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 import type { BlogPost } from "@/types";
 import { formatDate, readingTime } from "@/lib/utils";
 
@@ -8,6 +11,8 @@ interface Props {
 }
 
 export default function BlogCard({ post }: Props) {
+  const { t } = useTranslation();
+
   return (
     <Link href={`/blog/${post.slug}`} className="group block">
       <article className="bg-surface-card border border-border-light rounded-sm p-8 transition-all duration-400 group-hover:border-border-red-subtle group-hover:bg-surface-card-hover group-hover:-translate-y-0.5">
@@ -38,7 +43,7 @@ export default function BlogCard({ post }: Props) {
           )}
           <span className="flex items-center gap-1.5">
             <Clock size={12} />
-            {readingTime(post.content)} min read
+            {readingTime(post.content)} {t.blog.minRead}
           </span>
         </div>
 

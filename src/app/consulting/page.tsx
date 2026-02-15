@@ -1,19 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Send, Check, AlertTriangle } from "lucide-react";
 
-const BUDGET_RANGES = [
-  "Under $1,000",
-  "$1,000 - $5,000",
-  "$5,000 - $15,000",
-  "$15,000 - $50,000",
-  "$50,000+",
-];
-
 export default function ConsultingPage() {
+  const { t } = useTranslation();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -41,7 +36,7 @@ export default function ConsultingPage() {
       if (!res.ok) throw new Error("Failed to submit");
       setSubmitted(true);
     } catch {
-      setError("Something went wrong. Please try again or email directly.");
+      setError(t.consulting.errorMessage);
     } finally {
       setLoading(false);
     }
@@ -54,25 +49,21 @@ export default function ConsultingPage() {
     <>
       <Navbar />
       <main className="pt-[120px] pb-[80px] px-6 md:px-10 max-w-prose mx-auto">
-        <span className="block font-mono text-[11px] tracking-[6px] uppercase text-rifc-red mb-5">
-          Work Together
-        </span>
-        <h1 className="text-[clamp(32px,4vw,56px)] font-light leading-[1.2] tracking-[-1px] mb-4">
-          Book <strong className="font-semibold">Consulting</strong>
-        </h1>
-        <p className="text-lg leading-[1.9] text-text-secondary max-w-prose mb-12 font-light">
-          Work directly with Dumitru Talmazan to audit your marketing using
-          R IF C, identify weak variables, and create a clarity roadmap for
-          your business.
-        </p>
+        <SectionHeader
+          chapter={t.consulting.chapter}
+          titlePlain={t.consulting.titlePlain}
+          titleBold={t.consulting.titleBold}
+          description={t.consulting.description}
+          watermarkNumber="CT"
+          watermarkColor="#2563EB"
+        />
 
         {submitted ? (
           <div className="border border-rifc-green rounded-sm p-12 text-center bg-[rgba(5,150,105,0.02)]">
             <Check size={48} className="text-rifc-green mx-auto mb-4" />
-            <h2 className="text-xl font-light mb-2">Request Received</h2>
+            <h2 className="text-xl font-light mb-2">{t.consulting.successTitle}</h2>
             <p className="font-body text-sm text-text-muted">
-              Thank you for your interest. You&apos;ll receive a response within
-              24&ndash;48 hours.
+              {t.consulting.successMessage}
             </p>
           </div>
         ) : (
@@ -86,7 +77,7 @@ export default function ConsultingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-                  Name *
+                  {t.consulting.nameLabel}
                 </label>
                 <input
                   type="text"
@@ -94,12 +85,12 @@ export default function ConsultingPage() {
                   value={form.name}
                   onChange={(e) => update("name", e.target.value)}
                   className="w-full bg-surface-card border border-border-light rounded-sm px-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                  placeholder="Your name"
+                  placeholder={t.consulting.namePlaceholder}
                 />
               </div>
               <div>
                 <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-                  Email *
+                  {t.consulting.emailLabel}
                 </label>
                 <input
                   type="email"
@@ -107,7 +98,7 @@ export default function ConsultingPage() {
                   value={form.email}
                   onChange={(e) => update("email", e.target.value)}
                   className="w-full bg-surface-card border border-border-light rounded-sm px-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                  placeholder="you@company.com"
+                  placeholder={t.consulting.emailPlaceholder}
                 />
               </div>
             </div>
@@ -115,27 +106,27 @@ export default function ConsultingPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-                  Company
+                  {t.consulting.companyLabel}
                 </label>
                 <input
                   type="text"
                   value={form.company}
                   onChange={(e) => update("company", e.target.value)}
                   className="w-full bg-surface-card border border-border-light rounded-sm px-4 py-3 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                  placeholder="Company name"
+                  placeholder={t.consulting.companyPlaceholder}
                 />
               </div>
               <div>
                 <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-                  Budget Range
+                  {t.consulting.budgetLabel}
                 </label>
                 <select
                   value={form.budget_range}
                   onChange={(e) => update("budget_range", e.target.value)}
                   className="w-full bg-surface-card border border-border-light rounded-sm px-4 py-3 font-body text-sm text-text-primary appearance-none cursor-pointer focus:outline-none focus:border-border-red-subtle"
                 >
-                  <option value="">Select range...</option>
-                  {BUDGET_RANGES.map((b) => (
+                  <option value="">{t.consulting.budgetPlaceholder}</option>
+                  {t.consulting.budgetRanges.map((b) => (
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
@@ -144,7 +135,7 @@ export default function ConsultingPage() {
 
             <div>
               <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
-                Message *
+                {t.consulting.messageLabel}
               </label>
               <textarea
                 required
@@ -152,7 +143,7 @@ export default function ConsultingPage() {
                 value={form.message}
                 onChange={(e) => update("message", e.target.value)}
                 className="w-full bg-surface-card border border-border-light rounded-sm px-4 py-3 font-body text-sm text-text-primary resize-none focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost"
-                placeholder="Tell us about your project and what you need help with..."
+                placeholder={t.consulting.messagePlaceholder}
               />
             </div>
 
@@ -161,7 +152,7 @@ export default function ConsultingPage() {
               disabled={loading}
               className="flex items-center gap-2 font-mono text-xs tracking-[3px] uppercase px-10 py-4 bg-rifc-red text-surface-bg border border-rifc-red rounded-sm transition-all duration-300 hover:bg-rifc-red-light disabled:opacity-50"
             >
-              {loading ? "Sending..." : "Send Request"} <Send size={14} />
+              {loading ? t.consulting.sending : t.consulting.sendRequest} <Send size={14} />
             </button>
           </form>
         )}

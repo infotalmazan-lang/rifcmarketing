@@ -1,18 +1,23 @@
-import Link from "next/link";
-import { LayoutDashboard, Calculator, Bookmark, Download, LogOut, ArrowLeft } from "lucide-react";
+"use client";
 
-const SIDEBAR_ITEMS = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/calculations", label: "Calculations", icon: Calculator },
-  { href: "/dashboard/bookmarks", label: "Bookmarks", icon: Bookmark },
-  { href: "/dashboard/downloads", label: "Downloads", icon: Download },
-];
+import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
+import { LayoutDashboard, Calculator, Bookmark, Download, LogOut, ArrowLeft } from "lucide-react";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
+
+  const SIDEBAR_ITEMS = [
+    { href: "/dashboard", label: t.dashboard.overview, icon: LayoutDashboard },
+    { href: "/dashboard/calculations", label: t.dashboard.calculations, icon: Calculator },
+    { href: "/dashboard/bookmarks", label: t.dashboard.bookmarks, icon: Bookmark },
+    { href: "/dashboard/downloads", label: t.dashboard.downloads, icon: Download },
+  ];
+
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
@@ -43,14 +48,14 @@ export default function DashboardLayout({
             href="/"
             className="flex items-center gap-3 px-3 py-2.5 rounded-sm font-body text-sm text-text-ghost hover:text-text-primary transition-all duration-200"
           >
-            <ArrowLeft size={16} /> Back to Site
+            <ArrowLeft size={16} /> {t.dashboard.backToSite}
           </Link>
           <form action="/api/auth/signout" method="POST">
             <button
               type="submit"
               className="flex items-center gap-3 px-3 py-2.5 rounded-sm font-body text-sm text-text-ghost hover:text-rifc-red transition-all duration-200 w-full text-left"
             >
-              <LogOut size={16} /> Sign Out
+              <LogOut size={16} /> {t.dashboard.signOut}
             </button>
           </form>
         </div>

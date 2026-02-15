@@ -136,3 +136,24 @@ export interface Profile {
   role: string;
   created_at: string;
 }
+
+export interface AuditRecommendation {
+  variable: "R" | "I" | "F";
+  action: string;
+  impact: string;
+}
+
+export interface AuditResult {
+  r: number;
+  i: number;
+  f: number;
+  c: number;
+  rJustification: string;
+  iJustification: string;
+  fJustification: string;
+  diagnosis: string;
+  archetype: "invisible_phantom" | "aesthetic_noise" | "buried_diamond" | "none";
+  clarityLevel: "critical" | "noise" | "medium" | "supreme";
+  recommendations: AuditRecommendation[];
+  summary: string;
+}

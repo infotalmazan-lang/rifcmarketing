@@ -3,12 +3,12 @@ import type { Metadata } from "next";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rifcmarketing.com";
 const SITE_NAME = "R IF C Marketing";
 const DEFAULT_DESCRIPTION =
-  "R IF C is the first marketing framework that mathematically proves Form is an exponential Multiplier. R + (I \u00d7 F) = C. Measure your marketing Clarity.";
+  "R IF C este primul framework de marketing care demonstreaz\u0103 matematic c\u0103 Forma este un Multiplicator exponen\u021bial. R + (I \u00d7 F) = C. M\u0103soar\u0103-\u021bi Claritatea marketingului.";
 
 export function createMetadata(overrides: Partial<Metadata> & { path?: string } = {}): Metadata {
   const { path = "", ...rest } = overrides;
   const url = `${SITE_URL}${path}`;
-  const title = rest.title || `${SITE_NAME} \u2014 The Emotional Mathematics of Marketing`;
+  const title = rest.title || `${SITE_NAME} \u2014 Matematica Emo\u021bional\u0103 a Marketingului`;
   const description = (rest.description as string) || DEFAULT_DESCRIPTION;
 
   return {
@@ -17,6 +17,10 @@ export function createMetadata(overrides: Partial<Metadata> & { path?: string } 
     metadataBase: new URL(SITE_URL),
     alternates: {
       canonical: url,
+      languages: {
+        "ro": url,
+        "en": url,
+      },
     },
     openGraph: {
       title: title as string,
@@ -24,7 +28,7 @@ export function createMetadata(overrides: Partial<Metadata> & { path?: string } 
       url,
       siteName: SITE_NAME,
       type: "website",
-      locale: "en_US",
+      locale: "ro_RO",
       images: [
         {
           url: `${SITE_URL}/images/og-default.png`,
@@ -66,7 +70,7 @@ export function organizationJsonLd() {
     founder: {
       "@type": "Person",
       name: "Dumitru Talmazan",
-      jobTitle: "Founder & Marketing Strategist",
+      jobTitle: "Fondator & Strateg de Marketing",
     },
     description: DEFAULT_DESCRIPTION,
   };
@@ -123,12 +127,12 @@ export function calculatorJsonLd() {
     name: "R IF C Calculator",
     url: `${SITE_URL}/calculator`,
     description:
-      "Calculate your marketing Clarity score using the R IF C formula: R + (I \u00d7 F) = C. Diagnose weak variables and get actionable recommendations.",
+      "Calculeaz\u0103 scorul de Claritate al marketingului t\u0103u folosind formula R IF C: R + (I \u00d7 F) = C. Diagnosticheaz\u0103 variabilele slabe \u0219i prime\u0219te recomand\u0103ri ac\u021bionabile.",
     applicationCategory: "BusinessApplication",
     offers: {
       "@type": "Offer",
       price: "0",
-      priceCurrency: "USD",
+      priceCurrency: "EUR",
     },
   };
 }

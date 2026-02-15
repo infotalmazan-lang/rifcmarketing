@@ -3,10 +3,16 @@
 import { useState, useEffect } from "react";
 import { Trash2, Calculator } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "@/lib/i18n";
 import type { Calculation } from "@/types";
-import { getScoreRange, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { StampBadge } from "@/components/ui/V2Elements";
 
 export default function CalculationsPage() {
+  const { t } = useTranslation();
+
+  const getScoreRange = (c: number) =>
+    t.data.scoreRanges.find((sr) => c >= sr.min && c <= sr.max) || t.data.scoreRanges[0];
   const [calculations, setCalculations] = useState<Calculation[]>([]);
 
   useEffect(() => {
@@ -25,17 +31,17 @@ export default function CalculationsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <span className="block font-mono text-[11px] tracking-[6px] uppercase text-rifc-red mb-3">
-            History
+            {t.dashboard.historyLabel}
           </span>
           <h1 className="text-2xl font-light">
-            Saved <strong className="font-semibold">Calculations</strong>
+            {t.dashboard.savedCalcTitle} <strong className="font-semibold">{t.dashboard.savedCalcTitleBold}</strong>
           </h1>
         </div>
         <Link
           href="/calculator"
           className="flex items-center gap-2 font-mono text-[11px] tracking-[2px] uppercase px-5 py-2.5 border border-border-red-subtle text-rifc-red rounded-sm transition-all duration-300 hover:bg-[rgba(220,38,38,0.1)]"
         >
-          <Calculator size={14} /> New
+          <Calculator size={14} /> {t.dashboard.newBtn}
         </Link>
       </div>
 
@@ -43,13 +49,13 @@ export default function CalculationsPage() {
         <div className="text-center py-16 border border-border-subtle border-dashed rounded-sm">
           <Calculator size={32} className="text-text-ghost mx-auto mb-4" />
           <p className="font-body text-sm text-text-muted mb-4">
-            No saved calculations yet
+            {t.dashboard.noCalcYet}
           </p>
           <Link
             href="/calculator"
             className="font-mono text-[11px] tracking-[2px] uppercase text-rifc-red hover:underline"
           >
-            Create your first calculation
+            {t.dashboard.createFirst}
           </Link>
         </div>
       ) : (
@@ -61,8 +67,9 @@ export default function CalculationsPage() {
                 key={calc.id}
                 className="bg-surface-card border border-border-light rounded-sm p-5 flex items-center gap-6"
               >
+                {/* V2 large score number */}
                 <div
-                  className="font-mono text-2xl font-light min-w-[60px] text-center"
+                  className="font-mono text-[44px] font-light leading-none min-w-[80px] text-center"
                   style={{ color: range.statusColor }}
                 >
                   {calc.c_score}
@@ -72,12 +79,8 @@ export default function CalculationsPage() {
                     R={calc.r_score} &middot; I={calc.i_score} &middot; F=
                     {calc.f_score}
                   </div>
-                  <div className="font-body text-xs text-text-ghost mt-1 flex gap-3">
-                    <span
-                      style={{ color: range.statusColor }}
-                    >
-                      {range.label}
-                    </span>
+                  <div className="font-body text-xs text-text-ghost mt-1 flex gap-3 items-center">
+                    <StampBadge text={range.status} color={range.statusColor} />
                     {calc.channel && <span>{calc.channel}</span>}
                     <span>{formatDate(calc.created_at)}</span>
                   </div>

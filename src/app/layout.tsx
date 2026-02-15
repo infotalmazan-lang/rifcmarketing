@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createMetadata, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
+import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
 
 export const metadata: Metadata = createMetadata();
@@ -10,7 +11,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="ro">
       <head>
         <script
           type="application/ld+json"
@@ -26,8 +27,10 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-surface-bg text-text-primary font-heading antialiased">
-        <div className="grain" />
-        {children}
+        <LanguageProvider>
+          <div className="grain" />
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );
