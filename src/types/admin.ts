@@ -10,6 +10,7 @@ export interface ContentOverride {
 export interface SeoOverride {
   id: string;
   page_path: string;
+  locale?: "ro" | "en";
   meta_title: string | null;
   meta_description: string | null;
   og_image_url: string | null;

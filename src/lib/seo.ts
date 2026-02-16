@@ -6,7 +6,10 @@ export const SITE_NAME = "R IF C Marketing";
 export const DEFAULT_DESCRIPTION =
   "R IF C este primul framework de marketing care demonstreaz\u0103 matematic c\u0103 Forma este un Multiplicator exponen\u021bial. R + (I \u00d7 F) = C. M\u0103soar\u0103-\u021bi Claritatea marketingului.";
 
-/** Fetch SEO overrides from DB and return Metadata for a given path */
+/** Fetch SEO overrides from DB and return Metadata for a given path.
+ *  Fetches both RO and EN overrides — uses RO for primary metadata
+ *  and generates alternates.languages for better multilingual indexing.
+ */
 export async function generateSeoMetadata(pagePath: string): Promise<Metadata> {
   try {
     const supabase = createServerClient(
@@ -15,21 +18,33 @@ export async function generateSeoMetadata(pagePath: string): Promise<Metadata> {
       { cookies: { getAll: () => [], setAll: () => {} } }
     );
 
-    const { data } = await supabase
+    const { data: rows } = await supabase
       .from("seo_overrides")
-      .select("meta_title, meta_description, og_image_url")
-      .eq("page_path", pagePath)
-      .single();
+      .select("meta_title, meta_description, og_image_url, locale")
+      .eq("page_path", pagePath);
 
-    if (data) {
+    const ro = rows?.find((r: { locale?: string }) => !r.locale || r.locale === "ro");
+    const en = rows?.find((r: { locale?: string }) => r.locale === "en");
+
+    if (ro || en) {
+      const primary = ro || en;
+      const url = `${SITE_URL}${pagePath}`;
+      const alternateLanguages: Record<string, string> = { "x-default": url };
+      if (ro) alternateLanguages["ro"] = url;
+      if (en) alternateLanguages["en"] = url;
+
       return createMetadata({
         path: pagePath,
-        ...(data.meta_title && { title: data.meta_title }),
-        ...(data.meta_description && { description: data.meta_description }),
-        ...(data.og_image_url && {
-          openGraph: { images: [{ url: data.og_image_url, width: 1200, height: 630, alt: SITE_NAME }] },
-          twitter: { images: [data.og_image_url] },
+        ...(primary!.meta_title && { title: primary!.meta_title }),
+        ...(primary!.meta_description && { description: primary!.meta_description }),
+        ...(primary!.og_image_url && {
+          openGraph: { images: [{ url: primary!.og_image_url, width: 1200, height: 630, alt: SITE_NAME }] },
+          twitter: { images: [primary!.og_image_url] },
         }),
+        alternates: {
+          canonical: url,
+          languages: alternateLanguages,
+        },
       });
     }
   } catch {

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, X, Globe, Sparkles, ChevronDown } from "lucide-react";
+import { Menu, X, Globe, Sparkles, ChevronDown, FileText, LayoutGrid } from "lucide-react";
 
 export default function Navbar() {
   const { locale, t, setLocale } = useTranslation();
@@ -18,6 +18,8 @@ export default function Navbar() {
 
   const isLandingPage = pathname === "/";
   const isAuditPage = pathname === "/audit";
+  const isWhitepaperPage = pathname === "/whitepaper" || pathname === "/resources";
+  const isCalculatorPage = pathname === "/calculator";
 
   const toggleLocale = () => setLocale(locale === "ro" ? "en" : "ro");
 
@@ -92,6 +94,30 @@ export default function Navbar() {
         <span className="text-rifc-red">R</span> IF{" "}
         <span className="text-rifc-red">C</span>
       </Link>
+
+      {/* ─── CTA LINKS (center-left) ─── */}
+      <div className="hidden md:flex items-center gap-2">
+        <Link
+          href="/whitepaper"
+          className={`flex items-center gap-1.5 font-mono text-[11px] tracking-[2px] uppercase px-3 py-1.5 rounded-sm transition-all duration-200 no-underline ${
+            isWhitepaperPage
+              ? "text-text-primary"
+              : "text-text-faint hover:text-text-secondary"
+          }`}
+        >
+          <FileText size={12} /> White Paper
+        </Link>
+        <Link
+          href="/calculator"
+          className={`flex items-center gap-1.5 font-mono text-[11px] tracking-[2px] uppercase px-3 py-1.5 rounded-sm transition-all duration-200 no-underline ${
+            isCalculatorPage
+              ? "text-text-primary"
+              : "text-text-faint hover:text-text-secondary"
+          }`}
+        >
+          <LayoutGrid size={12} /> Calculator
+        </Link>
+      </div>
 
       <div className="flex items-center gap-3">
         {/* AI Audit link — CTA style */}
@@ -201,7 +227,25 @@ export default function Navbar() {
             : "hidden"
         } md:hidden`}
       >
-        {/* Mobile: AI Audit link */}
+        {/* Mobile: Page links */}
+        <Link
+          href="/whitepaper"
+          className={`font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm whitespace-nowrap no-underline flex items-center gap-2 ${
+            isWhitepaperPage ? "text-text-primary" : "text-text-faint"
+          }`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <FileText size={12} /> White Paper
+        </Link>
+        <Link
+          href="/calculator"
+          className={`font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm whitespace-nowrap no-underline flex items-center gap-2 ${
+            isCalculatorPage ? "text-text-primary" : "text-text-faint"
+          }`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <LayoutGrid size={12} /> Calculator
+        </Link>
         <Link
           href="/audit"
           className={`font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm border transition-all duration-300 whitespace-nowrap no-underline flex items-center gap-2 mb-2 ${

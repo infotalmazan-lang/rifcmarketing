@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (error) return error;
 
   const body = await request.json();
-  const { page_path, meta_title, meta_description, og_image_url } = body;
+  const { page_path, locale = "ro", meta_title, meta_description, og_image_url } = body;
 
   if (!page_path) {
     return NextResponse.json({ error: "page_path required" }, { status: 400 });
@@ -30,13 +30,14 @@ export async function POST(request: Request) {
     .upsert(
       {
         page_path,
+        locale,
         meta_title,
         meta_description,
         og_image_url,
         updated_by: user!.id,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "page_path" }
+      { onConflict: "page_path,locale" }
     );
 
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });

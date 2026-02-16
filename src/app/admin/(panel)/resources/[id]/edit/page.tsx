@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Upload, FileText, X, Loader2 } from "lucide-react";
 import type { Resource } from "@/types";
 
 export default function EditResourcePage() {
   const { id } = useParams();
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -37,6 +40,44 @@ export default function EditResourcePage() {
       });
     }
     setLoading(false);
+  };
+
+  const handleUpload = async (file: File) => {
+    if (!file) return;
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch("/api/admin/resources/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setForm((f) => ({
+        ...f,
+        file_url: data.url,
+        file_size: data.fileSize,
+      }));
+    } else {
+      const err = await res.json();
+      alert(`Upload esuat: ${err.error}`);
+    }
+    setUploading(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleUpload(file);
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleUpload(file);
   };
 
   const handleSave = async () => {
@@ -102,8 +143,81 @@ export default function EditResourcePage() {
             </select>
           </div>
         </div>
+
+        {/* PDF Upload Section */}
         <div>
-          <label className="block font-mono text-[10px] tracking-[2px] uppercase text-text-ghost mb-2">URL Fisier</label>
+          <label className="block font-mono text-[10px] tracking-[2px] uppercase text-text-ghost mb-2">
+            Fisier PDF
+          </label>
+
+          {form.file_url ? (
+            <div className="flex items-center gap-3 bg-surface-card border border-border-light rounded-sm p-3">
+              <FileText size={20} className="text-rifc-red shrink-0" />
+              <div className="flex-1 min-w-0">
+                <a
+                  href={form.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-body text-sm text-text-primary hover:text-rifc-red transition-colors truncate block"
+                >
+                  {form.file_url.split("/").pop()}
+                </a>
+                {form.file_size && (
+                  <span className="font-mono text-[10px] text-text-ghost">{form.file_size}</span>
+                )}
+              </div>
+              <button
+                onClick={() => setForm((f) => ({ ...f, file_url: "", file_size: "" }))}
+                className="p-1 text-text-ghost hover:text-rifc-red transition-colors"
+                title="Sterge fisierul"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => fileRef.current?.click()}
+              className={`flex flex-col items-center gap-2 border-2 border-dashed rounded-sm p-8 cursor-pointer transition-all duration-200 ${
+                dragOver
+                  ? "border-rifc-red bg-[rgba(220,38,38,0.05)]"
+                  : "border-border-light hover:border-border-medium"
+              }`}
+            >
+              {uploading ? (
+                <>
+                  <Loader2 size={24} className="text-rifc-red animate-spin" />
+                  <span className="font-body text-sm text-text-muted">Se incarca...</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={24} className="text-text-ghost" />
+                  <span className="font-body text-sm text-text-muted">
+                    Trage fisierul aici sau click pentru a selecta
+                  </span>
+                  <span className="font-mono text-[10px] text-text-ghost">
+                    PDF, DOC, DOCX — fara limita de dimensiune
+                  </span>
+                </>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                onChange={handleFileInput}
+                className="hidden"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Manual URL fallback */}
+        <div>
+          <label className="block font-mono text-[10px] tracking-[2px] uppercase text-text-ghost mb-2">
+            URL Fisier (sau introdu manual)
+          </label>
           <input type="url" value={form.file_url} onChange={(e) => setForm((f) => ({ ...f, file_url: e.target.value }))}
             className="w-full bg-surface-card border border-border-light rounded-sm px-3 py-2.5 font-body text-sm text-text-primary focus:outline-none focus:border-border-red-subtle placeholder:text-text-ghost" placeholder="https://..." />
         </div>
