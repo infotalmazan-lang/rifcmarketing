@@ -45,7 +45,7 @@ export default function AuthorSection() {
       {/* ════════════════════════════════════════════════════
           PUNCT 5A — Photo / Avatar + intro
           ════════════════════════════════════════════════════ */}
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-14 max-w-4xl mx-auto mb-10">
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-14 max-w-4xl mx-auto mb-16">
         {/* Author photo */}
         <div className="shrink-0">
           <div className="w-[200px] h-[260px] md:w-[260px] md:h-[340px] rounded-lg border-2 border-border-light overflow-hidden relative">
@@ -64,12 +64,12 @@ export default function AuthorSection() {
           </div>
         </div>
 
-        {/* Short bio intro */}
-        <div className="text-center md:text-left">
+        {/* Short bio intro + personal element */}
+        <div className="text-center md:text-left flex-1">
           <p className="font-body text-[15px] md:text-[16px] text-text-secondary leading-[1.9] mb-4">
             {a.bio1}
           </p>
-          <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+          <div className="flex flex-wrap gap-2 justify-center md:justify-start mb-5">
             {a.tags.map((tag, idx) => {
               const colors = ["#DC2626", "#2563EB", "#059669"];
               return (
@@ -86,23 +86,19 @@ export default function AuthorSection() {
               );
             })}
           </div>
-        </div>
-      </div>
 
-      {/* ════════════════════════════════════════════════════
-          PUNCT 3 — Personal Element (integrated with bio)
-          ════════════════════════════════════════════════════ */}
-      <div className="max-w-3xl mx-auto mb-16">
-        <div className="px-5 py-4 md:px-6 md:py-5 rounded-sm bg-[rgba(255,255,255,0.02)] border border-border-light">
-          <p className="font-body text-[13px] md:text-[14px] italic text-text-muted leading-[1.8] mb-3">
-            {a.personalBody}
-          </p>
-          <p className="font-mono text-[12px] md:text-[13px] font-semibold text-text-primary leading-[1.5] mb-0.5">
-            {a.personalHighlight1}
-          </p>
-          <p className="font-body text-[12px] md:text-[13px] text-text-secondary leading-[1.5]">
-            {a.personalHighlight2}
-          </p>
+          {/* Personal element — compact, inline with bio */}
+          <div className="px-4 py-3 rounded-sm bg-[rgba(255,255,255,0.02)] border border-border-light">
+            <p className="font-body text-[12px] md:text-[13px] italic text-text-muted leading-[1.7] mb-2">
+              {a.personalBody}
+            </p>
+            <p className="font-mono text-[11px] md:text-[12px] font-semibold text-text-primary leading-[1.4] mb-0.5">
+              {a.personalHighlight1}
+            </p>
+            <p className="font-body text-[11px] md:text-[12px] text-text-secondary leading-[1.4]">
+              {a.personalHighlight2}
+            </p>
+          </div>
         </div>
       </div>
 
