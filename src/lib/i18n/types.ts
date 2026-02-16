@@ -2,7 +2,7 @@ export type Locale = "ro" | "en" | "ru";
 
 export interface Dictionary {
   nav: {
-    sections: { id: string; label: string }[];
+    sections: { id: string; label: string; submenu?: { id: string; label: string }[] }[];
     langSwitch: string;
   };
   hero: {
@@ -16,6 +16,10 @@ export interface Dictionary {
     chapter: string;
     titlePlain: string;
     titleBold: string;
+    /* legacy — used by whitepaper */
+    description: string;
+    descriptionBold: string;
+    cards: { title: string; color: string; desc: string }[];
     /* PUNCT 1 — new title + hook */
     titleLine1: string;
     titleLine2: string;
@@ -76,6 +80,9 @@ export interface Dictionary {
     chapter: string;
     titlePlain: string;
     titleBold: string;
+    /* legacy — used by whitepaper */
+    description: string;
+    variables: { letter: string; color: string; label: string; desc: string }[];
     maxScoreLabel: string;
     maxScoreNote: string;
     blueprintLabel: string;
@@ -253,6 +260,9 @@ export interface Dictionary {
     chapter: string;
     titlePlain: string;
     titleBold: string;
+    /* legacy — used by whitepaper */
+    description: string;
+    tableHeaders: { score: string; clarity: string; status: string; impact: string };
     /* PUNCT 1 — new intro */
     introChallenge: string;
     introScoreGenerous: string;
@@ -307,6 +317,8 @@ export interface Dictionary {
     chapter: string;
     titlePlain: string;
     titleBold: string;
+    /* legacy — used by whitepaper */
+    description: string;
     rule: string;
     ruleDescription: string;
     exampleLabel: string;
@@ -379,6 +391,8 @@ export interface Dictionary {
     chapter: string;
     titlePlain: string;
     titleBold: string;
+    /* legacy — used by whitepaper */
+    description: string;
     perChannel: string;
     addChannel: string;
     addAll: string;
@@ -1032,6 +1046,8 @@ export interface Dictionary {
   data: {
     zones: { name: string; description: string; r: string; i: string; f: string; archetype: string; color: string }[];
     scoreRanges: { min: number; max: number; label: string; status: string; statusColor: string; impact: string }[];
+    /* legacy — used by whitepaper */
+    comparisons: { model: string; full: string; weakness: string; rifc: string }[];
     aiPrompts: { label: string; text: string }[]; /* legacy — kept for compat */
   };
   diagnosis: {

@@ -3,19 +3,29 @@ import type { Dictionary } from "./types";
 export const ro: Dictionary = {
   nav: {
     sections: [
-      { id: "hero", label: "Acasă" },
-      { id: "philosophy", label: "Filozofia" },
-      { id: "equation", label: "Ecuația" },
-      { id: "anatomy", label: "Anatomia Variabilelor" },
-      { id: "methodology", label: "Metodologia" },
-      { id: "relevance-gate", label: "Poarta Relevanței" },
-      { id: "omnichannel", label: "Diagnostic Omnichannel" },
-      { id: "archetypes", label: "Arhetipuri de Eșec" },
-      { id: "comparison", label: "R IF C vs Altele" },
-      { id: "implementation", label: "Implementare" },
-      { id: "case-studies", label: "Studii de Caz" },
-      { id: "ai-prompts", label: "Integrare AI" },
-      { id: "resources", label: "Resurse" },
+      { id: "hero", label: "Acas\u0103" },
+      { id: "protocol", label: "Protocolul", submenu: [
+        { id: "philosophy", label: "Filozofia" },
+        { id: "equation", label: "Ecua\u021bia" },
+        { id: "anatomy", label: "Anatomia Variabilelor" },
+      ]},
+      { id: "scoring", label: "Scoring", submenu: [
+        { id: "methodology", label: "Metodologia" },
+        { id: "relevance-gate", label: "Poarta Relevan\u021bei" },
+      ]},
+      { id: "diagnostic", label: "Diagnostic", submenu: [
+        { id: "omnichannel", label: "Diagnostic Omnichannel" },
+        { id: "archetypes", label: "Arhetipuri de E\u0219ec" },
+      ]},
+      { id: "aplicare", label: "Aplicare", submenu: [
+        { id: "comparison", label: "R IF C vs Altele" },
+        { id: "implementation", label: "Implementare" },
+        { id: "case-studies", label: "Studii de Caz" },
+      ]},
+      { id: "instrumente", label: "Instrumente", submenu: [
+        { id: "ai-prompts", label: "Integrare AI" },
+        { id: "resources", label: "Resurse" },
+      ]},
       { id: "author", label: "Despre" },
     ],
     langSwitch: "EN",
@@ -31,6 +41,13 @@ export const ro: Dictionary = {
     chapter: "Capitolul 01",
     titlePlain: "",
     titleBold: "Filozofia",
+    description: "Spre deosebire de modelele clasice (AIDA, RACE) care urmăresc conversia ca obiectiv principal, R IF C afirmă că",
+    descriptionBold: "oamenii acționează natural când mesajul este clar",
+    cards: [
+      { title: "Economia Cognitivă", color: "#DC2626", desc: "Creierul uman procesează 11 milioane de biți/secundă dar conștientizează doar 50. În marketing, asta înseamnă banner blindness, ad fatigue și CTR-uri sub 0,05%. Un mesaj neclar este filtrat automat de scutul anti-publicitar \u2014 iar o reclamă ignorată costă la fel ca una care nu a existat niciodată. Claritatea este prima condiție a rentabilității." },
+      { title: "Eliminarea Anxietății", color: "#2563EB", desc: "70% din coșurile de cumpărături online sunt abandonate. Rata medie de bounce pe landing page: 55%. Cauza principală? Confuzie și anxietate decizională. Claritatea elimină fricțiunea din customer journey \u2014 de la primul touchpoint până la checkout. Fără îndoieli, fără ezitare, fără vânzare pierdută." },
+      { title: "Ireversibilitatea Acțiunii", color: "#059669", desc: "Apple, Stripe și Basecamp nu \u201cvând agresiv\u201d \u2014 convertesc organic prin claritate absolută. Odată ce Relevanța este stabilită și Interesul amplificat de Formă, acțiunea devine inevitabilă. R IF C transformă marketingul din push selling în pull marketing \u2014 conversia ca consecință naturală, nu manipulare." },
+    ],
     /* PUNCT 1 \u2014 new title + hook */
     titleLine1: "Noua Paradigmă.",
     titleLine2: "Claritatea ca Motor al Acțiunii.",
@@ -117,6 +134,13 @@ export const ro: Dictionary = {
     chapter: "Capitolul 02",
     titlePlain: "",
     titleBold: "Ecuația Universală",
+    description: "Vizualizează marketingul tău ca o construcție solidă. Fiecare variabilă joacă un rol structural care determină dacă clădirea rezistă sau se prăbușește.",
+    variables: [
+      { letter: "R", color: "#DC2626", label: "Relevanță = Fundația", desc: "Dacă buyer persona este greșită, totul se prăbușește. Audiența definește piața ta adresabilă (TAM). Relevanța deschide poarta \u2014 fără ea, CTR-ul tău e zero și fiecare euro investit în I și F e irosit." },
+      { letter: "I", color: "#2563EB", label: "Interes = Structura de Oțel", desc: "Propunerea ta unică de valoare (UVP). Ce beneficiu concret primesc? Este \u201cce spui\u201d \u2014 USP-ul care te diferențiază în piață și motivul pentru care prospectul rămâne pe pagină în loc să dea scroll mai departe." },
+      { letter: "F", color: "#D97706", label: "Formă = Arhitectura", desc: "Amplificatorul de performanță. Design, format, tonalitate, UX. Un Reel de 15 secunde poate multiplica impactul x10 față de un text static. Dar fără substanță (I), e doar Zgomot Estetic \u2014 premii de design, zero conversii." },
+      { letter: "C", color: "#059669", label: "Claritate = Valoarea Proprietății", desc: "KPI-ul suprem al marketingului tău. Scorul C determină dacă prospectul convertește \u2014 sign-up, achiziție, cerere de ofertă. Un C de 80+ înseamnă cost per lead minim și ROI maxim. Sub 50 \u2014 arzi bugetul." },
+    ],
     maxScoreLabel: "SCOR MAXIM",
     maxScoreNote: "Cele 10 puncte bonus apar la Relevanță absolută (R=10) \u2014 Zona Brand Cult.",
     blueprintLabel: "PLAN ARHITECTURAL",
@@ -397,6 +421,8 @@ export const ro: Dictionary = {
     chapter: "Capitolul 04",
     titlePlain: "",
     titleBold: "Metodologia de Scoring",
+    description: "Fiecare variabilă este evaluată pe o scală de la 1 la 10, similar unui audit de performanță. Scorul C rezultat dezvăluie adevărata sănătate a campaniei tale \u2014 de la ROI și cost per lead până la rata de conversie și brand recall.",
+    tableHeaders: { score: "Scor C", clarity: "Nivel Claritate", status: "Status", impact: "Impact Financiar" },
     /* PUNCT 1 \u2014 intro rescris */
     introChallenge: "Cât de sincer poți fi cu tine însuți?",
     introBody: "Fiecare variabilă R, I, F primește o notă de la 1 la 10. Tu ești evaluatorul \u2014 și acuratețea diagnosticului depinde de onestitatea ta.",
@@ -485,6 +511,7 @@ export const ro: Dictionary = {
     chapter: "Regulă Critică",
     titlePlain: "",
     titleBold: "Poarta Relevanței",
+    description: "Formula funcționează sub o condiție fundamentală: Relevanța funcționează ca filtru de intrare. Acesta este întrerupătorul de circuit care previne investiția irosită.",
     rule: "DACĂ R < 3 \u2192 EȘEC CRITIC AUTOMAT",
     ruleDescription: "Un mesaj livrat publicului greșit nu poate fi salvat de creativitate sau design. Nicio execuție nu e suficient de bună pentru a compensa lipsa relevanței. Poarta Relevanței anulează orice scor I \u00d7 F.",
     exampleLabel: "Exemplu:",
@@ -601,6 +628,7 @@ export const ro: Dictionary = {
     chapter: "Capitolul 05",
     titlePlain: "Diagnostic",
     titleBold: "Omnichannel",
+    description: "Fiecare canal de marketing are propriul ADN: audiență, format nativ, metrici de succes. Dar ecuația R IF C funcționează identic pe toate. Selectează canalul, explorează ce înseamnă R, I, F și C specific pentru el, și simulează scorul de Claritate.",
     perChannel: "pe fiecare canal",
     addChannel: "Adaugă canal",
     addAll: "Toate",
@@ -1855,6 +1883,12 @@ export const ro: Dictionary = {
       { min: 21, max: 50, label: "Zgomot de Fond", status: "Ineficient", statusColor: "#D97706", impact: "CPL de 5-10x peste media industriei. ROI negativ. Cashflow-ul de marketing sângerează fără rezultate măsurabile." },
       { min: 51, max: 80, label: "Claritate Medie", status: "Funcțional", statusColor: "#2563EB", impact: "Funcțional dar necompetitiv. Concurența cu bugete mai mari și Claritate superioară te va depăși în SERP, în feed și în inbox." },
       { min: 81, max: 110, label: "Claritate Supremă", status: "Succes", statusColor: "#059669", impact: "Zona brandurilor cult: cost per lead minim, LTV maximizat, word-of-mouth organic. Fiecare euro investit se întoarce multiplicat." },
+    ],
+    comparisons: [
+      { model: "AIDA", full: "Atenție → Interes → Dorință → Acțiune", weakness: "Creat în 1898, pre-digital. Model liniar de pâlnie care ignoră retargeting-ul, atribuirea multi-canal și customer journey non-liniar. Fără scoring — nu poți măsura unde pierzi.", rifc: "R IF C oferă un scor numeric la fiecare punct de contact. Acțiunea devine consecință naturală a clarității, nu un pas forțat dintr-o pâlnie liniară." },
+      { model: "RACE", full: "Reach → Act → Convert → Engage", weakness: "Orientat pe proces (checklist-uri), fără măsurare a calității mesajului. Poți bifa Reach, Act, Convert, Engage — și totuși să ai CPL de 10x peste benchmark.", rifc: "R IF C diagnostichează CALITATEA la fiecare etapă cu un scor numeric. Știi exact care variabilă eșuează și cât te costă." },
+      { model: "StoryBrand", full: "Clientul este Eroul, Brandul este Ghidul", weakness: "Framework narativ puternic, dar 100% calitativ. Întrebarea \u201cPovestea noastră e suficient de bună?\u201d rămâne fără răspuns măsurabil. Fără KPI de claritate.", rifc: "R IF C cuantifică exact ce StoryBrand descrie calitativ. Coexistă perfect: StoryBrand construiește narativul, R IF C îl scorează și îl optimizează pe metrici." },
+      { model: "4Ps", full: "Produs → Preț → Plasare → Promovare", weakness: "Framework de strategie de afaceri din 1960, nu diagnostic de comunicare. Poți avea Product, Price, Place și Promotion perfecte — dar dacă mesajul e confuz, conversia e zero.", rifc: "R IF C operează la nivelul de comunicare DEASUPRA celor 4P. Diagnostichează și optimizează mesajul care transformă strategia în conversii." },
     ],
     aiPrompts: [
       { label: "Prompt Diagnostic", text: "Acționează ca expert R IF C Marketing. Analizează acest mesaj și scorează fiecare variabilă: R (Relevanță 1-10), I (Interes 1-10), F (Formă 1-10). Calculează C = R + (I \u00d7 F). Identifică variabila cea mai slabă și sugerează o îmbunătățire specifică. Aplică Poarta Relevanței: dacă R < 3, marchează ca Eșec Critic." },

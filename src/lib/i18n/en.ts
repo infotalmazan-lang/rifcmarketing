@@ -4,18 +4,28 @@ export const en: Dictionary = {
   nav: {
     sections: [
       { id: "hero", label: "Home" },
-      { id: "philosophy", label: "Philosophy" },
-      { id: "equation", label: "The Equation" },
-      { id: "anatomy", label: "Variable Anatomy" },
-      { id: "methodology", label: "Methodology" },
-      { id: "relevance-gate", label: "Relevance Gate" },
-      { id: "omnichannel", label: "Omnichannel Diagnostic" },
-      { id: "archetypes", label: "Failure Archetypes" },
-      { id: "comparison", label: "R IF C vs Others" },
-      { id: "implementation", label: "Implementation" },
-      { id: "case-studies", label: "Case Studies" },
-      { id: "ai-prompts", label: "AI Integration" },
-      { id: "resources", label: "Resources" },
+      { id: "protocol", label: "The Protocol", submenu: [
+        { id: "philosophy", label: "Philosophy" },
+        { id: "equation", label: "The Equation" },
+        { id: "anatomy", label: "Variable Anatomy" },
+      ]},
+      { id: "scoring", label: "Scoring", submenu: [
+        { id: "methodology", label: "Methodology" },
+        { id: "relevance-gate", label: "Relevance Gate" },
+      ]},
+      { id: "diagnostic", label: "Diagnostic", submenu: [
+        { id: "omnichannel", label: "Omnichannel Diagnostic" },
+        { id: "archetypes", label: "Failure Archetypes" },
+      ]},
+      { id: "application", label: "Application", submenu: [
+        { id: "comparison", label: "R IF C vs Others" },
+        { id: "implementation", label: "Implementation" },
+        { id: "case-studies", label: "Case Studies" },
+      ]},
+      { id: "tools", label: "Tools", submenu: [
+        { id: "ai-prompts", label: "AI Integration" },
+        { id: "resources", label: "Resources" },
+      ]},
       { id: "author", label: "About" },
     ],
     langSwitch: "RU",
@@ -31,6 +41,13 @@ export const en: Dictionary = {
     chapter: "Chapter 01",
     titlePlain: "The",
     titleBold: "Philosophy",
+    description: "Unlike classical models (AIDA, RACE) that pursue conversion as their primary goal, R IF C asserts that",
+    descriptionBold: "people act naturally when the message is clear",
+    cards: [
+      { title: "Cognitive Economy", color: "#DC2626", desc: "The human brain processes 11 million bits/second but is conscious of only 50. In marketing, this means banner blindness, ad fatigue, and CTRs below 0.05%. An unclear message is automatically filtered by the anti-advertising shield \u2014 and an ignored ad costs exactly the same as one that never existed. Clarity is the first condition of profitability." },
+      { title: "Anxiety Elimination", color: "#2563EB", desc: "70% of online shopping carts are abandoned. Average landing page bounce rate: 55%. The primary cause? Confusion and decision anxiety. Clarity eliminates friction across the entire customer journey \u2014 from first touchpoint to checkout. No doubt, no hesitation, no lost sale." },
+      { title: "Irrevocability of Action", color: "#059669", desc: "Apple, Stripe, and Basecamp don\u2019t \u201csell aggressively\u201d \u2014 they convert organically through absolute clarity. Once Relevance is established and Interest amplified by Form, action becomes inevitable. R IF C transforms marketing from push selling to pull marketing \u2014 conversion as natural consequence, not manipulation." },
+    ],
     /* PUNCT 1 — new title + hook */
     titleLine1: "The New Paradigm.",
     titleLine2: "Clarity as the Engine of Action.",
@@ -117,6 +134,13 @@ export const en: Dictionary = {
     chapter: "Chapter 02",
     titlePlain: "The",
     titleBold: "Universal Equation",
+    description: "Visualize your marketing as a solid building construction. Each variable plays a structural role that determines whether the building stands or collapses.",
+    variables: [
+      { letter: "R", color: "#DC2626", label: "Relevance = Foundation", desc: "If the buyer persona is wrong, everything collapses. Your audience defines your Total Addressable Market (TAM). Relevance opens the gate \u2014 without it, your CTR is zero and every euro spent on I and F is wasted." },
+      { letter: "I", color: "#2563EB", label: "Interest = Steel Structure", desc: "Your Unique Value Proposition (UVP). What concrete benefit do they get? It\u2019s \u201cwhat you say\u201d \u2014 the USP that differentiates you in the market and the reason the prospect stays on the page instead of scrolling past." },
+      { letter: "F", color: "#D97706", label: "Form = Architecture", desc: "The performance amplifier. Design, format, tonality, UX. A 15-second Reel can multiply impact 10x versus static text. But without substance (I), it\u2019s just Aesthetic Noise \u2014 design awards, zero conversions." },
+      { letter: "C", color: "#059669", label: "Clarity = Property Value", desc: "The ultimate KPI of your marketing. The C score determines whether the prospect converts \u2014 sign-up, purchase, quote request. A C of 80+ means minimum cost per lead and maximum ROI. Below 50 \u2014 you\u2019re burning budget." },
+    ],
     maxScoreLabel: "MAXIMUM SCORE",
     blueprintLabel: "ARCHITECTURAL BLUEPRINT",
     blueprint: {
@@ -397,6 +421,8 @@ export const en: Dictionary = {
     chapter: "Chapter 04",
     titlePlain: "Scoring",
     titleBold: "Methodology",
+    description: "Each variable is evaluated on a 1\u201310 scale, similar to a performance audit. The resulting C score reveals the true health of your campaign \u2014 from ROI and cost per lead to conversion rate and brand recall.",
+    tableHeaders: { score: "Score C", clarity: "Clarity Level", status: "Status", impact: "Financial Impact" },
     /* PUNCT 1 — rewritten intro */
     introChallenge: "How honest can you be with yourself?",
     introBody: "Each variable R, I, F gets a score from 1 to 10. You are the evaluator \u2014 and the accuracy of the diagnosis depends on your honesty.",
@@ -485,6 +511,7 @@ export const en: Dictionary = {
     chapter: "Critical Rule",
     titlePlain: "The",
     titleBold: "Relevance Gate",
+    description: "The formula operates under a fundamental condition: Relevance functions as an entry filter. This is the circuit breaker that prevents wasted investment.",
     rule: "IF R < 3 \u2192 AUTOMATIC CRITICAL FAILURE",
     ruleDescription: "A message delivered to the wrong audience cannot be saved by creativity or design. No execution is good enough to compensate for the lack of relevance. The Relevance Gate overrides any I \u00d7 F score.",
     exampleLabel: "Example:",
@@ -601,6 +628,7 @@ export const en: Dictionary = {
     chapter: "Chapter 05",
     titlePlain: "Omnichannel",
     titleBold: "Diagnostic",
+    description: "Every marketing channel has its own DNA: audience, native format, success metrics. But the R IF C equation works identically across all of them. Select a channel, explore what R, I, F and C mean specifically for it, and simulate the Clarity score.",
     perChannel: "on every channel",
     addChannel: "Add channel",
     addAll: "All",
@@ -1838,6 +1866,12 @@ export const en: Dictionary = {
       { min: 21, max: 50, label: "Background Noise", status: "Inefficient", statusColor: "#D97706", impact: "CPL at 5-10x above industry average. Negative ROI. Your marketing cash flow is bleeding without measurable results." },
       { min: 51, max: 80, label: "Medium Clarity", status: "Functional", statusColor: "#2563EB", impact: "Functional but uncompetitive. Competitors with bigger budgets and superior Clarity will outrank you in SERPs, feeds, and inboxes." },
       { min: 81, max: 110, label: "Supreme Clarity", status: "Success", statusColor: "#059669", impact: "Cult brand zone: minimum cost per lead, maximized LTV, organic word-of-mouth. Every euro invested returns multiplied." },
+    ],
+    comparisons: [
+      { model: "AIDA", full: "Attention \u2192 Interest \u2192 Desire \u2192 Action", weakness: "Created in 1898, pre-digital. Linear funnel model that ignores retargeting, multi-channel attribution, and non-linear customer journeys. No scoring \u2014 you can\u2019t measure where you\u2019re losing.", rifc: "R IF C provides a numeric score at every touchpoint. Action becomes a natural consequence of clarity, not a forced step in a linear funnel." },
+      { model: "RACE", full: "Reach \u2192 Act \u2192 Convert \u2192 Engage", weakness: "Process-oriented (checklists), no message quality measurement. You can check off Reach, Act, Convert, Engage \u2014 and still have a CPL 10x above benchmark.", rifc: "R IF C diagnoses QUALITY at every stage with a numeric score. You know exactly which variable is failing and how much it\u2019s costing you." },
+      { model: "StoryBrand", full: "Customer is the Hero, Brand is the Guide", weakness: "Powerful narrative framework, but 100% qualitative. The question \u201cIs our story good enough?\u201d remains without a measurable answer. No clarity KPI.", rifc: "R IF C quantifies exactly what StoryBrand describes qualitatively. They coexist perfectly: StoryBrand builds the narrative, R IF C scores and optimizes it on metrics." },
+      { model: "4Ps", full: "Product \u2192 Price \u2192 Place \u2192 Promotion", weakness: "Business strategy framework from 1960, not a communication diagnostic. You can have perfect Product, Price, Place, and Promotion \u2014 but if the message is confusing, conversion is zero.", rifc: "R IF C operates at the communication layer ABOVE the 4Ps. It diagnoses and optimizes the message that turns strategy into conversions." },
     ],
     aiPrompts: [
       { label: "Diagnostic Prompt", text: "Act as an R IF C Marketing expert. Analyze this message and score each variable: R (Relevance 1-10), I (Interest 1-10), F (Form 1-10). Calculate C = R + (I \u00d7 F). Identify the weakest variable and suggest one specific improvement. Apply The Relevance Gate: if R < 3, flag as Critical Failure." },
