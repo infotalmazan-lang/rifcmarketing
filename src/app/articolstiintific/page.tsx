@@ -240,6 +240,29 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .dw-confirm-actions { display:flex; gap:8px; justify-content:flex-end; }
 .dw-export-bar { display:flex; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
 
+/* ═══ BEST PRACTICE EXAMPLES ═══ */
+.dw-example { border:1px dashed var(--green); border-radius:8px; padding:14px 16px; margin-bottom:14px; background:rgba(5,150,105,0.04); }
+.dw-example .dw-ex-toggle { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--green); user-select:none; }
+.dw-example .dw-ex-arrow { transition:transform .2s; font-size:10px; }
+.dw-example.open .dw-ex-arrow { transform:rotate(90deg); }
+.dw-example .dw-ex-body { display:none; margin-top:10px; font-size:12px; color:var(--text2); line-height:1.7; }
+.dw-example.open .dw-ex-body { display:block; }
+.dw-ex-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:8px; }
+.dw-ex-table th { text-align:left; padding:6px; border-bottom:2px solid var(--green); font-size:10px; letter-spacing:1px; color:var(--green); text-transform:uppercase; opacity:.7; }
+.dw-ex-table td { padding:5px 6px; border-bottom:1px solid rgba(5,150,105,0.15); color:var(--text2); font-size:11px; }
+.dw-ex-kv { display:inline-block; font-family:JetBrains Mono,monospace; font-size:11px; background:rgba(5,150,105,0.08); padding:2px 8px; border-radius:4px; margin:2px; color:var(--text); }
+.dw-ex-note { font-size:10px; color:var(--text3); font-style:italic; margin-top:6px; }
+.dw-ex-def { background:rgba(5,150,105,0.06); border-left:3px solid var(--green); padding:8px 12px; border-radius:0 6px 6px 0; margin:6px 0; font-size:11px; line-height:1.6; }
+.dw-ex-def strong { color:var(--text); }
+.dw-ex-model { display:inline-block; background:rgba(5,150,105,0.06); border:1px solid rgba(5,150,105,0.2); border-radius:6px; padding:8px 12px; margin:4px; text-align:center; font-size:11px; }
+.dw-ex-model.winner { border-color:var(--green); background:rgba(5,150,105,0.12); }
+.dw-ex-model .em-label { font-size:9px; letter-spacing:1px; color:var(--green); font-weight:700; text-transform:uppercase; }
+.dw-ex-model .em-val { font-family:JetBrains Mono,monospace; font-size:13px; font-weight:700; color:var(--text); }
+.dw-ex-section { display:flex; align-items:center; gap:8px; padding:4px 0; font-size:11px; border-bottom:1px solid rgba(5,150,105,0.1); }
+.dw-ex-section .es-name { min-width:130px; font-weight:500; color:var(--text); }
+.dw-ex-section .es-bar { flex:1; height:4px; background:var(--surface3); border-radius:2px; overflow:hidden; }
+.dw-ex-section .es-fill { height:100%; border-radius:2px; background:var(--green); }
+
 @media(max-width:768px) {
   .sidebar { display:none; }
   .main { margin-left:0; }
@@ -384,6 +407,60 @@ function App() {
     return html;
   }
 
+  /* ═══ BEST PRACTICE EXAMPLES ═══ */
+  var EXAMPLES = {
+    'notes': '<p><strong>Exemplu de note structurate:</strong></p><div class="dw-ex-def">Ch03 Anatomia Variabilelor \\u2192 Surs\\u0103 direct\\u0103 pentru itemi Likert | <strong>GATA</strong><br>Ch04 Scoring 1-10 descriptori \\u2192 Ancore fixe pentru evaluatori | <strong>GATA</strong><br>Ch07 Compara\\u021Bii framework \\u2192 Reformulare academic\\u0103 necesar\\u0103 | <strong>PAR\\u021AIAL</strong><br>Ch09 Studii de caz \\u2192 Pilot data (5 cazuri) | <strong>GATA</strong><br>Poarta Relevan\\u021Bei \\u2192 Simul\\u0103ri dezastru \\u2014 de formalizat | <strong>\\u00CEN LUCRU</strong></div><p class="dw-ex-note">Tip: Noteaz\\u0103 sursa, statusul (GATA / PAR\\u021AIAL / LIPS\\u0102) \\u0219i ac\\u021Biunea necesar\\u0103 pentru fiecare element.</p>',
+
+    'equationNotes': '<p><strong>Exemplu de note ecua\\u021Bie:</strong></p><div class="dw-ex-def">C = R + (I \\u00D7 F), domeniu [0, 110]<br>R \\u2208 [0,10], I \\u2208 [0,10], F \\u2208 [0,10]<br><br><strong>Justificare I\\u00D7F (vs I+F):</strong><br>\\u2022 ELM (Petty & Cacioppo, 1986): forma modereaz\\u0103 procesarea, nu o adaug\\u0103<br>\\u2022 Marketing mix modeling: efecte multiplicative (Naik & Raman, 2003)<br>\\u2022 Exemplu numeric: I=2, F=10 \\u2192 IxF=20 (form\\u0103 nu salveaz\\u0103 con\\u021Binut slab)<br>\\u2022 Exemplu invers: I=10, F=2 \\u2192 IxF=20 (con\\u021Binut bun \\u00EEn form\\u0103 slab\\u0103 = irosit)</div>',
+
+    'gateNotes': '<p><strong>Exemplu de note Poarta Relevan\\u021Bei:</strong></p><div class="dw-ex-def"><strong>Ipoteza:</strong> Dac\\u0103 R < threshold (propunem R=3), atunci rela\\u021Bia I\\u00D7F \\u2192 C dispare.<br><br><strong>Referin\\u021Be:</strong><br>\\u2022 Vakratsas et al. (2004) \\u2014 threshold effects \\u00EEn advertising response<br>\\u2022 Bemmaor (1984) \\u2014 nonlinear response models<br>\\u2022 Baker & Lutz (2000) \\u2014 Relevance-Accessibility Model<br>\\u2022 ELM \\u2014 relevance ca switch de procesare (central vs periferic)</div>',
+
+    'scoringNotes': '<p><strong>Exemplu de note Scoring Rubric:</strong></p><div class="dw-ex-def"><strong>R nivel 9-10:</strong> "Mesajul se adreseaz\\u0103 exact segmentului cu nevoia specific\\u0103, \\u00EEn momentul optim, pe canalul preferat."<br><strong>R nivel 1-2:</strong> "Mesajul nu are nicio leg\\u0103tur\\u0103 cu audien\\u021Ba, contextul sau nevoia."<br><br><strong>Calibrare prin contra-exemple:</strong><br>\\u2022 Arhetipul "Fantoma": R=1, orice I/F \\u2192 mesaj irelevant total<br>\\u2022 Arhetipul "Zgomot": R=8, I=1, F=10 \\u2192 frumos dar gol</div>',
+
+    'knownGroupsNotes': '<p><strong>Exemplu de note Known-Groups:</strong></p><div class="dw-ex-def"><strong>3 categorii de testare (de pe site):</strong><br>\\u2022 Fantoma Invizibil\\u0103: R\\u22642, I\\u22657, F\\u22657 \\u2192 predic\\u021Bie C slab, KPI zero<br>\\u2022 Zgomotul Estetic: R\\u22657, I\\u22642, F\\u22658 \\u2192 predic\\u021Bie engagement fals<br>\\u2022 Diamantul \\u00CEngropat: R\\u22657, I\\u22658, F\\u22642 \\u2192 predic\\u021Bie poten\\u021Bial irosit<br><br><strong>Test:</strong> ANOVA one-way pe scor C \\u00EEntre cele 3 grupuri.<br><strong>A\\u0219teptat:</strong> F-statistic semnificativ, Cohen d > 0.8 per pereche.</div>',
+
+    'citationNotes': '<p><strong>Exemplu de note citare:</strong></p><div class="dw-ex-def"><strong>1.</strong> Talmazan, D. (2025). <em>R IF C Marketing Framework</em>. https://rifcmarketing.com [Practitioner implementation]<br><strong>2.</strong> Talmazan, D. (2025). <em>Codul Surs\\u0103: R IF C</em> [White Paper, 84 p.]. Talmazan School SRL.<br><strong>3.</strong> Talmazan, D. (2025). <em>R IF C AI Audit Tool</em>. https://rifcmarketing.com/audit [AI diagnostic instrument]</div>',
+
+    'definitions': '<p><strong>Exemplu de defini\\u021Bie academic\\u0103 (Relevance):</strong></p><div class="dw-ex-def"><strong>Defini\\u021Bie conceptual\\u0103:</strong> Relevance (R) is the degree of perceived alignment between a marketing message and the recipient\\u2019s current needs, context, and decision stage.<br><br><strong>Defini\\u021Bie opera\\u021Bional\\u0103:</strong> Measured as the mean score across 7 Likert items (1-7 scale) capturing audience fit, timing, journey stage, contextual match, geographic relevance, channel appropriateness, and segmentation precision.<br><br><strong>Baz\\u0103 teoretic\\u0103:</strong> Petty & Cacioppo (1986) \\u2014 personal relevance as central route trigger; Zaichkowsky (1985) \\u2014 Personal Involvement Inventory; Celsi & Olson (1988) \\u2014 felt involvement.<br><br><strong>Distinc\\u021Bie:</strong> Spre deosebire de "involvement" (Zaichkowsky), R m\\u0103soar\\u0103 alinierea mesaj-receptor, nu implicarea general\\u0103 \\u00EEn categorie.</div><p class="dw-ex-note">Recomandare: ~350-400 cuvinte per construct. Include defini\\u021Bie conceptual\\u0103 + opera\\u021Bional\\u0103 + baz\\u0103 teoretic\\u0103 + distinc\\u021Bie.</p>',
+
+    'references': '<p><strong>Exemplu de referin\\u021Be formatate APA 7th:</strong></p><table class="dw-ex-table"><thead><tr><th>Autor</th><th>An</th><th>Jurnal</th><th>Titlu</th></tr></thead><tbody><tr><td>Petty, R. E. & Cacioppo, J. T.</td><td>1986</td><td>Springer</td><td>Communication and Persuasion: Central and Peripheral Routes</td></tr><tr><td>Churchill, G. A. Jr.</td><td>1979</td><td>Journal of Marketing Research</td><td>A Paradigm for Developing Better Measures of Marketing Constructs</td></tr><tr><td>Parasuraman, A., Zeithaml, V., Berry, L.</td><td>1988</td><td>Journal of Retailing</td><td>SERVQUAL: A Multiple-Item Scale for Measuring Consumer Perceptions</td></tr></tbody></table><p class="dw-ex-note">Target: 80-100 referin\\u021Be \\u00EEn paper-ul final. Include autor, an, jurnal, titlu, DOI.</p>',
+
+    'likertItems': '<p><strong>Exemplu de itemi Likert formula\\u021Bi corect:</strong></p><table class="dw-ex-table"><thead><tr><th>ID</th><th>Text Item</th><th>Construct</th><th>Sub-factor</th><th>CVI</th></tr></thead><tbody><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">LI-001</td><td>Mesajul se adreseaz\\u0103 unui segment cu o nevoie specific\\u0103 pe care produsul o rezolv\\u0103</td><td style="color:var(--red);font-weight:700;">R</td><td>Audien\\u021Ba</td><td>0.92</td></tr><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">LI-002</td><td>Titlul capteaz\\u0103 aten\\u021Bia \\u00EEn primele 3 secunde</td><td style="color:var(--amber);font-weight:700;">I</td><td>Hook</td><td>0.88</td></tr><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">LI-003</td><td>Designul vizual sus\\u021Bine ierarhia informa\\u021Biei</td><td style="color:var(--violet);font-weight:700;">F</td><td>Layout</td><td>0.85</td></tr></tbody></table><p class="dw-ex-note">Target: 30-36 itemi ini\\u021Biali. CVI \\u2265 0.80 per item. Scala Likert 1-7 (Total dezacord \\u2192 Total acord).</p>',
+
+    'expertPanel': '<p><strong>Exemplu de panel de exper\\u021Bi:</strong></p><table class="dw-ex-table"><thead><tr><th>Nume</th><th>Rol</th><th>Institu\\u021Bie</th><th>CVI Mediu</th></tr></thead><tbody><tr><td>Dr. Maria Popescu</td><td>Lector Marketing</td><td>USM</td><td>0.87</td></tr><tr><td>Andrei Rusu</td><td>Director Marketing</td><td>Agency X</td><td>0.91</td></tr><tr><td>Prof. Elena Cojocaru</td><td>Cercet\\u0103tor</td><td>ASEM</td><td>0.84</td></tr></tbody></table><p class="dw-ex-note">Target: 15-20 exper\\u021Bi. Mix: 50% academici + 50% practicieni. CVI calculat pe baza evalu\\u0103rii itemilor (scala 1-4).</p>',
+
+    'cognitiveTests': '<p><strong>Exemplu de interviuri cognitive:</strong></p><table class="dw-ex-table"><thead><tr><th>Nume</th><th>Data</th><th>Note</th><th>Ambiguit\\u0103\\u021Bi</th></tr></thead><tbody><tr><td>Ion Munteanu</td><td>2026-03-15</td><td>A \\u00EEn\\u021Beles corect 28/30 itemi</td><td>LI-012: "procesare" \\u2014 termen confuz, sugereaz\\u0103 "prelucrare"</td></tr><tr><td>Ana Vere\\u0219</td><td>2026-03-17</td><td>A \\u00EEn\\u021Beles 26/30 itemi</td><td>LI-005: "segment\\u0103rii" \\u2014 prea tehnic; LI-019: "ierarhie" \\u2014 ambiguu</td></tr></tbody></table><p class="dw-ex-note">Target: 10-15 participan\\u021Bi. Noteaz\\u0103 fiecare item ambiguu \\u0219i sugestia de reformulare.</p>',
+
+    'stimuli': '<p><strong>Exemplu de set stimuli:</strong></p><table class="dw-ex-table"><thead><tr><th>ID</th><th>Nume</th><th>Canal</th><th>Industrie</th><th>R</th><th>I</th><th>F</th><th>C</th><th>Pilot</th></tr></thead><tbody><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">STM-001</td><td>Maison Noir FB Ad</td><td>Social</td><td>Restaurant</td><td>2</td><td>7</td><td>8</td><td>58</td><td>\\u2705 Pilot</td></tr><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">STM-006</td><td>TechCorp Landing Page</td><td>LP</td><td>SaaS B2B</td><td>8</td><td>6</td><td>7</td><td>50</td><td>Nou</td></tr><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">STM-007</td><td>FashionX Email Campaign</td><td>Email</td><td>Fashion</td><td>7</td><td>8</td><td>5</td><td>47</td><td>Nou</td></tr></tbody></table><p class="dw-ex-note">Target: 20-30 stimuli. Primele 5 sunt pilot din site. Diversific\\u0103: canale (LP, Social, Email, Ads, Pitch, Web) \\u00D7 industrii diferite.</p>',
+
+    'respondents': '<p><strong>Exemplu de date respondenti:</strong></p><div style="display:flex;flex-wrap:wrap;gap:6px;"><span class="dw-ex-kv">N = 312</span><span class="dw-ex-kv">V\\u00E2rsta medie = 31.4</span><span class="dw-ex-kv">SD = 6.2</span></div><div class="dw-ex-def" style="margin-top:8px;"><strong>Surse:</strong> USM 120 studen\\u021Bi marketing, UTM 80 studen\\u021Bi, LinkedIn comunitate 112 marketeri<br><strong>Demografie:</strong> 58% femei, 42% b\\u0103rba\\u021Bi; 89% urban; 67% licen\\u021B\\u0103+, 33% masterat+</div><p class="dw-ex-note">Standard: Ratio 10:1 respondenti:itemi (Nunnally, 1978). Cu 30 itemi = ideal 300+.</p>',
+
+    'efaResults': '<p><strong>Exemplu de rezultate EFA:</strong></p><div style="display:flex;flex-wrap:wrap;gap:6px;"><span class="dw-ex-kv">KMO = 0.87</span><span class="dw-ex-kv">Bartlett p < 0.001</span><span class="dw-ex-kv">Varian\\u021B\\u0103 = 67.3%</span><span class="dw-ex-kv">\\u03B1 R = 0.84</span><span class="dw-ex-kv">\\u03B1 I = 0.88</span><span class="dw-ex-kv">\\u03B1 F = 0.82</span><span class="dw-ex-kv">Factori = 3</span></div><p class="dw-ex-note">Thresholds: Loading \\u2265 0.50, cross-loading < 0.35, \\u03B1 \\u2265 0.80, KMO \\u2265 0.80 (Hair et al., 2019).</p>',
+
+    'cfaResults': '<p><strong>Exemplu de rezultate CFA:</strong></p><div style="display:flex;flex-wrap:wrap;gap:6px;"><span class="dw-ex-kv">CFI = 0.96</span><span class="dw-ex-kv">RMSEA = 0.048</span><span class="dw-ex-kv">SRMR = 0.042</span><span class="dw-ex-kv">AVE = 0.58</span><span class="dw-ex-kv">CR = 0.84</span><span class="dw-ex-kv">Fornell-Larcker = da</span><span class="dw-ex-kv">HTMT = 0.72</span></div><p class="dw-ex-note">Standarde: CFI \\u2265 0.95, RMSEA \\u2264 0.06, SRMR \\u2264 0.08, AVE \\u2265 0.50, CR \\u2265 0.70 (Hu & Bentler, 1999).</p>',
+
+    'modelComparison': '<p><strong>Exemplu de compara\\u021Bie modele:</strong></p><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;"><div class="dw-ex-model"><div class="em-label">Model A (Additiv)</div><div class="em-val">R\\u00B2 = 0.41</div><div style="font-size:10px;color:var(--text3);">AIC = 1245 | BIC = 1267</div></div><div class="dw-ex-model winner"><div class="em-label">\\u2B50 Model B (R IF C)</div><div class="em-val">R\\u00B2 = 0.58</div><div style="font-size:10px;color:var(--green);">AIC = 1089 | BIC = 1107</div></div><div class="dw-ex-model"><div class="em-label">Model C (Full)</div><div class="em-val">R\\u00B2 = 0.59</div><div style="font-size:10px;color:var(--text3);">AIC = 1092 | BIC = 1118</div></div></div><p class="dw-ex-note">Model B c\\u00E2\\u0219tig\\u0103: R\\u00B2 comparabil cu Full dar AIC/BIC mai mic = model mai parsimonios. \\u0394R\\u00B2 semnificativ vs Model A (p < 0.05).</p>',
+
+    'thresholdTest': '<p><strong>Exemplu de rezultate Threshold Test:</strong></p><div style="display:flex;flex-wrap:wrap;gap:6px;"><span class="dw-ex-kv">Threshold R = 3</span><span class="dw-ex-kv">Davies test p = 0.003</span></div><div class="dw-ex-def" style="margin-top:8px;"><strong>Interpretare:</strong> Rela\\u021Bia I\\u00D7F \\u2192 C este semnificativ\\u0103 doar c\\u00E2nd R \\u2265 3. Sub R=3, efectul I\\u00D7F dispare (\\u03B2 nesemnificativ).<br><strong>Sensitivity:</strong> R=2: \\u03B2(IxF)=0.03 (ns) | R=3: \\u03B2(IxF)=0.31** | R=4: \\u03B2(IxF)=0.44*** | R=5: \\u03B2(IxF)=0.52***</div><p class="dw-ex-note">Davies test confirm\\u0103 existen\\u021Ba unui breakpoint structural \\u00EEn rela\\u021Bia R \\u2192 C.</p>',
+
+    'campaigns': '<p><strong>Exemplu de campanii cu KPI-uri reale:</strong></p><table class="dw-ex-table"><thead><tr><th>ID</th><th>Campanie</th><th>CTR%</th><th>CPL</th><th>ROAS</th><th>Conv%</th><th>Bounce%</th><th>R</th><th>I</th><th>F</th><th>C</th><th>Sursa</th></tr></thead><tbody><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">KPI-001</td><td>Nike Retarget</td><td>3.2</td><td>12.50</td><td>4.8</td><td>5.1</td><td>32</td><td>9</td><td>8</td><td>8</td><td style="color:var(--green);font-weight:700;">73</td><td>Google Ads</td></tr><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">KPI-002</td><td>Startup X Cold Email</td><td>0.8</td><td>89.00</td><td>0.9</td><td>0.4</td><td>78</td><td>3</td><td>4</td><td>3</td><td style="color:var(--red);font-weight:700;">15</td><td>Mailchimp</td></tr><tr><td style="font-family:JetBrains Mono,monospace;font-size:10px;">KPI-003</td><td>Restaurant Y FB</td><td>2.1</td><td>18.00</td><td>3.2</td><td>3.8</td><td>45</td><td>7</td><td>7</td><td>6</td><td style="color:var(--amber);font-weight:700;">49</td><td>Facebook Ads</td></tr></tbody></table><p class="dw-ex-note">Target: 30-50 campanii cu KPI reale. Formular de consim\\u021B\\u0103m\\u00E2nt obligatoriu per client. C = R + (I\\u00D7F).</p>',
+
+    'interRater': '<p><strong>Exemplu de inter-rater reliability:</strong></p><table class="dw-ex-table"><thead><tr><th>Campanie</th><th>R1:R</th><th>R1:I</th><th>R1:F</th><th>R2:R</th><th>R2:I</th><th>R2:F</th><th>R3:R</th><th>R3:I</th><th>R3:F</th></tr></thead><tbody><tr><td>Nike Retarget</td><td>9</td><td>8</td><td>8</td><td>8</td><td>8</td><td>7</td><td>9</td><td>7</td><td>8</td></tr></tbody></table><p class="dw-ex-note">Target: ICC sau Krippendorff \\u03B1 > 0.70 (acceptabil), > 0.80 (excelent). 3 evaluatori independen\\u021Bi, 25-30 campanii.</p>',
+
+    'aiAudit': '<p><strong>Exemplu de compara\\u021Bie AI vs Human:</strong></p><table class="dw-ex-table"><thead><tr><th>Campanie</th><th>AI R</th><th>AI I</th><th>AI F</th><th>AI C</th></tr></thead><tbody><tr><td>Nike Retarget</td><td>8.5</td><td>7.8</td><td>8.2</td><td style="color:var(--green);font-weight:700;">72.5</td></tr></tbody></table><p class="dw-ex-note">Target: Corela\\u021Bie AI vs Human r > 0.70. Dac\\u0103 se confirm\\u0103: contribu\\u021Bie original\\u0103 rar\\u0103 \\u00EEn literatur\\u0103!</p>',
+
+    'sections': '<p><strong>Exemplu de progres redactare:</strong></p><div style="display:flex;flex-direction:column;gap:4px;"><div class="dw-ex-section"><span class="es-name">Introduction</span><span class="dw-ex-kv">1850 / 2000</span><div class="es-bar"><div class="es-fill" style="width:92%;"></div></div></div><div class="dw-ex-section"><span class="es-name">Literature Review</span><span class="dw-ex-kv">3200 / 3500</span><div class="es-bar"><div class="es-fill" style="width:91%;"></div></div></div><div class="dw-ex-section"><span class="es-name">Methodology</span><span class="dw-ex-kv">1500 / 3000</span><div class="es-bar"><div class="es-fill" style="width:50%;background:var(--amber);"></div></div></div><div class="dw-ex-section"><span class="es-name">Results</span><span class="dw-ex-kv">0 / 4000</span><div class="es-bar"><div class="es-fill" style="width:0%;"></div></div></div></div><p class="dw-ex-note">Total target: 12.000-15.000 cuvinte. Completeaz\\u0103 cuvintele pe m\\u0103sur\\u0103 ce scrii.</p>',
+
+    'submission': '<p><strong>Exemplu de submisie:</strong></p><div class="dw-ex-def"><strong>Jurnal:</strong> Journal of Business Research (IF ~10.5)<br><strong>Data submisie:</strong> 2026-08-15<br><strong>Status:</strong> Submitted<br><strong>Note:</strong> Cover letter trimis, format APA 7th, 12.340 cuvinte, 87 referin\\u021Be, 10 tabele, 4 figuri.</div><p class="dw-ex-note">Jurnale \\u021Bint\\u0103: JBR (IF 10.5), JAMS (IF 15.8), EJM (IF 3.7), JAd (IF 5.8), Studia UMoldaviae (start regional).</p>'
+  };
+
+  function renderExample(dataType, dataKey) {
+    var key = dataKey || dataType;
+    var content = EXAMPLES[key] || EXAMPLES[dataType] || '';
+    if (!content) return '';
+    return '<div class="dw-example"><div class="dw-ex-toggle"><span class="dw-ex-arrow">\\u25B6</span> EXEMPLU BEST PRACTICE</div><div class="dw-ex-body">' + content + '</div></div>';
+  }
+
   /* ═══ DATA WORKSPACE DISPATCHER ═══ */
   function renderDataWorkspace(stageId, taskIdx, task) {
     var dwKey = stageId + '-' + taskIdx;
@@ -404,7 +481,8 @@ function App() {
     else if (task.dataType === 'modelComparison') inner = renderModelCompWS(stageId, data);
     else if (task.dataType === 'sectionProgress') inner = renderSectionProgressWS(stageId, data);
     else if (task.dataType === 'submission') inner = renderSubmissionWS(stageId, data);
-    return '<div class="data-workspace" id="dw-'+dwKey+'"><div class="dw-toggle"><span class="dw-arrow">\\u25B6</span> DATE DE LUCRU'+(count>0?' <span class="dw-badge">'+count+' intr\\u0103ri</span>':'')+'</div><div class="dw-content" id="dwc-'+dwKey+'">'+inner+'</div></div>';
+    var example = renderExample(task.dataType, task.dataKey);
+    return '<div class="data-workspace" id="dw-'+dwKey+'"><div class="dw-toggle"><span class="dw-arrow">\\u25B6</span> DATE DE LUCRU'+(count>0?' <span class="dw-badge">'+count+' intr\\u0103ri</span>':'')+'</div><div class="dw-content" id="dwc-'+dwKey+'">'+example+inner+'</div></div>';
   }
 
   function getDataCount(data, key, type) {
@@ -804,6 +882,13 @@ function App() {
         var ws = el.closest('.data-workspace');
         ws.classList.toggle('open');
         openWorkspaces[ws.id.replace('dw-','')] = ws.classList.contains('open');
+      });
+    });
+    /* Example toggles */
+    document.querySelectorAll('.dw-ex-toggle').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var ex = el.closest('.dw-example');
+        ex.classList.toggle('open');
       });
     });
     /* Inline field auto-save: notes, definitions, kvForm, sections, submission */
