@@ -358,6 +358,100 @@ export const ro: Dictionary = {
     exampleLabel: "Exemplu:",
     exampleText: "Campanie video cinematică (F=9) + promisiune fascinantă (I=8) \u2192 I\u00d7F = 72. Dar trimisă către un public complet greșit (R=2) \u2192",
     exampleResult: "Poarta se activează \u2192 Eșec Critic. Buget ars.",
+    /* PUNCT 1 */
+    safetyLabel: "FILTRUL DE SIGURANȚĂ",
+    subtitle: "De ce investiția ta se oprește aici dacă nu ai permisiunea de a fi ascultat.",
+    /* PUNCT 2 */
+    introLines: [
+      "Poți avea cel mai frumos mesaj din lume.",
+      "Poți avea cel mai mare buget din industrie.",
+      "Poți avea echipa perfectă, agenția perfectă, momentul perfect.",
+    ],
+    introBreak: "Nimic din asta nu contează dacă vorbești cu oamenii greșiți.",
+    introProtocol: "R IF C nu este o medie aritmetică \u2014 este un protocol secvențial. Relevanța (R) este întrerupătorul de circuit. Dacă mesajul tău nu trece testul relevanței, sistemul se închide automat pentru a preveni risipa. Nicio execuție creativă (F) și nicio ofertă imbatabilă (I) nu pot repara un mesaj trimis cui nu trebuie, când nu trebuie.",
+    /* PUNCT 3 */
+    binaryRule: "IF  R < 3  \u2192  EȘEC CRITIC AUTOMAT",
+    toggleBullets: [
+      "Poarta se închide",
+      "Bugetul este blocat",
+      "Comunicarea devine \u201ezgomot\u201d",
+      "Orice I \u00d7 F este multiplicat cu ZERO în percepția clientului",
+    ],
+    toggleOnLabel: "R \u2265 3",
+    toggleOffLabel: "R < 3",
+    /* PUNCT 4 */
+    disasterTitle: "SIMULAREA DEZASTRULUI",
+    disaster1Scenario: "Campanie: Video cinematic (F=9) + Ofertă unică (I=8). Dar targetare greșită (R=2).",
+    disaster1OnPaper: "Pe hârtie: 74/110 \u2014 CLARITATE MEDIE",
+    disaster1Reality: "R = 2 \u2192 POARTA ACTIVATĂ",
+    disaster1Verdict: "În realitate: 0 \u2014 EȘEC CRITIC. BUGET ARS. Ai plătit pentru \u201eartă\u201d pe care nimeni nu o dorește.",
+    disaster2Intro: "Și mai dramatic: R=2, I=10, F=10",
+    disaster2OnPaper: "Pe hârtie: Claritate Supremă (102/110).",
+    disaster2Reality: "În realitate: Zero conversii. Zero ROI.",
+    disaster2Verdict: "Scorul 102 e cea mai scumpă iluzie din marketing.",
+    /* PUNCT 5 */
+    analogiesTitle: "Ce înseamnă R < 3 în lumea reală:",
+    analogies: [
+      { icon: "Hotel", text: "Hotel 5 stele pe o insulă fără aeroport. Camerele sunt perfecte. Nu ajunge nimeni." },
+      { icon: "Megaphone", text: "Discurs despre veganism la o convenție de vânătoare. Mesajul e corect. Audiența e greșită." },
+      { icon: "Pill", text: "Leac pentru migrene promovat la o clinică de ortopedie. Produsul funcționează. Pacienții nu au nevoie." },
+    ],
+    analogiesConclusion: "Toate au I = 10 și F = 10. Toate au R = 0. Toate sunt eșecuri.",
+    /* PUNCT 6 */
+    consequencesTitle: "Ce se întâmplă când Poarta se închide:",
+    consequences: [
+      "CTR sub 0.1% \u2014 mesajul e filtrat de \u201escutul anti-reclamă\u201d al creierului",
+      "CPL infinit \u2014 buget consumat pe click-uri fără intenție de cumpărare",
+      "Bounce rate 85%+ \u2014 vizitatorii realizează instant \u201enu e pentru mine\u201d",
+      "ROAS sub 0.5x \u2014 fiecare euro investit produce sub 50 de cenți",
+      "Echipa crede că problema e la creative. De fapt e la targeting.",
+    ],
+    mathThresholds: [
+      { r: 1, equation: "1 + (10 \u00d7 10) = 101", note: "Pe hârtie: Suprem. Realitate: 90% audiență greșită." },
+      { r: 2, equation: "2 + (10 \u00d7 10) = 102", note: "Pe hârtie: Suprem. Realitate: 80% audiență greșită." },
+      { r: 3, equation: "3 + (10 \u00d7 10) = 103", note: "PRAG MINIM \u2014 Poarta se deschide." },
+    ],
+    mathConclusion: "Sub R = 3, scorul e o ficțiune. Conversiile sunt zero.",
+    /* PUNCT 7 */
+    protocolTitle: "PROTOCOL PRE-LANSARE: 3 Întrebări Obligatorii",
+    protocolQuestions: [
+      {
+        num: "\u2776",
+        category: "AUDIENȚA",
+        question: "\u201ePoți descrie clientul ideal în 3 propoziții fără \u2018toată lumea\u2019 sau \u2018oricine\u2019?\u201d",
+        yes: "Da \u2192 Continuă",
+        no: "Nu \u2192 STOP. R < 3. Nu lansa.",
+      },
+      {
+        num: "\u2777",
+        category: "VALIDAREA",
+        question: "\u201eDin ultimele 100 de click-uri, câte au venit de la persoane care chiar pot cumpăra?\u201d",
+        yes: "Peste 50% \u2192 Continuă",
+        warning: "Sub 50% \u2192 Revizuiește targetarea",
+        no: "Nu am verificat \u2192 STOP. Verifică întâi.",
+      },
+      {
+        num: "\u2778",
+        category: "TESTUL DE 5 SECUNDE",
+        question: "\u201eUn reprezentant al audienței spune \u2018Asta e exact ce căutam\u2019 în 5 secunde?\u201d",
+        yes: "Da, sigur \u2192 Poarta e deschisă. Lansează.",
+        warning: "Poate \u2192 Testează cu un grup mai mare",
+        no: "Probabil nu \u2192 STOP. R < 3. Refă mesajul.",
+      },
+    ],
+    protocolRule: "La ORICARE întrebare \u2192 Poarta ÎNCHISĂ. Nu investi în I și F până nu rezolvi R.",
+    protocolQuote: "\u201ePoarta Relevanței anulează creativitatea. Nu trece mai departe până nu ești sigur de R.\u201d",
+    /* PUNCT 8 */
+    ghostTitle: "Dacă Poarta e închisă, ești Fantoma Invizibilă.",
+    ghostBody: "R < 3 activează automat Arhetipul #1: strigi într-o cameră goală.",
+    ghostLink: "Citește diagnosticul complet în Capitolul 06: Arhetipuri de Eșec",
+    riskFraming: "Poarta Relevanței nu e o restricție \u2014 e un mecanism de protecție. Poziționează R IF C nu doar ca metodă de marketing, ci ca instrument de management al riscului. Întrerupătorul care îți salvează bugetul înainte să fie ars pe Zgomot Estetic.",
+    /* PUNCT 9 */
+    ctaIntro: "Poarta Relevanței este checkpoint-ul zero. Dacă trece, ecuația funcționează. Dacă nu trece, nimic nu funcționează.",
+    ctaButton: "Testează cu AI Audit",
+    transitionText: "Poarta e deschisă? Atunci hai să vedem ce se întâmplă când ecuația eșuează.",
+    transitionCta: "Capitolul 06: Arhetipuri de Eșec",
+    transitionTarget: "#archetypes",
   },
   application: {
     chapter: "Capitolul 05",

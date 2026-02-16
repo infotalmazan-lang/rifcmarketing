@@ -358,6 +358,100 @@ export const en: Dictionary = {
     exampleLabel: "Example:",
     exampleText: "Cinematic video campaign (F=9) + fascinating promise (I=8) \u2192 I\u00d7F = 72. But sent to completely wrong audience (R=2) \u2192",
     exampleResult: "Gate activates \u2192 Critical Failure. Budget burned.",
+    /* PUNCT 1 */
+    safetyLabel: "SAFETY FILTER",
+    subtitle: "Why your investment stops here if you don\u2019t have permission to be heard.",
+    /* PUNCT 2 */
+    introLines: [
+      "You can have the most beautiful message in the world.",
+      "You can have the biggest budget in the industry.",
+      "You can have the perfect team, the perfect agency, the perfect timing.",
+    ],
+    introBreak: "None of it matters if you\u2019re talking to the wrong people.",
+    introProtocol: "R IF C is not an arithmetic average \u2014 it\u2019s a sequential protocol. Relevance (R) is the circuit breaker. If your message doesn\u2019t pass the relevance test, the system shuts down automatically to prevent waste. No creative execution (F) and no unbeatable offer (I) can fix a message sent to the wrong people, at the wrong time.",
+    /* PUNCT 3 */
+    binaryRule: "IF  R < 3  \u2192  AUTOMATIC CRITICAL FAILURE",
+    toggleBullets: [
+      "Gate closes",
+      "Budget is blocked",
+      "Communication becomes \u201cnoise\u201d",
+      "Any I \u00d7 F is multiplied by ZERO in the client\u2019s perception",
+    ],
+    toggleOnLabel: "R \u2265 3",
+    toggleOffLabel: "R < 3",
+    /* PUNCT 4 */
+    disasterTitle: "DISASTER SIMULATION",
+    disaster1Scenario: "Campaign: Cinematic video (F=9) + Unique offer (I=8). But wrong targeting (R=2).",
+    disaster1OnPaper: "On paper: 74/110 \u2014 MEDIUM CLARITY",
+    disaster1Reality: "R = 2 \u2192 GATE ACTIVATED",
+    disaster1Verdict: "In reality: 0 \u2014 CRITICAL FAILURE. BUDGET BURNED. You paid for \u201cart\u201d nobody wants.",
+    disaster2Intro: "Even more dramatic: R=2, I=10, F=10",
+    disaster2OnPaper: "On paper: Supreme Clarity (102/110).",
+    disaster2Reality: "In reality: Zero conversions. Zero ROI.",
+    disaster2Verdict: "The score of 102 is the most expensive illusion in marketing.",
+    /* PUNCT 5 */
+    analogiesTitle: "What R < 3 means in the real world:",
+    analogies: [
+      { icon: "Hotel", text: "5-star hotel on an island with no airport. Rooms are perfect. Nobody gets there." },
+      { icon: "Megaphone", text: "Veganism speech at a hunting convention. Message is correct. Audience is wrong." },
+      { icon: "Pill", text: "Migraine cure marketed at an orthopedic clinic. Product works. Patients don\u2019t need it." },
+    ],
+    analogiesConclusion: "All have I = 10 and F = 10. All have R = 0. All are failures.",
+    /* PUNCT 6 */
+    consequencesTitle: "What happens when the Gate closes:",
+    consequences: [
+      "CTR under 0.1% \u2014 message filtered by the brain\u2019s \u201cad shield\u201d",
+      "Infinite CPL \u2014 budget consumed on clicks with no purchase intent",
+      "Bounce rate 85%+ \u2014 visitors instantly realize \u201cthis isn\u2019t for me\u201d",
+      "ROAS under 0.5x \u2014 every euro invested produces under 50 cents",
+      "Team thinks the problem is creative. It\u2019s actually targeting.",
+    ],
+    mathThresholds: [
+      { r: 1, equation: "1 + (10 \u00d7 10) = 101", note: "On paper: Supreme. Reality: 90% wrong audience." },
+      { r: 2, equation: "2 + (10 \u00d7 10) = 102", note: "On paper: Supreme. Reality: 80% wrong audience." },
+      { r: 3, equation: "3 + (10 \u00d7 10) = 103", note: "MINIMUM THRESHOLD \u2014 Gate opens." },
+    ],
+    mathConclusion: "Below R = 3, the score is fiction. Conversions are zero.",
+    /* PUNCT 7 */
+    protocolTitle: "PRE-LAUNCH PROTOCOL: 3 Mandatory Questions",
+    protocolQuestions: [
+      {
+        num: "\u2776",
+        category: "AUDIENCE",
+        question: "\u201cCan you describe the ideal client in 3 sentences without \u2018everyone\u2019 or \u2018anyone\u2019?\u201d",
+        yes: "Yes \u2192 Continue",
+        no: "No \u2192 STOP. R < 3. Don\u2019t launch.",
+      },
+      {
+        num: "\u2777",
+        category: "VALIDATION",
+        question: "\u201cOf the last 100 ad clicks, how many came from people who can actually buy?\u201d",
+        yes: "Over 50% \u2192 Continue",
+        warning: "Under 50% \u2192 Revise targeting",
+        no: "Haven\u2019t checked \u2192 STOP. Check first.",
+      },
+      {
+        num: "\u2778",
+        category: "THE 5-SECOND TEST",
+        question: "\u201cDoes a target audience rep say \u2018This is exactly what I need\u2019 in 5 seconds?\u201d",
+        yes: "Yes, definitely \u2192 Gate is open. Launch.",
+        warning: "Maybe \u2192 Test with a larger group",
+        no: "Probably not \u2192 STOP. R < 3. Redo the message.",
+      },
+    ],
+    protocolRule: "To ANY question \u2192 Gate CLOSED. Don\u2019t invest in I and F until you fix R.",
+    protocolQuote: "\u201cThe Relevance Gate overrides creativity. Don\u2019t proceed until you\u2019re certain about R.\u201d",
+    /* PUNCT 8 */
+    ghostTitle: "If the Gate is closed, you\u2019re the Invisible Ghost.",
+    ghostBody: "R < 3 automatically activates Archetype #1: screaming into an empty room.",
+    ghostLink: "Read the full diagnosis in Chapter 06: Failure Archetypes",
+    riskFraming: "The Relevance Gate isn\u2019t a restriction \u2014 it\u2019s a protection mechanism. It positions R IF C not just as a marketing method, but as a risk management instrument. The circuit breaker that saves your budget before it\u2019s burned on Aesthetic Noise.",
+    /* PUNCT 9 */
+    ctaIntro: "The Relevance Gate is checkpoint zero. If it passes, the equation works. If it doesn\u2019t pass, nothing works.",
+    ctaButton: "Test with AI Audit",
+    transitionText: "Gate is open? Then let\u2019s see what happens when the equation fails.",
+    transitionCta: "Chapter 06: Failure Archetypes",
+    transitionTarget: "#archetypes",
   },
   application: {
     chapter: "Chapter 05",

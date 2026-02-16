@@ -211,6 +211,60 @@ export interface Dictionary {
     exampleLabel: string;
     exampleText: string;
     exampleResult: string;
+    /* PUNCT 1 — new label + subtitle */
+    safetyLabel: string;
+    subtitle: string;
+    /* PUNCT 2 — intro anaphora */
+    introLines: string[];
+    introBreak: string;
+    introProtocol: string;
+    /* PUNCT 3 — binary rule + toggle */
+    binaryRule: string;
+    toggleBullets: string[];
+    toggleOnLabel: string;
+    toggleOffLabel: string;
+    /* PUNCT 4 — disaster simulation */
+    disasterTitle: string;
+    disaster1Scenario: string;
+    disaster1OnPaper: string;
+    disaster1Reality: string;
+    disaster1Verdict: string;
+    disaster2Intro: string;
+    disaster2OnPaper: string;
+    disaster2Reality: string;
+    disaster2Verdict: string;
+    /* PUNCT 5 — analogies */
+    analogiesTitle: string;
+    analogies: { icon: string; text: string }[];
+    analogiesConclusion: string;
+    /* PUNCT 6 — consequences + math */
+    consequencesTitle: string;
+    consequences: string[];
+    mathThresholds: { r: number; equation: string; note: string }[];
+    mathConclusion: string;
+    /* PUNCT 7 — pre-launch protocol */
+    protocolTitle: string;
+    protocolQuestions: {
+      num: string;
+      category: string;
+      question: string;
+      yes: string;
+      warning?: string;
+      no: string;
+    }[];
+    protocolRule: string;
+    protocolQuote: string;
+    /* PUNCT 8 — ghost archetype link */
+    ghostTitle: string;
+    ghostBody: string;
+    ghostLink: string;
+    riskFraming: string;
+    /* PUNCT 9 — CTA + transition */
+    ctaIntro: string;
+    ctaButton: string;
+    transitionText: string;
+    transitionCta: string;
+    transitionTarget: string;
   };
   application: {
     chapter: string;
