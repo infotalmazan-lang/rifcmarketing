@@ -3,16 +3,13 @@
 import { useEffect } from "react";
 import { useTranslation } from "@/lib/i18n";
 
-/* ─────────── helper: small colored bar ─────────── */
-const Bar = ({ color }: { color: string }) => (
-  <div style={{ width: 40, height: 3, background: color, borderRadius: 2, marginBottom: 8 }} />
-);
-
 export default function WhitePaperPage() {
   const { t } = useTranslation();
 
-  /* auto-trigger print dialog on load */
+  /* auto-trigger print only when opened directly (not inside iframe) */
   useEffect(() => {
+    const isInIframe = window.self !== window.top;
+    if (isInIframe) return;
     const timeout = setTimeout(() => window.print(), 600);
     return () => clearTimeout(timeout);
   }, []);

@@ -1,11 +1,12 @@
 "use client";
 
+import { useState, useCallback, useRef } from "react";
 import { useTranslation } from "@/lib/i18n";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { GradientBorderBlock, StampBadge } from "@/components/ui/V2Elements";
-import { FileText, BarChart3, ClipboardList, BookOpen, Download } from "lucide-react";
+import { FileText, BarChart3, ClipboardList, BookOpen, Download, Loader2 } from "lucide-react";
 
 const ICONS = [
   <FileText key="ft" size={32} />,
@@ -16,6 +17,25 @@ const ICONS = [
 
 export default function ResourcesPage() {
   const { t } = useTranslation();
+  const [downloading, setDownloading] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const handleDownload = useCallback(() => {
+    setDownloading(true);
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    iframe.src = "/whitepaper?print=1";
+    iframe.onload = () => {
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.print();
+        } catch {
+          window.open("/whitepaper", "_blank");
+        }
+        setDownloading(false);
+      }, 800);
+    };
+  }, []);
 
   const STATUS_MAP: Record<string, { text: string; color: string; canDownload: boolean }> = {
     available: { text: t.resourcesPage.download, color: "#059669", canDownload: true },
@@ -26,6 +46,7 @@ export default function ResourcesPage() {
   return (
     <>
       <Navbar />
+      <iframe ref={iframeRef} style={{ display: "none" }} title="whitepaper-print" />
       <main className="pt-[120px] pb-[80px] px-6 md:px-10 max-w-content mx-auto">
         <SectionHeader
           chapter={t.resourcesPage.chapter}
@@ -53,14 +74,14 @@ export default function ResourcesPage() {
                     {r.desc}
                   </p>
                   {statusInfo.canDownload ? (
-                    <a
-                      href="/whitepaper"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[2px] uppercase px-6 py-3 bg-rifc-green text-surface-bg border border-rifc-green rounded-sm transition-all duration-300 hover:opacity-90 no-underline"
+                    <button
+                      onClick={handleDownload}
+                      disabled={downloading}
+                      className="flex items-center gap-2 font-mono text-[11px] tracking-[2px] uppercase px-6 py-3 bg-rifc-green text-surface-bg border border-rifc-green rounded-sm transition-all duration-300 hover:opacity-90 disabled:opacity-60"
                     >
-                      <Download size={14} /> {statusInfo.text}
-                    </a>
+                      {downloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                      {downloading ? "Se pregătește..." : statusInfo.text}
+                    </button>
                   ) : (
                     <StampBadge text={statusInfo.text} color={statusInfo.color} />
                   )}
