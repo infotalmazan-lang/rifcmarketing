@@ -1,9 +1,43 @@
 import type { Metadata } from "next";
+import { createServerClient } from "@supabase/ssr";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rifcmarketing.com";
-const SITE_NAME = "R IF C Marketing";
-const DEFAULT_DESCRIPTION =
+export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rifcmarketing.com";
+export const SITE_NAME = "R IF C Marketing";
+export const DEFAULT_DESCRIPTION =
   "R IF C este primul framework de marketing care demonstreaz\u0103 matematic c\u0103 Forma este un Multiplicator exponen\u021bial. R + (I \u00d7 F) = C. M\u0103soar\u0103-\u021bi Claritatea marketingului.";
+
+/** Fetch SEO overrides from DB and return Metadata for a given path */
+export async function generateSeoMetadata(pagePath: string): Promise<Metadata> {
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    );
+
+    const { data } = await supabase
+      .from("seo_overrides")
+      .select("meta_title, meta_description, og_image_url")
+      .eq("page_path", pagePath)
+      .single();
+
+    if (data) {
+      return createMetadata({
+        path: pagePath,
+        ...(data.meta_title && { title: data.meta_title }),
+        ...(data.meta_description && { description: data.meta_description }),
+        ...(data.og_image_url && {
+          openGraph: { images: [{ url: data.og_image_url, width: 1200, height: 630, alt: SITE_NAME }] },
+          twitter: { images: [data.og_image_url] },
+        }),
+      });
+    }
+  } catch {
+    // fallback to defaults
+  }
+
+  return createMetadata({ path: pagePath });
+}
 
 export function createMetadata(overrides: Partial<Metadata> & { path?: string } = {}): Metadata {
   const { path = "", ...rest } = overrides;
