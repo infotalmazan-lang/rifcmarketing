@@ -11,37 +11,37 @@ const ROADMAP_HTML = `<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #0a0a0b;
-  --surface: #111113;
-  --surface2: #18181b;
-  --surface3: #1f1f23;
-  --border: #27272a;
-  --border2: #3f3f46;
-  --text: #fafafa;
-  --text2: #a1a1aa;
-  --text3: #71717a;
-  --red: #ef4444;
-  --red-dim: #dc26261a;
-  --blue: #3b82f6;
-  --blue-dim: #2563eb1a;
-  --green: #22c55e;
+  --bg: #f8f9fa;
+  --surface: #ffffff;
+  --surface2: #f1f3f5;
+  --surface3: #e9ecef;
+  --border: #dee2e6;
+  --border2: #ced4da;
+  --text: #1a1a2e;
+  --text2: #495057;
+  --text3: #868e96;
+  --red: #dc2626;
+  --red-dim: #dc262612;
+  --blue: #2563eb;
+  --blue-dim: #2563eb12;
+  --green: #059669;
   --green-dim: #059669aa;
-  --green-dim2: #05966922;
-  --amber: #f59e0b;
-  --amber-dim: #d976061a;
-  --violet: #8b5cf6;
-  --violet-dim: #7c3aed1a;
-  --cyan: #06b6d4;
-  --cyan-dim: #0891b21a;
-  --pink: #ec4899;
-  --pink-dim: #db27771a;
+  --green-dim2: #05966915;
+  --amber: #d97706;
+  --amber-dim: #d9770612;
+  --violet: #7c3aed;
+  --violet-dim: #7c3aed12;
+  --cyan: #0891b2;
+  --cyan-dim: #0891b212;
+  --pink: #db2777;
+  --pink-dim: #db277712;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html, body { height:100%; }
 body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif; overflow-x:hidden; }
 ::selection { background:var(--red); color:#fff; }
 ::-webkit-scrollbar { width:6px; }
-::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-track { background:var(--surface2); }
 ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:3px; }
 
 .app { display:flex; min-height:100vh; }
@@ -72,7 +72,7 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .progress-bar .stats { display:flex; justify-content:space-between; margin-top:6px; font-size:11px; color:var(--text3); }
 
 .main { margin-left:290px; flex:1; min-height:100vh; }
-.main-header { padding:24px 40px; border-bottom:1px solid var(--border); background:var(--surface); position:sticky; top:0; z-index:50; backdrop-filter:blur(20px); }
+.main-header { padding:24px 40px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.92); position:sticky; top:0; z-index:50; backdrop-filter:blur(20px); }
 .main-header h1 { font-size:20px; font-weight:700; }
 .main-header .subtitle { font-size:12px; color:var(--text3); margin-top:2px; }
 
