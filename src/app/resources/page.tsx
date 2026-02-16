@@ -53,9 +53,14 @@ export default function ResourcesPage() {
                     {r.desc}
                   </p>
                   {statusInfo.canDownload ? (
-                    <button className="flex items-center gap-2 font-mono text-[11px] tracking-[2px] uppercase px-6 py-3 bg-rifc-green text-surface-bg border border-rifc-green rounded-sm transition-all duration-300 hover:opacity-90">
+                    <a
+                      href="/whitepaper"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 font-mono text-[11px] tracking-[2px] uppercase px-6 py-3 bg-rifc-green text-surface-bg border border-rifc-green rounded-sm transition-all duration-300 hover:opacity-90 no-underline"
+                    >
                       <Download size={14} /> {statusInfo.text}
-                    </button>
+                    </a>
                   ) : (
                     <StampBadge text={statusInfo.text} color={statusInfo.color} />
                   )}
