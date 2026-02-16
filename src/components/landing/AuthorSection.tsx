@@ -48,17 +48,17 @@ export default function AuthorSection() {
       <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-14 max-w-4xl mx-auto mb-10">
         {/* Author photo */}
         <div className="shrink-0">
-          <div className="w-[160px] h-[160px] md:w-[200px] md:h-[200px] rounded-full border-2 border-border-light overflow-hidden relative">
+          <div className="w-[200px] h-[260px] md:w-[260px] md:h-[340px] rounded-lg border-2 border-border-light overflow-hidden relative">
             <Image
               src="/images/dumitru-talmazan.jpg"
               alt="Dumitru Talmazan"
               fill
               className="object-cover"
-              sizes="200px"
+              sizes="260px"
             />
-            {/* Decorative ring */}
+            {/* Decorative border accent */}
             <div
-              className="absolute inset-[-4px] rounded-full border border-rifc-red/20"
+              className="absolute inset-[-4px] rounded-lg border border-rifc-red/20"
               aria-hidden="true"
             />
           </div>
@@ -92,15 +92,15 @@ export default function AuthorSection() {
       {/* ════════════════════════════════════════════════════
           PUNCT 3 — Personal Element (integrated with bio)
           ════════════════════════════════════════════════════ */}
-      <div className="max-w-4xl mx-auto mb-16">
-        <div className="px-6 py-6 md:px-8 md:py-8 rounded-sm bg-[rgba(255,255,255,0.02)] border border-border-light">
-          <p className="font-body text-[14px] md:text-[16px] italic text-text-muted leading-[1.9] mb-4">
+      <div className="max-w-3xl mx-auto mb-16">
+        <div className="px-5 py-4 md:px-6 md:py-5 rounded-sm bg-[rgba(255,255,255,0.02)] border border-border-light">
+          <p className="font-body text-[13px] md:text-[14px] italic text-text-muted leading-[1.8] mb-3">
             {a.personalBody}
           </p>
-          <p className="font-mono text-[14px] md:text-[16px] font-semibold text-text-primary leading-[1.6] mb-1">
+          <p className="font-mono text-[12px] md:text-[13px] font-semibold text-text-primary leading-[1.5] mb-0.5">
             {a.personalHighlight1}
           </p>
-          <p className="font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.6]">
+          <p className="font-body text-[12px] md:text-[13px] text-text-secondary leading-[1.5]">
             {a.personalHighlight2}
           </p>
         </div>
