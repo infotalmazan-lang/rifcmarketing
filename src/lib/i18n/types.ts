@@ -850,13 +850,6 @@ export interface Dictionary {
     transitionCta: string;
     transitionTarget: string;
   };
-  resourcesSection: {
-    chapter: string;
-    titleBold: string;
-    description: string;
-    resources: { title: string; desc: string; status: "available" | "coming_soon" | "in_development" }[];
-    statusLabels: Record<string, { text: string; color: string }>;
-  };
   author: {
     chapter: string;
     name: string;

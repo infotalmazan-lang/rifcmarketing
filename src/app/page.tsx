@@ -14,7 +14,6 @@ import ComparisonSection from "@/components/landing/ComparisonSection";
 import ImplementationSection from "@/components/landing/ImplementationSection";
 import CaseStudiesSection from "@/components/landing/CaseStudiesSection";
 import AIPromptsSection from "@/components/landing/AIPromptsSection";
-import ResourcesSection from "@/components/landing/ResourcesSection";
 import AuthorSection from "@/components/landing/AuthorSection";
 import CTASection from "@/components/landing/CTASection";
 
@@ -35,7 +34,6 @@ export default function HomePage() {
         <ImplementationSection />
         <CaseStudiesSection />
         <AIPromptsSection />
-        <ResourcesSection />
         <AuthorSection />
         <CTASection />
       </main>

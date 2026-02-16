@@ -24,7 +24,6 @@ export const ro: Dictionary = {
       ]},
       { id: "instrumente", label: "Instrumente", submenu: [
         { id: "ai-prompts", label: "Integrare AI" },
-        { id: "resources", label: "Resurse" },
       ]},
       { id: "author", label: "Despre" },
     ],
@@ -1645,22 +1644,6 @@ export const ro: Dictionary = {
     transitionLine2: "Acum vezi cum arat\u0103 R IF C \u00een ac\u021biune.",
     transitionCta: "Capitolul 11 \u2192 Studii de Caz",
     transitionTarget: "#case-studies",
-  },
-  resourcesSection: {
-    chapter: "Descărcări",
-    titleBold: "Resurse",
-    description: "Tot ce ai nevoie pentru a implementa R IF C în operațiunile tale de marketing.",
-    resources: [
-      { title: "White Paper (Codul Sursă)", desc: "Protocolul R IF C complet: filozofie, metodologie, scoring, ghid de implementare + 35 exemple de diagnostic din industrii reale (e-commerce, SaaS, servicii profesionale, retail). Documentul fundațional \u2014 84 pagini.", status: "available" },
-      { title: "Șablon de Scoring", desc: "Google Sheets / Excel cu calcul automat al scorului C, Poarta Relevanței, dashboard per campanie, grafice evoluție C și export pentru rapoarte de performanță către management sau clienți.", status: "coming_soon" },
-      { title: "Card de Diagnostic Rapid", desc: "One-pager printabil: ecuația, definițiile variabilelor, scala de scoring, checklist-ul cu 4 întrebări de audit și arhetipurile de eșec. Ideal pentru echipa de marketing, briefing-uri sau ședințe de strategie.", status: "coming_soon" },
-      { title: "Lucrare Științifică", desc: "Publicație academică peer-reviewed cu validare empirică, metodologie și analiză comparativă față de framework-urile existente.", status: "in_development" },
-    ],
-    statusLabels: {
-      available: { text: "Disponibil", color: "#059669" },
-      coming_soon: { text: "În Curând", color: "rgba(220,38,38,0.5)" },
-      in_development: { text: "În Dezvoltare", color: "rgba(220,38,38,0.5)" },
-    },
   },
   author: {
     chapter: "Creatorul",

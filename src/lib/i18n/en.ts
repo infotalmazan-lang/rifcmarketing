@@ -24,7 +24,6 @@ export const en: Dictionary = {
       ]},
       { id: "tools", label: "Tools", submenu: [
         { id: "ai-prompts", label: "AI Integration" },
-        { id: "resources", label: "Resources" },
       ]},
       { id: "author", label: "About" },
     ],
@@ -1628,22 +1627,6 @@ export const en: Dictionary = {
     transitionLine2: "Now see R IF C in action.",
     transitionCta: "Chapter 11 \u2192 Case Studies",
     transitionTarget: "#case-studies",
-  },
-  resourcesSection: {
-    chapter: "Downloads",
-    titleBold: "Resources",
-    description: "Everything you need to implement R IF C in your marketing operations.",
-    resources: [
-      { title: "White Paper (Source Code)", desc: "The complete R IF C Protocol: philosophy, methodology, scoring, implementation guide + 35 diagnostic examples from real industries (e-commerce, SaaS, professional services, retail). The foundational document \u2014 84 pages.", status: "available" },
-      { title: "Scoring Template", desc: "Google Sheets / Excel with automated C score calculation, Relevance Gate trigger, per-campaign dashboard, C evolution charts, and export for performance reports to management or clients.", status: "coming_soon" },
-      { title: "Quick Diagnostic Card", desc: "One-page printable reference: the equation, variable definitions, scoring scale, 4-question audit checklist, and failure archetypes. Ideal for marketing teams, briefings, or strategy sessions.", status: "coming_soon" },
-      { title: "Scientific Paper", desc: "Peer-reviewed academic publication with empirical validation, methodology, and comparative analysis against existing frameworks.", status: "in_development" },
-    ],
-    statusLabels: {
-      available: { text: "Available", color: "#059669" },
-      coming_soon: { text: "Coming Soon", color: "rgba(220,38,38,0.5)" },
-      in_development: { text: "In Development", color: "rgba(220,38,38,0.5)" },
-    },
   },
   author: {
     chapter: "The Creator",
