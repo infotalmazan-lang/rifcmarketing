@@ -1632,7 +1632,7 @@ export const en: Dictionary = {
     chapter: "The Creator",
     name: "Dumitru",
     nameBold: "Talmazan",
-    bio1: "Marketing strategist, mentor, and business systems architect.",
+    bio1: "Marketing strategist, mentor, and business systems architect.\nUniversity lecturer \u2014 State University of Moldova (Master in Marketing) and Technical University of Moldova (Bachelor in Marketing).",
     bio2: "The framework was born from frustration with budgets burned on undiagnosed campaigns.",
     quote: "\u201cTo restore respect for the client through messages that deliver value before asking for money.\u201d",
     tags: ["Marketing Strategist", "R IF C Protocol Creator", "CONTINUUM GRUP"],
@@ -1672,10 +1672,10 @@ export const en: Dictionary = {
     signatureQuote: "Let\u2019s restore respect for the client\nthrough messages that deliver value\nbefore asking for money.",
     signatureAuthor: "\u2014 Dumitru Talmazan",
     /* PUNCT 5 — social proof */
-    entity1: "CONTINUUM GRUP",
-    entity1Desc: "Memory preservation ecosystem",
-    entity2: "Talmazan School",
-    entity2Desc: "Business mentoring and consulting",
+    entity1: "CONTINUUM.MD",
+    entity1Desc: "The Architect of the Legacy Flow \u2014 a strategic infrastructure that transforms ephemeral moments into eternity, ensuring that no voice is lost in the noise of time.",
+    entity2: "TALMAZAN SCHOOL",
+    entity2Desc: "The Engineer of Growth Systems \u2014 a strategic infrastructure that transforms intuition into methodology, ensuring that new business visions don\u2019t collapse under the weight of marketing chaos.",
     founderLabel: "Founder",
     statsLine: "3 years of development \u00b7 1,960+ students \u00b7 60+ institutions \u00b7 52K EUR validated revenue",
     /* PUNCT 6 — CTA */

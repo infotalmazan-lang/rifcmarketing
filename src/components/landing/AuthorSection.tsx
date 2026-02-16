@@ -4,7 +4,6 @@ import { useTranslation } from "@/lib/i18n";
 import Link from "next/link";
 import Image from "next/image";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { GradientBorderBlock } from "@/components/ui/V2Elements";
 
 export default function AuthorSection() {
@@ -13,28 +12,34 @@ export default function AuthorSection() {
 
   return (
     <section id="author" className="py-[120px] px-6 md:px-10 max-w-content mx-auto relative overflow-hidden">
-      <SectionHeader
-        chapter={a.chapter}
-        titlePlain={a.name}
-        titleBold={a.nameBold}
-        watermarkNumber="DT"
-        watermarkColor="#DC2626"
-      />
-
       {/* ════════════════════════════════════════════════════
-          PUNCT 1 — Label + Name + Subtitle
+          PUNCT 1 — Chapter + Name + Label + Subtitle + Watermark
           ════════════════════════════════════════════════════ */}
-      <div className="text-center mb-16">
-        <div className="font-mono text-[11px] md:text-[12px] tracking-[4px] uppercase text-rifc-red font-bold mb-4">
-          {a.label}
+      <div className="relative mb-16">
+        {/* Watermark "DT" */}
+        <div
+          className="absolute -right-4 -top-8 md:right-4 md:-top-4 font-heading text-[120px] md:text-[180px] font-black leading-none select-none pointer-events-none"
+          style={{ color: "rgba(220,38,38,0.06)" }}
+          aria-hidden="true"
+        >
+          DT
         </div>
-        <h3 className="font-heading text-[36px] md:text-[48px] font-light text-text-primary leading-[1.1] mb-3">
-          <span>{a.name} </span>
-          <span className="font-semibold">{a.nameBold}</span>
-        </h3>
-        <p className="font-heading text-[18px] md:text-[22px] italic text-text-muted leading-[1.4]">
-          {a.subtitle}
-        </p>
+
+        <div className="relative z-[1]">
+          <div className="font-mono text-[11px] md:text-[12px] tracking-[4px] uppercase text-text-muted mb-4">
+            {a.chapter}
+          </div>
+          <h3 className="font-heading text-[36px] md:text-[48px] font-light text-text-primary leading-[1.1] mb-3">
+            <span>{a.nameBold} </span>
+            <span className="font-semibold">{a.name}</span>
+          </h3>
+          <div className="font-mono text-[11px] md:text-[12px] tracking-[4px] uppercase text-rifc-red font-bold mb-4">
+            {a.label}
+          </div>
+          <p className="font-heading text-[18px] md:text-[22px] italic text-text-muted leading-[1.4]">
+            {a.subtitle}
+          </p>
+        </div>
       </div>
 
       {/* ════════════════════════════════════════════════════

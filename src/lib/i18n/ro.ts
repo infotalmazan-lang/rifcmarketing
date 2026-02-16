@@ -1649,7 +1649,7 @@ export const ro: Dictionary = {
     chapter: "Creatorul",
     name: "Dumitru",
     nameBold: "Talmazan",
-    bio1: "Strateg de marketing, mentor \u0219i arhitect de sisteme de business.",
+    bio1: "Strateg de marketing, mentor \u0219i arhitect de sisteme de business.\nLector universitar \u2014 Universitatea de Stat din Moldova (Master \u00een Marketing) \u0219i Universitatea Tehnic\u0103 a Moldovei (Licen\u021b\u0103 \u00een Marketing).",
     bio2: "Framework-ul s-a n\u0103scut din frustrarea fa\u021b\u0103 de bugete arse pe campanii f\u0103r\u0103 diagnostic.",
     quote: "\u201cS\u0103 restaur\u0103m respectul fa\u021b\u0103 de client prin mesaje care livreaz\u0103 valoare \u00eenainte de a cere bani.\u201d",
     tags: ["Marketing Strategist", "Creator Protocol R IF C", "CONTINUUM GRUP"],
@@ -1689,10 +1689,10 @@ export const ro: Dictionary = {
     signatureQuote: "S\u0103 restaur\u0103m respectul fa\u021b\u0103 de client\nprin mesaje care livreaz\u0103 valoare\n\u00eenainte de a cere bani.",
     signatureAuthor: "\u2014 Dumitru Talmazan",
     /* PUNCT 5 \u2014 social proof */
-    entity1: "CONTINUUM GRUP",
-    entity1Desc: "Ecosistem de preservare a memoriei",
-    entity2: "Talmazan School",
-    entity2Desc: "Mentorat \u0219i consultan\u021b\u0103 de business",
+    entity1: "CONTINUUM.MD",
+    entity1Desc: "Arhitectul Fluxului de Mo\u0219tenire \u2014 o infrastructur\u0103 strategic\u0103 ce transform\u0103 momentele efemere \u00een eternitate, asigur\u00e2nd c\u0103 nici o voce nu se pierde \u00een zgomotul timpului.",
+    entity2: "TALMAZAN SCHOOL",
+    entity2Desc: "Inginerul Sistemelor de Cre\u0219tere \u2014 o infrastructur\u0103 strategic\u0103 ce transform\u0103 intui\u021bia \u00een metodologie, asigur\u00e2nd c\u0103 noile viziuni de business nu se pr\u0103bu\u0219esc sub greutatea haosului de marketing.",
     founderLabel: "Fondator",
     statsLine: "3 ani de dezvoltare \u00b7 1.960+ studen\u021bi \u00b7 60+ institu\u021bii \u00b7 52K EUR revenue validat",
     /* PUNCT 6 \u2014 CTA */
