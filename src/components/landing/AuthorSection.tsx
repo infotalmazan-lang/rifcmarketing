@@ -45,16 +45,16 @@ export default function AuthorSection() {
       {/* ════════════════════════════════════════════════════
           PUNCT 5A — Photo / Avatar + intro
           ════════════════════════════════════════════════════ */}
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-14 max-w-4xl mx-auto mb-16">
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 md:gap-14 max-w-4xl mx-auto mb-10">
         {/* Author photo */}
         <div className="shrink-0">
-          <div className="w-[180px] h-[180px] md:w-[220px] md:h-[220px] rounded-full border-2 border-border-light overflow-hidden relative">
+          <div className="w-[160px] h-[160px] md:w-[200px] md:h-[200px] rounded-full border-2 border-border-light overflow-hidden relative">
             <Image
               src="/images/dumitru-talmazan.jpg"
               alt="Dumitru Talmazan"
               fill
               className="object-cover"
-              sizes="220px"
+              sizes="200px"
             />
             {/* Decorative ring */}
             <div
@@ -86,6 +86,23 @@ export default function AuthorSection() {
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════
+          PUNCT 3 — Personal Element (integrated with bio)
+          ════════════════════════════════════════════════════ */}
+      <div className="max-w-4xl mx-auto mb-16">
+        <div className="px-6 py-6 md:px-8 md:py-8 rounded-sm bg-[rgba(255,255,255,0.02)] border border-border-light">
+          <p className="font-body text-[14px] md:text-[16px] italic text-text-muted leading-[1.9] mb-4">
+            {a.personalBody}
+          </p>
+          <p className="font-mono text-[14px] md:text-[16px] font-semibold text-text-primary leading-[1.6] mb-1">
+            {a.personalHighlight1}
+          </p>
+          <p className="font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.6]">
+            {a.personalHighlight2}
+          </p>
         </div>
       </div>
 
@@ -151,23 +168,6 @@ export default function AuthorSection() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* ════════════════════════════════════════════════════
-          PUNCT 3 — Personal Element
-          ════════════════════════════════════════════════════ */}
-      <div className="max-w-3xl mx-auto mb-16">
-        <div className="px-6 py-6 md:px-8 md:py-8 rounded-sm bg-[rgba(255,255,255,0.02)] border border-border-light">
-          <p className="font-body text-[14px] md:text-[16px] italic text-text-muted leading-[1.9] mb-4">
-            {a.personalBody}
-          </p>
-          <p className="font-mono text-[14px] md:text-[16px] font-semibold text-text-primary leading-[1.6] mb-1">
-            {a.personalHighlight1}
-          </p>
-          <p className="font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.6]">
-            {a.personalHighlight2}
-          </p>
-        </div>
       </div>
 
       {/* ════════════════════════════════════════════════════
