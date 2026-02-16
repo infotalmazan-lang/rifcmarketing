@@ -72,18 +72,36 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .progress-bar .stats { display:flex; justify-content:space-between; margin-top:6px; font-size:11px; color:var(--text3); }
 
 .main { margin-left:290px; flex:1; min-height:100vh; }
-.main-header { padding:24px 40px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.92); position:sticky; top:0; z-index:50; backdrop-filter:blur(20px); }
-.main-header h1 { font-size:20px; font-weight:700; }
+.main-header { padding:24px 48px; border-bottom:1px solid var(--border); background:rgba(255,255,255,0.92); position:sticky; top:0; z-index:50; backdrop-filter:blur(20px); }
+.main-header h1 { font-size:22px; font-weight:700; }
 .main-header .subtitle { font-size:12px; color:var(--text3); margin-top:2px; }
 
-.content { padding:32px 40px 80px; max-width:960px; }
+.content { padding:32px 48px 80px; max-width:1200px; }
 
 .stage-header { margin-bottom:32px; }
 .stage-label { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:3px; font-weight:700; margin-bottom:6px; }
-.stage-title { font-size:28px; font-weight:800; line-height:1.2; margin-bottom:8px; }
-.stage-desc { font-size:14px; color:var(--text2); line-height:1.6; max-width:640px; }
+.stage-title { font-size:30px; font-weight:800; line-height:1.2; margin-bottom:8px; }
+.stage-desc { font-size:15px; color:var(--text2); line-height:1.7; max-width:900px; }
 .stage-meta { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
 .stage-meta .tag { font-size:11px; padding:4px 10px; border-radius:20px; font-weight:600; }
+
+/* ═══ QUICK GUIDE CARD ═══ */
+.quick-guide { background:linear-gradient(135deg, #f0f7ff 0%, #f8faff 100%); border:1px solid #bfdbfe; border-radius:12px; padding:24px 28px; margin-bottom:28px; position:relative; overflow:hidden; }
+.quick-guide::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--blue), var(--green)); }
+.quick-guide .qg-title { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:2px; font-weight:700; color:var(--blue); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.quick-guide .qg-title .qg-icon { font-size:16px; }
+.quick-guide .qg-body { font-size:14px; color:var(--text2); line-height:1.7; }
+.quick-guide .qg-steps { list-style:none; padding:0; margin:12px 0 0; }
+.quick-guide .qg-steps li { display:flex; align-items:flex-start; gap:12px; padding:8px 0; border-bottom:1px solid rgba(37,99,235,0.08); font-size:13px; line-height:1.6; color:var(--text2); }
+.quick-guide .qg-steps li:last-child { border:none; }
+.quick-guide .qg-num { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:#fff; background:var(--blue); width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.quick-guide .qg-steps li strong { color:var(--text); }
+.quick-guide .qg-what { margin-top:12px; padding:10px 14px; background:rgba(5,150,105,0.06); border:1px solid rgba(5,150,105,0.15); border-radius:8px; font-size:13px; color:var(--green); font-weight:600; }
+.quick-guide .qg-what strong { color:var(--text); font-weight:700; }
+
+/* ═══ TASK STEP NUMBER ═══ */
+.task-step { font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:var(--text3); background:var(--surface3); width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.task.has-site .task-step { color:var(--pink); background:var(--pink-dim); }
 
 .site-map { background:var(--surface); border:1px solid var(--pink); border-radius:12px; padding:20px; margin-bottom:24px; position:relative; overflow:hidden; }
 .site-map::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--pink), var(--violet)); }
@@ -99,13 +117,13 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 
 .task-group { margin-bottom:32px; }
 .task-group-title { font-size:13px; font-weight:700; letter-spacing:1px; color:var(--text3); text-transform:uppercase; margin-bottom:12px; padding-left:4px; }
-.task { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; overflow:hidden; transition:all .25s; }
-.task:hover { border-color:var(--border2); }
+.task { background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:10px; overflow:hidden; transition:all .25s; }
+.task:hover { border-color:var(--border2); box-shadow:0 2px 8px rgba(0,0,0,0.04); }
 .task.has-site { border-left:3px solid var(--pink); }
-.task-header { display:flex; align-items:center; gap:12px; padding:16px 20px; cursor:pointer; }
-.task-checkbox { width:20px; height:20px; border:2px solid var(--border2); border-radius:5px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s; cursor:pointer; font-size:11px; color:transparent; }
+.task-header { display:flex; align-items:center; gap:12px; padding:18px 24px; cursor:pointer; }
+.task-checkbox { width:22px; height:22px; border:2px solid var(--border2); border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s; cursor:pointer; font-size:11px; color:transparent; }
 .task-checkbox.checked { background:var(--green); border-color:var(--green); color:#fff; }
-.task-header .title { font-size:14px; font-weight:500; flex:1; }
+.task-header .title { font-size:15px; font-weight:500; flex:1; line-height:1.4; }
 .task-header .badges { display:flex; gap:6px; align-items:center; }
 .task-header .priority { font-size:10px; padding:3px 8px; border-radius:10px; font-weight:700; letter-spacing:.5px; }
 .task-header .priority.urgent { background:var(--red-dim); color:var(--red); }
@@ -115,18 +133,19 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .task-header .site-tag { font-size:9px; padding:2px 6px; border-radius:8px; background:var(--pink-dim); color:var(--pink); font-weight:700; letter-spacing:.3px; }
 .task-header .arrow { color:var(--text3); transition:transform .2s; font-size:12px; }
 .task.open .task-header .arrow { transform:rotate(180deg); }
-.task-body { display:none; padding:0 20px 20px; }
+.task-body { display:none; padding:0 24px 24px; }
 .task.open .task-body { display:block; }
-.task-detail { font-size:13px; color:var(--text2); line-height:1.7; }
+.task-detail { font-size:14px; color:var(--text2); line-height:1.8; max-width:900px; }
 .task-detail strong { color:var(--text); }
+.task-detail em { color:var(--text); font-style:italic; }
 
-.deliverable { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px 16px; margin-top:12px; }
-.deliverable .dlabel { font-size:10px; letter-spacing:2px; font-weight:700; margin-bottom:6px; }
+.deliverable { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:16px 20px; margin-top:14px; }
+.deliverable .dlabel { font-size:10px; letter-spacing:2px; font-weight:700; margin-bottom:8px; }
 .deliverable .dlabel.output { color:var(--green); }
 .deliverable .dlabel.input { color:var(--amber); }
 .deliverable .dlabel.standard { color:var(--cyan); }
 .deliverable .dlabel.site { color:var(--pink); }
-.deliverable .dtext { font-size:12px; color:var(--text2); line-height:1.6; }
+.deliverable .dtext { font-size:13px; color:var(--text2); line-height:1.7; }
 
 .ref-box { background:var(--surface3); border-left:3px solid var(--red); padding:12px 16px; margin-top:12px; border-radius:0 8px 8px 0; }
 .ref-box .rlabel { font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--red); margin-bottom:4px; }
@@ -266,9 +285,17 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 @media(max-width:768px) {
   .sidebar { display:none; }
   .main { margin-left:0; }
-  .content { padding:20px; }
+  .main-header { padding:16px 20px; }
+  .content { padding:20px 16px 60px; }
+  .stage-title { font-size:24px; }
+  .stage-desc { font-size:14px; }
+  .quick-guide { padding:16px 18px; }
+  .quick-guide .qg-steps li { font-size:12px; }
   .overview-grid, .sim-grid { grid-template-columns:1fr; }
   .sm-items { grid-template-columns:1fr; }
+  .task-header { padding:14px 16px; }
+  .task-body { padding:0 16px 16px; }
+  .task-header .title { font-size:13px; }
   .dw-kv-grid, .dw-model-grid { grid-template-columns:1fr; }
   .dw-form-row { grid-template-columns:1fr; }
   .dw-table { font-size:11px; }
@@ -388,22 +415,128 @@ function App() {
 
   function render() {
     var p = getProgress();
-    app.innerHTML = '<nav class="sidebar"><div class="sidebar-header"><div class="logo">R IF C</div><h2>Roadmap Articol \\u0218tiin\\u021Bific</h2><p>Validare Empiric\\u0103 Framework</p><div class="version">v2 \\u2014 cu integrare site</div></div><div class="progress-bar"><div class="label">PROGRES TOTAL</div><div class="bar"><div class="fill" style="width:'+p.pct+'%"></div></div><div class="stats"><span>'+p.done+'/'+p.total+' sarcini</span><span>'+p.pct+'%</span></div></div><div class="nav-section"><div class="nav-section-label">Etape</div>'+STAGES.map(function(s){var isDone=s.tasks.length>0&&s.tasks.every(function(t){return checkedTasks[s.id+'-'+t.title]});return '<div class="nav-item '+(activeStage===s.id?'active':'')+' '+(isDone?'completed':'')+'" data-stage="'+s.id+'"><span class="num">'+s.icon+'</span><span>'+s.label+'</span>'+(s.hasSite?'<span class="site-badge">SITE</span>':'')+'<span class="check">\\u2713</span></div>'}).join('')+'</div></nav><div class="main"><div class="main-header"><h1>'+(activeStage==='overview'?'R IF C \\u2014 Plan de Cercetare v2':STAGES.find(function(s){return s.id===activeStage}).label)+'</h1><div class="subtitle">Integrat cu rifcmarketing.com \\u00B7 '+p.siteInputs+' sarcini alimentate de site</div></div><div class="content">'+(activeStage==='overview'?renderOverview(p):renderStage(STAGES.find(function(s){return s.id===activeStage})))+'</div></div>';
+    app.innerHTML = '<nav class="sidebar"><div class="sidebar-header"><div class="logo">R IF C</div><h2>Roadmap Articol \\u0218tiin\\u021Bific</h2><p>Validare Empiric\\u0103 Framework</p><div class="version">v2 \\u2014 cu integrare site</div></div><div class="progress-bar"><div class="label">PROGRES TOTAL</div><div class="bar"><div class="fill" style="width:'+p.pct+'%"></div></div><div class="stats"><span>'+p.done+'/'+p.total+' sarcini</span><span>'+p.pct+'%</span></div></div><div class="nav-section"><div class="nav-section-label">Etape</div>'+STAGES.map(function(s){var isDone=s.tasks.length>0&&s.tasks.every(function(t){return checkedTasks[s.id+'-'+t.title]});var sDone=0;var sTotal=s.tasks.length;s.tasks.forEach(function(t){if(checkedTasks[s.id+'-'+t.title])sDone++;});var sPct=sTotal?Math.round(sDone/sTotal*100):0;return '<div class="nav-item '+(activeStage===s.id?'active':'')+' '+(isDone?'completed':'')+'" data-stage="'+s.id+'"><span class="num">'+s.icon+'</span><span>'+s.label+(sTotal>0?' <span style="font-size:10px;opacity:.6;">('+sDone+'/'+sTotal+')</span>':'')+'</span>'+(s.hasSite?'<span class="site-badge">SITE</span>':'')+'<span class="check">\\u2713</span></div>'}).join('')+'</div></nav><div class="main"><div class="main-header"><h1>'+(activeStage==='overview'?'R IF C \\u2014 Plan de Cercetare v2':STAGES.find(function(s){return s.id===activeStage}).label)+'</h1><div class="subtitle">Integrat cu rifcmarketing.com \\u00B7 '+p.siteInputs+' sarcini alimentate de site</div></div><div class="content">'+(activeStage==='overview'?renderOverview(p):renderStage(STAGES.find(function(s){return s.id===activeStage})))+'</div></div>';
     bindEvents();
+    /* Restore open state */
     Object.keys(openTasks).forEach(function(k){ if(openTasks[k]){ var el=document.querySelector('[data-taskkey="'+k+'"]'); if(el) el.classList.add('open'); } });
     Object.keys(openWorkspaces).forEach(function(k){ if(openWorkspaces[k]){ var el=document.getElementById('dw-'+k); if(el) el.classList.add('open'); } });
+    /* Auto-open first unchecked task if none are manually open */
+    var anyOpen = Object.keys(openTasks).some(function(k){ return openTasks[k]; });
+    if (!anyOpen && activeStage !== 'overview') {
+      var stage = STAGES.find(function(s){return s.id===activeStage;});
+      if (stage) {
+        for (var ti=0; ti<stage.tasks.length; ti++) {
+          var tKey = stage.id + '-' + stage.tasks[ti].title;
+          if (!checkedTasks[tKey]) {
+            var el = document.querySelector('[data-taskkey="'+tKey+'"]');
+            if (el) { el.classList.add('open'); openTasks[tKey] = true; }
+            break;
+          }
+        }
+      }
+    }
   }
 
   function renderOverview(p) {
     return '<div class="stage-header"><div class="stage-label" style="color:var(--red)">PLAN COMPLET v2</div><div class="stage-title">De la Site la Publica\\u021Bie Interna\\u021Bional\\u0103</div><div class="stage-desc">7 etape (incluz\\u00E2nd Etapa 0: Audit Resurse Site), '+p.total+' sarcini concrete. Con\\u021Binutul de pe rifcmarketing.com alimenteaz\\u0103 direct 60% din inputuri \\u2014 restul sunt date noi de colectat.</div></div><div class="equation-display"><div class="eq">C = R + (I \\u00D7 F)</div><div class="eq-sub">Site \\u2192 Reformulare Academic\\u0103 \\u2192 Validare Empiric\\u0103 \\u2192 Paper \\u2192 Publicare</div></div><div class="overview-grid"><div class="ov-card"><div class="ov-num" style="color:var(--red)">4+1</div><div class="ov-label">STUDII (4 obligatorii + AI Audit op\\u021Bional)</div></div><div class="ov-card"><div class="ov-num" style="color:var(--blue)">1.000+</div><div class="ov-label">RESPONDENTI TOTAL</div></div><div class="ov-card"><div class="ov-num" style="color:var(--pink)">'+p.siteInputs+'</div><div class="ov-label">SARCINI CU INPUT DIN SITE</div></div><div class="ov-card"><div class="ov-num" style="color:var(--green)">12-15K</div><div class="ov-label">CUVINTE PAPER FINAL</div></div></div><div class="site-integration-map"><div class="sim-title"><span class="dot"></span>CE VINE DE PE RIFCMARKETING.COM</div><div class="sim-grid"><div class="sim-card ready"><div class="sc-chapter">CH03</div><div class="sc-name">Anatomia Variabilelor</div><div class="sc-maps">28 sub-factori \\u2192 30-36 itemi Likert</div><div class="sc-status">\\u2713 GATA \\u2014 reformulare</div></div><div class="sim-card ready"><div class="sc-chapter">CH07</div><div class="sc-name">R IF C vs Altele</div><div class="sc-maps">4 compara\\u021Bii \\u2192 Literature Review</div><div class="sc-status">\\u2713 GATA \\u2014 reformulare</div></div><div class="sim-card ready"><div class="sc-chapter">CH04</div><div class="sc-name">Scoring 1-10</div><div class="sc-maps">Descriptori \\u2192 Ancore evaluatori</div><div class="sc-status">\\u2713 GATA \\u2014 reformulare</div></div><div class="sim-card ready"><div class="sc-chapter">POARTA</div><div class="sc-name">Poarta Relevan\\u021Bei</div><div class="sc-maps">Simul\\u0103ri dezastru \\u2192 Threshold test</div><div class="sc-status">\\u2713 GATA \\u2014 testare</div></div><div class="sim-card ready"><div class="sc-chapter">CH06</div><div class="sc-name">Arhetipuri E\\u0219ec</div><div class="sc-maps">3 tipuri \\u2192 Known-Groups Validity</div><div class="sc-status">\\u2713 GATA \\u2014 testare</div></div><div class="sim-card partial"><div class="sc-chapter">CH09</div><div class="sc-name">Studii de Caz</div><div class="sc-maps">5 cazuri \\u2192 Pilot data + calibrare</div><div class="sc-status">\\u26A0 PAR\\u021AIAL \\u2014 adaugi campanii</div></div><div class="sim-card partial"><div class="sc-chapter">/AUDIT</div><div class="sc-name">AI Audit Tool</div><div class="sc-maps">Scoring automat \\u2192 Study 5 AI vs Human</div><div class="sc-status">\\u26A0 OP\\u021AIONAL \\u2014 bonus mare</div></div><div class="sim-card partial"><div class="sc-chapter">CH05</div><div class="sc-name">Matricea de Aplicare</div><div class="sc-maps">6 canale \\u2192 Categorii stimuli</div><div class="sc-status">\\u26A0 PAR\\u021AIAL \\u2014 adaugi date</div></div><div class="sim-card ready"><div class="sc-chapter">CH01+02</div><div class="sc-name">Filozofia + Ecua\\u021Bia</div><div class="sc-maps">Claritate, I\\u00D7F \\u2192 Formalizare math</div><div class="sc-status">\\u2713 GATA \\u2014 reformulare</div></div></div></div><div class="removed-notice"><div class="rn-title">ELIMINAT DIN PLAN v1 (DUPLICAT CU SITE-UL)</div><div class="rn-text">\\u2022 "Furnizeaz\\u0103 descrierile R, I, F, C" \\u2014 deja pe Ch01+Ch02+Ch03<br>\\u2022 "Furnizeaz\\u0103 compara\\u021Biile cu alte framework-uri" \\u2014 deja pe Ch07<br>\\u2022 "Furnizeaz\\u0103 exemplele de dezastru al Por\\u021Bii" \\u2014 deja pe sec\\u021Biunea Poarta Relevan\\u021Bei<br>\\u2022 "Creeaz\\u0103 enciclopedia framework-urilor" \\u2014 deja realizat\\u0103 (35 framework-uri)</div><div class="rn-reason">\\u2192 \\u00CEnlocuit cu: "Reformuleaz\\u0103 academic con\\u021Binutul de pe site"</div></div><h3 style="margin-top:32px;font-size:15px;color:var(--text3);letter-spacing:1px;">TIMELINE \\u2014 6 LUNI</h3><div class="timeline-simple"><div class="tl-item"><div class="tl-month">PRE</div><div class="tl-content"><strong>Etapa 0: Audit Site.</strong> Catalogare con\\u021Binut, export AI Audit ca instrument, documentare White Paper. <span style="color:var(--pink)">2-3 zile.</span></div></div><div class="tl-item"><div class="tl-month">LUNA 1</div><div class="tl-content"><strong>Fundamentare + Scal\\u0103.</strong> Reformulare academic\\u0103 (site \\u2192 paper). Transformare 28 sub-factori \\u2192 itemi Likert. Panel exper\\u021Bi. <span style="color:var(--pink)">~60% input din site.</span></div></div><div class="tl-item"><div class="tl-month">LUNA 2-3</div><div class="tl-content"><strong>Colectare + EFA.</strong> 5 cazuri pilot din site + 15-25 campanii noi. N=250-350. Factor analysis.</div></div><div class="tl-item"><div class="tl-month">LUNA 3-4</div><div class="tl-content"><strong>CFA + Test Central.</strong> N=300-500 nou. Additive vs Multiplicative. Threshold Poarta Relevan\\u021Bei.</div></div><div class="tl-item"><div class="tl-month">LUNA 4-5</div><div class="tl-content"><strong>Validare Predictiv\\u0103.</strong> KPI-uri reale. Arhetipuri \\u2192 Known-Groups. <span style="color:var(--pink)">+ AI Audit vs Human (op\\u021Bional).</span></div></div><div class="tl-item"><div class="tl-month">LUNA 5-6</div><div class="tl-content"><strong>Scriere + Submisie.</strong> Site citat ca "practitioner implementation". Paper \\u2192 JBR / JAMS.</div></div></div>';
   }
 
+  var STAGE_GUIDES = {
+    s0: {
+      what: 'Treci prin tot site-ul rifcmarketing.com \\u0219i noteaz\\u0103 ce con\\u021Binut ai deja. Nu trebuie s\\u0103 scrii nimic nou \\u2014 doar cataloghezi.',
+      steps: [
+        'Deschide <strong>rifcmarketing.com</strong> \\u0219i treci prin fiecare sec\\u021Biune.',
+        'Pentru fiecare con\\u021Binut, noteaz\\u0103 dac\\u0103 e <strong>GATA</strong>, <strong>PAR\\u021AIAL</strong> sau <strong>LIPS\\u0102</strong>.',
+        'Export\\u0103 instrumentele AI Audit \\u0219i Calculator ca resurse de cercetare.'
+      ],
+      output: 'Document de mapare: ce con\\u021Binut de pe site merge direct \\u00EEn paper.'
+    },
+    s1: {
+      what: 'Rescrii defini\\u021Biile R, I, F, C din limbaj de marketer \\u00EEn limbaj academic. Adaugi referin\\u021Be peer-reviewed.',
+      steps: [
+        'Cite\\u0219te defini\\u021Biile de pe site (Ch01-Ch03) \\u0219i <strong>rescrie-le academic</strong> cu referin\\u021Be.',
+        'Formalizeaz\\u0103 ecua\\u021Bia matematic: C = R + (I \\u00D7 F) cu nota\\u021Bie formal\\u0103.',
+        'Scrie Literature Review \\u2014 reformuleaz\\u0103 compara\\u021Biile de pe Ch07.',
+        'Construie\\u0219te baza de referin\\u021Be (80-100 total \\u00EEn paper final).'
+      ],
+      output: '~6.000 cuvinte de fundament teoretic + 40-60 referin\\u021Be.'
+    },
+    s2: {
+      what: 'Transformi sub-factorii de pe site \\u00EEn itemi de chestionar. Testezi cu exper\\u021Bi \\u0219i utilizatori.',
+      steps: [
+        'Ia cei <strong>28 sub-factori</strong> (7R + 10I + 11F) \\u0219i formuleaz\\u0103-i ca afirma\\u021Bii Likert 1-7.',
+        'Construie\\u0219te un <strong>Scoring Rubric</strong> cu ancore fixe (din Ch04).',
+        'Adun\\u0103 <strong>15-20 exper\\u021Bi</strong> care evalueaz\\u0103 relevan\\u021Ba itemilor (CVI).',
+        'F\\u0103 <strong>10-15 interviuri cognitive</strong> cu marketeri reali.'
+      ],
+      output: 'Pool de 24-30 itemi valida\\u021Bi + Scoring Rubric standardizat.'
+    },
+    s3: {
+      what: 'Colectezi primul set mare de date \\u0219i faci Exploratory Factor Analysis (EFA).',
+      steps: [
+        'Construie\\u0219te <strong>20-30 stimuli</strong> (mesaje reale de marketing). 5 sunt deja pe site.',
+        'Distribui chestionarul la <strong>250-350 respondenti</strong> (studen\\u021Bi, marketeri, LinkedIn).',
+        'Ruleaz\\u0103 EFA: verific\\u0103 dac\\u0103 datele confirm\\u0103 structura cu 3 factori (R, I, F).'
+      ],
+      output: 'Factor loadings, scree plot, Cronbach \\u03B1 \\u2265 0.80, scal\\u0103 rafinat\\u0103.'
+    },
+    s4: {
+      what: 'TESTUL CENTRAL. Confirmi structura pe date noi \\u0219i demonstrezi c\\u0103 I\\u00D7F e superior lui I+F.',
+      steps: [
+        'Colecteaz\\u0103 <strong>e\\u0219antion NOU</strong> (300-500 respondenti, zero overlap cu S3).',
+        'Ruleaz\\u0103 CFA \\u2014 confirm\\u0103 structura 3 factori.',
+        'Compar\\u0103 3 modele: Additiv vs R IF C vs Full \\u2014 <strong>dac\\u0103 B > A, ecua\\u021Bia e validat\\u0103!</strong>',
+        'Testeaz\\u0103 Poarta Relevan\\u021Bei: sub ce R dispare efectul I\\u00D7F?'
+      ],
+      output: 'CFI \\u2265 0.95, RMSEA \\u2264 0.06, \\u0394R\\u00B2 semnificativ, threshold R confirmat.'
+    },
+    s5: {
+      what: 'Demonstrezi c\\u0103 scorurile R IF C prezic performan\\u021Ba real\\u0103 a campaniilor.',
+      steps: [
+        'Colecteaz\\u0103 <strong>KPI-uri reale</strong> de la 30-50 campanii (CTR, CPL, ROAS, Conversion, Bounce).',
+        'Testeaz\\u0103 Known-Groups: cele 3 arhetipuri de pe site difer\\u0103 semnificativ pe C?',
+        'Verific\\u0103 Inter-Rater Reliability (3 evaluatori independen\\u021Bi).',
+        '[Op\\u021Bional] Compar\\u0103 scoruri AI Audit vs evaluatori umani.'
+      ],
+      output: 'Corela\\u021Bie C vs CTR (r > 0.4), ICC > 0.70, ANOVA semnificativ\\u0103.'
+    },
+    s6: {
+      what: 'Scrii paper-ul final de 12.000-15.000 cuvinte \\u0219i \\u00EEl triimi\\u021Bi la jurnal.',
+      steps: [
+        'Scrie Introduction (2.000 cuv.) + Literature Review (3.500 cuv.).',
+        'Scrie Framework (2.500 cuv.) + Methodology (3.000 cuv.) + Results (4.000 cuv.).',
+        'Scrie Discussion (2.500 cuv.) + Conclusion (800 cuv.) + AI Declaration.',
+        'Review intern, formatare APA 7th, cover letter, submisie.'
+      ],
+      output: 'Paper final ~15.000 cuvinte, 80-100 referin\\u021Be, submit la JBR/JAMS.'
+    }
+  };
+
+  function getStageProgress(stage) {
+    var total = stage.tasks.length;
+    var done = 0;
+    stage.tasks.forEach(function(t) { if (checkedTasks[stage.id + '-' + t.title]) done++; });
+    return { total: total, done: done, pct: total ? Math.round(done / total * 100) : 0 };
+  }
+
   function renderStage(stage) {
-    var html = '<div class="stage-header"><div class="stage-label" style="color:'+stage.color+'">'+stage.priority+'</div><div class="stage-title">'+stage.label+'</div><div class="stage-desc">'+stage.description+'</div><div class="stage-meta"><span class="tag" style="background:var(--surface2);color:var(--text2);">'+stage.duration+'</span><span class="tag" style="background:var(--surface2);color:var(--text2);">'+stage.tasks.length+' sarcini</span>'+(stage.hasSite?'<span class="tag" style="background:var(--pink-dim);color:var(--pink);">input din site</span>':'')+'</div></div>';
+    var sp = getStageProgress(stage);
+    var guide = STAGE_GUIDES[stage.id];
+    var html = '<div class="stage-header"><div class="stage-label" style="color:'+stage.color+'">'+stage.priority+'</div><div class="stage-title">'+stage.label+'</div><div class="stage-desc">'+stage.description+'</div><div class="stage-meta"><span class="tag" style="background:var(--surface2);color:var(--text2);">'+stage.duration+'</span><span class="tag" style="background:var(--surface2);color:var(--text2);">'+stage.tasks.length+' sarcini</span>'+(stage.hasSite?'<span class="tag" style="background:var(--pink-dim);color:var(--pink);">input din site</span>':'')+'<span class="tag" style="background:'+(sp.pct===100?'var(--green-dim2)':'var(--surface2)')+';color:'+(sp.pct===100?'var(--green)':'var(--text2)')+';">'+sp.done+'/'+sp.total+' completate ('+sp.pct+'%)</span></div></div>';
+
+    /* Quick Guide */
+    if (guide) {
+      html += '<div class="quick-guide"><div class="qg-title"><span class="qg-icon">\\uD83E\\uDDED</span> GHID RAPID \\u2014 CE FACI \\u00CEN ACEAST\\u0102 ETAP\\u0102</div><div class="qg-body"><strong>Pe scurt:</strong> ' + guide.what + '</div><ol class="qg-steps">';
+      guide.steps.forEach(function(s, idx) {
+        html += '<li><span class="qg-num">' + (idx + 1) + '</span><span>' + s + '</span></li>';
+      });
+      html += '</ol><div class="qg-what"><strong>Livrabil final:</strong> ' + guide.output + '</div></div>';
+    }
+
     if(stage.siteMap) {
       html += '<div class="site-map"><div class="sm-title"><span class="globe">\\uD83C\\uDF10</span> CE VINE DE PE RIFCMARKETING.COM \\u2192 UNDE AJUNGE \\u00CEN PAPER</div><div class="sm-items">'+stage.siteMap.map(function(m){return '<div class="sm-item '+m.status+'"><span class="arrow">\\u2192</span><div><span class="from">'+m.from+'</span><br><span class="to">'+m.to+'</span></div></div>'}).join('')+'</div></div>';
     }
-    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-detail">'+t.detail+'</div>'+((t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''))+(t.dataType ? renderDataWorkspace(stage.id, i, t) : '')+'</div></div>'}).join('')+'</div>';
+    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-detail">'+t.detail+'</div>'+((t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''))+(t.dataType ? renderDataWorkspace(stage.id, i, t) : '')+'</div></div>'}).join('')+'</div>';
     return html;
   }
 
