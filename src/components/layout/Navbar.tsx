@@ -16,7 +16,10 @@ export default function Navbar() {
   const isLandingPage = pathname === "/";
   const isAuditPage = pathname === "/audit";
 
-  const toggleLocale = () => setLocale(locale === "ro" ? "en" : "ro");
+  const toggleLocale = () => {
+    const order: Record<string, "ro" | "en" | "ru"> = { ro: "en", en: "ru", ru: "ro" };
+    setLocale(order[locale] ?? "ro");
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 80);

@@ -18,7 +18,7 @@ export const en: Dictionary = {
       { id: "resources", label: "Resources" },
       { id: "author", label: "About" },
     ],
-    langSwitch: "RO",
+    langSwitch: "RU",
   },
   hero: {
     subtitle: "A Marketing Protocol by Dumitru Talmazan",

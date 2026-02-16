@@ -1,4 +1,4 @@
-export type Locale = "ro" | "en";
+export type Locale = "ro" | "en" | "ru";
 
 export interface Dictionary {
   nav: {
