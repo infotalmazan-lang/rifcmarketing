@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, ChevronDown, ArrowRight, TrendingUp } from "lucide-react";
+import { AlertTriangle, ChevronDown, TrendingUp } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { WatermarkNumber, StampBadge, GradientBorderBlock } from "@/components/ui/V2Elements";
@@ -451,50 +451,19 @@ export default function MethodologySection() {
       </div>
 
       {/* ═══════════════════════════════════════════════
-          PUNCT 7 — CTA + Tranziție spre Cap. 05
+          PUNCT 7 — Tranziție spre Cap. 05
           ═══════════════════════════════════════════════ */}
       <div className="text-center border-t border-border-subtle pt-12 md:pt-16">
-        {/* CTA title */}
-        <p className="font-heading text-[22px] md:text-[28px] text-text-primary leading-[1.4] mb-3">
-          {t.methodology.ctaTitle}
+        <p className="font-heading text-[18px] md:text-[22px] font-light text-red-400/70 leading-[1.4] mb-4">
+          {t.methodology.transitionText}
         </p>
-        <p className="font-body text-[15px] text-text-muted mb-6 max-w-lg mx-auto">
-          {t.methodology.ctaBody}
-        </p>
-
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
-          <a
-            href="/audit"
-            className="inline-flex items-center gap-2 bg-rifc-red hover:bg-red-500 text-white font-bold px-8 py-4 rounded-sm transition-colors duration-200 font-body text-[15px]"
-          >
-            <ArrowRight size={16} strokeWidth={2} />
-            {t.methodology.ctaButton}
-          </a>
-          <span className="font-body text-[14px] text-text-muted">
-            {t.methodology.ctaOr}{" "}
-            <a
-              href="/calculator"
-              className="text-text-muted hover:text-text-primary underline transition-colors duration-200"
-            >
-              {t.methodology.ctaSecondaryLink}
-            </a>
-          </span>
-        </div>
-
-        {/* Transition to Ch. 05 */}
-        <div className="mt-6">
-          <p className="font-heading text-[18px] md:text-[22px] font-light text-red-400/70 leading-[1.4] mb-4">
-            {t.methodology.transitionText}
-          </p>
-          <a
-            href={t.methodology.transitionTarget}
-            className="inline-flex items-center gap-2 font-body text-[14px] text-text-muted hover:text-text-primary transition-colors duration-200"
-          >
-            <ChevronDown size={16} strokeWidth={2} className="animate-bounce" />
-            {t.methodology.transitionCta}
-          </a>
-        </div>
+        <a
+          href={t.methodology.transitionTarget}
+          className="inline-flex items-center gap-2 font-body text-[14px] text-text-muted hover:text-text-primary transition-colors duration-200"
+        >
+          <ChevronDown size={16} strokeWidth={2} className="animate-bounce" />
+          {t.methodology.transitionCta}
+        </a>
       </div>
     </section>
   );

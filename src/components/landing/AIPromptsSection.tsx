@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useTranslation } from "@/lib/i18n";
-import Link from "next/link";
-import { Sparkles, Download, ChevronDown, Check, Copy, ArrowRight, ChevronRight, Search, Zap, BarChart3, MessageSquare } from "lucide-react";
+import { ChevronDown, Check, Copy, ArrowRight, ChevronRight, Search, Zap, BarChart3, MessageSquare } from "lucide-react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { GradientBorderBlock, WatermarkNumber } from "@/components/ui/V2Elements";
 
@@ -451,37 +450,7 @@ export default function AIPromptsSection() {
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════════
-          PUNCT 8 — CTA Final
-          ════════════════════════════════════════════════════ */}
-      <div className="max-w-2xl mx-auto text-center mb-16">
-        <p className="font-heading text-[22px] md:text-[28px] font-light italic text-text-primary leading-[1.4] mb-2">
-          {ai.ctaLine1}
-        </p>
-        <p className="font-body text-[14px] md:text-[15px] text-text-muted mb-10 leading-[1.7]">
-          {ai.ctaLine2}
-        </p>
-
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Link
-            href="/audit"
-            className="inline-flex items-center justify-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-8 py-[16px] bg-rifc-red text-white rounded-sm hover:bg-rifc-red/90 transition-all duration-300 no-underline"
-          >
-            <Sparkles size={16} />
-            {ai.ctaPrimary}
-          </Link>
-
-          <button
-            className="inline-flex items-center justify-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-8 py-[16px] border border-amber-500/40 text-amber-400 rounded-sm hover:border-amber-500 hover:bg-amber-900/10 transition-all duration-300 cursor-default opacity-60"
-            title="Coming soon"
-          >
-            <Download size={16} />
-            {ai.ctaSecondary}
-          </button>
-        </div>
-      </div>
-
-      {/* ── Transition CTA to Chapter 11 ───────────────── */}
+      {/* ── Transition to Chapter 11 ───────────────── */}
       <div className="mt-20 md:mt-24 text-center border-t border-border-subtle pt-12 md:pt-16">
         <p className="font-heading text-[20px] md:text-[26px] font-light text-text-primary leading-[1.4] mb-2 italic">
           {ai.transitionLine1}

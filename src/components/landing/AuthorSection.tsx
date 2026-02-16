@@ -1,9 +1,7 @@
 "use client";
 
 import { useTranslation } from "@/lib/i18n";
-import Link from "next/link";
 import Image from "next/image";
-import { Sparkles, ArrowRight } from "lucide-react";
 import { GradientBorderBlock } from "@/components/ui/V2Elements";
 
 export default function AuthorSection() {
@@ -235,36 +233,6 @@ export default function AuthorSection() {
         </p>
       </div>
 
-      {/* ════════════════════════════════════════════════════
-          PUNCT 6 — CTA
-          ════════════════════════════════════════════════════ */}
-      <div className="max-w-2xl mx-auto text-center">
-        <p className="font-heading text-[22px] md:text-[28px] font-light text-text-primary leading-[1.4] mb-8">
-          {a.ctaQuestion}
-        </p>
-
-        <div className="flex flex-col items-center gap-4">
-          <Link
-            href="/consulting"
-            className="inline-flex items-center justify-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-8 py-[16px] bg-rifc-red text-white rounded-sm hover:bg-rifc-red/90 transition-all duration-300 no-underline"
-          >
-            <ArrowRight size={16} />
-            {a.ctaPrimary}
-          </Link>
-
-          <p className="font-body text-[13px] text-text-muted">
-            {a.ctaOr}
-          </p>
-
-          <Link
-            href="/audit"
-            className="inline-flex items-center justify-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-8 py-[16px] border border-border-light text-text-muted rounded-sm hover:border-rifc-red/40 hover:text-rifc-red transition-all duration-300 no-underline"
-          >
-            <Sparkles size={16} />
-            {a.ctaSecondary}
-          </Link>
-        </div>
-      </div>
     </section>
   );
 }

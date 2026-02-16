@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n";
-import Link from "next/link";
-import { ChevronDown, ArrowRight, Check, X, Sparkles } from "lucide-react";
+import { ChevronDown, ArrowRight, Check, X } from "lucide-react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { GradientBorderBlock } from "@/components/ui/V2Elements";
 
@@ -541,23 +540,6 @@ export default function ComparisonSection() {
             </div>
           </div>
         </GradientBorderBlock>
-      </div>
-
-      {/* ═══ PUNCT 8 — CTA ════════════════════════════════════ */}
-      <div className="max-w-2xl mx-auto text-center mb-0">
-        <p className="font-heading text-[22px] md:text-[28px] font-light text-text-primary leading-[1.4] mb-3">
-          {t.comparison.ctaLine1}
-        </p>
-        <p className="font-body text-[14px] md:text-[15px] text-text-muted mb-8">
-          {t.comparison.ctaLine2}
-        </p>
-        <Link
-          href="/audit"
-          className="inline-flex items-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-10 py-[18px] bg-rifc-red text-white rounded-sm hover:bg-rifc-red/90 transition-all duration-300 no-underline"
-        >
-          <Sparkles size={16} />
-          {t.comparison.ctaButton}
-        </Link>
       </div>
 
       {/* Transition CTA to Chapter 08 */}

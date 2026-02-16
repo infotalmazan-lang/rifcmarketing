@@ -597,37 +597,23 @@ export default function RelevanceGateSection() {
         </div>
 
         {/* ═══════════════════════════════════════════════
-            PUNCT 9 — CTA + Tranziție
+            PUNCT 9 — Tranziție
             ═══════════════════════════════════════════════ */}
         <div className="text-center border-t border-red-500/20 pt-12 md:pt-16">
-          <p className="font-body text-[15px] md:text-[16px] text-text-secondary leading-[1.7] mb-6 max-w-lg mx-auto">
-            {t.relevanceGate.ctaIntro}
+          <p className="font-heading text-[18px] md:text-[22px] font-light text-red-400/70 leading-[1.4] mb-4">
+            {t.relevanceGate.transitionText}
           </p>
-
           <a
-            href="/audit"
-            className="inline-flex items-center gap-2 bg-rifc-red hover:bg-red-500 text-white font-bold px-8 py-4 rounded-sm transition-colors duration-200 font-body text-[15px] mb-10"
+            href={t.relevanceGate.transitionTarget}
+            className="inline-flex items-center gap-2 font-body text-[14px] text-text-muted hover:text-text-primary transition-colors duration-200"
           >
-            <ArrowRight size={16} strokeWidth={2} />
-            {t.relevanceGate.ctaButton}
+            <ChevronDown
+              size={16}
+              strokeWidth={2}
+              className="animate-bounce"
+            />
+            {t.relevanceGate.transitionCta}
           </a>
-
-          <div className="mt-6">
-            <p className="font-heading text-[18px] md:text-[22px] font-light text-red-400/70 leading-[1.4] mb-4">
-              {t.relevanceGate.transitionText}
-            </p>
-            <a
-              href={t.relevanceGate.transitionTarget}
-              className="inline-flex items-center gap-2 font-body text-[14px] text-text-muted hover:text-text-primary transition-colors duration-200"
-            >
-              <ChevronDown
-                size={16}
-                strokeWidth={2}
-                className="animate-bounce"
-              />
-              {t.relevanceGate.transitionCta}
-            </a>
-          </div>
         </div>
       </div>
     </section>

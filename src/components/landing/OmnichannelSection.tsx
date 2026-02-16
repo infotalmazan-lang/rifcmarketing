@@ -2,8 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "@/lib/i18n";
-import Link from "next/link";
-import { Sparkles, Calculator, ChevronDown, AlertTriangle, ArrowRight, Target, Zap, RotateCw, Flag, Eye } from "lucide-react";
+import { ChevronDown, AlertTriangle, ArrowRight, Target, Zap, RotateCw, Flag, Eye } from "lucide-react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { GradientBorderBlock, WatermarkNumber, getScoreColor, getScoreZone } from "@/components/ui/V2Elements";
 
@@ -461,12 +460,6 @@ export default function OmnichannelSection() {
                       {t.omnichannel.diagJumpTo.replace("{percent}", String(percentChange)).replace("{zone}", improvedZone)}
                     </span>
                   </p>
-                  <Link
-                    href="/audit"
-                    className="inline-flex items-center gap-1.5 font-mono text-[10px] text-rifc-red mt-2 hover:underline no-underline"
-                  >
-                    <ArrowRight size={12} /> {t.omnichannel.diagTestAudit}
-                  </Link>
                 </div>
               )}
             </div>
@@ -778,45 +771,6 @@ export default function OmnichannelSection() {
           </GradientBorderBlock>
         </div>
 
-        {/* ── PUNCT 4 — Panic Button CTA ────────────────────────── */}
-        <div className="max-w-3xl mx-auto mt-14 text-center">
-          <h4 className="font-heading text-[22px] md:text-[28px] font-light text-text-primary mb-2">
-            {t.omnichannel.ctaStuckTitle}
-          </h4>
-          <p className="font-body text-[14px] text-text-muted mb-8">
-            {t.omnichannel.ctaStuckSub}
-          </p>
-
-          <div className="flex flex-col sm:flex-row justify-center gap-5">
-            {/* Audit button */}
-            <div className="flex flex-col items-center gap-2">
-              <Link
-                href="/audit"
-                className="inline-flex items-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-10 py-[18px] bg-rifc-red text-white rounded-sm hover:bg-rifc-red/90 transition-all duration-300 no-underline"
-              >
-                <Sparkles size={16} />
-                {t.omnichannel.ctaAuditBtn}
-              </Link>
-              <p className="font-body text-[11px] md:text-[12px] text-text-muted leading-[1.5] max-w-[280px]">
-                {t.omnichannel.ctaAuditSub}
-              </p>
-            </div>
-
-            {/* Diagnostic button */}
-            <div className="flex flex-col items-center gap-2">
-              <Link
-                href="/calculator"
-                className="inline-flex items-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-10 py-[18px] border border-rifc-red/40 text-rifc-red rounded-sm hover:border-rifc-red hover:bg-[rgba(220,38,38,0.05)] transition-all duration-300 no-underline"
-              >
-                <Calculator size={16} />
-                {t.omnichannel.ctaDiagnosticBtn}
-              </Link>
-              <p className="font-body text-[11px] md:text-[12px] text-text-muted leading-[1.5] max-w-[280px]">
-                {t.omnichannel.ctaDiagnosticSub}
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* ── PUNCT 5 — Micro-closer ────────────────────────────── */}
         <div className="max-w-2xl mx-auto mt-16 text-center">

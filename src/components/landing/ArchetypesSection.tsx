@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Ghost, Theater, Gem, ChevronDown, ArrowRight } from "lucide-react";
+import { Ghost, Theater, Gem, ChevronDown } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { WatermarkNumber } from "@/components/ui/V2Elements";
 import FailureSimulator from "./FailureSimulator";
-import Link from "next/link";
 
 /* ─── Icon map ───────────────────────────────────────── */
 
@@ -340,66 +339,6 @@ function DiagnosisTable() {
   );
 }
 
-/* ─── CTA Final — Contrast Visual ────────────────────── */
-
-function ArchetypesCTA() {
-  const { t } = useTranslation();
-
-  return (
-    <div className="mt-20 md:mt-24 relative overflow-hidden">
-      {/* Separator — green line marking transition from "problem" to "solution" */}
-      <div className="h-[2px] bg-gradient-to-r from-transparent via-[#059669] to-transparent mb-12" />
-
-      {/* CTA Card — lighter background for contrast */}
-      <div className="relative rounded-sm p-8 md:p-14 text-center bg-[rgba(255,255,255,0.025)] border border-border-light">
-        <WatermarkNumber
-          value="C"
-          color="#059669"
-          size="md"
-          className="-top-[30px] -right-[20px]"
-        />
-        <div className="relative z-[1]">
-          {/* Title — large serif */}
-          <h3 className="font-heading text-[24px] md:text-[32px] lg:text-[36px] font-light text-text-primary mb-3 leading-[1.3]">
-            {t.archetypes.ctaTitle}
-          </h3>
-          {/* Highlight */}
-          <p className="font-heading text-[20px] md:text-[24px] mb-8" style={{ color: "#059669" }}>
-            {t.archetypes.ctaHighlight}
-          </p>
-
-          {/* Body */}
-          <p className="font-body text-[14px] md:text-[16px] text-text-muted leading-[1.8] max-w-[640px] mx-auto mb-10">
-            {t.archetypes.ctaBody}
-          </p>
-
-          {/* Primary Button — larger, with subtle glow */}
-          <Link
-            href="/audit"
-            className="inline-flex items-center gap-2 bg-rifc-red text-white font-body text-[15px] md:text-[16px] font-semibold px-8 py-4 rounded-sm transition-all duration-200 hover:bg-rifc-red-light hover:shadow-[0_0_30px_rgba(220,38,38,0.3)]"
-          >
-            <ArrowRight size={18} strokeWidth={2} />
-            {t.archetypes.ctaButton}
-          </Link>
-
-          {/* Secondary */}
-          <div className="mt-5">
-            <span className="font-body text-[13px] text-text-muted">
-              {t.archetypes.ctaOr}{" "}
-            </span>
-            <Link
-              href="/calculator"
-              className="font-body text-[13px] text-text-muted underline underline-offset-4 hover:text-text-primary transition-colors"
-            >
-              {t.archetypes.ctaSecondaryLink}
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main Section ───────────────────────────────────── */
 
 export default function ArchetypesSection() {
@@ -455,8 +394,6 @@ export default function ArchetypesSection() {
       {/* Self-Diagnosis Table */}
       <DiagnosisTable />
 
-      {/* CTA — Contrast Visual */}
-      <ArchetypesCTA />
     </section>
   );
 }

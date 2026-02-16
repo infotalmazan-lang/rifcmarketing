@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "@/lib/i18n";
 import Link from "next/link";
-import { ChevronDown, Sparkles, Download, Check } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { GradientBorderBlock } from "@/components/ui/V2Elements";
 
@@ -398,7 +398,7 @@ export default function ImplementationSection() {
         </div>
       </div>
 
-      {/* ═══ PUNCT 8 — Closer + CTA ═════════════════════════ */}
+      {/* ═══ PUNCT 8 — Closer ═════════════════════════ */}
       <div className="max-w-2xl mx-auto text-center mb-0">
         <div className="font-mono text-[12px] md:text-[14px] tracking-[4px] uppercase text-amber-400 font-bold mb-5">
           {t.implementation.closerLabel}
@@ -412,29 +412,12 @@ export default function ImplementationSection() {
         <p className="font-body text-[15px] md:text-[16px] font-semibold text-text-primary mb-3">
           {t.implementation.closerLine3}
         </p>
-        <p className="font-body text-[13px] text-text-muted leading-[1.7] mb-8">
+        <p className="font-body text-[13px] text-text-muted leading-[1.7]">
           {t.implementation.closerLine4}
         </p>
-
-        <div className="flex flex-col sm:flex-row justify-center gap-4">
-          <Link
-            href="/audit"
-            className="inline-flex items-center justify-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-8 py-[18px] bg-rifc-red text-white rounded-sm hover:bg-rifc-red/90 transition-all duration-300 no-underline"
-          >
-            <Sparkles size={16} />
-            {t.implementation.ctaPrimary}
-          </Link>
-          <button
-            className="inline-flex items-center justify-center gap-2.5 font-mono text-xs tracking-[2px] uppercase px-8 py-[18px] border border-amber-500/40 text-amber-400 rounded-sm hover:border-amber-500 hover:bg-[rgba(217,119,6,0.05)] transition-all duration-300 cursor-pointer"
-            title="Coming soon"
-          >
-            <Download size={16} />
-            {t.implementation.ctaSecondary}
-          </button>
-        </div>
       </div>
 
-      {/* Transition CTA to Chapter 09 */}
+      {/* Transition to Chapter 09 */}
       <div className="mt-20 md:mt-24 text-center border-t border-border-subtle pt-12 md:pt-16">
         <p className="font-heading text-[20px] md:text-[26px] font-light text-text-primary leading-[1.4] mb-2 italic">
           {t.implementation.transitionLine1}

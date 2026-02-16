@@ -15,7 +15,6 @@ import ImplementationSection from "@/components/landing/ImplementationSection";
 import CaseStudiesSection from "@/components/landing/CaseStudiesSection";
 import AIPromptsSection from "@/components/landing/AIPromptsSection";
 import AuthorSection from "@/components/landing/AuthorSection";
-import CTASection from "@/components/landing/CTASection";
 
 export default function HomePage() {
   return (
@@ -35,7 +34,6 @@ export default function HomePage() {
         <CaseStudiesSection />
         <AIPromptsSection />
         <AuthorSection />
-        <CTASection />
       </main>
       <Footer />
     </>
