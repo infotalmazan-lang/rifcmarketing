@@ -4,18 +4,28 @@ export const ro: Dictionary = {
   nav: {
     sections: [
       { id: "hero", label: "Acasă" },
-      { id: "philosophy", label: "Filozofia" },
-      { id: "equation", label: "Ecuația" },
-      { id: "anatomy", label: "Anatomia Variabilelor" },
-      { id: "methodology", label: "Metodologia" },
-      { id: "relevance-gate", label: "Poarta Relevanței" },
-      { id: "omnichannel", label: "Diagnostic Omnichannel" },
-      { id: "archetypes", label: "Arhetipuri de Eșec" },
-      { id: "comparison", label: "R IF C vs Altele" },
-      { id: "implementation", label: "Implementare" },
-      { id: "case-studies", label: "Studii de Caz" },
-      { id: "ai-prompts", label: "Integrare AI" },
-      { id: "resources", label: "Resurse" },
+      { id: "protocol", label: "Protocolul", submenu: [
+        { id: "philosophy", label: "Filozofia" },
+        { id: "equation", label: "Ecuația" },
+        { id: "anatomy", label: "Anatomia Variabilelor" },
+      ]},
+      { id: "scoring", label: "Scoring", submenu: [
+        { id: "methodology", label: "Metodologia" },
+        { id: "relevance-gate", label: "Poarta Relevanței" },
+      ]},
+      { id: "diagnostic", label: "Diagnostic", submenu: [
+        { id: "omnichannel", label: "Diagnostic Omnichannel" },
+        { id: "archetypes", label: "Arhetipuri de Eșec" },
+      ]},
+      { id: "aplicare", label: "Aplicare", submenu: [
+        { id: "comparison", label: "R IF C vs Altele" },
+        { id: "implementation", label: "Implementare" },
+        { id: "case-studies", label: "Studii de Caz" },
+      ]},
+      { id: "instrumente", label: "Instrumente", submenu: [
+        { id: "ai-prompts", label: "Integrare AI" },
+        { id: "resources", label: "Resurse" },
+      ]},
       { id: "author", label: "Despre" },
     ],
     langSwitch: "EN",

@@ -4,18 +4,28 @@ export const en: Dictionary = {
   nav: {
     sections: [
       { id: "hero", label: "Home" },
-      { id: "philosophy", label: "Philosophy" },
-      { id: "equation", label: "The Equation" },
-      { id: "anatomy", label: "Variable Anatomy" },
-      { id: "methodology", label: "Methodology" },
-      { id: "relevance-gate", label: "Relevance Gate" },
-      { id: "omnichannel", label: "Omnichannel Diagnostic" },
-      { id: "archetypes", label: "Failure Archetypes" },
-      { id: "comparison", label: "R IF C vs Others" },
-      { id: "implementation", label: "Implementation" },
-      { id: "case-studies", label: "Case Studies" },
-      { id: "ai-prompts", label: "AI Integration" },
-      { id: "resources", label: "Resources" },
+      { id: "protocol", label: "The Protocol", submenu: [
+        { id: "philosophy", label: "Philosophy" },
+        { id: "equation", label: "The Equation" },
+        { id: "anatomy", label: "Variable Anatomy" },
+      ]},
+      { id: "scoring", label: "Scoring", submenu: [
+        { id: "methodology", label: "Methodology" },
+        { id: "relevance-gate", label: "Relevance Gate" },
+      ]},
+      { id: "diagnostic", label: "Diagnostic", submenu: [
+        { id: "omnichannel", label: "Omnichannel Diagnostic" },
+        { id: "archetypes", label: "Failure Archetypes" },
+      ]},
+      { id: "application", label: "Application", submenu: [
+        { id: "comparison", label: "R IF C vs Others" },
+        { id: "implementation", label: "Implementation" },
+        { id: "case-studies", label: "Case Studies" },
+      ]},
+      { id: "tools", label: "Tools", submenu: [
+        { id: "ai-prompts", label: "AI Integration" },
+        { id: "resources", label: "Resources" },
+      ]},
       { id: "author", label: "About" },
     ],
     langSwitch: "RO",

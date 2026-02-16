@@ -2,7 +2,7 @@ export type Locale = "ro" | "en";
 
 export interface Dictionary {
   nav: {
-    sections: { id: string; label: string }[];
+    sections: { id: string; label: string; submenu?: { id: string; label: string }[] }[];
     langSwitch: string;
   };
   hero: {
