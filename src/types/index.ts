@@ -117,7 +117,6 @@ export interface ConsultingRequest {
   message: string;
   budget_range: string | null;
   status: "new" | "contacted" | "closed";
-  admin_notes: string | null;
   created_at: string;
 }
 

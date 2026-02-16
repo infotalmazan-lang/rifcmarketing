@@ -43,48 +43,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ── Admin route protection ──
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
-  const isAdminLogin = request.nextUrl.pathname === "/admin/login";
-
-  if (isAdminRoute) {
-    if (isAdminLogin) {
-      // If logged in as admin, redirect to admin dashboard
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", user.id)
-          .single();
-        if (profile?.role === "admin") {
-          const url = request.nextUrl.clone();
-          url.pathname = "/admin";
-          return NextResponse.redirect(url);
-        }
-      }
-      return supabaseResponse;
-    }
-
-    // All other /admin/* routes require authenticated admin
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/admin/login";
-      return NextResponse.redirect(url);
-    }
-
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      const url = request.nextUrl.clone();
-      url.pathname = "/admin/login";
-      url.searchParams.set("error", "unauthorized");
-      return NextResponse.redirect(url);
-    }
-  }
-
   return supabaseResponse;
 }

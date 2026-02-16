@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import { generateSeoMetadata, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
+import { createMetadata, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
 import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
 
-export async function generateMetadata(): Promise<Metadata> {
-  return generateSeoMetadata("/");
-}
+export const metadata: Metadata = createMetadata();
 
 export default function RootLayout({
   children,
