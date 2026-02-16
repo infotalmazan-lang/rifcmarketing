@@ -76,7 +76,7 @@ export default function ConsultingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
                   {t.consulting.nameLabel}
                 </label>
                 <input
@@ -89,7 +89,7 @@ export default function ConsultingPage() {
                 />
               </div>
               <div>
-                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
                   {t.consulting.emailLabel}
                 </label>
                 <input
@@ -105,7 +105,7 @@ export default function ConsultingPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
                   {t.consulting.companyLabel}
                 </label>
                 <input
@@ -117,7 +117,7 @@ export default function ConsultingPage() {
                 />
               </div>
               <div>
-                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+                <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
                   {t.consulting.budgetLabel}
                 </label>
                 <select
@@ -134,7 +134,7 @@ export default function ConsultingPage() {
             </div>
 
             <div>
-              <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+              <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
                 {t.consulting.messageLabel}
               </label>
               <textarea

@@ -59,7 +59,7 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
               {t.login.emailLabel}
             </label>
             <div className="relative">
@@ -76,7 +76,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
               {t.login.passwordLabel}
             </label>
             <div className="relative">

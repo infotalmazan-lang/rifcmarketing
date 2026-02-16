@@ -63,11 +63,11 @@ export default function RegisterPage() {
           )}
 
           <div>
-            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
               {t.register.nameLabel}
             </label>
             <div className="relative">
-              <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
+              <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
               <input
                 type="text"
                 value={name}
@@ -80,11 +80,11 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
               {t.register.emailLabel}
             </label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
+              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
               <input
                 type="email"
                 value={email}
@@ -97,11 +97,11 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-ghost mb-2">
+            <label className="block font-mono text-[11px] tracking-[2px] uppercase text-text-muted mb-2">
               {t.register.passwordLabel}
             </label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-ghost" />
+              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
               <input
                 type="password"
                 value={password}

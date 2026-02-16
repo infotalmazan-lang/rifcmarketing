@@ -433,7 +433,7 @@ export default function AuditForm() {
                 <span className="font-body text-[14px] text-text-muted text-center px-4">
                   {t.audit.imageDropzone}
                 </span>
-                <span className="font-mono text-[11px] text-text-ghost mt-1">
+                <span className="font-mono text-[11px] text-text-muted mt-1">
                   {t.audit.imageDropzoneHint}
                 </span>
                 <input
@@ -460,7 +460,7 @@ export default function AuditForm() {
                   <div className="font-body text-[14px] text-text-primary truncate">
                     {imageFile.name}
                   </div>
-                  <div className="font-mono text-[11px] text-text-ghost">
+                  <div className="font-mono text-[11px] text-text-muted">
                     {(imageFile.size / 1024 / 1024).toFixed(2)} MB
                   </div>
                 </div>
@@ -505,7 +505,7 @@ export default function AuditForm() {
                 <span className="font-body text-[14px] text-text-muted text-center px-4">
                   {t.audit.pdfDropzone}
                 </span>
-                <span className="font-mono text-[11px] text-text-ghost mt-1">
+                <span className="font-mono text-[11px] text-text-muted mt-1">
                   {t.audit.pdfDropzoneHint}
                 </span>
                 <input
@@ -525,7 +525,7 @@ export default function AuditForm() {
                   <div className="font-body text-[14px] text-text-primary truncate">
                     {pdfFile.name}
                   </div>
-                  <div className="font-mono text-[11px] text-text-ghost">
+                  <div className="font-mono text-[11px] text-text-muted">
                     {(pdfFile.size / 1024 / 1024).toFixed(2)} MB &middot;{" "}
                     {pdfPageCount} {t.audit.previewPages}
                   </div>

@@ -182,7 +182,7 @@ export default function AnatomySection() {
                   {f.desc}
                 </div>
                 {/* Diagnostic question */}
-                <div className="font-body text-[12px] md:text-[13px] italic text-text-ghost leading-[1.6] mt-2">
+                <div className="font-body text-[12px] md:text-[13px] italic text-text-muted leading-[1.6] mt-2">
                   <span className="text-text-ghost/60">&rarr;</span> {f.question}
                 </div>
               </GradientBorderBlock>

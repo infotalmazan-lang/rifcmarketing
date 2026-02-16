@@ -606,7 +606,7 @@ export default function RelevanceGateSection() {
 
           <a
             href="/audit"
-            className="inline-flex items-center gap-2 bg-rifc-red hover:bg-red-500 text-white font-bold px-8 py-4 rounded-lg transition-colors duration-200 font-body text-[15px] mb-10"
+            className="inline-flex items-center gap-2 bg-rifc-red hover:bg-red-500 text-white font-bold px-8 py-4 rounded-sm transition-colors duration-200 font-body text-[15px] mb-10"
           >
             <ArrowRight size={16} strokeWidth={2} />
             {t.relevanceGate.ctaButton}

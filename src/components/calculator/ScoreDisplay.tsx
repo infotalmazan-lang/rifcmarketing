@@ -46,7 +46,7 @@ export default function ScoreDisplay({ r, i, f, c, gatePass, range }: Props) {
 
       <div className="relative z-[1]">
         {/* Score label */}
-        <div className="font-mono text-[11px] text-text-ghost tracking-[3px] text-center mb-4">
+        <div className="font-mono text-[11px] text-text-muted tracking-[3px] text-center mb-4">
           {t.calculator.yourScore}
         </div>
 

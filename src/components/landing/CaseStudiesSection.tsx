@@ -87,7 +87,7 @@ function ScreenMockup({
           <div className="w-2.5 h-2.5 rounded-full bg-[rgba(255,255,255,0.1)]" />
           <div className="w-2.5 h-2.5 rounded-full bg-[rgba(255,255,255,0.1)]" />
         </div>
-        <div className="flex items-center gap-1.5 ml-2 text-text-ghost">
+        <div className="flex items-center gap-1.5 ml-2 text-text-muted">
           {SCREEN_ICON[type]}
           <span className="font-mono text-[10px] tracking-[1px] uppercase">
             {screenLabelMap[type] || type}
@@ -97,7 +97,7 @@ function ScreenMockup({
       <div className="p-5 space-y-4">
         {type === "email" && data.subject && (
           <div>
-            <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-ghost block mb-1">
+            <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-muted block mb-1">
               {labels.subject}
             </span>
             <p className="font-body text-[13px] text-text-secondary leading-[1.5] italic">
@@ -106,7 +106,7 @@ function ScreenMockup({
           </div>
         )}
         <div>
-          <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-ghost block mb-1">
+          <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-muted block mb-1">
             {labels.headline}
           </span>
           <p className="font-heading text-[18px] font-semibold text-text-primary leading-[1.3]">
@@ -114,7 +114,7 @@ function ScreenMockup({
           </p>
         </div>
         <div>
-          <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-ghost block mb-1">
+          <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-muted block mb-1">
             {labels.body}
           </span>
           <p className="font-body text-[13px] text-text-muted leading-[1.7]">
@@ -122,7 +122,7 @@ function ScreenMockup({
           </p>
         </div>
         <div>
-          <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-ghost block mb-1">
+          <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-muted block mb-1">
             {labels.cta}
           </span>
           <span className="inline-block font-mono text-[11px] tracking-[1px] uppercase px-4 py-2 bg-rifc-red/20 text-rifc-red border border-rifc-red/30 rounded-sm">
@@ -530,7 +530,7 @@ function CaseTabCard({
             }`}>
               {cs.brand}
             </h4>
-            <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-ghost">
+            <span className="font-mono text-[9px] tracking-[1px] uppercase text-text-muted">
               {cs.industry}
             </span>
           </div>

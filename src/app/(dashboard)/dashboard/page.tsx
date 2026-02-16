@@ -75,7 +75,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick actions */}
-      <h2 className="font-mono text-[11px] tracking-[3px] uppercase text-text-ghost mb-4">
+      <h2 className="font-mono text-[11px] tracking-[3px] uppercase text-text-muted mb-4">
         {t.dashboard.quickActions}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

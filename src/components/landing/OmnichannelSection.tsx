@@ -1,16 +1,21 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useTranslation } from "@/lib/i18n";
 import Link from "next/link";
-import { Sparkles, Calculator } from "lucide-react";
+import { Sparkles, Calculator, ChevronDown, AlertTriangle, ArrowRight, Target, Zap, RotateCw, Flag, Eye } from "lucide-react";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { HeroScore, FormulaDisplay, GradientBorderBlock, WatermarkNumber, getScoreColor, getScoreZone } from "@/components/ui/V2Elements";
+import { GradientBorderBlock, WatermarkNumber, getScoreColor, getScoreZone } from "@/components/ui/V2Elements";
 
-/* ─── RIFC Colors ──────────────────────────────────────────── */
+/* ── RIFC Colors ─────────────────────────────────────────── */
 const COLORS = { r: "#DC2626", i: "#2563EB", f: "#D97706", c: "#059669" };
+const VAR_NAMES: Record<string, Record<string, string>> = {
+  r: { ro: "R (Relevanță)", en: "R (Relevance)" },
+  i: { ro: "I (Interes)", en: "I (Interest)" },
+  f: { ro: "F (Formă)", en: "F (Form)" },
+};
 
-/* ─── Lucide-style SVG mini icons (inline, no emoji) ──────── */
+/* ── Lucide-style SVG mini icons (inline, no emoji) ──────── */
 function IconGrid() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
@@ -26,23 +31,13 @@ function IconX() {
     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
   );
 }
-function IconChevronDown() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-  );
-}
-function IconAlertTriangle() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-  );
-}
 function IconLayers() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
   );
 }
 
-/* ─── Channel Zone Data (structural, not translatable) ────── */
+/* ── Channel Zone Data (structural, not translatable) ─────── */
 interface ZoneData {
   label: string;
   preview: string;
@@ -69,58 +64,10 @@ const ALL_CHANNELS: Record<string, ChannelData> = {
     category: "Digital",
     default: true,
     zones: {
-      r: {
-        label: "R — RELEVANCE",
-        preview: "URL matches search intent, aligned traffic source",
-        title: "R — Who reaches the site?",
-        items: [
-          "URL matches what they searched for",
-          "Traffic source is aligned (Google, ad, referral)",
-          "Headline confirms: you\u2019re in the right place",
-          "Language, location, context — correct",
-          "Visitor self-identifies in 2 seconds",
-        ],
-        fail: "R < 3: Bounce rate 90%. A beautiful site can\u2019t save irrelevance.",
-      },
-      i: {
-        label: "I — INTEREST",
-        preview: "Why 73% of campaigns fail even when they look good?",
-        title: "I — What makes them stay?",
-        items: [
-          "Headline promises a clear benefit",
-          "Subheadline creates curiosity",
-          "Social proof (testimonials, numbers)",
-          "Unique Value Proposition visible",
-          "Open loop that draws deeper",
-        ],
-        fail: "I < 3: Scans 5 sec, finds nothing, closes tab.",
-      },
-      f: {
-        label: "F — FORM",
-        preview: "Layout, CTA, font, white space, responsive, speed",
-        title: "F — Does design amplify the message?",
-        items: [
-          "Clear visual hierarchy (H1 > H2 > body)",
-          "Sufficient white space — not cluttered",
-          "CTA visible above the fold",
-          "Readable font, good contrast, responsive",
-          "Loading speed < 3 seconds",
-        ],
-        fail: "F < 3: Good content nobody reads. Wall of text.",
-      },
-      c: {
-        label: "C = CLARITY",
-        preview: "Visitor understands exactly who you are and what to do",
-        title: "C — The clarity test",
-        items: [
-          "5-second test: a stranger understands the page",
-          "One main message",
-          "Single, obvious CTA",
-          "Zero confusion",
-          "Next step is clear without thinking",
-        ],
-        fail: "Low C = visits without conversions. Wasted traffic.",
-      },
+      r: { label: "R \u2014 RELEVAN\u021a\u0102", preview: "URL-ul corespunde cu inten\u021bia de c\u0103utare, surs\u0103 de trafic aliniat\u0103", title: "R \u2014 Cine ajunge pe site?", items: ["URL-ul corespunde cu ce au c\u0103utat", "Sursa de trafic e aliniat\u0103 (Google, ad, referral)", "Headline-ul confirm\u0103: e\u0219ti \u00een locul potrivit", "Limba, loca\u021bia, contextul \u2014 corecte", "Vizitatorul se auto-identific\u0103 \u00een 2 secunde"], fail: "R < 3: Bounce rate 90%. Un site frumos nu salveaz\u0103 irelevan\u021ba." },
+      i: { label: "I \u2014 INTERES", preview: "De ce 73% din campanii e\u0219ueaz\u0103 chiar dac\u0103 arat\u0103 bine?", title: "I \u2014 Ce \u00eei face s\u0103 r\u0103m\u00e2n\u0103?", items: ["Headline-ul promite un beneficiu clar", "Subheadline-ul creeaz\u0103 curiozitate", "Dovad\u0103 social\u0103 (testimoniale, cifre)", "Propunere Unic\u0103 de Valoare vizibil\u0103", "Bucl\u0103 deschis\u0103 care atrage mai ad\u00e2nc"], fail: "I < 3: Scaneaz\u0103 5 sec, nu g\u0103se\u0219te nimic, \u00eenchide tab-ul." },
+      f: { label: "F \u2014 FORM\u0102", preview: "Layout, CTA, font, spa\u021biu alb, responsive, vitez\u0103", title: "F \u2014 Designul amplific\u0103 mesajul?", items: ["Ierarhie vizual\u0103 clar\u0103 (H1 > H2 > body)", "Spa\u021biu alb suficient \u2014 nu aglomerat", "CTA vizibil deasupra fold-ului", "Font lizibil, contrast bun, responsive", "Vitez\u0103 de \u00eenc\u0103rcare < 3 secunde"], fail: "F < 3: Con\u021binut bun pe care nimeni nu-l cite\u0219te. Zid de text." },
+      c: { label: "C = CLARITATE", preview: "Vizitatorul \u00een\u021belege exact cine e\u0219ti \u0219i ce s\u0103 fac\u0103", title: "C \u2014 Testul clarit\u0103\u021bii", items: ["Testul de 5 secunde: un str\u0103in \u00een\u021belege pagina", "Un singur mesaj principal", "Un singur CTA, evident", "Zero confuzie", "Pasul urm\u0103tor e clar f\u0103r\u0103 s\u0103 g\u00e2nde\u0219ti"], fail: "C slab = vizite f\u0103r\u0103 conversii. Trafic irosit." },
     },
   },
   social: {
@@ -128,34 +75,21 @@ const ALL_CHANNELS: Record<string, ChannelData> = {
     category: "Digital",
     default: true,
     zones: {
-      r: {
-        label: "R — AUDIENCE",
-        preview: "Relevant followers, algorithm, timing, clear niche",
-        title: "R — Who sees the post?",
-        items: ["Followers = relevant audience?", "Algorithm shows it to the right people?", "Profile confirms authority?", "Optimal timing?", "Clear niche from the first 2 words?"],
-        fail: "FAIL: Posting marketing but audience is gamers.",
-      },
-      i: {
-        label: "I — HOOK + CONTENT",
-        preview: "First line stops the scroll, concrete data, curiosity",
-        title: "I — What stops the scroll?",
-        items: ["Hook (first line) stops the scroll?", "Open loop: 73% have the same problem", "Concrete data: numbers, percentages", "Curiosity: I discovered a pattern", "Real promise, not clickbait"],
-        fail: "FAIL: \u201cI wrote a new article\u201d — zero engagement.",
-      },
-      f: {
-        label: "F — VISUAL FORMAT",
-        preview: "Image, carousel, video, text formatting, hashtags",
-        title: "F — How does the post look?",
-        items: ["Image stops the scroll", "Text formatted with spacing", "Bold on key words", "Carousel vs image vs video", "Relevant hashtags"],
-        fail: "FAIL: Long text without formatting, no image.",
-      },
-      c: {
-        label: "C = ENGAGEMENT",
-        preview: "Likes, comments, shares, saves, DMs",
-        title: "C — What does engagement mean?",
-        items: ["Like = emotional resonance", "Comment = interest + opinion", "Share = someone else needs to see this", "Save = I want to come back", "DM = I want to learn more"],
-        fail: "Supreme = high share rate.",
-      },
+      r: { label: "R \u2014 AUDIEN\u021a\u0102", preview: "Followeri relevan\u021bi, algoritm, timing, ni\u0219\u0103 clar\u0103", title: "R \u2014 Cine vede postarea?", items: ["Followerii = audien\u021b\u0103 relevant\u0103?", "Algoritmul o arat\u0103 oamenilor potrivi\u021bi?", "Profilul confirm\u0103 autoritate?", "Timing optim?", "Ni\u0219\u0103 clar\u0103 din primele 2 cuvinte?"], fail: "E\u0218EC: Postezi marketing dar audien\u021ba e de gameri." },
+      i: { label: "I \u2014 HOOK + CON\u021aINUT", preview: "Prima linie opre\u0219te scroll-ul, date concrete, curiozitate", title: "I \u2014 Ce opre\u0219te scroll-ul?", items: ["Hook-ul (prima linie) opre\u0219te scroll-ul?", "Bucl\u0103 deschis\u0103: 73% au aceea\u0219i problem\u0103", "Date concrete: cifre, procente", "Curiozitate: Am descoperit un pattern", "Promisiune real\u0103, nu clickbait"], fail: "E\u0218EC: \u201eAm scris un articol nou\u201d \u2014 zero engagement." },
+      f: { label: "F \u2014 FORMAT VIZUAL", preview: "Imagine, carousel, video, formatare text, hashtag-uri", title: "F \u2014 Cum arat\u0103 postarea?", items: ["Imaginea opre\u0219te scroll-ul", "Textul formatat cu spa\u021bii", "Bold pe cuvintele cheie", "Carousel vs imagine vs video", "Hashtag-uri relevante"], fail: "E\u0218EC: Text lung f\u0103r\u0103 formatare, f\u0103r\u0103 imagine." },
+      c: { label: "C = ENGAGEMENT", preview: "Like-uri, comentarii, share-uri, save-uri, DM-uri", title: "C \u2014 Ce \u00eenseamn\u0103 engagement-ul?", items: ["Like = rezonan\u021b\u0103 emo\u021bional\u0103", "Comentariu = interes + opinie", "Share = altcineva trebuie s\u0103 vad\u0103 asta", "Save = vreau s\u0103 revin", "DM = vreau s\u0103 aflu mai mult"], fail: "Supreme = rat\u0103 mare de share." },
+    },
+  },
+  video: {
+    name: "Video (YouTube/TikTok/Reels)",
+    category: "Digital",
+    default: true,
+    zones: {
+      r: { label: "R \u2014 DESCOPERIRE", preview: "Thumbnail + titlu \u00een feed-ul potrivit", title: "R \u2014 Cine g\u0103se\u0219te videoul?", items: ["Titlu optimizat SEO/algoritm", "Thumbnail care atrage click-ul", "Tag-uri \u0219i categorii corecte", "Publicat c\u00e2nd audien\u021ba e activ\u0103"], fail: "E\u0218EC: Video bun pe canalul gre\u0219it." },
+      i: { label: "I \u2014 HOOK + CON\u021aINUT", preview: "Primele 3 secunde, reten\u021bie, valoare", title: "I \u2014 Primele 3 secunde", items: ["Hook \u00een primele 3 secunde", "Bucl\u0103 deschis\u0103 care re\u021bine", "Valoare real\u0103, nu umplut\u0103", "Reten\u021bie peste 50%", "Pattern interrupt periodic"], fail: "E\u0218EC: Intro de 30 sec cu logo animat." },
+      f: { label: "F \u2014 PRODUC\u021aIE", preview: "Calitate imagine/sunet, editare, ritm, subtitl\u0103ri", title: "F \u2014 Produc\u021bia amplific\u0103?", items: ["Audio clar (mai important dec\u00e2t video)", "Editare ritmic\u0103, f\u0103r\u0103 timp mort", "Subtitl\u0103ri (85% privesc f\u0103r\u0103 sunet)", "B-roll relevant", "Thumbnail personalizat"], fail: "E\u0218EC: Audio prost, f\u0103r\u0103 subtitl\u0103ri, monoton." },
+      c: { label: "C = VIZIONARE + AC\u021aIUNE", preview: "Reten\u021bie, like-uri, abon\u0103ri, comentarii", title: "C \u2014 C\u00e2t au vizionat?", items: ["Durat\u0103 medie de vizionare mare", "Raport like/dislike", "Abonare dup\u0103 vizionare", "Comentarii cu \u00eentreb\u0103ri", "Share = Supreme"], fail: "Supreme: oamenii privesc p\u00e2n\u0103 la final." },
     },
   },
   email: {
@@ -163,265 +97,51 @@ const ALL_CHANNELS: Record<string, ChannelData> = {
     category: "Digital",
     default: true,
     zones: {
-      r: {
-        label: "R — SEGMENTATION",
-        preview: "Segmented list, optimized timing, known sender",
-        title: "R — Who are you sending to?",
-        items: ["List segmented by interest?", "Timing optimized per segment?", "Recognized sender name?", "Not blasting entire list"],
-        fail: "FAIL: Email blast to 50K unsegmented.",
-      },
-      i: {
-        label: "I — SUBJECT LINE",
-        preview: "Subject line with curiosity + complementary preview text",
-        title: "I — Do they open the email?",
-        items: ["Subject creates curiosity?", "Preview text completes the hook?", "Not clickbait", "Personalized with context"],
-        fail: "FAIL: Newsletter #47.",
-      },
-      f: {
-        label: "F — BODY FORMAT",
-        preview: "Short paragraphs, central CTA, mobile-friendly",
-        title: "F — Scannable body?",
-        items: ["Short paragraphs", "Single main CTA", "Mobile-friendly", "Personalization [Name]", "Visual hierarchy"],
-        fail: "FAIL: Wall of text, 5 links, no hierarchy.",
-      },
-      c: {
-        label: "C = METRICS",
-        preview: "Open rate, click rate, reply rate, unsub rate",
-        title: "C — What do metrics say?",
-        items: ["Open rate = R works", "Click rate = IxF works", "Reply = Supreme Clarity", "Low unsub = good segmentation"],
-        fail: "Open 40%+ and Click 10%+ = Supreme.",
-      },
+      r: { label: "R \u2014 SEGMENTARE", preview: "List\u0103 segmentat\u0103, timing optimizat, expeditor cunoscut", title: "R \u2014 Cui trimiți?", items: ["Lista segmentat\u0103 pe interese?", "Timing optimizat per segment?", "Nume expeditor recunoscut?", "Nu trimiți la toat\u0103 lista"], fail: "E\u0218EC: Email blast la 50K nesegmenta\u021bi." },
+      i: { label: "I \u2014 SUBJECT LINE", preview: "Subject cu curiozitate + preview text complementar", title: "I \u2014 Deschid email-ul?", items: ["Subject-ul creeaz\u0103 curiozitate?", "Preview text-ul completeaz\u0103 hook-ul?", "Nu e clickbait", "Personalizat cu context"], fail: "E\u0218EC: Newsletter #47." },
+      f: { label: "F \u2014 FORMAT CORP", preview: "Paragrafe scurte, CTA central, mobile-friendly", title: "F \u2014 Corp scanabil?", items: ["Paragrafe scurte", "Un singur CTA principal", "Mobile-friendly", "Personalizare [Nume]", "Ierarhie vizual\u0103"], fail: "E\u0218EC: Zid de text, 5 linkuri, f\u0103r\u0103 ierarhie." },
+      c: { label: "C = METRICI", preview: "Rat\u0103 deschidere, rat\u0103 click, rat\u0103 r\u0103spuns, dezabon\u0103ri", title: "C \u2014 Ce spun metricile?", items: ["Open rate = R func\u021bioneaz\u0103", "Click rate = IxF func\u021bioneaz\u0103", "R\u0103spuns = Claritate Suprem\u0103", "Dezabon\u0103ri mici = segmentare bun\u0103"], fail: "Open 40%+ \u0219i Click 10%+ = Supreme." },
     },
   },
   paid_ads: {
-    name: "Paid Ads (Google/Meta)",
+    name: "Reclame Pl\u0103tite (Google/Meta)",
     category: "Digital",
     default: true,
     zones: {
-      r: {
-        label: "R — TARGETING",
-        preview: "Precise audience, lookalike, keyword match, retargeting",
-        title: "R — Who sees the ad?",
-        items: ["Precise targeting = high R", "Lookalike audiences", "Keyword match type", "Retargeting = maximum R"],
-        fail: "FAIL: Broad targeting to everyone.",
-      },
-      i: {
-        label: "I — COPY + OFFER",
-        preview: "Clear pain/solution, concrete offer, numbers",
-        title: "I — Offer in 2 seconds",
-        items: ["Pain + solution in headline", "Free offer = zero barrier", "Concrete numbers", "Subtle urgency"],
-        fail: "FAIL: Discover our innovative solution.",
-      },
-      f: {
-        label: "F — CREATIVE",
-        preview: "Scroll-stopping visual, contrast, CTA on image",
-        title: "F — Does creative stop the scroll?",
-        items: ["Scroll-stopping visual", "Strong contrast, large text", "Consistent branding", "Clear CTA on image"],
-        fail: "FAIL: Generic stock photo.",
-      },
-      c: {
-        label: "C = CONVERSIONS",
-        preview: "CTR, CPC, conversion rate, ROAS",
-        title: "C — What do numbers say?",
-        items: ["High CTR = IxF works", "High conv = high C", "Low CPC = precise R", "Positive ROAS = everything works"],
-        fail: "CTR 3%+ and Conv 5%+ = Supreme.",
-      },
+      r: { label: "R \u2014 TARGETARE", preview: "Audien\u021b\u0103 precis\u0103, lookalike, potrivire keyword, retargeting", title: "R \u2014 Cine vede reclama?", items: ["Targetare precis\u0103 = R mare", "Audien\u021be lookalike", "Tipul de potrivire keyword", "Retargeting = R maxim"], fail: "E\u0218EC: Targetare larg\u0103 c\u0103tre toat\u0103 lumea." },
+      i: { label: "I \u2014 COPY + OFERT\u0102", preview: "Durere/solu\u021bie clar\u0103, ofert\u0103 concret\u0103, cifre", title: "I \u2014 Oferta \u00een 2 secunde", items: ["Durere + solu\u021bie \u00een headline", "Ofert\u0103 gratuit\u0103 = barier\u0103 zero", "Cifre concrete", "Urgen\u021b\u0103 subtil\u0103"], fail: "E\u0218EC: Descoper\u0103 solu\u021bia noastr\u0103 inovativ\u0103." },
+      f: { label: "F \u2014 CREATIVE", preview: "Vizual care opre\u0219te scroll-ul, contrast, CTA pe imagine", title: "F \u2014 Creative-ul opre\u0219te scroll-ul?", items: ["Vizual care opre\u0219te scroll-ul", "Contrast puternic, text mare", "Branding consistent", "CTA clar pe imagine"], fail: "E\u0218EC: Foto generic\u0103 de stock." },
+      c: { label: "C = CONVERSII", preview: "CTR, CPC, rat\u0103 de conversie, ROAS", title: "C \u2014 Ce spun cifrele?", items: ["CTR mare = IxF func\u021bioneaz\u0103", "Conversie mare = C mare", "CPC mic = R precis", "ROAS pozitiv = totul func\u021bioneaz\u0103"], fail: "CTR 3%+ \u0219i Conv 5%+ = Supreme." },
     },
   },
   seo_blog: {
-    name: "SEO / Blog / Content",
+    name: "SEO / Blog / Con\u021binut",
     category: "Digital",
+    default: true,
     zones: {
-      r: { label: "R — INTENT MATCH", preview: "Keyword matches search intent", title: "R — Does the article answer what they\u2019re searching?", items: ["Correct keyword research", "Search intent match (informational/transactional)", "Optimized title tag", "Clean and descriptive URL"], fail: "FAIL: Article about X when user searches Y." },
-      i: { label: "I — VALUABLE CONTENT", preview: "Unique insights, original data, complete answer", title: "I — Why read the whole article?", items: ["Insights not found elsewhere", "Original data, not copied", "Complete answer to the question", "Structure that guides reading"], fail: "FAIL: Generic summary from 5 other sites." },
-      f: { label: "F — STRUCTURE + UX", preview: "Scannable H2/H3, images, internal links, speed", title: "F — Reading experience", items: ["Clear and scannable H2/H3", "Relevant images, not decorative", "Logical internal links", "Optimal page speed", "Schema markup"], fail: "FAIL: Continuous text without headings, 15 sec load." },
-      c: { label: "C = RANKING + DWELL TIME", preview: "Google position, time on page, bounce rate", title: "C — Google confirms clarity", items: ["Top 3 = maximum relevance", "High dwell time = valuable content", "Low bounce rate = good match", "Featured snippet = Supreme"], fail: "Low C = page 3+ on Google." },
-    },
-  },
-  sms_whatsapp: {
-    name: "SMS / WhatsApp",
-    category: "Digital",
-    zones: {
-      r: { label: "R — PERMISSION + CONTEXT", preview: "Valid opt-in, right moment, correct segment", title: "R — Does it make sense to send now?", items: ["Explicit opt-in obtained", "Relevant timing (not 3 AM)", "Behavior-segmented", "Context from previous conversation"], fail: "FAIL: Spam SMS at 3 AM." },
-      i: { label: "I — CONCISE MESSAGE", preview: "Clear benefit in 160 characters, real urgency", title: "I — What do you transmit in 160 chars?", items: ["Clear immediate benefit", "Real urgency, not fabricated", "Personalized with name/context", "One thing to remember"], fail: "FAIL: You won a prize! Click here..." },
-      f: { label: "F — DIRECT FORMAT", preview: "Short link, strategic emoji, unique CTA", title: "F — Formatted for mobile", items: ["Short link with tracking", "Strategic emoji (max 1-2)", "Single clear CTA", "Length under 160 chars"], fail: "FAIL: 500-character message with 3 links." },
-      c: { label: "C = IMMEDIATE ACTION", preview: "Open rate, click rate, reply rate, opt-out", title: "C — Reaction in minutes", items: ["Open rate 95%+ (native SMS)", "Click rate = IxF works", "Reply = conversation", "Low opt-out = relevance"], fail: "Supreme: reply within first 5 minutes." },
-    },
-  },
-  video: {
-    name: "Video (YouTube/TikTok/Reels)",
-    category: "Digital",
-    zones: {
-      r: { label: "R — DISCOVERABILITY", preview: "Thumbnail + title in the right feed", title: "R — Who finds the video?", items: ["SEO/algorithm optimized title", "Click-attracting thumbnail", "Correct tags and categories", "Published when audience is active"], fail: "FAIL: Good video on wrong channel." },
-      i: { label: "I — HOOK + CONTENT", preview: "First 3 seconds, retention, value", title: "I — First 3 seconds", items: ["Hook in first 3 seconds", "Open loop that retains", "Real value not padding", "Retention over 50%", "Periodic pattern interrupt"], fail: "FAIL: 30 sec intro with animated logo." },
-      f: { label: "F — PRODUCTION", preview: "Image/sound quality, editing, rhythm, subtitles", title: "F — Does production amplify?", items: ["Clear audio (more important than video)", "Rhythmic editing, no dead time", "Subtitles (85% watch muted)", "Relevant B-roll", "Custom thumbnail"], fail: "FAIL: Bad audio, no subtitles, monotone." },
-      c: { label: "C = WATCH TIME + ACTION", preview: "Retention, likes, subscribes, comments", title: "C — How long did they watch?", items: ["High average view duration", "Like/dislike ratio", "Subscribe after viewing", "Comments with questions", "Share = Supreme"], fail: "Supreme: people watch until the end." },
-    },
-  },
-  podcast: {
-    name: "Podcast / Audio",
-    category: "Digital",
-    zones: {
-      r: { label: "R — NICHE AUDIENCE", preview: "Right platform, correct category, relevant guest", title: "R — Who listens?", items: ["Distributed on right platforms", "Correct category and tags", "Guest relevant to audience", "Episode title = searchable"], fail: "FAIL: Marketing podcast in Comedy category." },
-      i: { label: "I — CONVERSATION", preview: "New insights, personal stories, aha moments", title: "I — Why listen to the end?", items: ["Unique insights from experience", "Concrete personal stories", "Surprising aha moments", "Clear structure: intro-core-takeaway"], fail: "FAIL: Generic monologue without substance." },
-      f: { label: "F — AUDIO QUALITY", preview: "Clear sound, editing, intro/outro, show notes", title: "F — Listening experience", items: ["Professional audio, no noise", "Editing: no long pauses", "Branded intro/outro", "Show notes with timestamps", "Appropriate duration (not 3h)"], fail: "FAIL: Background noise, echoes, no editing." },
-      c: { label: "C = LOYALTY", preview: "Completion rate, subscribers, reviews, referrals", title: "C — Do they come back weekly?", items: ["High completion rate", "Subscriber growth", "5-star reviews", "People recommend to others", "Social posts about episodes"], fail: "Supreme: audience waits for each episode." },
-    },
-  },
-  influencer: {
-    name: "Influencer Marketing",
-    category: "Digital",
-    zones: {
-      r: { label: "R — INFLUENCER-BRAND FIT", preview: "Influencer\u2019s audience = your customer", title: "R — Is the influencer right?", items: ["Their audience = your target", "Values align", "Real engagement rate (not fake)", "Specific niche, not generalist"], fail: "FAIL: Fashion influencer promoting B2B SaaS." },
-      i: { label: "I — AUTHENTIC INTEGRATION", preview: "Natural story, real benefit, personal experience", title: "I — Does it feel authentic?", items: ["Naturally integrated in content", "Real personal experience", "Specific benefit mentioned", "Doesn\u2019t sound like read brief"], fail: "FAIL: Reading the brief word-for-word." },
-      f: { label: "F — NATIVE FORMAT", preview: "Influencer\u2019s style preserved, right platform", title: "F — Respects their style?", items: ["In influencer\u2019s natural style", "Platform-native format", "Subtly integrated CTA", "Story vs Post vs Reel \u2014 chosen correctly"], fail: "FAIL: Stock image with overlaid text." },
-      c: { label: "C = TRUST TRANSFER", preview: "Engagement, saves, link clicks, discount code", title: "C — Did audience act?", items: ["Engagement above their average", "Link clicks / swipe ups", "Discount code used", "New followers for brand", "Comments: I want one too!"], fail: "Supreme: audience buys from trust." },
-    },
-  },
-  webinar: {
-    name: "Webinar / Live Stream",
-    category: "Digital",
-    zones: {
-      r: { label: "R — RELEVANT SIGNUPS", preview: "Targeted promotion, clear title, right audience", title: "R — Who signs up?", items: ["Clear landing page", "Promotion to right audience", "Title promises specific value", "Convenient date/time"], fail: "FAIL: Generic webinar promoted to entire list." },
-      i: { label: "I — LIVE CONTENT", preview: "Actionable value, interaction, Q&A, demo", title: "I — Why do they stay live?", items: ["Immediately actionable value", "Audience interaction", "Live demo or case study", "Real Q&A, not prepared", "Element of exclusivity"], fail: "FAIL: PowerPoint read for 60 minutes." },
-      f: { label: "F — LIVE PRODUCTION", preview: "Clear audio/video, professional slides, moderated chat", title: "F — Live experience", items: ["Stable clear audio/video", "Visual slides (not text)", "Active moderated chat", "Recording available after", "Easy-to-access platform"], fail: "FAIL: Technical problems, wrong screen shared." },
-      c: { label: "C = LIVE CONVERSION", preview: "Attendance rate, engagement, CTA acceptance", title: "C — What do they do after?", items: ["Attendance vs signups > 40%", "Stay until the end", "Questions in chat", "Click on final offer", "Follow-up email opened"], fail: "Supreme: they ask for the offer before you present it." },
-    },
-  },
-  marketplace: {
-    name: "Marketplace (Amazon/eMag)",
-    category: "Digital",
-    zones: {
-      r: { label: "R — SEARCH + CATEGORY", preview: "Right keywords, correct category, optimized listing", title: "R — Do they find you when searching?", items: ["Keywords in title and description", "Correct category", "Complete backend keywords", "Competitive price in search"], fail: "FAIL: Product listed in wrong category." },
-      i: { label: "I — COMPLETE LISTING", preview: "Clear benefits, reviews, A+ content, comparison", title: "I — Why choose your product?", items: ["Benefits > features", "Positive and plentiful reviews", "A+ content with images", "Answers to questions", "Favorable comparison"], fail: "FAIL: Technical description, zero reviews." },
-      f: { label: "F — IMAGES + FORMAT", preview: "7+ HD images, infographics, lifestyle, video", title: "F — Does listing look professional?", items: ["7+ professional HD images", "First image = hero shot", "Infographic with benefits", "Lifestyle images", "Short product video"], fail: "FAIL: Single photo on white background." },
-      c: { label: "C = CONVERSION + RANKING", preview: "Conversion rate, BSR, reviews, buy box", title: "C — Do they buy?", items: ["Conversion rate vs category", "Best Seller Rank", "Review velocity", "Buy box won", "Repeat purchases"], fail: "Supreme: top 3 in category." },
-    },
-  },
-  tv: {
-    name: "TV / Commercial",
-    category: "Traditional",
-    zones: {
-      r: { label: "R — SLOT + CHANNEL", preview: "Right channel, right time, right show", title: "R — Who sees the spot?", items: ["Channel with target audience", "Right time slot (prime time?)", "During relevant show break", "GRPs on desired segment"], fail: "FAIL: B2B SaaS spot on reality TV." },
-      i: { label: "I — SCRIPT + MESSAGE", preview: "Memorable story, emotion, clear benefit in 30s", title: "I — Do they remember the spot?", items: ["Memorable story in 30 sec", "Strong emotion (laughter, surprise)", "Clear benefit, not just branding", "Memorable call to action"], fail: "FAIL: 30 sec of logo and slogan." },
-      f: { label: "F — PRODUCTION", preview: "Cinema quality, sound, actors, editing", title: "F — Does it look professional?", items: ["Cinematographic quality", "Professional sound and music", "Convincing actors/voice", "Rhythmic editing, no filler"], fail: "FAIL: Spot filmed with a phone." },
-      c: { label: "C = MEMORABILITY", preview: "Brand recall, search lift, conversations", title: "C — Do they talk about the spot?", items: ["Brand recall at 24h", "Search lift on brand name", "Organic social buzz", "People imitate/quote it", "Measurable sales lift"], fail: "Supreme: the spot goes viral organically." },
-    },
-  },
-  radio: {
-    name: "Radio",
-    category: "Traditional",
-    zones: {
-      r: { label: "R — STATION + TIME", preview: "Station with target audience, drive time", title: "R — Who hears the spot?", items: ["Station with right demographics", "Drive time vs off-peak", "Compatible programming", "Sufficient frequency"], fail: "FAIL: B2B spot on pop music radio." },
-      i: { label: "I — AUDIO SCRIPT", preview: "Audio hook, clear benefit, memorable number/site", title: "I — What do they remember from 20 sec?", items: ["Audio hook in first 3 sec", "Single clear benefit", "Memorable number or site", "Strategic repetition"], fail: "FAIL: 20 sec of technical information." },
-      f: { label: "F — AUDIO PRODUCTION", preview: "Professional voice, jingle, sound design", title: "F — Does it sound professional?", items: ["Voice matching the brand", "Memorable jingle", "Clear sound design", "Professional audio mix"], fail: "FAIL: Owner reads the text himself." },
-      c: { label: "C = POST-LISTEN ACTION", preview: "Calls, website visits, code mentions", title: "C — Do they call after hearing?", items: ["Calls mentioning radio", "Website traffic spike", "Promo code used", "Increased brand recognition"], fail: "Supreme: people hum the jingle." },
-    },
-  },
-  print: {
-    name: "Print (Magazine/Newspaper)",
-    category: "Traditional",
-    zones: {
-      r: { label: "R — PUBLICATION + POSITION", preview: "Magazine read by target, right page", title: "R — Who sees the ad?", items: ["Publication read by target", "Position in magazine (cover?)", "Relevant themed edition", "Verified circulation"], fail: "FAIL: Tech ad in gardening magazine." },
-      i: { label: "I — HEADLINE + COPY", preview: "Headline that stops browsing, clear offer", title: "I — Do they stop browsing?", items: ["Visually strong headline", "Concise copy with benefit", "Specific offer", "Visible social proof"], fail: "FAIL: Just a big logo and slogan." },
-      f: { label: "F — PRINT DESIGN", preview: "Layout, CMYK colors, font size, QR code", title: "F — Does it look impeccable printed?", items: ["Balanced, airy layout", "Correct CMYK colors", "Readable font (min 9pt body)", "Functional QR code", "HD resolution image"], fail: "FAIL: Small text, dirty colors, cluttered layout." },
-      c: { label: "C = MEASURABLE RESPONSE", preview: "QR scans, unique URL visits, coupon redemption", title: "C — Did they act?", items: ["QR code scans", "Unique URL visits", "Coupon redemptions", "Phone calls with mention", "Brand lift survey"], fail: "Supreme: they keep the page and show others." },
-    },
-  },
-  ooh: {
-    name: "OOH (Billboard/Banner)",
-    category: "Traditional",
-    zones: {
-      r: { label: "R — PHYSICAL LOCATION", preview: "Location with target traffic, visibility", title: "R — Do the right people pass by?", items: ["Location with right demographic traffic", "Good visibility (angle, distance)", "No visual obstacles", "Sufficient contract duration"], fail: "FAIL: Billboard on the wrong road." },
-      i: { label: "I — MESSAGE IN 3 SEC", preview: "Max 7 words, instant benefit", title: "I — Do you understand from the car?", items: ["Maximum 7 words", "Single message/benefit", "Short memorable URL/number", "Emotion or visual surprise"], fail: "FAIL: 30 words on a billboard." },
-      f: { label: "F — OUTDOOR DESIGN", preview: "Maximum contrast, huge font, simple image", title: "F — Is it visible from 50m?", items: ["Maximum contrast (background vs text)", "Huge font, readable at distance", "Simple image, one focal point", "Brand visible but not dominant"], fail: "FAIL: Brochure design on billboard." },
-      c: { label: "C = AWARENESS + RECALL", preview: "Brand recall, traffic lift, search volume", title: "C — Did they remember?", items: ["Brand recall in the area", "Traffic lift at location", "Increased search volume", "Social media mentions", "People photograph the billboard"], fail: "Supreme: it becomes a local landmark." },
-    },
-  },
-  events: {
-    name: "Events / Expo / Conference",
-    category: "Traditional",
-    zones: {
-      r: { label: "R — RIGHT EVENT", preview: "Conference with your target attendees", title: "R — Are you at the right event?", items: ["Event attracts your target", "Stand/slot in relevant area", "Pre-qualified attendees", "Good timing (no competing events)"], fail: "FAIL: SaaS stand at a wedding fair." },
-      i: { label: "I — STAND EXPERIENCE", preview: "Live demo, valuable giveaway, conversation", title: "I — Why do they stop?", items: ["Interactive live demo", "Giveaway with real value", "Conversation not pitch", "Exclusivity: only at event"], fail: "FAIL: Brochures on table, nobody at stand." },
-      f: { label: "F — STAND DESIGN + MATERIALS", preview: "Visible stand, branded, quality materials", title: "F — Does the stand attract?", items: ["Stand visible from distance", "Coherent attractive branding", "Quality printed materials", "Working screens/demos"], fail: "FAIL: Generic banner and empty table." },
-      c: { label: "C = LEADS + RELATIONSHIPS", preview: "Leads collected, meetings scheduled, follow-up", title: "C — Did you leave with contacts?", items: ["Number of leads collected", "Meetings scheduled on-spot", "Business cards exchanged", "Follow-up rate after event", "Deals closed from event"], fail: "Supreme: they schedule meeting before leaving." },
-    },
-  },
-  direct_mail: {
-    name: "Direct Mail (Post)",
-    category: "Traditional",
-    zones: {
-      r: { label: "R — LIST + ADDRESS", preview: "Clean list, correct address, precise segment", title: "R — Does it reach the right person?", items: ["Updated and cleaned list", "Segmented by relevant criteria", "Verified addresses", "Not sending to entire database"], fail: "FAIL: Mass mailing to old addresses." },
-      i: { label: "I — PHYSICAL OFFER", preview: "Exclusive offer, tangible benefit, urgency", title: "I — Do they open the envelope?", items: ["Offer exclusive to mail only", "Tangible and clear benefit", "Real urgency (deadline)", "Personalization with name"], fail: "FAIL: Generic brochure without offer." },
-      f: { label: "F — DESIGN + MATERIAL", preview: "Quality paper, premium design, clear CTA", title: "F — Do they feel quality?", items: ["Quality paper (weight)", "Premium design, not spam look", "Clear CTA (phone, QR, URL)", "Envelope that stands out"], fail: "FAIL: Cheap flyer that looks like spam." },
-      c: { label: "C = DIRECT RESPONSE", preview: "Response rate, QR scans, calls, orders", title: "C — Do they respond?", items: ["Response rate (2-5% = good)", "QR code scans", "Phone calls received", "Orders with unique code", "ROI per piece"], fail: "Supreme: they keep the material on their desk." },
-    },
-  },
-  pr: {
-    name: "PR / Press Releases",
-    category: "Traditional",
-    zones: {
-      r: { label: "R — JOURNALIST + PUBLICATION", preview: "Journalist covering your niche, news cycle timing", title: "R — Who do you send the release to?", items: ["Journalist covering your industry", "Publication read by target", "Timing with news cycle", "Pre-existing relationship"], fail: "FAIL: Generic release sent to 500 newsrooms." },
-      i: { label: "I — ANGLE + STORY", preview: "Unique news angle, exclusive data, human story", title: "I — Is it news or an ad?", items: ["Unique and timely news angle", "Exclusive data or study", "Human story behind it", "Memorable quote included"], fail: "FAIL: Press release = disguised advertisement." },
-      f: { label: "F — RELEASE FORMAT", preview: "Inverted pyramid, quote, multimedia kit", title: "F — Can the journalist use it directly?", items: ["Inverted pyramid (essence first)", "Ready-to-publish quote", "Media kit with HD images", "Clear contact for follow-up", "Max 1 page"], fail: "FAIL: 3 pages of corporate speak." },
-      c: { label: "C = MEDIA COVERAGE", preview: "Published articles, reach, sentiment, backlinks", title: "C — Did they write about you?", items: ["Number of published articles", "Estimated total reach", "Positive sentiment", "Quality backlinks", "Your quote used directly"], fail: "Supreme: journalist calls you for more." },
-    },
-  },
-  chatbot: {
-    name: "Chatbot / Live Chat",
-    category: "Digital",
-    zones: {
-      r: { label: "R — TRIGGER + MOMENT", preview: "Appears when visitor needs it, not random", title: "R — Does it appear at the right time?", items: ["Behavior trigger (exit intent, time)", "On relevant page", "Doesn\u2019t appear every visit", "Contextual message"], fail: "FAIL: Chat pop-up at 2 seconds on homepage." },
-      i: { label: "I — USEFUL CONVERSATION", preview: "Relevant answers, guidance, not spam", title: "I — Does it help or annoy?", items: ["Answers the real question", "Guides toward solution", "Consistent personality", "Escalation to human when needed"], fail: "FAIL: Infinite loop of generic answers." },
-      f: { label: "F — INTERFACE", preview: "Clean design, fast, mobile-friendly, brand voice", title: "F — Is it easy to use?", items: ["Clean non-intrusive design", "Fast response (< 3 sec)", "Mobile-friendly", "Consistent brand voice"], fail: "FAIL: Ugly widget covering content." },
-      c: { label: "C = RESOLUTION", preview: "Resolution rate, satisfaction, conversion", title: "C — Problem solved?", items: ["High resolution rate", "Customer satisfaction", "Conversion from chat", "Low resolution time"], fail: "Supreme: customer says thank you in chat." },
-    },
-  },
-  push: {
-    name: "Push Notifications",
-    category: "Digital",
-    zones: {
-      r: { label: "R — PERMISSION + TIMING", preview: "Active opt-in, relevant moment, ok frequency", title: "R — Is it worth disturbing them?", items: ["Active opt-in obtained", "Relevant timing (not at night)", "Reasonable frequency", "Right segment"], fail: "FAIL: 5 pushes per day to everyone." },
-      i: { label: "I — SHORT MESSAGE", preview: "Max 50 characters, instant benefit, real urgency", title: "I — Click or dismiss?", items: ["Clear benefit in 50 chars", "Real urgency or novelty", "Behavior-personalized", "Not repetitive"], fail: "FAIL: Don\u2019t forget about us! \u2014 instant dismiss." },
-      f: { label: "F — NOTIFICATION FORMAT", preview: "Strategic emoji, image, correct deep link", title: "F — Does it look good on screen?", items: ["Relevant emoji (max 1)", "Image if supported", "Deep link directly to content", "Rich notification when possible"], fail: "FAIL: Truncated text, link to homepage." },
-      c: { label: "C = OPEN + ACTION", preview: "Open rate, click-through, retention, opt-out", title: "C — Did they return to app?", items: ["Push open rate (3-10% = good)", "Click-through on CTA", "Retention after push", "Low opt-out rate"], fail: "Supreme: user returns and completes action." },
-    },
-  },
-  affiliate: {
-    name: "Affiliate Marketing",
-    category: "Digital",
-    zones: {
-      r: { label: "R — RIGHT AFFILIATE", preview: "Affiliate\u2019s audience = your ideal customer", title: "R — Right affiliate?", items: ["Their audience = your target", "Aligned niche and values", "Real quality traffic", "Commission motivates effort"], fail: "FAIL: Coupon affiliate for premium product." },
-      i: { label: "I — OFFER + LANDING", preview: "Attractive offer, optimized landing page", title: "I — Is the click worth it?", items: ["Clear and attractive offer", "Dedicated landing page for affiliates", "Specific benefit mentioned", "Social proof on landing"], fail: "FAIL: Affiliate link to homepage." },
-      f: { label: "F — AFFILIATE MATERIALS", preview: "Banners, pre-written copy, correct tracking", title: "F — Do they have what they need?", items: ["Banners in all sizes", "Adaptable pre-written copy", "Working tracking link", "Dashboard with statistics"], fail: "FAIL: Zero materials, just a link." },
-      c: { label: "C = SALES + ROI", preview: "Conversions, EPC, revenue, affiliate client LTV", title: "C — Does it generate sales?", items: ["Conversion rate per affiliate", "EPC (earnings per click)", "Total channel revenue", "LTV of clients from affiliate"], fail: "Supreme: affiliate promotes actively without asking." },
-    },
-  },
-  general: {
-    name: "General (Any Channel)",
-    category: "General",
-    zones: {
-      r: { label: "R — RELEVANCE", preview: "Does the message reach the right audience?", title: "R — Correct audience?", items: ["Does the channel reach target?", "Is the timing right?", "Is the context relevant?", "Does audience self-identify?"], fail: "R < 3: All effort wasted. Message doesn\u2019t matter if it doesn\u2019t reach the right people." },
-      i: { label: "I — INTEREST", preview: "Does content offer value and create curiosity?", title: "I — Why would they care?", items: ["Offers clear insight or benefit?", "Creates curiosity or emotion?", "Has substance, not just form?", "Different from what they\u2019ve seen?"], fail: "I < 3: Audience sees message but doesn\u2019t react. Background noise." },
-      f: { label: "F — FORM", preview: "Does presentation amplify or sabotage the message?", title: "F — Does form amplify?", items: ["Format is native to channel?", "Design is professional?", "Scannable/consumable easily?", "CTA is clear and visible?", "Optimized for device?"], fail: "F < 3: Good message presented badly = lost message." },
-      c: { label: "C — CLARITY (RESULT)", preview: "Did audience understand exactly what you communicated?", title: "C — Did they understand?", items: ["Message arrived undistorted?", "Audience knows what to do next?", "Desired action happened?", "Can they repeat your message to others?"], fail: "C = R + (IxF). Clarity is the sum of all efforts." },
+      r: { label: "R \u2014 POTRIVIRE INTEN\u021aIE", preview: "Keyword-ul se potrive\u0219te cu inten\u021bia de c\u0103utare", title: "R \u2014 Articolul r\u0103spunde la ce caut\u0103?", items: ["Cercetare corect\u0103 de keyword-uri", "Potrivirea inten\u021biei de c\u0103utare (informa\u021bional/tranzac\u021bional)", "Title tag optimizat", "URL curat \u0219i descriptiv"], fail: "E\u0218EC: Articol despre X c\u00e2nd userul caut\u0103 Y." },
+      i: { label: "I \u2014 CON\u021aINUT VALOROS", preview: "Insight-uri unice, date originale, r\u0103spuns complet", title: "I \u2014 De ce s\u0103 citeasc\u0103 tot articolul?", items: ["Insight-uri pe care nu le g\u0103sesc \u00een alt\u0103 parte", "Date originale, nu copiate", "R\u0103spuns complet la \u00eentrebare", "Structur\u0103 care ghideaz\u0103 lectura"], fail: "E\u0218EC: Rezumat generic din alte 5 site-uri." },
+      f: { label: "F \u2014 STRUCTUR\u0102 + UX", preview: "H2/H3 scanabile, imagini, link-uri interne, vitez\u0103", title: "F \u2014 Experien\u021ba de lectur\u0103", items: ["H2/H3 clare \u0219i scanabile", "Imagini relevante, nu decorative", "Link-uri interne logice", "Vitez\u0103 optim\u0103 a paginii", "Schema markup"], fail: "E\u0218EC: Text continuu f\u0103r\u0103 headinguri, 15 sec \u00eenc\u0103rcare." },
+      c: { label: "C = RANKING + TIMP PE PAGIN\u0102", preview: "Pozi\u021bie Google, timp pe pagin\u0103, bounce rate", title: "C \u2014 Google confirm\u0103 claritatea", items: ["Top 3 = relevan\u021b\u0103 maxim\u0103", "Timp mare pe pagin\u0103 = con\u021binut valoros", "Bounce rate mic = potrivire bun\u0103", "Featured snippet = Supreme"], fail: "C slab = pagina 3+ pe Google." },
     },
   },
 };
 
 type ZoneKey = "r" | "i" | "f" | "c";
 
-/* ─── COMPONENT ──────────────────────────────────────────────── */
+/* Key channels that have expanded i18n descriptions */
+const KEYED_CHANNELS = ["website", "social", "video", "email", "paid_ads", "seo_blog"];
+
+/* ── COMPONENT ─────────────────────────────────────────────── */
 export default function OmnichannelSection() {
   const { t } = useTranslation();
   const sectionRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
   const defaultIds = Object.keys(ALL_CHANNELS).filter((k) => ALL_CHANNELS[k].default);
-  const [activeIds, setActiveIds] = useState<string[]>([...defaultIds, "general"]);
+  const [activeIds, setActiveIds] = useState<string[]>([...defaultIds]);
   const [channel, setChannel] = useState("website");
-  const [activeZone, setActiveZone] = useState<ZoneKey | null>(null);
+  const [activeZone, setActiveZone] = useState<ZoneKey>("r");
   const [scores, setScores] = useState({ r: 8, i: 7, f: 9 });
   const [showAdd, setShowAdd] = useState(false);
 
@@ -447,7 +167,7 @@ export default function OmnichannelSection() {
     setShowAdd(false);
   };
   const removeChannel = (id: string) => {
-    if (defaultIds.includes(id) || id === "general") return;
+    if (defaultIds.includes(id)) return;
     const next = activeIds.filter((x) => x !== id);
     setActiveIds(next);
     if (channel === id) setChannel(next[0]);
@@ -455,7 +175,6 @@ export default function OmnichannelSection() {
 
   const available = Object.keys(ALL_CHANNELS).filter((k) => !activeIds.includes(k));
   const chData = ALL_CHANNELS[channel];
-  const zData = activeZone && chData ? chData.zones[activeZone] : null;
 
   const categories: Record<string, string[]> = {};
   available.forEach((id) => {
@@ -463,6 +182,29 @@ export default function OmnichannelSection() {
     if (!categories[cat]) categories[cat] = [];
     categories[cat].push(id);
   });
+
+  /* PUNCT 5 — dynamic diagnosis computation */
+  const lowestVar = useMemo(() => {
+    const vars = { r: scores.r, i: scores.i, f: scores.f };
+    const min = Math.min(scores.r, scores.i, scores.f);
+    return (Object.keys(vars) as ("r" | "i" | "f")[]).find((k) => vars[k] === min) || "r";
+  }, [scores]);
+
+  const channelName = chData?.name || "General";
+
+  /* Get the expanded i18n variable data if channel has it */
+  const hasExpandedData = KEYED_CHANNELS.includes(channel);
+  const expandedVars = hasExpandedData ? t.omnichannel.channelVariables?.[channel] : null;
+  const channelSummary = t.omnichannel.channelSummaries?.[channel];
+  const channelTip = t.omnichannel.channelTips?.[channel];
+
+  /* Potential improved score */
+  const improvedVal = Math.min(lowestVar === "r" ? scores.r + 2 : scores.r, 10);
+  const improvedI = Math.min(lowestVar === "i" ? scores.i + 2 : scores.i, 10);
+  const improvedF = Math.min(lowestVar === "f" ? scores.f + 2 : scores.f, 10);
+  const improvedC = (lowestVar === "r" ? improvedVal : scores.r) + (lowestVar === "i" ? improvedI : scores.i) * (lowestVar === "f" ? improvedF : scores.f);
+  const percentChange = c > 0 ? Math.round(((improvedC - c) / c) * 100) : 0;
+  const improvedZone = getScoreZone(improvedC);
 
   return (
     <section
@@ -475,10 +217,27 @@ export default function OmnichannelSection() {
         chapter={t.omnichannel.chapter}
         titlePlain={t.omnichannel.titlePlain}
         titleBold={t.omnichannel.titleBold}
-        description={t.omnichannel.description}
+        description=""
         watermarkNumber="05"
         watermarkColor="#DC2626"
       />
+
+      {/* PUNCT 1 — Shock intro with colored scores */}
+      <div className="mb-12">
+        <p className="font-mono text-[20px] md:text-[22px] font-bold text-white leading-[1.5] mb-4">
+          {t.omnichannel.introShock.split(/(C = 85|C = 30)/g).map((part, i) => {
+            if (part === "C = 85") return <span key={i} className="text-rifc-green">{part}</span>;
+            if (part === "C = 30") return <span key={i} className="text-rifc-red">{part}</span>;
+            return <span key={i}>{part}</span>;
+          })}
+        </p>
+        <p className="font-body text-[16px] text-gray-300 leading-[1.7] mb-3">
+          {t.omnichannel.introBody}
+        </p>
+        <p className="font-body text-[14px] text-gray-400 leading-[1.6]">
+          {t.omnichannel.introAction}
+        </p>
+      </div>
 
       {/* Equation header */}
       <div className="flex items-center gap-3 mb-10">
@@ -491,7 +250,7 @@ export default function OmnichannelSection() {
           <span className="text-text-invisible">) = </span>
           <span className="text-rifc-green">C</span>
         </div>
-        <span className="font-mono text-[11px] text-text-ghost tracking-[1px]">
+        <span className="font-mono text-[11px] text-text-muted tracking-[1px]">
           {t.omnichannel.perChannel}
         </span>
       </div>
@@ -501,7 +260,7 @@ export default function OmnichannelSection() {
         {activeIds.map((id) => (
           <div key={id} className="relative inline-flex">
             <button
-              onClick={() => { setChannel(id); setActiveZone(null); }}
+              onClick={() => { setChannel(id); setActiveZone("r"); }}
               className={`px-3 py-2 rounded font-mono text-[10px] transition-all duration-200 border cursor-pointer ${
                 channel === id
                   ? "bg-[rgba(220,38,38,0.08)] border-rifc-red text-rifc-red"
@@ -510,7 +269,7 @@ export default function OmnichannelSection() {
             >
               {ALL_CHANNELS[id].name}
             </button>
-            {!defaultIds.includes(id) && id !== "general" && (
+            {!defaultIds.includes(id) && (
               <button
                 onClick={(e) => { e.stopPropagation(); removeChannel(id); }}
                 className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-surface-bg border border-border-medium text-text-ghost flex items-center justify-center cursor-pointer hover:text-rifc-red hover:border-rifc-red transition-colors"
@@ -529,7 +288,7 @@ export default function OmnichannelSection() {
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-mono text-[10px] transition-all duration-200 border cursor-pointer ${
             showAdd
               ? "bg-[rgba(5,150,105,0.08)] border-rifc-green text-rifc-green"
-              : "bg-surface-card border-border-light text-text-ghost hover:text-text-muted"
+              : "bg-surface-card border-border-light text-text-muted hover:text-text-primary"
           }`}
         >
           <IconPlus /> {t.omnichannel.addChannel}
@@ -537,7 +296,7 @@ export default function OmnichannelSection() {
         {available.length > 0 && (
           <button
             onClick={addAll}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded font-mono text-[10px] transition-all duration-200 border border-border-light bg-surface-card text-text-ghost hover:text-text-muted cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded font-mono text-[10px] transition-all duration-200 border border-border-light bg-surface-card text-text-muted hover:text-text-primary cursor-pointer"
           >
             <IconLayers /> {t.omnichannel.addAll} ({available.length})
           </button>
@@ -546,10 +305,10 @@ export default function OmnichannelSection() {
 
       {/* Add panel */}
       {showAdd && available.length > 0 && (
-        <div className="mb-10 border border-border-medium rounded-lg p-5 bg-surface-card">
+        <div className="mb-10 border border-border-medium rounded-sm p-5 bg-surface-card">
           {Object.keys(categories).map((cat) => (
             <div key={cat} className="mb-4 last:mb-0">
-              <div className="font-mono text-[9px] text-text-ghost tracking-[2px] uppercase mb-3">{cat}</div>
+              <div className="font-mono text-[9px] text-text-muted tracking-[2px] uppercase mb-3">{cat}</div>
               <div className="flex flex-wrap gap-1.5">
                 {categories[cat].map((id) => (
                   <button
@@ -571,11 +330,11 @@ export default function OmnichannelSection() {
         {/* Left column: Channel zones + Sliders */}
         <div className="flex-1 min-w-[320px]">
           {chData && (
-            <div className="border border-border-medium rounded-lg overflow-hidden">
+            <div className="border border-border-medium rounded-sm overflow-hidden">
               {/* Channel name header */}
               <div className="px-4 py-3 bg-surface-card border-b border-border-subtle flex items-center gap-2">
                 <IconGrid />
-                <span className="font-mono text-[10px] text-text-ghost tracking-[2px] uppercase">{chData.name}</span>
+                <span className="font-mono text-[10px] text-text-muted tracking-[2px] uppercase">{chData.name}</span>
               </div>
 
               {/* R, I, F, C zone rows */}
@@ -610,8 +369,8 @@ export default function OmnichannelSection() {
           )}
 
           {/* Score sliders */}
-          <div className="mt-4 border border-border-medium rounded-lg p-4 bg-surface-card">
-            <div className="font-mono text-[9px] text-text-ghost tracking-[2px] uppercase mb-4">
+          <div className="mt-4 border border-border-medium rounded-sm p-4 bg-surface-card">
+            <div className="font-mono text-[9px] text-text-muted tracking-[2px] uppercase mb-4">
               {t.omnichannel.simulateScore}
             </div>
             {(["r", "i", "f"] as const).map((key) => (
@@ -620,7 +379,7 @@ export default function OmnichannelSection() {
                   <span className="font-mono text-[11px] font-semibold" style={{ color: COLORS[key] }}>
                     {key.toUpperCase()} = {scores[key]}
                   </span>
-                  <span className="font-mono text-[9px] text-text-ghost">
+                  <span className="font-mono text-[9px] text-text-muted">
                     {scores[key] <= 3 ? t.omnichannel.low : scores[key] <= 6 ? t.omnichannel.mid : t.omnichannel.high}
                   </span>
                 </div>
@@ -652,30 +411,113 @@ export default function OmnichannelSection() {
               </div>
               {scores.r < 3 && (
                 <div className="mt-2 flex items-center justify-center gap-1.5 font-mono text-[9px] text-rifc-red bg-[rgba(220,38,38,0.08)] px-3 py-1.5 rounded">
-                  <IconAlertTriangle />
+                  <AlertTriangle size={12} />
                   {t.omnichannel.relevanceGateWarning}
+                </div>
+              )}
+            </div>
+
+            {/* PUNCT 5 — Dynamic diagnosis */}
+            <div className="mt-4 border-t border-border-subtle pt-4">
+              <div className="font-mono text-[9px] text-text-muted tracking-[2px] uppercase mb-3">
+                DIAGNOSTICUL T\u0102U
+              </div>
+              <div
+                className="p-3 rounded-md border-l-3 text-[12px] font-body leading-[1.6]"
+                style={{
+                  borderLeftWidth: "3px",
+                  borderLeftColor: cColor,
+                  background: `${cColor}08`,
+                  color: cColor,
+                }}
+              >
+                {scores.r < 3 ? (
+                  <p className="font-medium">{t.omnichannel.diagGateActivated.replace("{channel}", channelName)}</p>
+                ) : c < 30 ? (
+                  <p className="font-medium">{t.omnichannel.diagCritical}</p>
+                ) : c < 50 ? (
+                  <p className="font-medium">{t.omnichannel.diagInefficient.replace("{channel}", channelName).replace("{lowestVar}", lowestVar.toUpperCase())}</p>
+                ) : c < 80 ? (
+                  <p className="font-medium">{t.omnichannel.diagMedium.replace("{lowestVar}", lowestVar.toUpperCase()).replace("{channel}", channelName)}</p>
+                ) : (
+                  <p className="font-medium">{t.omnichannel.diagSupreme.replace("{channel}", channelName)}</p>
+                )}
+              </div>
+
+              {/* Show improvement suggestion if not supreme */}
+              {c < 80 && scores.r >= 3 && (
+                <div className="mt-2 p-3 rounded-md bg-surface-card border border-border-subtle">
+                  <p className="font-mono text-[11px] text-text-secondary leading-[1.6]">
+                    {t.omnichannel.diagLowestVar.replace("{var}", lowestVar.toUpperCase()).replace("{val}", String(scores[lowestVar as keyof typeof scores]))}
+                  </p>
+                  <p className="font-mono text-[11px] text-rifc-green leading-[1.6] mt-1">
+                    {t.omnichannel.diagIncrease
+                      .replace("{var}", lowestVar.toUpperCase())
+                      .replace("{from}", String(scores[lowestVar as keyof typeof scores]))
+                      .replace("{to}", String(Math.min(scores[lowestVar as keyof typeof scores] + 2, 10)))
+                      .replace("{newC}", String(improvedC))}
+                    {" "}
+                    <span className="text-text-muted">
+                      {t.omnichannel.diagJumpTo.replace("{percent}", String(percentChange)).replace("{zone}", improvedZone)}
+                    </span>
+                  </p>
+                  <Link
+                    href="/audit"
+                    className="inline-flex items-center gap-1.5 font-mono text-[10px] text-rifc-red mt-2 hover:underline no-underline"
+                  >
+                    <ArrowRight size={12} /> {t.omnichannel.diagTestAudit}
+                  </Link>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Right column: Zone detail + Stats */}
+        {/* Right column: Zone detail (PUNCT 3 — always populated) */}
         <div className="flex-1 min-w-[280px]">
-          {zData ? (
+          {/* Zone detail — always show (default R) */}
+          {chData && activeZone && (
             <div
-              className="rounded-lg p-5 border transition-all duration-300"
-              style={{ background: `${COLORS[activeZone!]}06`, borderColor: COLORS[activeZone!] }}
+              className="rounded-sm p-5 border transition-all duration-300"
+              style={{ background: `${COLORS[activeZone]}06`, borderColor: COLORS[activeZone] }}
             >
-              <div className="font-mono text-[12px] font-semibold tracking-[1px] mb-5" style={{ color: COLORS[activeZone!] }}>
-                {zData.title}
+              <div className="font-mono text-[12px] font-semibold tracking-[1px] mb-5" style={{ color: COLORS[activeZone] }}>
+                {chData.zones[activeZone].title}
               </div>
+
+              {/* PUNCT 2 — Expanded description if available */}
+              {expandedVars && expandedVars[activeZone] && (
+                <div className="mb-5">
+                  <p className="font-body text-[13px] text-text-secondary leading-[1.7] mb-3">
+                    {expandedVars[activeZone].desc}
+                  </p>
+                  {/* Scoring question */}
+                  <div
+                    className="flex items-start gap-2 p-3 rounded-md mb-3"
+                    style={{ background: `${COLORS[activeZone]}0c` }}
+                  >
+                    <span className="font-mono text-[10px] tracking-[1px] shrink-0 mt-0.5" style={{ color: COLORS[activeZone] }}>?</span>
+                    <p className="font-body text-[12px] text-text-muted italic leading-[1.6]">
+                      {expandedVars[activeZone].question}
+                    </p>
+                  </div>
+                  {/* Red flag */}
+                  <div className="flex items-start gap-2 p-3 rounded-md bg-[rgba(220,38,38,0.06)]">
+                    <AlertTriangle size={12} className="text-rifc-red shrink-0 mt-0.5" />
+                    <p className="font-mono text-[10px] text-rifc-red/80 leading-[1.5]">
+                      {expandedVars[activeZone].redFlag}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Original zone items */}
               <div className="space-y-2.5 mb-5">
-                {zData.items.map((item, i) => (
+                {chData.zones[activeZone].items.map((item, i) => (
                   <div
                     key={i}
                     className="font-mono text-[10px] text-text-muted leading-[1.6] pl-3"
-                    style={{ borderLeft: `2px solid ${COLORS[activeZone!]}25` }}
+                    style={{ borderLeft: `2px solid ${COLORS[activeZone]}25` }}
                   >
                     {item}
                   </div>
@@ -683,23 +525,73 @@ export default function OmnichannelSection() {
               </div>
               <div
                 className="mt-4 p-3 rounded font-mono text-[9px] leading-[1.5]"
-                style={{ background: `${COLORS[activeZone!]}0c`, color: COLORS[activeZone!] }}
+                style={{ background: `${COLORS[activeZone]}0c`, color: COLORS[activeZone] }}
               >
-                {zData.fail}
+                {chData.zones[activeZone].fail}
               </div>
             </div>
-          ) : (
-            <div className="rounded-lg border border-dashed border-border-light p-8 flex flex-col items-center justify-center text-center min-h-[200px]">
-              <IconChevronDown />
-              <div className="font-mono text-[11px] text-text-ghost mt-3">
-                {t.omnichannel.selectZone}
+          )}
+
+          {/* PUNCT 3 — Channel summary + benchmarks */}
+          {channelSummary && (
+            <div className="mt-4 border border-border-light rounded-sm p-4 bg-surface-card">
+              <div className="font-mono text-[9px] text-text-muted tracking-[2px] uppercase mb-3">
+                {t.omnichannel.summaryLabel}
+              </div>
+              <p className="font-body text-[12px] text-text-muted leading-[1.7] mb-4">
+                {channelSummary.summary}
+              </p>
+
+              {/* Key metrics */}
+              <div className="font-mono text-[9px] text-text-muted tracking-[1px] uppercase mb-2">
+                {t.omnichannel.keyMetricsLabel}
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {channelSummary.metrics.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2 font-mono text-[10px]">
+                    <span
+                      className="w-5 h-5 rounded-sm flex items-center justify-center text-[9px] font-bold"
+                      style={{
+                        color: COLORS[m.indicator.toLowerCase() as keyof typeof COLORS],
+                        background: `${COLORS[m.indicator.toLowerCase() as keyof typeof COLORS]}15`,
+                      }}
+                    >
+                      {m.indicator}
+                    </span>
+                    <span className="text-text-muted">{m.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Benchmark */}
+              <div
+                className="p-2.5 rounded-md font-mono text-[10px] tracking-[1px] text-center"
+                style={{
+                  background: `${getScoreColor(channelSummary.benchmarkValue)}10`,
+                  color: getScoreColor(channelSummary.benchmarkValue),
+                }}
+              >
+                {t.omnichannel.benchmarkLabel}: {channelSummary.benchmark}
+              </div>
+            </div>
+          )}
+
+          {/* PUNCT 6 — Channel Pro Tip */}
+          {channelTip && (
+            <div className="mt-4 border border-border-subtle rounded-sm p-4">
+              <div className="font-mono text-[9px] text-text-muted tracking-[1px] uppercase mb-2">
+                {t.omnichannel.tipTitle}
+              </div>
+              <div className="font-body text-[13px] text-gray-300 leading-[1.7]">
+                <span className="font-bold text-rifc-green">{t.omnichannel.quickWinLabel}</span>{" "}
+                {channelTip.replace(/^Quick Win:\s*/i, "")}
               </div>
             </div>
           )}
 
           {/* Stats bar */}
-          <div className="mt-4 border border-border-light rounded-lg p-4 bg-surface-card">
-            <div className="font-mono text-[9px] text-text-ghost tracking-[2px] uppercase mb-3">
+          <div className="mt-4 border border-border-light rounded-sm p-4 bg-surface-card">
+            <div className="font-mono text-[9px] text-text-muted tracking-[2px] uppercase mb-3">
               {activeIds.length} {t.omnichannel.channelsActive} / {Object.keys(ALL_CHANNELS).length} {t.omnichannel.channelsAvailable}
             </div>
             <div className="font-mono text-[13px] text-text-ghost text-center tracking-[3px] pt-3 border-t border-border-subtle">
@@ -712,65 +604,249 @@ export default function OmnichannelSection() {
               <span className="text-rifc-green">C</span>
             </div>
           </div>
-
-          {/* Channel tip */}
-          <div className="mt-4 border border-border-subtle rounded-lg p-4">
-            <div className="font-mono text-[9px] text-text-ghost tracking-[1px] uppercase mb-2">
-              {t.omnichannel.tipTitle}
-            </div>
-            <div className="font-body text-[12px] text-text-muted leading-[1.7]">
-              {t.omnichannel.tipText}
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Diagnostic Universal: 3 Steps (migrated from ApplicationSection) */}
+      {/* ── DIAGNOSTIC UNIVERSAL: 3 PAȘI ──────────────────────── */}
       <div className="mt-16 pt-12 border-t border-border-subtle">
-        <h3 className="font-mono text-[13px] tracking-[3px] uppercase text-rifc-red mb-6">
+        {/* PUNCT 1 — Hook title */}
+        <h3 className="font-mono text-[13px] tracking-[3px] uppercase text-rifc-red mb-4">
           {t.omnichannel.diagnosticTitle}
         </h3>
-        <div className="space-y-4">
-          {t.omnichannel.steps.map((step) => (
-            <div
-              key={step.num}
-              className="border border-border-light rounded-sm p-6 bg-surface-card relative overflow-hidden"
-            >
-              <WatermarkNumber
-                value={step.num}
-                color="#DC2626"
-                size="sm"
-                className="-top-[10px] -right-[10px]"
-              />
-              <div className="relative z-[1]">
-                <div className="font-medium text-text-primary mb-2 text-[17px]">
-                  {step.title}
+        <p className="font-heading text-[28px] md:text-[36px] font-light italic text-text-primary leading-[1.3] text-center mb-12">
+          {t.omnichannel.diagHook}
+        </p>
+
+        {/* Vertical infographic — connecting line + numbered circles + arrows */}
+        <div className="relative max-w-3xl mx-auto">
+          {/* Vertical connecting line */}
+          <div
+            className="absolute left-[23px] md:left-[27px] top-[28px] bottom-[28px] w-[2px]"
+            style={{ background: "linear-gradient(to bottom, #DC2626, #DC262640)" }}
+            aria-hidden="true"
+          />
+
+          {/* ── STEP 1 ──────────────────────────────────────────── */}
+          <div className="relative pl-16 md:pl-20 pb-10">
+            {/* Numbered circle */}
+            <div className="absolute left-0 top-0 w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-full bg-[rgba(220,38,38,0.12)] border-2 border-rifc-red flex items-center justify-center font-mono text-[22px] md:text-[26px] font-bold text-rifc-red z-[1]">
+              1
+            </div>
+            <GradientBorderBlock gradientFrom="#DC2626" gradientTo="#DC262660" bgTint="transparent">
+              <div className="flex items-center gap-2 mb-3">
+                <Target size={18} className="text-rifc-red shrink-0" />
+                <h4 className="font-mono text-[15px] md:text-[17px] font-semibold text-text-primary tracking-[0.5px]">
+                  {t.omnichannel.step1Title}
+                </h4>
+              </div>
+              <div className="font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.8] whitespace-pre-line">
+                {t.omnichannel.step1Body}
+              </div>
+              <div className="mt-4 flex items-start gap-2 px-3 py-2 rounded-sm bg-[rgba(220,38,38,0.06)] border-l-2 border-rifc-red">
+                <Flag size={14} className="text-rifc-red/60 mt-0.5 shrink-0" />
+                <p className="font-body text-[12px] md:text-[13px] italic text-rifc-red/70 leading-[1.6]">
+                  {t.omnichannel.step1Question}
+                </p>
+              </div>
+            </GradientBorderBlock>
+            {/* Arrow connector */}
+            <div className="absolute left-[19px] md:left-[23px] -bottom-1 text-rifc-red/50" aria-hidden="true">
+              <ChevronDown size={14} />
+            </div>
+          </div>
+
+          {/* ── STEP 2 ──────────────────────────────────────────── */}
+          <div className="relative pl-16 md:pl-20 pb-10">
+            <div className="absolute left-0 top-0 w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-full bg-[rgba(220,38,38,0.12)] border-2 border-rifc-red flex items-center justify-center font-mono text-[22px] md:text-[26px] font-bold text-rifc-red z-[1]">
+              2
+            </div>
+            <GradientBorderBlock gradientFrom="#DC2626" gradientTo="#2563EB60" bgTint="transparent">
+              <div className="flex items-center gap-2 mb-3">
+                <Zap size={18} className="text-rifc-red shrink-0" />
+                <h4 className="font-mono text-[15px] md:text-[17px] font-semibold text-text-primary tracking-[0.5px]">
+                  {t.omnichannel.step2Title}
+                </h4>
+              </div>
+              <div className="font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.8] whitespace-pre-line">
+                {t.omnichannel.step2Body}
+              </div>
+              {/* Mathematical warning block */}
+              <div className="mt-4 p-4 rounded-sm bg-[rgba(220,38,38,0.08)] border-l-2 border-red-500">
+                <div className="font-mono text-[12px] tracking-[1px] uppercase text-rifc-red/80 mb-2 flex items-center gap-2">
+                  <AlertTriangle size={14} className="shrink-0" />
+                  {t.omnichannel.step2WarningTitle}
                 </div>
-                <div className="font-body text-sm leading-[1.7] text-text-muted">
-                  {step.desc}
+                <div className="font-mono text-[13px] md:text-[14px] text-text-muted leading-[2]">
+                  <div className="text-red-400">{t.omnichannel.step2WarningLine1}</div>
+                  <div className="text-green-400">{t.omnichannel.step2WarningLine2}</div>
+                </div>
+                <div className="mt-2 font-body text-[12px] md:text-[13px] italic text-text-muted leading-[1.6]">
+                  <p className="text-red-400/70">{t.omnichannel.step2WarningConclusion1}</p>
+                  <p className="text-green-400/70 mt-1">{t.omnichannel.step2WarningConclusion2}</p>
+                </div>
+              </div>
+            </GradientBorderBlock>
+            <div className="absolute left-[19px] md:left-[23px] -bottom-1 text-rifc-red/50" aria-hidden="true">
+              <ChevronDown size={14} />
+            </div>
+          </div>
+
+          {/* ── STEP 3 ──────────────────────────────────────────── */}
+          <div className="relative pl-16 md:pl-20">
+            <div className="absolute left-0 top-0 w-[48px] h-[48px] md:w-[56px] md:h-[56px] rounded-full bg-[rgba(220,38,38,0.12)] border-2 border-rifc-red flex items-center justify-center font-mono text-[22px] md:text-[26px] font-bold text-rifc-red z-[1]">
+              3
+            </div>
+            <GradientBorderBlock gradientFrom="#DC2626" gradientTo="#05966960" bgTint="transparent">
+              <div className="flex items-center gap-2 mb-3">
+                <RotateCw size={18} className="text-rifc-red shrink-0" />
+                <h4 className="font-mono text-[15px] md:text-[17px] font-semibold text-text-primary tracking-[0.5px]">
+                  {t.omnichannel.step3Title}
+                </h4>
+              </div>
+              <div className="font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.8]">
+                {t.omnichannel.step3Body}
+              </div>
+              {/* Cyclic process */}
+              <div className="mt-3 px-4 py-3 rounded-sm bg-[rgba(255,255,255,0.03)] border border-border-light">
+                <div className="font-mono text-[12px] md:text-[13px] tracking-[1px] text-rifc-red/80 text-center">
+                  {t.omnichannel.step3Cycle}
+                </div>
+              </div>
+              {/* Goal */}
+              <div className="mt-3 font-body text-[13px] md:text-[14px] leading-[1.7]">
+                <span className="text-rifc-green font-semibold">C &ge; 80</span>
+                <span className="text-text-muted"> &mdash; </span>
+                <span className="text-text-secondary">{t.omnichannel.step3Goal}</span>
+              </div>
+              {/* 5-Second Test */}
+              <div className="mt-4 flex items-start gap-2 px-3 py-2 rounded-sm bg-[rgba(5,150,105,0.06)] border-l-2 border-rifc-green">
+                <Eye size={14} className="text-rifc-green/60 mt-0.5 shrink-0" />
+                <p className="font-body text-[12px] md:text-[13px] italic text-rifc-green/70 leading-[1.6]">
+                  {t.omnichannel.step3FinalCheck}
+                </p>
+              </div>
+            </GradientBorderBlock>
+          </div>
+        </div>
+
+        {/* ── PUNCT 3 — Before/After Example ────────────────────── */}
+        <div className="max-w-3xl mx-auto mt-14">
+          <GradientBorderBlock gradientFrom="#DC2626" gradientTo="#059669" bgTint="rgba(220,38,38,0.04)">
+            <div className="font-mono text-[11px] tracking-[3px] uppercase text-text-muted mb-4">
+              {t.omnichannel.exampleTitle}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Before */}
+              <div className="p-4 rounded-sm bg-[rgba(220,38,38,0.06)] border border-red-500/20">
+                <div className="font-mono text-[11px] tracking-[2px] uppercase text-red-400 mb-2">
+                  {t.omnichannel.exampleBefore}
+                </div>
+                <div className="font-mono text-[18px] md:text-[22px] font-bold text-red-400 mb-1">
+                  {t.omnichannel.exampleBeforeEq}
+                </div>
+                <div className="font-mono text-[10px] tracking-[2px] uppercase text-red-400/60 mb-3">
+                  {t.omnichannel.exampleBeforeZone}
+                </div>
+                <div className="space-y-1 font-body text-[12px] text-text-muted leading-[1.6]">
+                  <p>{t.omnichannel.exampleStep1}</p>
+                  <p>{t.omnichannel.exampleStep2}</p>
+                  <p>{t.omnichannel.exampleStep3}</p>
+                </div>
+              </div>
+
+              {/* After */}
+              <div className="p-4 rounded-sm bg-[rgba(5,150,105,0.06)] border border-green-500/20">
+                <div className="font-mono text-[11px] tracking-[2px] uppercase text-green-400 mb-2">
+                  {t.omnichannel.exampleAfter}
+                </div>
+                <div className="font-mono text-[18px] md:text-[22px] font-bold text-green-400 mb-1">
+                  {t.omnichannel.exampleAfterEq}
+                </div>
+                <div className="font-mono text-[10px] tracking-[2px] uppercase text-green-400/60 mb-3">
+                  {t.omnichannel.exampleAfterZone}
                 </div>
               </div>
             </div>
-          ))}
+
+            {/* Lift result */}
+            <div className="mt-4 text-center">
+              <span className="font-mono text-[16px] md:text-[20px] font-bold text-rifc-green">
+                {t.omnichannel.exampleLift}
+              </span>
+            </div>
+          </GradientBorderBlock>
+        </div>
+
+        {/* ── PUNCT 4 — Panic Button CTA ────────────────────────── */}
+        <div className="max-w-3xl mx-auto mt-14 text-center">
+          <h4 className="font-heading text-[22px] md:text-[28px] font-light text-text-primary mb-2">
+            {t.omnichannel.ctaStuckTitle}
+          </h4>
+          <p className="font-body text-[14px] text-text-muted mb-8">
+            {t.omnichannel.ctaStuckSub}
+          </p>
+
+          <div className="flex flex-col sm:flex-row justify-center gap-5">
+            {/* Audit button */}
+            <div className="flex flex-col items-center gap-2">
+              <Link
+                href="/audit"
+                className="inline-flex items-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-10 py-[18px] bg-rifc-red text-white rounded-sm hover:bg-rifc-red/90 transition-all duration-300 no-underline"
+              >
+                <Sparkles size={16} />
+                {t.omnichannel.ctaAuditBtn}
+              </Link>
+              <p className="font-body text-[11px] md:text-[12px] text-text-muted leading-[1.5] max-w-[280px]">
+                {t.omnichannel.ctaAuditSub}
+              </p>
+            </div>
+
+            {/* Diagnostic button */}
+            <div className="flex flex-col items-center gap-2">
+              <Link
+                href="/calculator"
+                className="inline-flex items-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-10 py-[18px] border border-rifc-red/40 text-rifc-red rounded-sm hover:border-rifc-red hover:bg-[rgba(220,38,38,0.05)] transition-all duration-300 no-underline"
+              >
+                <Calculator size={16} />
+                {t.omnichannel.ctaDiagnosticBtn}
+              </Link>
+              <p className="font-body text-[11px] md:text-[12px] text-text-muted leading-[1.5] max-w-[280px]">
+                {t.omnichannel.ctaDiagnosticSub}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── PUNCT 5 — Micro-closer ────────────────────────────── */}
+        <div className="max-w-2xl mx-auto mt-16 text-center">
+          <p className="font-heading text-[22px] md:text-[28px] font-light italic text-text-primary leading-[1.4] mb-4">
+            {t.omnichannel.closerLine1}
+          </p>
+          <p className="font-body text-[14px] text-text-muted leading-[1.7] mb-3">
+            {t.omnichannel.closerBody}
+          </p>
+          <p className="font-mono text-[12px] tracking-[1px] text-text-muted">
+            {t.omnichannel.closerFinal}
+          </p>
         </div>
       </div>
 
-      {/* CTA Buttons */}
-      <div className="flex flex-wrap justify-center gap-4 mt-16">
-        <Link
-          href="/audit"
-          className="inline-flex items-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-12 py-[18px] bg-rifc-red text-white rounded-sm hover:bg-rifc-red/90 transition-all duration-300 no-underline"
+      {/* PUNCT 7 — Transition CTA to Chapter 06 */}
+      <div className="mt-20 md:mt-24 text-center border-t border-border-subtle pt-12 md:pt-16">
+        <p className="font-heading text-[20px] md:text-[26px] font-light text-text-primary leading-[1.4] mb-2 italic">
+          {t.omnichannel.transitionLine1}
+        </p>
+        <p className="font-heading text-[20px] md:text-[26px] font-light text-text-primary leading-[1.4] mb-6 italic">
+          {t.omnichannel.transitionLine2}
+        </p>
+        <a
+          href={t.omnichannel.transitionTarget}
+          className="inline-flex items-center gap-2 font-body text-[14px] text-text-muted hover:text-text-primary transition-colors duration-200"
         >
-          <Sparkles size={16} />
-          {t.omnichannel.ctaAudit}
-        </Link>
-        <Link
-          href="/calculator"
-          className="inline-flex items-center gap-2.5 font-mono text-xs tracking-[3px] uppercase px-12 py-[18px] border border-rifc-red/40 text-rifc-red rounded-sm hover:border-rifc-red hover:bg-[rgba(220,38,38,0.05)] transition-all duration-300 no-underline"
-        >
-          <Calculator size={16} />
-          {t.omnichannel.ctaDiagnostic}
-        </Link>
+          <ChevronDown size={16} strokeWidth={2} className="animate-bounce" />
+          {t.omnichannel.transitionCta}
+        </a>
       </div>
     </section>
   );

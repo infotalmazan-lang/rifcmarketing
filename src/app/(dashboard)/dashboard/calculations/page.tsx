@@ -79,13 +79,13 @@ export default function CalculationsPage() {
                     R={calc.r_score} &middot; I={calc.i_score} &middot; F=
                     {calc.f_score}
                   </div>
-                  <div className="font-body text-xs text-text-ghost mt-1 flex gap-3 items-center">
+                  <div className="font-body text-xs text-text-muted mt-1 flex gap-3 items-center">
                     <StampBadge text={range.status} color={range.statusColor} />
                     {calc.channel && <span>{calc.channel}</span>}
                     <span>{formatDate(calc.created_at)}</span>
                   </div>
                   {calc.notes && (
-                    <div className="font-body text-xs text-text-ghost mt-1 truncate">
+                    <div className="font-body text-xs text-text-muted mt-1 truncate">
                       {calc.notes}
                     </div>
                   )}

@@ -466,12 +466,12 @@ export default function MethodologySection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
           <a
             href="/audit"
-            className="inline-flex items-center gap-2 bg-rifc-red hover:bg-red-500 text-white font-bold px-8 py-4 rounded-lg transition-colors duration-200 font-body text-[15px]"
+            className="inline-flex items-center gap-2 bg-rifc-red hover:bg-red-500 text-white font-bold px-8 py-4 rounded-sm transition-colors duration-200 font-body text-[15px]"
           >
             <ArrowRight size={16} strokeWidth={2} />
             {t.methodology.ctaButton}
           </a>
-          <span className="font-body text-[14px] text-text-ghost">
+          <span className="font-body text-[14px] text-text-muted">
             {t.methodology.ctaOr}{" "}
             <a
               href="/calculator"

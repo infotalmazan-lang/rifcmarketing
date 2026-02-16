@@ -1,33 +1,3 @@
-export interface Section {
-  id: string;
-  label: string;
-}
-
-export interface Zone {
-  name: string;
-  r: string;
-  i: string;
-  f: string;
-  archetype: string;
-  color: string;
-}
-
-export interface Archetype {
-  name: string;
-  formula: string;
-  description: string;
-  icon: string;
-  score: string;
-  color: string;
-}
-
-export interface Comparison {
-  model: string;
-  full: string;
-  weakness: string;
-  rifc: string;
-}
-
 export interface ScoreRange {
   min: number;
   max: number;
@@ -74,66 +44,6 @@ export interface Calculation {
   channel: string | null;
   notes: string | null;
   diagnosis: string | null;
-  created_at: string;
-}
-
-export interface Resource {
-  id: string;
-  title: string;
-  description: string;
-  file_url: string | null;
-  file_size: string | null;
-  type: "whitepaper" | "template" | "card" | "paper";
-  status: "available" | "coming_soon" | "in_development";
-  download_count: number;
-  created_at: string;
-}
-
-export interface CaseStudy {
-  id: string;
-  title: string;
-  slug: string;
-  industry: string;
-  description: string;
-  before_r: number;
-  before_i: number;
-  before_f: number;
-  before_c: number;
-  after_r: number;
-  after_i: number;
-  after_f: number;
-  after_c: number;
-  metric_improvement: string;
-  is_published: boolean;
-  created_at: string;
-}
-
-export interface ConsultingRequest {
-  id: string;
-  name: string;
-  email: string;
-  company: string | null;
-  phone: string | null;
-  message: string;
-  budget_range: string | null;
-  status: "new" | "contacted" | "closed";
-  created_at: string;
-}
-
-export interface NewsletterSubscriber {
-  id: string;
-  email: string;
-  subscribed_at: string;
-  confirmed: boolean;
-  unsubscribed_at: string | null;
-}
-
-export interface Profile {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  company: string | null;
-  role: string;
   created_at: string;
 }
 

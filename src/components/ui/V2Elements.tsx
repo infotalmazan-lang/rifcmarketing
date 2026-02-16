@@ -225,7 +225,7 @@ export function FormulaDisplay({
   };
 
   return (
-    <div className={`text-center font-body text-[14px] font-light text-text-ghost ${className}`}>
+    <div className={`text-center font-body text-[14px] font-light text-text-muted ${className}`}>
       <span className={`text-rifc-red font-mono ${numSize[size]}`}>{r}</span>
       {" + ("}
       <span className={`text-rifc-blue font-mono ${numSize[size]}`}>{i}</span>
@@ -236,7 +236,7 @@ export function FormulaDisplay({
         {c}
       </span>
       {fixBadge && (
-        <span className="ml-2.5 font-mono text-[10px] tracking-[2px] text-rifc-green bg-[rgba(5,150,105,0.08)] px-2.5 py-0.5 rounded-lg">
+        <span className="ml-2.5 font-mono text-[10px] tracking-[2px] text-rifc-green bg-[rgba(5,150,105,0.08)] px-2.5 py-0.5 rounded-sm">
           FIX: {fixBadge}
         </span>
       )}
@@ -342,71 +342,3 @@ export function BeforeAfterToggle({
   );
 }
 
-/* ─── BrandPillSelector ───────────────────────────────── */
-
-export function BrandPillSelector({
-  items,
-  activeIndex,
-  onSelect,
-  className = "",
-}: {
-  items: {
-    label: string;
-    sublabel?: string;
-    color: string;
-    initials: string;
-  }[];
-  activeIndex: number;
-  onSelect: (i: number) => void;
-  className?: string;
-}) {
-  return (
-    <div className={`flex gap-1.5 justify-center flex-wrap ${className}`}>
-      {items.map((item, idx) => {
-        const isActive = idx === activeIndex;
-        return (
-          <button
-            key={idx}
-            onClick={() => onSelect(idx)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg border transition-all duration-200 ${
-              isActive
-                ? "bg-surface-card border-[rgba(255,255,255,0.1)] shadow-sm"
-                : "bg-transparent border-border-subtle hover:border-border-light"
-            }`}
-          >
-            <div
-              className="w-6 h-6 rounded-md flex items-center justify-center font-mono text-[10px]"
-              style={{
-                background: isActive
-                  ? `${item.color}15`
-                  : `${item.color}08`,
-                border: isActive
-                  ? `1px solid ${item.color}33`
-                  : `1px solid ${item.color}15`,
-                color: item.color,
-              }}
-            >
-              {item.initials}
-            </div>
-            <div className="text-left">
-              <div
-                className={`text-[12px] leading-tight ${
-                  isActive
-                    ? "text-text-primary font-medium"
-                    : "text-text-muted font-light"
-                }`}
-              >
-                {item.label}
-              </div>
-              {item.sublabel && (
-                <div className="text-[10px] text-text-ghost font-light leading-tight">
-                  {item.sublabel}
-                </div>
-              )}
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  );
-}

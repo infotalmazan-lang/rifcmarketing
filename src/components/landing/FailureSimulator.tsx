@@ -2,14 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useTranslation } from "@/lib/i18n";
-import { VARIABLE_COLORS } from "@/components/ui/V2Elements";
-
-function getScoreColor(c: number): string {
-  if (c <= 20) return "#DC2626";
-  if (c <= 50) return "#D97706";
-  if (c <= 80) return "#2563EB";
-  return "#059669";
-}
+import { VARIABLE_COLORS, getScoreColor } from "@/components/ui/V2Elements";
 
 function detectArchetype(
   r: number,
@@ -129,7 +122,7 @@ export default function FailureSimulator() {
       {/* Detected Archetype */}
       {detected && (
         <div className="text-center mb-6">
-          <span className="font-body text-[13px] text-text-ghost">
+          <span className="font-body text-[13px] text-text-muted">
             {t.archetypes.simulatorDetectedLabel}{" "}
           </span>
           <span

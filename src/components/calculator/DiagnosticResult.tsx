@@ -4,7 +4,6 @@ import { useTranslation } from "@/lib/i18n";
 import { AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import {
   GradientBorderBlock,
-  ScoreTrio,
   VARIABLE_COLORS,
 } from "@/components/ui/V2Elements";
 

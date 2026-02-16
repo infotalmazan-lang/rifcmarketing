@@ -100,7 +100,7 @@ function MirrorBlock({
 }) {
   return (
     <div className="py-10 md:py-14 border-t border-b border-border-subtle text-center">
-      <p className="font-heading text-[15px] md:text-[17px] italic text-text-ghost leading-[1.8] mb-3">
+      <p className="font-heading text-[15px] md:text-[17px] italic text-text-muted leading-[1.8] mb-3">
         {mirror.prev}
       </p>
       <p className="font-heading text-[15px] md:text-[17px] italic text-text-primary leading-[1.8] font-medium">
@@ -273,13 +273,13 @@ function DiagnosisTable() {
       <div className="hidden md:block">
         {/* Headers */}
         <div className="grid grid-cols-3 gap-0 mb-2">
-          <div className="font-mono text-[10px] tracking-[3px] uppercase text-text-ghost px-5 py-3">
+          <div className="font-mono text-[10px] tracking-[3px] uppercase text-text-muted px-5 py-3">
             {diagnosisHeaders.symptom}
           </div>
-          <div className="font-mono text-[10px] tracking-[3px] uppercase text-text-ghost px-5 py-3">
+          <div className="font-mono text-[10px] tracking-[3px] uppercase text-text-muted px-5 py-3">
             {diagnosisHeaders.archetype}
           </div>
-          <div className="font-mono text-[10px] tracking-[3px] uppercase text-text-ghost px-5 py-3">
+          <div className="font-mono text-[10px] tracking-[3px] uppercase text-text-muted px-5 py-3">
             {diagnosisHeaders.solution}
           </div>
         </div>
@@ -376,7 +376,7 @@ function ArchetypesCTA() {
           {/* Primary Button — larger, with subtle glow */}
           <Link
             href="/audit"
-            className="inline-flex items-center gap-2 bg-rifc-red text-white font-body text-[15px] md:text-[16px] font-semibold px-8 py-4 rounded-lg transition-all duration-200 hover:bg-rifc-red-light hover:shadow-[0_0_30px_rgba(220,38,38,0.3)]"
+            className="inline-flex items-center gap-2 bg-rifc-red text-white font-body text-[15px] md:text-[16px] font-semibold px-8 py-4 rounded-sm transition-all duration-200 hover:bg-rifc-red-light hover:shadow-[0_0_30px_rgba(220,38,38,0.3)]"
           >
             <ArrowRight size={18} strokeWidth={2} />
             {t.archetypes.ctaButton}
@@ -384,7 +384,7 @@ function ArchetypesCTA() {
 
           {/* Secondary */}
           <div className="mt-5">
-            <span className="font-body text-[13px] text-text-ghost">
+            <span className="font-body text-[13px] text-text-muted">
               {t.archetypes.ctaOr}{" "}
             </span>
             <Link

@@ -175,7 +175,7 @@ export default function AuditResultDisplay({
                 {analyzedInput}
               </p>
               {pdfPageCount !== undefined && pdfPageCount > 0 && (
-                <p className="font-mono text-[11px] text-text-ghost mt-1">
+                <p className="font-mono text-[11px] text-text-muted mt-1">
                   {pdfPageCount} {t.audit.previewPages}
                 </p>
               )}
@@ -217,7 +217,7 @@ export default function AuditResultDisplay({
       {/* ===== TAB: AUDIT ===== */}
       <div className={`space-y-6 ${activeTab === "audit" ? "block" : "hidden print:!block"}`}>
         {/* Header */}
-        <div className="font-mono text-[11px] tracking-[3px] uppercase text-text-ghost">
+        <div className="font-mono text-[11px] tracking-[3px] uppercase text-text-muted">
           {t.audit.resultTitle}
         </div>
 
@@ -241,7 +241,7 @@ export default function AuditResultDisplay({
 
           <div className="relative z-[1]">
             {/* Score label */}
-            <div className="font-mono text-[11px] text-text-ghost tracking-[3px] text-center mb-4">
+            <div className="font-mono text-[11px] text-text-muted tracking-[3px] text-center mb-4">
               {t.calculator.yourScore}
             </div>
 
@@ -416,7 +416,7 @@ export default function AuditResultDisplay({
         {/* V2 Recommendations — GradientBorderBlock per recommendation */}
         {result.recommendations.length > 0 && (
           <div className="space-y-4">
-            <h3 className="font-mono text-[11px] tracking-[3px] uppercase text-text-ghost">
+            <h3 className="font-mono text-[11px] tracking-[3px] uppercase text-text-muted">
               {t.audit.recommendationsTitle}
             </h3>
             <div className="space-y-3">
@@ -465,7 +465,7 @@ export default function AuditResultDisplay({
       {/* AI Disclaimer */}
       <div className="flex items-start gap-3 border border-border-subtle rounded-sm p-4 bg-[rgba(255,255,255,0.01)]">
         <Bot size={16} className="text-text-ghost shrink-0 mt-0.5" />
-        <p className="font-body text-[11px] leading-[1.7] text-text-ghost">
+        <p className="font-body text-[11px] leading-[1.7] text-text-muted">
           {t.audit.aiDisclaimer}
         </p>
       </div>
