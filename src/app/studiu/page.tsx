@@ -122,71 +122,113 @@ const TABS: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
 const INDUSTRIES = [
   // Tech & Digital
   "SaaS / Software",
-  "IT Services",
-  "FinTech",
-  "EdTech",
-  "HealthTech",
+  "IT Services / Web Development",
+  "FinTech / Plati Digitale",
+  "EdTech / Platforme Educationale",
+  "HealthTech / Telemedicina",
   "AI / Machine Learning",
   "Cybersecurity",
   "Cloud / Infrastructure",
-  "Gaming / Entertainment",
-  "Telecom",
+  "Gaming / Entertainment Digital",
+  "Telecom / Internet",
+  "Mobile Apps",
   // E-commerce & Retail
-  "E-commerce",
-  "Retail (fizic)",
-  "Marketplace",
+  "E-commerce (general)",
+  "Retail (magazine fizice)",
+  "Marketplace / Platforme",
   "D2C (Direct to Consumer)",
-  // Finance & Insurance
+  "Dropshipping",
+  // Finance, Insurance & Real Estate
   "Banci / Servicii Financiare",
   "Asigurari",
-  "Investitii / Trading",
-  "Crypto / Blockchain",
-  // Healthcare & Wellness
-  "Sanatate / Medicina",
-  "Farma",
-  "Wellness / Fitness",
-  "Beauty / Cosmetice",
-  // Food & Beverage
-  "Food & Beverage",
-  "Restaurante / HoReCa",
-  "FMCG (bunuri de consum)",
-  // Real Estate & Construction
-  "Imobiliare",
-  "Constructii",
+  "Investitii / Trading / Bursa",
+  "Crypto / Blockchain / Web3",
+  "Contabilitate / Audit / Fiscalitate",
+  "Imobiliare / Dezvoltare",
+  "Constructii / Renovari",
   "Arhitectura / Design Interior",
-  // Education
-  "Educatie / Training",
+  // Healthcare & Medical
+  "Medicina Generala / Clinici",
+  "Stomatologie / Dental",
+  "Chirurgie Estetica / Plastica",
+  "Oftalmologie / Optica",
+  "Dermatologie",
+  "Ortopedie / Recuperare",
+  "Pediatrie",
+  "Psihologie / Psihoterapie",
+  "Farma / Parafarmaceutice",
+  "Laboratoare / Analize Medicale",
+  "Echipamente Medicale",
+  "Medicina Veterinara",
+  // Wellness, Beauty & Fitness
+  "Wellness / Spa",
+  "Fitness / Sali de Sport",
+  "Yoga / Pilates / Mindfulness",
+  "Beauty / Cosmetice",
+  "Salon Infrumusetare / Coafor",
+  "Nutritie / Dietetica",
+  "Suplimente Alimentare",
+  // Food & Beverage
+  "Food & Beverage (producator)",
+  "Restaurante / Cafenele",
+  "Fast Food / Street Food",
+  "Catering / Evenimente Culinare",
+  "Cofetarie / Patiserie",
+  "Bauturi / Vinuri / Craft Beer",
+  "FMCG (bunuri de consum rapid)",
+  "Organic / Bio / Vegan",
+  "Livrare Mancare / Delivery",
+  // Education & Training
+  "Educatie (general)",
   "Universitati / Scoli",
-  "Cursuri Online",
-  // Professional Services
-  "Consultanta",
-  "Marketing / Agentie",
-  "Legal / Juridic",
-  "Contabilitate / Audit",
-  "HR / Recrutare",
-  // Media & Creative
-  "Media / Publicatii",
-  "Publicitate / Branding",
+  "Cursuri Online / E-learning",
+  "Coaching / Dezvoltare Personala",
+  "Training Profesional / Corporate",
+  "Limbi Straine / Traduceri",
+  "After School / Gradinite",
+  // Professional & Business Services
+  "Consultanta Business / Management",
+  "Consultanta IT",
+  "Marketing / Agentie Publicitate",
+  "PR / Comunicare",
+  "Legal / Avocatura / Notariat",
+  "HR / Recrutare / Staffing",
+  "Outsourcing / BPO",
+  "Cleaning / Servicii Curatenie",
+  // Media, Creative & Entertainment
+  "Media / Presa / Publicatii",
+  "Publicitate / Branding / Design",
+  "Fotografie / Videografie",
   "Film / Video Production",
-  "Muzica / Evenimente",
-  // Travel & Lifestyle
-  "Turism / Travel",
-  "Hoteluri / Hospitality",
-  "Fashion / Imbracaminte",
-  "Luxury / Premium",
-  "Sport / Outdoor",
-  // Industry & Manufacturing
-  "Automotive",
-  "Manufacturing / Productie",
-  "Energie / Utilities",
-  "Agricultura / Agribusiness",
-  "Logistica / Transport",
+  "Muzica / DJ / Entertainment",
+  "Evenimente / Organizare",
+  "Podcast / Content Creation",
+  "Influencer Marketing",
+  // Travel, Hospitality & Lifestyle
+  "Turism / Agentii de Turism",
+  "Hoteluri / Pensiuni / Airbnb",
+  "Fashion / Imbracaminte / Accesorii",
+  "Luxury / Premium / Bijuterii",
+  "Sport / Outdoor / Echipamente",
+  "Auto (dealership / rent-a-car)",
+  "Animale de Companie / Pet Shop",
+  // Industry, Manufacturing & Agriculture
+  "Automotive (productie / piese)",
+  "Manufacturing / Productie Industriala",
+  "Energie / Utilities / Solar",
+  "Agricultura / Ferme / Agribusiness",
+  "Logistica / Transport / Curierat",
+  "Materiale de Constructii",
+  "Ambalaje / Packaging",
   // B2B
-  "B2B Services",
+  "B2B Services (general)",
   "B2B SaaS",
-  // Non-profit & Government
-  "ONG / Non-profit",
+  "B2B Marketing / Lead Gen",
+  // Non-profit, Government & Social
+  "ONG / Non-profit / Fundatii",
   "Guvern / Administratie Publica",
+  "Sanatate Publica / Campanii Sociale",
+  "Mediu / Ecologie / Sustenabilitate",
   // Other
   "Altele",
 ] as const;
@@ -216,6 +258,87 @@ const emptyStimulus = (type: string, order: number): Partial<Stimulus> => ({
   variant_label: null,
   execution_quality: null,
 });
+
+// ── IndustryPicker — searchable dropdown ────────────────────
+function IndustryPicker({ value, onChange, style }: { value: string; onChange: (v: string) => void; style?: React.CSSProperties }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = INDUSTRIES.filter(ind =>
+    ind.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div ref={ref} style={{ position: "relative", ...style }}>
+      <input
+        type="text"
+        style={{
+          width: "100%", padding: "8px 12px", fontSize: 13, border: "1.5px solid #d1d5db",
+          borderRadius: 8, background: "#fff", color: "#1a1a1a", outline: "none",
+          boxSizing: "border-box" as const,
+        }}
+        placeholder="Cauta industrie..."
+        value={open ? search : (value || "")}
+        onFocus={() => { setOpen(true); setSearch(""); }}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {value && !open && (
+        <button
+          onClick={() => { onChange(""); setSearch(""); setOpen(true); }}
+          style={{
+            position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+            background: "none", border: "none", cursor: "pointer", color: "#9ca3af",
+            fontSize: 16, lineHeight: 1, padding: 2,
+          }}
+          title="Sterge"
+        >
+          ×
+        </button>
+      )}
+      {open && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 999,
+          maxHeight: 240, overflowY: "auto", border: "1.5px solid #d1d5db",
+          borderTop: "none", borderRadius: "0 0 8px 8px", background: "#fff",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: "10px 14px", fontSize: 13, color: "#9ca3af" }}>
+              Nicio industrie gasita
+            </div>
+          ) : (
+            filtered.map(ind => (
+              <div
+                key={ind}
+                style={{
+                  padding: "8px 14px", fontSize: 13, cursor: "pointer",
+                  background: value === ind ? "#f0fdf4" : "transparent",
+                  color: "#1a1a1a", borderBottom: "1px solid #f3f4f6",
+                  transition: "background 0.1s",
+                }}
+                onMouseDown={() => { onChange(ind); setSearch(""); setOpen(false); }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = value === ind ? "#dcfce7" : "#f9fafb")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = value === ind ? "#f0fdf4" : "transparent")}
+              >
+                {ind}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Main Component ─────────────────────────────────────────
 export default function StudiuAdminPage() {
@@ -880,7 +1003,7 @@ export default function StudiuAdminPage() {
                           <div style={S.matFormWide}>
                             <div style={S.formRow3}>
                               <div style={S.formField}><label style={S.formLabel}>Nume *</label><input style={S.formInput} value={newStimData.name || ""} onChange={(e) => setNewStimData({ ...newStimData, name: e.target.value })} autoFocus placeholder="Ex: Maison Noir — FB Ad" /></div>
-                              <div style={S.formField}><label style={S.formLabel}>Industrie</label><select style={S.formInput} value={newStimData.industry || ""} onChange={(e) => setNewStimData({ ...newStimData, industry: e.target.value })}><option value="">Selecteaza...</option>{INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}</select></div>
+                              <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={newStimData.industry || ""} onChange={(v) => setNewStimData({ ...newStimData, industry: v })} /></div>
                               <div style={S.formField}><label style={S.formLabel}>Display Order</label><input style={S.formInput} type="number" value={newStimData.display_order || 0} onChange={(e) => setNewStimData({ ...newStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
                             </div>
                             <div style={S.formRow3}>
@@ -977,7 +1100,7 @@ export default function StudiuAdminPage() {
                             <div style={S.matFormWide}>
                               <div style={S.formRow3}>
                                 <div style={S.formField}><label style={S.formLabel}>Nume</label><input style={S.formInput} value={editStimData.name || ""} onChange={(e) => setEditStimData({ ...editStimData, name: e.target.value })} /></div>
-                                <div style={S.formField}><label style={S.formLabel}>Industrie</label><select style={S.formInput} value={editStimData.industry || ""} onChange={(e) => setEditStimData({ ...editStimData, industry: e.target.value })}><option value="">Selecteaza...</option>{INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}</select></div>
+                                <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={editStimData.industry || ""} onChange={(v) => setEditStimData({ ...editStimData, industry: v })} /></div>
                                 <div style={S.formField}><label style={S.formLabel}>Display Order</label><input style={S.formInput} type="number" value={editStimData.display_order || 0} onChange={(e) => setEditStimData({ ...editStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
                               </div>
                               <div style={S.formRow3}>
