@@ -50,6 +50,10 @@ export async function POST(request: Request) {
       // No body or invalid JSON — that's fine, tag is optional
     }
 
+    // Randomly assign variant group A/B/C
+    const variantGroups = ["A", "B", "C"];
+    const variantGroup = variantGroups[Math.floor(Math.random() * 3)];
+
     // Create respondent
     const { error: respError } = await supabase
       .from("survey_respondents")
@@ -59,6 +63,7 @@ export async function POST(request: Request) {
         ip_hash: ipHash,
         user_agent: ua.slice(0, 255),
         device_type: deviceType,
+        variant_group: variantGroup,
         ...(distributionId ? { distribution_id: distributionId } : {}),
       });
 

@@ -42,10 +42,6 @@ function extractYoutubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-function computeC(r: number, i: number, f: number): number {
-  return r > 0 ? Math.round((r + i * f) * 10) / 10 : 0;
-}
-
 function useIsMobile(breakpoint = 640): boolean {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -354,24 +350,6 @@ function StudiuWizardInner() {
       color: "#9CA3AF",
       marginTop: 2,
     },
-    cScoreDesktop: {
-      textAlign: "center" as const,
-      padding: 20,
-      background: "#fef2f2",
-      border: "1px solid #fecaca",
-      borderRadius: 12,
-      marginTop: 16,
-    },
-    cScoreMobile: {
-      margin: "16px -16px -20px",
-      padding: "12px 16px",
-      background: "rgba(254, 242, 242, 0.95)",
-      borderTop: "1px solid #fecaca",
-      borderRadius: "0 0 10px 10px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
     nav: {
       display: "flex",
       alignItems: "center",
@@ -564,18 +542,6 @@ function StudiuWizardInner() {
 
   // ── Complete state ──────────────────────────────────────
   if (step >= thankYouStep) {
-    const scores = Object.values(stimulusScores);
-    const avgC =
-      scores.length > 0
-        ? Math.round(
-            (scores.reduce(
-              (a, s) => a + computeC(s.r, s.i, s.f),
-              0
-            ) /
-              scores.length) *
-              10
-          ) / 10
-        : 0;
     return (
       <div style={S.container}>
         <div style={S.card}>
@@ -602,8 +568,7 @@ function StudiuWizardInner() {
             <p style={{ color: "#6B7280", marginBottom: 24, fontSize: m ? 14 : 16 }}>
               Ai evaluat {session.stimuli.length} materiale de marketing.
               <br />
-              Scorul C mediu al evaluarilor tale:{" "}
-              <strong style={{ color: "#DC2626" }}>{avgC}</strong>
+              Raspunsurile tale au fost inregistrate cu succes.
             </p>
             <div
               style={{
@@ -615,13 +580,13 @@ function StudiuWizardInner() {
               }}
             >
               <p style={{ fontSize: 13, color: "#166534" }}>
-                Raspunsurile tale contribuie la validarea stiintifica a
-                framework-ului R IF C. Datele sunt anonime.
+                Raspunsurile tale contribuie la un studiu stiintific despre
+                perceptia materialelor de marketing. Datele sunt anonime.
               </p>
             </div>
             <p style={{ fontSize: 13, color: "#9CA3AF" }}>
               Trimite sondajul si altora:{" "}
-              <strong>rifcmarketing.com/studiu</strong>
+              <strong>rifcmarketing.com/studiu/wizard</strong>
             </p>
           </div>
         </div>
@@ -947,8 +912,8 @@ function StudiuWizardInner() {
               {session.stimuli.length}
             </h2>
             <p style={S.stepDesc}>
-              Analizeaza materialul de mai jos si evalueaza-l pe cele 3
-              dimensiuni.
+              Analizeaza materialul de mai jos si raspunde la intrebarile de
+              evaluare.
             </p>
 
             {/* Stimulus display */}
@@ -1069,20 +1034,20 @@ function StudiuWizardInner() {
               {[
                 {
                   key: "r" as const,
-                  label: "R — Relevanta",
+                  label: "Relevanta",
                   desc: "Cat de relevant este acest mesaj pentru publicul sau tinta?",
                   color: "#DC2626",
                 },
                 {
                   key: "i" as const,
-                  label: "I — Interes",
+                  label: "Impact & Interes",
                   desc: "Cat de interesant si captivant este continutul?",
                   color: "#D97706",
                 },
                 {
                   key: "f" as const,
-                  label: "F — Forma",
-                  desc: "Cat de bine este executat vizual/structural?",
+                  label: "Calitate Executie",
+                  desc: "Cat de bine este executat vizual si structural?",
                   color: "#7C3AED",
                 },
               ].map((dim) => (
@@ -1185,53 +1150,7 @@ function StudiuWizardInner() {
                 </div>
               ))}
 
-              {/* Computed C — sticky on mobile, static on desktop */}
-              <div
-                className={m ? "wizard-sticky-score" : undefined}
-                style={m ? S.cScoreMobile : S.cScoreDesktop}
-              >
-                {m ? (
-                  <>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 11, letterSpacing: 1.5, color: "#6B7280", fontWeight: 600 }}>
-                        SCOR C
-                      </span>
-                      <span style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "JetBrains Mono, monospace" }}>
-                        {currentScores.r}+({currentScores.i}&times;{currentScores.f})
-                      </span>
-                    </div>
-                    <span style={{
-                      fontSize: 28,
-                      fontWeight: 800,
-                      fontFamily: "JetBrains Mono, monospace",
-                      color: "#DC2626",
-                    }}>
-                      {computeC(currentScores.r, currentScores.i, currentScores.f)}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ fontSize: 12, letterSpacing: 2, color: "#6B7280" }}>
-                      SCOR C CALCULAT
-                    </span>
-                    <div
-                      style={{
-                        fontSize: 36,
-                        fontWeight: 800,
-                        fontFamily: "JetBrains Mono, monospace",
-                        color: "#DC2626",
-                      }}
-                    >
-                      {computeC(currentScores.r, currentScores.i, currentScores.f)}
-                    </div>
-                    <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                      {currentScores.r} + ({currentScores.i} &times;{" "}
-                      {currentScores.f}) ={" "}
-                      {computeC(currentScores.r, currentScores.i, currentScores.f)}
-                    </span>
-                  </>
-                )}
-              </div>
+              {/* Score summary hidden from participants — C computed server-side */}
             </div>
           </div>
         )}
@@ -1277,7 +1196,7 @@ function StudiuWizardInner() {
 
       {/* Footer */}
       <div style={S.footer}>
-        <span>R IF C &mdash; Studiu de Perceptie &middot; </span>
+        <span>Studiu de Perceptie &middot; </span>
         <a href="https://rifcmarketing.com" style={{ color: "#DC2626" }}>
           rifcmarketing.com
         </a>

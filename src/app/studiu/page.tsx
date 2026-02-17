@@ -508,11 +508,9 @@ export default function StudiuAdminPage() {
                   <div style={S.configFormula}>
                     <span style={{ color: "#DC2626" }}>R</span>
                     <span style={{ color: "#6B7280" }}> + </span>
-                    <span style={{ color: "#6B7280" }}>(</span>
                     <span style={{ color: "#D97706" }}>I</span>
                     <span style={{ color: "#6B7280" }}> &times; </span>
                     <span style={{ color: "#7C3AED" }}>F</span>
-                    <span style={{ color: "#6B7280" }}>)</span>
                     <span style={{ color: "#6B7280" }}> = </span>
                     <span style={{ color: "#DC2626", fontWeight: 800 }}>C</span>
                   </div>
@@ -873,7 +871,7 @@ export default function StudiuAdminPage() {
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>Rezultate Sondaj</h2>
             <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
-              Scoruri agregate R, I, F, C pe fiecare material — formula C = R + (I &times; F).
+              Scoruri agregate R, I, F, C pe fiecare material — formula R + I &times; F = C.
             </p>
 
             {/* Segment sub-tabs */}
