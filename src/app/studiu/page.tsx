@@ -33,6 +33,7 @@ import {
   UserCheck,
   Bot,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu Admin — Structura Sondaj
@@ -412,17 +413,37 @@ export default function StudiuAdminPage() {
   const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
   const [aiSaving, setAiSaving] = useState(false);
 
-  // ── Upload helper ──────────────────────────────────────
+  // ── Upload helper (direct to Supabase Storage — supports large files up to 500MB) ──
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const uploadFile = async (file: File, fieldKey: string): Promise<string | null> => {
     setUploading((prev) => ({ ...prev, [fieldKey]: true }));
+    setUploadProgress((prev) => ({ ...prev, [fieldKey]: 0 }));
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
-      const result = await res.json();
-      if (result.url) return result.url;
-      return null;
-    } catch {
+      const supabase = createClient();
+      const ext = file.name.split(".").pop() || "bin";
+      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const path = `materials/${uniqueName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("survey-media")
+        .upload(path, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("survey-media")
+        .getPublicUrl(path);
+
+      setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("Upload failed:", err);
       return null;
     } finally {
       setUploading((prev) => ({ ...prev, [fieldKey]: false }));
