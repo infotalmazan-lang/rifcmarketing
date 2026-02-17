@@ -1168,7 +1168,7 @@ export const en: Dictionary = {
         brutalQuestion: "If I show this material to a stranger for 5 seconds, can they tell me Who we are, What we offer, and What they should do next? If the answer is no, the C score is below the profit threshold.",
         whatToCheck: "Is the final message clear for a complete stranger?",
         howToCheck: [
-          "Calculate: C = R + (I \u00d7 F) = ___",
+          "Calculate: R + (I \u00d7 F) = C = ___",
           "Run the 5-Second Test with someone who doesn\u2019t know you",
           "After 5 seconds: \u201cWhat do they offer? To whom? What should you do?\u201d",
           "If 70%+ can\u2019t answer \u2192 C < 50",
@@ -1502,7 +1502,7 @@ export const en: Dictionary = {
         usage: "Any marketing message",
         level: "Beginner",
         category: "diagnostic",
-        promptText: "Act as an expert in the R IF C Marketing Protocol.\nAnalyze the text below and provide:\n1. R Score (Relevance, 1-10): Who is the audience and why would they care NOW?\n2. I Score (Interest, 1-10): What tension is created? Is the benefit unique and quantifiable?\n3. F Score (Form, 1-10): Is the format optimal for this channel? Does it amplify or sabotage?\n4. Calculate C = R + (I \u00d7 F)\n5. Verdict: Which zone (Critical Failure / Background Noise / Medium Clarity / Supreme)?\n6. Identify the weakest variable + ONE specific improvement\n7. Applicable Failure Archetype? (Invisible Phantom / Aesthetic Noise / Empty Message / Execution Paradox)\n8. Apply the Relevance Gate: if R < 3, mark CRITICAL FAILURE regardless of I\u00d7F\n\nMessage to analyze:",
+        promptText: "Act as an expert in the R IF C Marketing Protocol.\nAnalyze the text below and provide:\n1. R Score (Relevance, 1-10): Who is the audience and why would they care NOW?\n2. I Score (Interest, 1-10): What tension is created? Is the benefit unique and quantifiable?\n3. F Score (Form, 1-10): Is the format optimal for this channel? Does it amplify or sabotage?\n4. Calculate R + (I \u00d7 F) = C\n5. Verdict: Which zone (Critical Failure / Background Noise / Medium Clarity / Supreme)?\n6. Identify the weakest variable + ONE specific improvement\n7. Applicable Failure Archetype? (Invisible Phantom / Aesthetic Noise / Empty Message / Execution Paradox)\n8. Apply the Relevance Gate: if R < 3, mark CRITICAL FAILURE regardless of I\u00d7F\n\nMessage to analyze:",
         placeholder: "[PASTE YOUR CONTENT HERE]",
         hasExample: true,
         exampleOutput: "R = 7/10 \u2014 Audience is defined (startup CTOs) but timing questionable\n            (August launch = frozen budgets)\nI = 4/10 \u2014 \u201cThe complete management solution\u201d is generic. Concrete\n            benefit doesn\u2019t appear in the first 5 seconds.\nF = 8/10 \u2014 Professional design, clear CTA, mobile-optimized. Speed: 2.1s \u2713\n\nC = 7 + (4 \u00d7 8) = 39 \u2192 BACKGROUND NOISE\nArchetype: EMPTY MESSAGE (weak I + strong F)\n\nWeak variable: I\nRecommendation: Rewrite headline with concrete benefit:\n\u201cReduce meeting time by 40%\u201d not \u201cThe complete solution\u201d\nImpact: I from 4 to 7 \u2192 C = 63 (+62%)"
@@ -1857,7 +1857,7 @@ export const en: Dictionary = {
       { model: "4Ps", full: "Product \u2192 Price \u2192 Place \u2192 Promotion", weakness: "Business strategy framework from 1960, not a communication diagnostic. You can have perfect Product, Price, Place, and Promotion \u2014 but if the message is confusing, conversion is zero.", rifc: "R IF C operates at the communication layer ABOVE the 4Ps. It diagnoses and optimizes the message that turns strategy into conversions." },
     ],
     aiPrompts: [
-      { label: "Diagnostic Prompt", text: "Act as an R IF C Marketing expert. Analyze this message and score each variable: R (Relevance 1-10), I (Interest 1-10), F (Form 1-10). Calculate C = R + (I \u00d7 F). Identify the weakest variable and suggest one specific improvement. Apply The Relevance Gate: if R < 3, flag as Critical Failure." },
+      { label: "Diagnostic Prompt", text: "Act as an R IF C Marketing expert. Analyze this message and score each variable: R (Relevance 1-10), I (Interest 1-10), F (Form 1-10). Calculate R + (I \u00d7 F) = C. Identify the weakest variable and suggest one specific improvement. Apply The Relevance Gate: if R < 3, flag as Critical Failure." },
       { label: "Rewrite Prompt", text: "Act as an R IF C Marketing expert. Rewrite this message: increase variable I by adding a unique, specific benefit and maximize variable F using an airy structure (no jargon) that amplifies clarity. Maintain the same R targeting." },
       { label: "Landing Page Audit", text: "Audit this landing page using R IF C methodology. Score R (is the traffic source aligned with the page message?), I (is the promise clear and unique in the first 5 seconds?), F (does the layout guide the eye to a single CTA?). Provide the C score and identify which Failure Archetype applies, if any." },
       { label: "Ad Creative Scoring", text: "Score this ad creative using R IF C. Check: R \u2014 does it match the target audience\u2019s current priority? I \u2014 does the offer stand out in 2 seconds of scroll? F \u2014 is the format optimized for this platform? Calculate C and recommend whether to launch, revise, or kill." },

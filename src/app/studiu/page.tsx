@@ -123,9 +123,17 @@ export default function StudiuPage() {
     init();
   }, []);
 
+  // ── Compute total steps ─────────────────────────────────
+  // Steps: 1=demographic, 2=behavioral, 3=psychographic, 4..3+N=stimuli, 3+N+1=thank you
+  const numStimuli = session?.stimuli?.length || 8;
+  const lastStimulusStep = 3 + numStimuli; // e.g. 11 for 8 stimuli
+  const thankYouStep = lastStimulusStep + 1; // e.g. 12 for 8 stimuli
+  const totalSteps = thankYouStep;
+  const pct = step >= thankYouStep ? 100 : Math.round(((step - 1) / (totalSteps - 1)) * 100);
+
   // ── Timer for stimulus steps ────────────────────────────
   useEffect(() => {
-    if (step >= 4 && step <= 11) {
+    if (step >= 4 && step <= lastStimulusStep) {
       timerRef.current = 0;
       timerInterval.current = setInterval(() => {
         timerRef.current += 1;
@@ -134,7 +142,7 @@ export default function StudiuPage() {
     return () => {
       if (timerInterval.current) clearInterval(timerInterval.current);
     };
-  }, [step]);
+  }, [step, lastStimulusStep]);
 
   // ── Save & advance step ─────────────────────────────────
   const saveAndNext = useCallback(async () => {
@@ -154,7 +162,7 @@ export default function StudiuPage() {
     } else if (step === 3) {
       type = "psychographic";
       data = psychographic;
-    } else if (step >= 4 && step <= 11) {
+    } else if (step >= 4 && step <= lastStimulusStep) {
       const idx = step - 4;
       const stimId = session.stimuliOrder[idx];
       const scores = stimulusScores[stimId] || { r: 5, i: 5, f: 5 };
@@ -165,10 +173,8 @@ export default function StudiuPage() {
         iScore: scores.i,
         fScore: scores.f,
         timeSpentSeconds: timerRef.current,
+        isLast: step === lastStimulusStep,
       };
-    } else if (step === 12) {
-      type = "complete";
-      data = {};
     }
 
     try {
@@ -185,13 +191,8 @@ export default function StudiuPage() {
       const result = await res.json();
       if (result.success) {
         const nextStep = step + 1;
-        // If we have fewer than 8 stimuli, skip remaining stimulus steps
-        const maxStimulusStep = 3 + (session.stimuli?.length || 8);
-        const actualNext =
-          step >= 4 && nextStep > maxStimulusStep
-            ? maxStimulusStep + 1
-            : nextStep;
-        const finalStep = Math.min(actualNext, 13);
+        // After last stimulus, go to thank you
+        const finalStep = Math.min(nextStep, thankYouStep);
 
         const updated = { ...session, currentStep: finalStep };
         localStorage.setItem(LS_KEY, JSON.stringify(updated));
@@ -205,7 +206,7 @@ export default function StudiuPage() {
       setError("Eroare de conexiune.");
     }
     setSaving(false);
-  }, [session, step, saving, demographics, behavioral, psychographic, stimulusScores]);
+  }, [session, step, saving, demographics, behavioral, psychographic, stimulusScores, lastStimulusStep, thankYouStep]);
 
   const goBack = () => {
     if (step > 1) {
@@ -213,10 +214,6 @@ export default function StudiuPage() {
       window.scrollTo(0, 0);
     }
   };
-
-  // ── Compute total steps ─────────────────────────────────
-  const totalSteps = session ? 3 + (session.stimuli?.length || 8) + 1 : 12;
-  const pct = Math.round(((step - 1) / (totalSteps - 1)) * 100);
 
   // ── Loading state ───────────────────────────────────────
   if (step === 0 || !session) {
@@ -234,7 +231,7 @@ export default function StudiuPage() {
   }
 
   // ── Complete state ──────────────────────────────────────
-  if (step > totalSteps || step === 13) {
+  if (step >= thankYouStep) {
     const scores = Object.values(stimulusScores);
     const avgC =
       scores.length > 0
@@ -301,7 +298,7 @@ export default function StudiuPage() {
   }
 
   // ── Get current stimulus ────────────────────────────────
-  const currentStimIdx = step >= 4 && step <= 11 ? step - 4 : -1;
+  const currentStimIdx = step >= 4 && step <= lastStimulusStep ? step - 4 : -1;
   const currentStim =
     currentStimIdx >= 0 && currentStimIdx < session.stimuli.length
       ? session.stimuli[currentStimIdx]
@@ -597,8 +594,8 @@ export default function StudiuPage() {
           </div>
         )}
 
-        {/* Steps 4-11: Stimulus evaluation */}
-        {step >= 4 && step <= 11 && currentStim && (
+        {/* Steps 4-N: Stimulus evaluation */}
+        {step >= 4 && step <= lastStimulusStep && currentStim && (
           <div>
             <h2 style={styles.stepTitle}>
               Evaluare Material {currentStimIdx + 1} din{" "}
@@ -799,9 +796,9 @@ export default function StudiuPage() {
                   {computeC(currentScores.r, currentScores.i, currentScores.f)}
                 </div>
                 <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                  C = R + (I &times; F) ={" "}
                   {currentScores.r} + ({currentScores.i} &times;{" "}
-                  {currentScores.f})
+                  {currentScores.f}) ={" "}
+                  {computeC(currentScores.r, currentScores.i, currentScores.f)}
                 </span>
               </div>
             </div>
@@ -840,7 +837,7 @@ export default function StudiuPage() {
           >
             {saving
               ? "Se salveaza..."
-              : step >= totalSteps
+              : step === lastStimulusStep
               ? "Finalizeaza"
               : "Urmatorul \u2192"}
           </button>

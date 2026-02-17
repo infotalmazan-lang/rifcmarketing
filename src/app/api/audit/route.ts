@@ -156,7 +156,7 @@ async function extractYoutubeTranscript(url: string): Promise<string> {
 const RIFC_SYSTEM_PROMPT = `You are an R IF C Marketing expert consultant. R IF C is a marketing diagnostic framework created by Dumitru Talmazan.
 
 ## The R IF C Equation
-C = R + (I × F)
+R + (I × F) = C
 
 Where:
 - **R (Relevance)** — Score 1-10. Is this message reaching the RIGHT audience at the RIGHT time?

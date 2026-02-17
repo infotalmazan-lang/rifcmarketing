@@ -80,8 +80,8 @@ export async function PUT(request: Request) {
         );
       }
 
-      // Update step
-      const isComplete = step >= 12;
+      // Update step — mark complete if client says this is the last stimulus
+      const isComplete = !!data.isLast;
       await supabase
         .from("survey_respondents")
         .update({
