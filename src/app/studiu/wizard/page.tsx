@@ -843,13 +843,53 @@ function StudiuWizardInner() {
             </p>
             <div style={{
               background: "#f0fdf4", border: "1px solid #bbf7d0",
-              borderRadius: 10, padding: 16, marginBottom: 20,
+              borderRadius: 10, padding: 16, marginBottom: 24,
             }}>
               <p style={{ fontSize: 13, color: "#166534", lineHeight: 1.5 }}>
                 Raspunsurile tale contribuie la un studiu stiintific despre
                 perceptia materialelor de marketing. Datele sunt complet anonime.
               </p>
             </div>
+
+            {/* Author follow section */}
+            <div style={{
+              background: "#faf8f5", border: "1px solid #e5e1d9",
+              borderRadius: 12, padding: m ? 20 : 24, marginBottom: 24, width: "100%",
+            }}>
+              <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 10, textTransform: "uppercase" as const }}>
+                A MARKETING PROTOCOL BY
+              </p>
+              <h3 style={{ fontSize: m ? 16 : 18, fontWeight: 700, color: textDark, marginBottom: 4, lineHeight: 1.3 }}>
+                The Emotional Mathematics of Marketing
+              </h3>
+              <p style={{ fontSize: m ? 14 : 15, fontWeight: 600, color: accentRed, marginBottom: 16 }}>
+                Dumitru Talmazan
+              </p>
+              <p style={{ fontSize: 13, color: textMuted, lineHeight: 1.5, marginBottom: 16 }}>
+                Urmareste pentru actualizari despre rezultatele studiului, insights si noi cercetari.
+              </p>
+              <a
+                href="https://instagram.com/talmazan.md"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 8,
+                  padding: "12px 24px", borderRadius: 10,
+                  background: "linear-gradient(135deg, #833AB4, #FD1D1D, #F77737)",
+                  color: "#fff", fontSize: m ? 14 : 15, fontWeight: 700,
+                  textDecoration: "none", cursor: "pointer",
+                  border: "none", letterSpacing: 0.3,
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                </svg>
+                Urmareste @talmazan.md
+              </a>
+            </div>
+
             <p style={{ fontSize: 12, color: textMuted }}>
               Trimite sondajul si altora: <strong>rifcmarketing.com/studiu/wizard</strong>
             </p>
