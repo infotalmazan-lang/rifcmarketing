@@ -1,15 +1,48 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Settings,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Pencil,
+  ChevronRight,
+  ChevronDown as ChevronExpand,
+  GripVertical,
+  Plus,
+  X,
+  Check,
+  ClipboardList,
+  BarChart3,
+  Share2,
+  PlayCircle,
+  Image,
+  Video,
+  FileText,
+  Link,
+  Globe,
+} from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
-   R IF C — Studiu de Percepție Consumator
-   Wizard cu 12 steps, auto-save la fiecare pas, resume din localStorage
+   R IF C — Studiu Admin — Structura Sondaj
+   4 tabs: SONDAJ | REZULTATE | DISTRIBUTIE | PREVIEW
    ═══════════════════════════════════════════════════════════ */
 
-const LS_KEY = "rifc-survey-session";
-
 // ── Types ──────────────────────────────────────────────────
+interface Category {
+  id: string;
+  type: string;
+  label: string;
+  short_code: string;
+  color: string;
+  display_order: number;
+  is_visible: boolean;
+  max_materials: number;
+}
+
 interface Stimulus {
   id: string;
   name: string;
@@ -21,1117 +54,1133 @@ interface Stimulus {
   text_content: string | null;
   pdf_url: string | null;
   site_url: string | null;
+  display_order: number;
+  is_active: boolean;
 }
 
-interface SessionData {
-  sessionId: string;
-  currentStep: number;
-  stimuliOrder: string[];
-  stimuli: Stimulus[];
-}
+type TabKey = "sondaj" | "rezultate" | "distributie" | "preview";
 
-// ── Helpers ────────────────────────────────────────────────
-function extractYoutubeId(url: string): string | null {
-  const m =
-    url.match(/(?:youtube\.com\/watch\?.*v=)([a-zA-Z0-9_-]{11})/) ||
-    url.match(/(?:youtu\.be\/)([a-zA-Z0-9_-]{11})/) ||
-    url.match(/(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/) ||
-    url.match(/(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
+const TABS: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
+  { key: "sondaj", label: "SONDAJ", icon: ClipboardList },
+  { key: "rezultate", label: "REZULTATE", icon: BarChart3 },
+  { key: "distributie", label: "DISTRIBUTIE", icon: Share2 },
+  { key: "preview", label: "PREVIEW", icon: PlayCircle },
+];
 
-function computeC(r: number, i: number, f: number): number {
-  return r > 0 ? Math.round((r + i * f) * 10) / 10 : 0;
-}
+// ── Empty stimulus template ─────────────────────────────────
+const emptyStimulus = (type: string, order: number): Partial<Stimulus> => ({
+  name: "",
+  type,
+  industry: "",
+  description: "",
+  image_url: "",
+  video_url: "",
+  text_content: "",
+  pdf_url: "",
+  site_url: "",
+  display_order: order,
+});
 
 // ── Main Component ─────────────────────────────────────────
-export default function StudiuPage() {
-  const [session, setSession] = useState<SessionData | null>(null);
-  const [step, setStep] = useState(0); // 0=loading, 1-12=active steps
-  const [saving, setSaving] = useState(false);
+export default function StudiuAdminPage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("sondaj");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [stimuli, setStimuli] = useState<Stimulus[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Profile data
-  const [demographics, setDemographics] = useState({
-    ageRange: "",
-    gender: "",
-    locationType: "",
-    incomeRange: "",
-    education: "",
-    occupation: "",
-  });
-  const [behavioral, setBehavioral] = useState({
-    purchaseFrequency: "",
-    preferredChannels: [] as string[],
-    dailyOnlineTime: "",
-    primaryDevice: "",
-  });
-  const [psychographic, setPsychographic] = useState({
-    adReceptivity: 4,
-    visualPreference: 4,
-    impulseBuying: 4,
-    irrelevanceAnnoyance: 4,
-    attentionCapture: 4,
-  });
+  // UI state
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editCatLabel, setEditCatLabel] = useState("");
+  const [editCatColor, setEditCatColor] = useState("");
+  const [editingStimId, setEditingStimId] = useState<string | null>(null);
+  const [editStimData, setEditStimData] = useState<Partial<Stimulus>>({});
+  const [addingToType, setAddingToType] = useState<string | null>(null);
+  const [newStimData, setNewStimData] = useState<Partial<Stimulus>>({});
+  const [saving, setSaving] = useState(false);
 
-  // Stimulus evaluation
-  const [stimulusScores, setStimulusScores] = useState<
-    Record<string, { r: number; i: number; f: number }>
-  >({});
-  const timerRef = useRef<number>(0);
-  const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  // ── Fetch data ─────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [catRes, stimRes] = await Promise.all([
+        fetch("/api/survey/categories"),
+        fetch("/api/survey/stimuli?all=true"),
+      ]);
+      const catData = await catRes.json();
+      const stimData = await stimRes.json();
 
-  // ── Init: load session or create new ────────────────────
-  useEffect(() => {
-    const init = async () => {
-      // Try resume
-      try {
-        const saved = localStorage.getItem(LS_KEY);
-        if (saved) {
-          const s: SessionData = JSON.parse(saved);
-          if (s.sessionId && s.stimuli?.length > 0) {
-            setSession(s);
-            setStep(s.currentStep || 1);
-            return;
-          }
-        }
-      } catch {
-        /* ignore */
-      }
-
-      // Start new session
-      try {
-        const res = await fetch("/api/survey/start", { method: "POST" });
-        const data = await res.json();
-        if (data.success) {
-          const s: SessionData = {
-            sessionId: data.sessionId,
-            currentStep: 1,
-            stimuliOrder: data.stimuli.map((st: Stimulus) => st.id),
-            stimuli: data.stimuli,
-          };
-          localStorage.setItem(LS_KEY, JSON.stringify(s));
-          setSession(s);
-          setStep(1);
-        } else {
-          setError("Nu s-a putut porni sondajul. Reincarca pagina.");
-        }
-      } catch {
-        setError("Eroare de conexiune. Verifica internetul si reincarca.");
-      }
-    };
-    init();
+      if (catData.categories) setCategories(catData.categories);
+      if (stimData.stimuli) setStimuli(stimData.stimuli);
+    } catch {
+      setError("Eroare la incarcarea datelor.");
+    }
+    setLoading(false);
   }, []);
 
-  // ── Compute total steps ─────────────────────────────────
-  // Steps: 1=demographic, 2=behavioral, 3=psychographic, 4..3+N=stimuli, 3+N+1=thank you
-  const numStimuli = session?.stimuli?.length || 8;
-  const lastStimulusStep = 3 + numStimuli; // e.g. 11 for 8 stimuli
-  const thankYouStep = lastStimulusStep + 1; // e.g. 12 for 8 stimuli
-  const totalSteps = thankYouStep;
-  const pct = step >= thankYouStep ? 100 : Math.round(((step - 1) / (totalSteps - 1)) * 100);
-
-  // ── Timer for stimulus steps ────────────────────────────
   useEffect(() => {
-    if (step >= 4 && step <= lastStimulusStep) {
-      timerRef.current = 0;
-      timerInterval.current = setInterval(() => {
-        timerRef.current += 1;
-      }, 1000);
-    }
-    return () => {
-      if (timerInterval.current) clearInterval(timerInterval.current);
-    };
-  }, [step, lastStimulusStep]);
+    fetchData();
+  }, [fetchData]);
 
-  // ── Save & advance step ─────────────────────────────────
-  const saveAndNext = useCallback(async () => {
-    if (!session || saving) return;
-    setSaving(true);
-    setError(null);
+  // ── Helpers ────────────────────────────────────────────
+  const getStimuliForType = (type: string) =>
+    stimuli.filter((s) => s.type === type && s.is_active);
 
-    let type = "";
-    let data: Record<string, unknown> = {};
+  const totalMaterials = stimuli.filter((s) => s.is_active).length;
+  const visibleCategories = categories.filter((c) => c.is_visible).length;
 
-    if (step === 1) {
-      type = "demographic";
-      data = demographics;
-    } else if (step === 2) {
-      type = "behavioral";
-      data = behavioral;
-    } else if (step === 3) {
-      type = "psychographic";
-      data = psychographic;
-    } else if (step >= 4 && step <= lastStimulusStep) {
-      const idx = step - 4;
-      const stimId = session.stimuliOrder[idx];
-      const scores = stimulusScores[stimId] || { r: 5, i: 5, f: 5 };
-      type = "stimulus";
-      data = {
-        stimulusId: stimId,
-        rScore: scores.r,
-        iScore: scores.i,
-        fScore: scores.f,
-        timeSpentSeconds: timerRef.current,
-        isLast: step === lastStimulusStep,
-      };
-    }
-
-    try {
-      const res = await fetch("/api/survey/step", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: session.sessionId,
-          step,
-          type,
-          data,
-        }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        const nextStep = step + 1;
-        // After last stimulus, go to thank you
-        const finalStep = Math.min(nextStep, thankYouStep);
-
-        const updated = { ...session, currentStep: finalStep };
-        localStorage.setItem(LS_KEY, JSON.stringify(updated));
-        setSession(updated);
-        setStep(finalStep);
-        window.scrollTo(0, 0);
-      } else {
-        setError("Eroare la salvare. Incearca din nou.");
-      }
-    } catch {
-      setError("Eroare de conexiune.");
-    }
-    setSaving(false);
-  }, [session, step, saving, demographics, behavioral, psychographic, stimulusScores, lastStimulusStep, thankYouStep]);
-
-  const goBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
-      window.scrollTo(0, 0);
+  // ── Category actions ───────────────────────────────────
+  const toggleVisibility = async (cat: Category) => {
+    const res = await fetch("/api/survey/categories", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: cat.id, is_visible: !cat.is_visible }),
+    });
+    if ((await res.json()).success) {
+      setCategories((prev) =>
+        prev.map((c) => (c.id === cat.id ? { ...c, is_visible: !c.is_visible } : c))
+      );
     }
   };
 
-  // ── Loading state ───────────────────────────────────────
-  if (step === 0 || !session) {
-    return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          {error ? (
-            <p style={{ color: "#DC2626" }}>{error}</p>
-          ) : (
-            <p style={{ color: "#6B7280" }}>Se incarca sondajul...</p>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const moveCategory = async (cat: Category, direction: "up" | "down") => {
+    const sorted = [...categories].sort((a, b) => a.display_order - b.display_order);
+    const idx = sorted.findIndex((c) => c.id === cat.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
 
-  // ── Complete state ──────────────────────────────────────
-  if (step >= thankYouStep) {
-    const scores = Object.values(stimulusScores);
-    const avgC =
-      scores.length > 0
-        ? Math.round(
-            (scores.reduce(
-              (a, s) => a + computeC(s.r, s.i, s.f),
-              0
-            ) /
-              scores.length) *
-              10
-          ) / 10
-        : 0;
-    return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <div style={{ textAlign: "center", padding: "40px 20px" }}>
-            <div
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: "50%",
-                background: "#059669",
-                color: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 28,
-                margin: "0 auto 20px",
-              }}
-            >
-              &#10003;
-            </div>
-            <h2 style={{ fontSize: 24, marginBottom: 8, color: "#111827" }}>
-              Multumim pentru participare!
-            </h2>
-            <p style={{ color: "#6B7280", marginBottom: 24 }}>
-              Ai evaluat {session.stimuli.length} materiale de marketing.
-              <br />
-              Scorul C mediu al evaluarilor tale:{" "}
-              <strong style={{ color: "#DC2626" }}>{avgC}</strong>
-            </p>
-            <div
-              style={{
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                borderRadius: 8,
-                padding: 16,
-                marginBottom: 24,
-              }}
-            >
-              <p style={{ fontSize: 13, color: "#166534" }}>
-                Raspunsurile tale contribuie la validarea stiintifica a
-                framework-ului R IF C. Datele sunt anonime.
-              </p>
-            </div>
-            <p style={{ fontSize: 13, color: "#9CA3AF" }}>
-              Trimite sondajul si altora:{" "}
-              <strong>rifcmarketing.com/studiu</strong>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    const other = sorted[swapIdx];
+    const myOrder = cat.display_order;
+    const otherOrder = other.display_order;
 
-  // ── Get current stimulus ────────────────────────────────
-  const currentStimIdx = step >= 4 && step <= lastStimulusStep ? step - 4 : -1;
-  const currentStim =
-    currentStimIdx >= 0 && currentStimIdx < session.stimuli.length
-      ? session.stimuli[currentStimIdx]
-      : null;
-  const currentScores = currentStim
-    ? stimulusScores[currentStim.id] || { r: 5, i: 5, f: 5 }
-    : { r: 5, i: 5, f: 5 };
+    await Promise.all([
+      fetch("/api/survey/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: cat.id, display_order: otherOrder }),
+      }),
+      fetch("/api/survey/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: other.id, display_order: myOrder }),
+      }),
+    ]);
+
+    setCategories((prev) =>
+      prev
+        .map((c) => {
+          if (c.id === cat.id) return { ...c, display_order: otherOrder };
+          if (c.id === other.id) return { ...c, display_order: myOrder };
+          return c;
+        })
+        .sort((a, b) => a.display_order - b.display_order)
+    );
+  };
+
+  const deleteCategory = async (cat: Category) => {
+    if (!confirm(`Stergi categoria "${cat.label}"? Materialele din ea vor ramane in baza de date.`)) return;
+    const res = await fetch(`/api/survey/categories?id=${cat.id}`, { method: "DELETE" });
+    if ((await res.json()).success) {
+      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+    }
+  };
+
+  const startEditCategory = (cat: Category) => {
+    setEditingCatId(cat.id);
+    setEditCatLabel(cat.label);
+    setEditCatColor(cat.color);
+  };
+
+  const saveEditCategory = async () => {
+    if (!editingCatId) return;
+    setSaving(true);
+    const res = await fetch("/api/survey/categories", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingCatId, label: editCatLabel, color: editCatColor }),
+    });
+    if ((await res.json()).success) {
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === editingCatId ? { ...c, label: editCatLabel, color: editCatColor } : c
+        )
+      );
+    }
+    setEditingCatId(null);
+    setSaving(false);
+  };
+
+  // ── Stimulus actions ───────────────────────────────────
+  const startEditStimulus = (stim: Stimulus) => {
+    setEditingStimId(stim.id);
+    setEditStimData({ ...stim });
+  };
+
+  const saveEditStimulus = async () => {
+    if (!editingStimId) return;
+    setSaving(true);
+    const res = await fetch("/api/survey/stimuli", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingStimId, ...editStimData }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      setStimuli((prev) =>
+        prev.map((s) => (s.id === editingStimId ? { ...s, ...editStimData } : s))
+      );
+    }
+    setEditingStimId(null);
+    setSaving(false);
+  };
+
+  const deleteStimulus = async (stim: Stimulus) => {
+    if (!confirm(`Stergi materialul "${stim.name}"?`)) return;
+    const res = await fetch(`/api/survey/stimuli?id=${stim.id}`, { method: "DELETE" });
+    if ((await res.json()).success) {
+      setStimuli((prev) => prev.map((s) => (s.id === stim.id ? { ...s, is_active: false } : s)));
+    }
+  };
+
+  const startAddStimulus = (type: string) => {
+    const materialsCount = getStimuliForType(type).length;
+    setAddingToType(type);
+    setNewStimData(emptyStimulus(type, materialsCount + 1));
+  };
+
+  const saveNewStimulus = async () => {
+    if (!newStimData.name || !addingToType) return;
+    setSaving(true);
+    const res = await fetch("/api/survey/stimuli", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newStimData),
+    });
+    const result = await res.json();
+    if (result.success && result.stimulus) {
+      setStimuli((prev) => [...prev, result.stimulus]);
+    }
+    setAddingToType(null);
+    setNewStimData({});
+    setSaving(false);
+  };
+
+  // ── Media icons helper ─────────────────────────────────
+  const getMediaIcons = (stim: Stimulus) => {
+    const icons: { icon: typeof Image; label: string }[] = [];
+    if (stim.image_url) icons.push({ icon: Image, label: "Imagine" });
+    if (stim.video_url) icons.push({ icon: Video, label: "Video" });
+    if (stim.text_content) icons.push({ icon: FileText, label: "Text" });
+    if (stim.pdf_url) icons.push({ icon: FileText, label: "PDF" });
+    if (stim.site_url) icons.push({ icon: Link, label: "Site" });
+    return icons;
+  };
 
   // ── Render ──────────────────────────────────────────────
   return (
-    <div style={styles.container}>
-      {/* Progress bar */}
-      <div style={styles.progressWrap}>
-        <div style={styles.progressBar}>
-          <div
-            style={{
-              ...styles.progressFill,
-              width: `${pct}%`,
-            }}
-          />
+    <div style={S.page}>
+      {/* Header bar */}
+      <div style={S.headerBar}>
+        <div style={S.logo}>
+          <span style={{ color: "#DC2626", fontWeight: 800 }}>R</span>
+          <span style={{ color: "#6B7280", fontWeight: 300 }}> IF </span>
+          <span style={{ color: "#DC2626", fontWeight: 800 }}>C</span>
         </div>
-        <div style={styles.progressText}>
-          Pasul {step} din {totalSteps} &mdash; {pct}% completat
-        </div>
+        <div style={S.headerBadge}>SONDAJ</div>
+        <div style={{ flex: 1 }} />
+        <button style={S.langBtn} onClick={() => {}}>
+          <Globe size={14} />
+          <span>RO</span>
+        </button>
       </div>
 
-      <div style={styles.card}>
-        {/* Step 1: Demographics */}
-        {step === 1 && (
-          <div>
-            <h2 style={styles.stepTitle}>Profil Demografic</h2>
-            <p style={styles.stepDesc}>
-              Aceste date ne ajuta sa intelegem perspectiva diferitelor segmente
-              de audienta. Toate raspunsurile sunt anonime.
+      {/* Tabs */}
+      <div style={S.tabsBar}>
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              style={{
+                ...S.tab,
+                ...(isActive ? S.tabActive : {}),
+              }}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <Icon size={16} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Content area */}
+      <div style={S.content}>
+        {activeTab === "sondaj" && (
+          <>
+            {/* Header */}
+            <div style={S.sectionHeader}>
+              <div>
+                <h1 style={S.pageTitle}>Structura Sondaj</h1>
+                <p style={S.pageSubtitle}>
+                  {visibleCategories} categorii &middot; {totalMaterials} materiale
+                </p>
+              </div>
+              <button style={S.addCatBtn} onClick={() => {/* TODO: add new category type */}}>
+                <Plus size={16} />
+                <span>ADAUGA CATEGORIE</span>
+              </button>
+            </div>
+
+            {/* Configuration card */}
+            <div style={S.configCard}>
+              <div style={S.configHeader}>
+                <Settings size={16} style={{ color: "#6B7280" }} />
+                <span style={S.configTitle}>CONFIGURATIE</span>
+              </div>
+              <div style={S.configGrid}>
+                <div style={S.configItem}>
+                  <span style={S.configLabel}>FORMULA</span>
+                  <div style={S.configFormula}>
+                    <span style={{ color: "#DC2626" }}>R</span>
+                    <span style={{ color: "#6B7280" }}> + </span>
+                    <span style={{ color: "#6B7280" }}>(</span>
+                    <span style={{ color: "#D97706" }}>I</span>
+                    <span style={{ color: "#6B7280" }}> &times; </span>
+                    <span style={{ color: "#7C3AED" }}>F</span>
+                    <span style={{ color: "#6B7280" }}>)</span>
+                    <span style={{ color: "#6B7280" }}> = </span>
+                    <span style={{ color: "#DC2626", fontWeight: 800 }}>C</span>
+                  </div>
+                </div>
+                <div style={S.configItem}>
+                  <span style={S.configLabel}>BUTOANE PER MATERIAL</span>
+                  <div style={S.configValue}>R, I, F, C, CTA (1-10)</div>
+                </div>
+                <div style={S.configItem}>
+                  <span style={S.configLabel}>PER CATEGORIE</span>
+                  <div style={S.configValue}>Max 3 materiale</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Loading / Error */}
+            {loading && <p style={{ textAlign: "center", color: "#6B7280", padding: 40 }}>Se incarca...</p>}
+            {error && <p style={{ textAlign: "center", color: "#DC2626", padding: 20 }}>{error}</p>}
+
+            {/* Categories list */}
+            {!loading &&
+              categories
+                .sort((a, b) => a.display_order - b.display_order)
+                .map((cat) => {
+                  const catStimuli = getStimuliForType(cat.type);
+                  const isExpanded = expandedCat === cat.id;
+                  const isEditing = editingCatId === cat.id;
+                  const maxMat = cat.max_materials;
+
+                  return (
+                    <div key={cat.id} style={S.catCard}>
+                      {/* Category row */}
+                      <div style={S.catRow}>
+                        <div style={S.catDrag}>
+                          <GripVertical size={16} style={{ color: "#d1d5db" }} />
+                        </div>
+
+                        {isEditing ? (
+                          /* Edit mode */
+                          <div style={S.catEditRow}>
+                            <input
+                              type="color"
+                              value={editCatColor}
+                              onChange={(e) => setEditCatColor(e.target.value)}
+                              style={S.colorPicker}
+                            />
+                            <input
+                              type="text"
+                              value={editCatLabel}
+                              onChange={(e) => setEditCatLabel(e.target.value)}
+                              style={S.catEditInput}
+                              autoFocus
+                            />
+                            <button style={S.iconBtnSave} onClick={saveEditCategory} disabled={saving}>
+                              <Check size={14} />
+                            </button>
+                            <button style={S.iconBtnCancel} onClick={() => setEditingCatId(null)}>
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          /* Display mode */
+                          <>
+                            <span
+                              style={{
+                                ...S.catBadge,
+                                background: cat.color,
+                              }}
+                            >
+                              {cat.short_code}
+                            </span>
+                            <span style={S.catName}>{cat.label}</span>
+                            <span style={S.catCount}>
+                              {catStimuli.length}/{maxMat} materiale
+                            </span>
+
+                            {/* Action buttons */}
+                            <div style={S.catActions}>
+                              <button
+                                style={S.iconBtn}
+                                title={cat.is_visible ? "Ascunde" : "Arata"}
+                                onClick={() => toggleVisibility(cat)}
+                              >
+                                {cat.is_visible ? (
+                                  <Eye size={15} style={{ color: "#059669" }} />
+                                ) : (
+                                  <EyeOff size={15} style={{ color: "#9CA3AF" }} />
+                                )}
+                              </button>
+                              <button style={S.iconBtn} title="Muta sus" onClick={() => moveCategory(cat, "up")}>
+                                <ChevronUp size={15} />
+                              </button>
+                              <button style={S.iconBtn} title="Muta jos" onClick={() => moveCategory(cat, "down")}>
+                                <ChevronDown size={15} />
+                              </button>
+                              <button style={S.iconBtn} title="Editeaza" onClick={() => startEditCategory(cat)}>
+                                <Pencil size={14} />
+                              </button>
+                              <button style={S.iconBtnDanger} title="Sterge" onClick={() => deleteCategory(cat)}>
+                                <Trash2 size={14} />
+                              </button>
+                              <button
+                                style={S.iconBtn}
+                                title={isExpanded ? "Restringe" : "Expandeaza"}
+                                onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+                              >
+                                {isExpanded ? (
+                                  <ChevronExpand size={16} style={{ transform: "rotate(180deg)" }} />
+                                ) : (
+                                  <ChevronRight size={16} />
+                                )}
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Expanded materials */}
+                      {isExpanded && (
+                        <div style={S.materialsWrap}>
+                          {catStimuli.length === 0 && addingToType !== cat.type && (
+                            <p style={S.emptyMsg}>
+                              Niciun material adaugat. Adauga primul material de marketing.
+                            </p>
+                          )}
+
+                          {catStimuli.map((stim, idx) => (
+                            <div key={stim.id}>
+                              {editingStimId === stim.id ? (
+                                /* Edit stimulus form */
+                                <div style={S.stimEditForm}>
+                                  <div style={S.stimEditHeader}>
+                                    <Pencil size={14} style={{ color: "#6B7280" }} />
+                                    <span style={S.stimEditTitle}>Editare Material</span>
+                                  </div>
+                                  <div style={S.stimEditGrid}>
+                                    <div style={S.formField}>
+                                      <label style={S.formLabel}>Nume</label>
+                                      <input
+                                        style={S.formInput}
+                                        value={editStimData.name || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, name: e.target.value })}
+                                      />
+                                    </div>
+                                    <div style={S.formField}>
+                                      <label style={S.formLabel}>Industrie</label>
+                                      <input
+                                        style={S.formInput}
+                                        value={editStimData.industry || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, industry: e.target.value })}
+                                      />
+                                    </div>
+                                    <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                      <label style={S.formLabel}>Descriere</label>
+                                      <textarea
+                                        style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
+                                        value={editStimData.description || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })}
+                                      />
+                                    </div>
+                                    <div style={S.formField}>
+                                      <label style={S.formLabel}>URL Imagine</label>
+                                      <input
+                                        style={S.formInput}
+                                        value={editStimData.image_url || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, image_url: e.target.value })}
+                                        placeholder="https://..."
+                                      />
+                                    </div>
+                                    <div style={S.formField}>
+                                      <label style={S.formLabel}>URL Video (YouTube)</label>
+                                      <input
+                                        style={S.formInput}
+                                        value={editStimData.video_url || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, video_url: e.target.value })}
+                                        placeholder="https://youtube.com/..."
+                                      />
+                                    </div>
+                                    <div style={S.formField}>
+                                      <label style={S.formLabel}>URL PDF</label>
+                                      <input
+                                        style={S.formInput}
+                                        value={editStimData.pdf_url || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, pdf_url: e.target.value })}
+                                        placeholder="https://..."
+                                      />
+                                    </div>
+                                    <div style={S.formField}>
+                                      <label style={S.formLabel}>URL Site</label>
+                                      <input
+                                        style={S.formInput}
+                                        value={editStimData.site_url || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, site_url: e.target.value })}
+                                        placeholder="https://..."
+                                      />
+                                    </div>
+                                    <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                      <label style={S.formLabel}>Text Content</label>
+                                      <textarea
+                                        style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
+                                        value={editStimData.text_content || ""}
+                                        onChange={(e) => setEditStimData({ ...editStimData, text_content: e.target.value })}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div style={S.stimEditActions}>
+                                    <button style={S.btnCancel} onClick={() => setEditingStimId(null)}>
+                                      Anuleaza
+                                    </button>
+                                    <button style={S.btnSave} onClick={saveEditStimulus} disabled={saving}>
+                                      {saving ? "Se salveaza..." : "Salveaza"}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* Display stimulus */
+                                <div style={S.stimCard}>
+                                  <span style={S.stimIdx}>{idx + 1}.</span>
+                                  <span style={S.stimName}>{stim.name}</span>
+                                  {stim.industry && (
+                                    <span style={S.stimIndustry}>{stim.industry}</span>
+                                  )}
+                                  <div style={S.stimMediaIcons}>
+                                    {getMediaIcons(stim).map((m, i) => {
+                                      const MIcon = m.icon;
+                                      return (
+                                        <span key={i} title={m.label} style={S.mediaIcon}>
+                                          <MIcon size={13} />
+                                        </span>
+                                      );
+                                    })}
+                                  </div>
+                                  <div style={S.stimActions}>
+                                    <button style={S.iconBtn} title="Editeaza" onClick={() => startEditStimulus(stim)}>
+                                      <Pencil size={13} />
+                                    </button>
+                                    <button style={S.iconBtnDanger} title="Sterge" onClick={() => deleteStimulus(stim)}>
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+
+                          {/* Add new stimulus form */}
+                          {addingToType === cat.type ? (
+                            <div style={S.stimEditForm}>
+                              <div style={S.stimEditHeader}>
+                                <Plus size={14} style={{ color: "#059669" }} />
+                                <span style={S.stimEditTitle}>Material nou</span>
+                              </div>
+                              <div style={S.stimEditGrid}>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Nume *</label>
+                                  <input
+                                    style={S.formInput}
+                                    value={newStimData.name || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, name: e.target.value })}
+                                    autoFocus
+                                    placeholder="Ex: Maison Noir — FB Ad"
+                                  />
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Industrie</label>
+                                  <input
+                                    style={S.formInput}
+                                    value={newStimData.industry || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, industry: e.target.value })}
+                                    placeholder="Ex: Restaurant, SaaS, Fashion"
+                                  />
+                                </div>
+                                <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                  <label style={S.formLabel}>Descriere</label>
+                                  <textarea
+                                    style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
+                                    value={newStimData.description || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })}
+                                    placeholder="Scurta descriere a materialului..."
+                                  />
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>URL Imagine</label>
+                                  <input
+                                    style={S.formInput}
+                                    value={newStimData.image_url || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, image_url: e.target.value })}
+                                    placeholder="https://..."
+                                  />
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>URL Video (YouTube)</label>
+                                  <input
+                                    style={S.formInput}
+                                    value={newStimData.video_url || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, video_url: e.target.value })}
+                                    placeholder="https://youtube.com/..."
+                                  />
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>URL PDF</label>
+                                  <input
+                                    style={S.formInput}
+                                    value={newStimData.pdf_url || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, pdf_url: e.target.value })}
+                                    placeholder="https://..."
+                                  />
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>URL Site</label>
+                                  <input
+                                    style={S.formInput}
+                                    value={newStimData.site_url || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, site_url: e.target.value })}
+                                    placeholder="https://..."
+                                  />
+                                </div>
+                                <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                  <label style={S.formLabel}>Text Content</label>
+                                  <textarea
+                                    style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
+                                    value={newStimData.text_content || ""}
+                                    onChange={(e) => setNewStimData({ ...newStimData, text_content: e.target.value })}
+                                    placeholder="Continut text al materialului..."
+                                  />
+                                </div>
+                              </div>
+                              <div style={S.stimEditActions}>
+                                <button
+                                  style={S.btnCancel}
+                                  onClick={() => {
+                                    setAddingToType(null);
+                                    setNewStimData({});
+                                  }}
+                                >
+                                  Anuleaza
+                                </button>
+                                <button
+                                  style={{
+                                    ...S.btnSave,
+                                    opacity: !newStimData.name ? 0.5 : 1,
+                                  }}
+                                  onClick={saveNewStimulus}
+                                  disabled={saving || !newStimData.name}
+                                >
+                                  {saving ? "Se salveaza..." : "Adauga"}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            catStimuli.length < maxMat && (
+                              <button style={S.addStimBtn} onClick={() => startAddStimulus(cat.type)}>
+                                <Plus size={14} />
+                                <span>Adauga material</span>
+                              </button>
+                            )
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+          </>
+        )}
+
+        {activeTab === "rezultate" && (
+          <div style={S.placeholderTab}>
+            <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+            <h2 style={{ fontSize: 20, color: "#374151", marginTop: 16 }}>Rezultate Sondaj</h2>
+            <p style={{ color: "#6B7280", fontSize: 14 }}>
+              Vizualizeaza rezultatele agregate ale sondajului — scoruri R, I, F, C pe fiecare material.
             </p>
+          </div>
+        )}
 
-            <label style={styles.label}>Varsta</label>
-            <select
-              style={styles.select}
-              value={demographics.ageRange}
-              onChange={(e) =>
-                setDemographics({ ...demographics, ageRange: e.target.value })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="18-24">18-24 ani</option>
-              <option value="25-34">25-34 ani</option>
-              <option value="35-44">35-44 ani</option>
-              <option value="45-54">45-54 ani</option>
-              <option value="55-64">55-64 ani</option>
-              <option value="65+">65+ ani</option>
-            </select>
+        {activeTab === "distributie" && (
+          <div style={S.placeholderTab}>
+            <Share2 size={48} style={{ color: "#d1d5db" }} />
+            <h2 style={{ fontSize: 20, color: "#374151", marginTop: 16 }}>Distributie Sondaj</h2>
+            <p style={{ color: "#6B7280", fontSize: 14 }}>
+              Link-ul public al sondajului:{" "}
+              <a href="/studiu/wizard" style={{ color: "#DC2626", fontWeight: 600 }}>
+                rifcmarketing.com/studiu/wizard
+              </a>
+            </p>
+          </div>
+        )}
 
-            <label style={styles.label}>Gen</label>
-            <select
-              style={styles.select}
-              value={demographics.gender}
-              onChange={(e) =>
-                setDemographics({ ...demographics, gender: e.target.value })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="masculin">Masculin</option>
-              <option value="feminin">Feminin</option>
-              <option value="altul">Altul</option>
-              <option value="prefer_nu_spun">Prefer sa nu spun</option>
-            </select>
-
-            <label style={styles.label}>Locatie</label>
-            <select
-              style={styles.select}
-              value={demographics.locationType}
-              onChange={(e) =>
-                setDemographics({
-                  ...demographics,
-                  locationType: e.target.value,
-                })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="urban">Urban</option>
-              <option value="rural">Rural</option>
-            </select>
-
-            <label style={styles.label}>Venit lunar net (orientativ)</label>
-            <select
-              style={styles.select}
-              value={demographics.incomeRange}
-              onChange={(e) =>
-                setDemographics({
-                  ...demographics,
-                  incomeRange: e.target.value,
-                })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="sub_500">Sub 500 EUR</option>
-              <option value="500_1000">500 - 1.000 EUR</option>
-              <option value="1000_2000">1.000 - 2.000 EUR</option>
-              <option value="peste_2000">Peste 2.000 EUR</option>
-            </select>
-
-            <label style={styles.label}>Nivel educatie</label>
-            <select
-              style={styles.select}
-              value={demographics.education}
-              onChange={(e) =>
-                setDemographics({ ...demographics, education: e.target.value })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="liceu">Liceu</option>
-              <option value="universitate">Universitate (Licenta)</option>
-              <option value="master">Master</option>
-              <option value="doctorat">Doctorat</option>
-              <option value="altul">Altul</option>
-            </select>
-
-            <label style={styles.label}>Ocupatie</label>
-            <input
-              type="text"
-              style={styles.input}
-              placeholder="Ex: Manager Marketing, Student, Antreprenor..."
-              value={demographics.occupation}
-              onChange={(e) =>
-                setDemographics({ ...demographics, occupation: e.target.value })
-              }
+        {activeTab === "preview" && (
+          <div style={{ width: "100%", height: "80vh", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+            <iframe
+              src="/studiu/wizard"
+              style={{ width: "100%", height: "100%", border: "none" }}
+              title="Preview Sondaj"
             />
           </div>
         )}
-
-        {/* Step 2: Behavioral */}
-        {step === 2 && (
-          <div>
-            <h2 style={styles.stepTitle}>Profil Comportamental</h2>
-            <p style={styles.stepDesc}>
-              Cum interactionezi cu mediul digital si reclamele.
-            </p>
-
-            <label style={styles.label}>Cat de des cumperi online?</label>
-            <select
-              style={styles.select}
-              value={behavioral.purchaseFrequency}
-              onChange={(e) =>
-                setBehavioral({
-                  ...behavioral,
-                  purchaseFrequency: e.target.value,
-                })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="zilnic">Zilnic</option>
-              <option value="saptamanal">Saptamanal</option>
-              <option value="lunar">Lunar</option>
-              <option value="rar">Rar (cateva ori pe an)</option>
-            </select>
-
-            <label style={styles.label}>
-              Canale media preferate (selecteaza mai multe)
-            </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-              {[
-                "Social Media",
-                "Email",
-                "TV",
-                "Radio",
-                "Print",
-                "Outdoor",
-                "Online Search",
-              ].map((ch) => (
-                <label
-                  key={ch}
-                  style={{
-                    ...styles.chip,
-                    ...(behavioral.preferredChannels.includes(ch)
-                      ? styles.chipActive
-                      : {}),
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    style={{ display: "none" }}
-                    checked={behavioral.preferredChannels.includes(ch)}
-                    onChange={() => {
-                      const channels = behavioral.preferredChannels.includes(ch)
-                        ? behavioral.preferredChannels.filter((c) => c !== ch)
-                        : [...behavioral.preferredChannels, ch];
-                      setBehavioral({ ...behavioral, preferredChannels: channels });
-                    }}
-                  />
-                  {ch}
-                </label>
-              ))}
-            </div>
-
-            <label style={styles.label}>Timp online zilnic</label>
-            <select
-              style={styles.select}
-              value={behavioral.dailyOnlineTime}
-              onChange={(e) =>
-                setBehavioral({
-                  ...behavioral,
-                  dailyOnlineTime: e.target.value,
-                })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="sub_1h">Sub 1 ora</option>
-              <option value="1_3h">1-3 ore</option>
-              <option value="3_5h">3-5 ore</option>
-              <option value="peste_5h">Peste 5 ore</option>
-            </select>
-
-            <label style={styles.label}>Dispozitiv principal</label>
-            <select
-              style={styles.select}
-              value={behavioral.primaryDevice}
-              onChange={(e) =>
-                setBehavioral({
-                  ...behavioral,
-                  primaryDevice: e.target.value,
-                })
-              }
-            >
-              <option value="">Selecteaza...</option>
-              <option value="telefon">Telefon mobil</option>
-              <option value="laptop_pc">Laptop / PC</option>
-              <option value="tableta">Tableta</option>
-            </select>
-          </div>
-        )}
-
-        {/* Step 3: Psychographic */}
-        {step === 3 && (
-          <div>
-            <h2 style={styles.stepTitle}>Profil Psihografic</h2>
-            <p style={styles.stepDesc}>
-              Indica cat de mult esti de acord cu fiecare afirmatie (1 = Total
-              dezacord, 7 = Total acord).
-            </p>
-
-            {[
-              {
-                key: "adReceptivity" as const,
-                text: "Acord atentie reclamelor care par relevante pentru mine",
-              },
-              {
-                key: "visualPreference" as const,
-                text: "Prefer reclamele cu un design vizual atractiv",
-              },
-              {
-                key: "impulseBuying" as const,
-                text: "Uneori cumpar impulsiv dupa ce vad o reclama",
-              },
-              {
-                key: "irrelevanceAnnoyance" as const,
-                text: "Ma irita reclamele care nu au legatura cu interesele mele",
-              },
-              {
-                key: "attentionCapture" as const,
-                text: "Ma opresc din scrollat cand vad o reclama interesanta",
-              },
-            ].map((item, idx) => (
-              <div key={item.key} style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 14, color: "#374151", marginBottom: 8 }}>
-                  <span style={styles.likertNum}>{idx + 1}</span>
-                  {item.text}
-                </div>
-                <div style={styles.likertRow}>
-                  {[1, 2, 3, 4, 5, 6, 7].map((v) => (
-                    <button
-                      key={v}
-                      style={{
-                        ...styles.likertBtn,
-                        ...(psychographic[item.key] === v
-                          ? styles.likertBtnActive
-                          : {}),
-                      }}
-                      onClick={() =>
-                        setPsychographic({ ...psychographic, [item.key]: v })
-                      }
-                    >
-                      {v}
-                    </button>
-                  ))}
-                </div>
-                <div style={styles.likertLabels}>
-                  <span>Total dezacord</span>
-                  <span>Total acord</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Steps 4-N: Stimulus evaluation */}
-        {step >= 4 && step <= lastStimulusStep && currentStim && (
-          <div>
-            <h2 style={styles.stepTitle}>
-              Evaluare Material {currentStimIdx + 1} din{" "}
-              {session.stimuli.length}
-            </h2>
-            <p style={styles.stepDesc}>
-              Analizeaza materialul de mai jos si evalueaza-l pe cele 3
-              dimensiuni.
-            </p>
-
-            {/* Stimulus display */}
-            <div style={styles.stimulusBox}>
-              <div style={styles.stimulusMeta}>
-                <span style={styles.typeBadge}>{currentStim.type}</span>
-                {currentStim.industry && (
-                  <span style={styles.industryBadge}>
-                    {currentStim.industry}
-                  </span>
-                )}
-              </div>
-              <h3 style={{ fontSize: 18, color: "#111827", marginBottom: 12 }}>
-                {currentStim.name}
-              </h3>
-
-              {/* Image */}
-              {currentStim.image_url && (
-                <img
-                  src={currentStim.image_url}
-                  alt={currentStim.name}
-                  style={styles.stimulusImg}
-                  loading="lazy"
-                />
-              )}
-
-              {/* YouTube video */}
-              {currentStim.video_url &&
-                extractYoutubeId(currentStim.video_url) && (
-                  <div style={styles.videoWrap}>
-                    <iframe
-                      src={`https://www.youtube.com/embed/${extractYoutubeId(
-                        currentStim.video_url
-                      )}`}
-                      title={currentStim.name}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-                      allowFullScreen
-                      style={styles.videoIframe}
-                    />
-                  </div>
-                )}
-
-              {/* Text content */}
-              {currentStim.text_content && (
-                <div style={styles.textContent}>
-                  {currentStim.text_content}
-                </div>
-              )}
-
-              {/* PDF */}
-              {currentStim.pdf_url && (
-                <a
-                  href={currentStim.pdf_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.pdfLink}
-                >
-                  Deschide PDF-ul &rarr;
-                </a>
-              )}
-
-              {/* Site URL */}
-              {currentStim.site_url && (
-                <a
-                  href={currentStim.site_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={styles.siteLink}
-                >
-                  Viziteaza site-ul &rarr;
-                </a>
-              )}
-
-              {/* Description */}
-              {currentStim.description && (
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "#6B7280",
-                    marginTop: 12,
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {currentStim.description}
-                </p>
-              )}
-            </div>
-
-            {/* R, I, F Sliders */}
-            <div style={{ marginTop: 24 }}>
-              {[
-                {
-                  key: "r" as const,
-                  label: "R — Relevanta",
-                  desc: "Cat de relevant este acest mesaj pentru publicul sau tinta?",
-                  color: "#DC2626",
-                },
-                {
-                  key: "i" as const,
-                  label: "I — Interes",
-                  desc: "Cat de interesant si captivant este continutul?",
-                  color: "#D97706",
-                },
-                {
-                  key: "f" as const,
-                  label: "F — Forma",
-                  desc: "Cat de bine este executat vizual/structural?",
-                  color: "#7C3AED",
-                },
-              ].map((dim) => (
-                <div key={dim.key} style={{ marginBottom: 20 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "baseline",
-                      marginBottom: 4,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 700,
-                        color: dim.color,
-                      }}
-                    >
-                      {dim.label}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 24,
-                        fontWeight: 800,
-                        fontFamily: "JetBrains Mono, monospace",
-                        color: dim.color,
-                      }}
-                    >
-                      {currentScores[dim.key]}
-                    </span>
-                  </div>
-                  <p
-                    style={{
-                      fontSize: 12,
-                      color: "#9CA3AF",
-                      marginBottom: 8,
-                    }}
-                  >
-                    {dim.desc}
-                  </p>
-                  <input
-                    type="range"
-                    min={1}
-                    max={10}
-                    value={currentScores[dim.key]}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setStimulusScores({
-                        ...stimulusScores,
-                        [currentStim.id]: {
-                          ...currentScores,
-                          [dim.key]: val,
-                        },
-                      });
-                    }}
-                    style={{
-                      ...styles.slider,
-                      accentColor: dim.color,
-                    }}
-                  />
-                  <div style={styles.sliderLabels}>
-                    <span>1</span>
-                    <span>5</span>
-                    <span>10</span>
-                  </div>
-                </div>
-              ))}
-
-              {/* Computed C */}
-              <div style={styles.cScore}>
-                <span style={{ fontSize: 12, letterSpacing: 2, color: "#6B7280" }}>
-                  SCOR C CALCULAT
-                </span>
-                <div
-                  style={{
-                    fontSize: 36,
-                    fontWeight: 800,
-                    fontFamily: "JetBrains Mono, monospace",
-                    color: "#DC2626",
-                  }}
-                >
-                  {computeC(currentScores.r, currentScores.i, currentScores.f)}
-                </div>
-                <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                  {currentScores.r} + ({currentScores.i} &times;{" "}
-                  {currentScores.f}) ={" "}
-                  {computeC(currentScores.r, currentScores.i, currentScores.f)}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <p
-            style={{
-              color: "#DC2626",
-              fontSize: 13,
-              marginTop: 12,
-              textAlign: "center",
-            }}
-          >
-            {error}
-          </p>
-        )}
-
-        {/* Navigation */}
-        <div style={styles.nav}>
-          {step > 1 && (
-            <button style={styles.btnSecondary} onClick={goBack}>
-              &larr; Inapoi
-            </button>
-          )}
-          <div style={{ flex: 1 }} />
-          <button
-            style={{
-              ...styles.btnPrimary,
-              opacity: saving ? 0.6 : 1,
-            }}
-            onClick={saveAndNext}
-            disabled={saving}
-          >
-            {saving
-              ? "Se salveaza..."
-              : step === lastStimulusStep
-              ? "Finalizeaza"
-              : "Urmatorul \u2192"}
-          </button>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div style={styles.footer}>
-        <span>R IF C &mdash; Studiu de Perceptie &middot; </span>
-        <a href="https://rifcmarketing.com" style={{ color: "#DC2626" }}>
-          rifcmarketing.com
-        </a>
       </div>
     </div>
   );
 }
 
 // ── Styles ─────────────────────────────────────────────────
-const styles: Record<string, React.CSSProperties> = {
-  container: {
+const S: Record<string, React.CSSProperties> = {
+  page: {
     minHeight: "100vh",
     background: "#f8f9fa",
     fontFamily: "Outfit, system-ui, sans-serif",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "20px 16px",
   },
-  progressWrap: {
-    width: "100%",
-    maxWidth: 700,
-    marginBottom: 20,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    background: "#e5e7eb",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-    background: "linear-gradient(90deg, #DC2626, #059669)",
-    transition: "width 0.3s ease",
-  },
-  progressText: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginTop: 6,
-    textAlign: "center" as const,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 700,
-    background: "#ffffff",
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    padding: "32px 28px",
-  },
-  stepTitle: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: 6,
-  },
-  stepDesc: {
-    fontSize: 14,
-    color: "#6B7280",
-    lineHeight: 1.6,
-    marginBottom: 24,
-  },
-  label: {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#374151",
-    marginBottom: 6,
-    marginTop: 16,
-  },
-  select: {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: 14,
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    background: "#fff",
-    color: "#111827",
-    appearance: "auto" as const,
-  },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: 14,
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    background: "#fff",
-    color: "#111827",
-    boxSizing: "border-box" as const,
-  },
-  chip: {
-    padding: "8px 14px",
-    fontSize: 13,
-    borderRadius: 20,
-    border: "1px solid #d1d5db",
-    background: "#fff",
-    color: "#374151",
-    cursor: "pointer",
-    userSelect: "none" as const,
-    transition: "all 0.15s",
-  },
-  chipActive: {
-    background: "#DC2626",
-    color: "#fff",
-    borderColor: "#DC2626",
-  },
-  likertNum: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 22,
-    height: 22,
-    borderRadius: "50%",
-    background: "#DC2626",
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: 700,
-    marginRight: 8,
-  },
-  likertRow: {
-    display: "flex",
-    gap: 6,
-    justifyContent: "center",
-  },
-  likertBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    border: "1px solid #d1d5db",
-    background: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
-    color: "#374151",
-    cursor: "pointer",
-    transition: "all 0.15s",
-  },
-  likertBtnActive: {
-    background: "#DC2626",
-    color: "#fff",
-    borderColor: "#DC2626",
-  },
-  likertLabels: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 10,
-    color: "#9CA3AF",
-    marginTop: 4,
-    padding: "0 4px",
-  },
-  stimulusBox: {
-    border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    padding: 20,
-    background: "#fafafa",
-  },
-  stimulusMeta: {
-    display: "flex",
-    gap: 8,
-    marginBottom: 10,
-  },
-  typeBadge: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 1,
-    padding: "3px 8px",
-    borderRadius: 4,
-    background: "#DC2626",
-    color: "#fff",
-  },
-  industryBadge: {
-    fontSize: 10,
-    fontWeight: 600,
-    padding: "3px 8px",
-    borderRadius: 4,
-    background: "#e5e7eb",
-    color: "#374151",
-  },
-  stimulusImg: {
-    width: "100%",
-    borderRadius: 8,
-    border: "1px solid #e5e7eb",
-    maxHeight: 400,
-    objectFit: "cover" as const,
-  },
-  videoWrap: {
-    position: "relative" as const,
-    paddingBottom: "56.25%",
-    height: 0,
-    overflow: "hidden",
-    borderRadius: 8,
-    border: "1px solid #e5e7eb",
-  },
-  videoIframe: {
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    border: "none",
-  },
-  textContent: {
-    fontSize: 14,
-    lineHeight: 1.7,
-    color: "#374151",
-    background: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: 8,
-    padding: 16,
-    whiteSpace: "pre-wrap" as const,
-  },
-  pdfLink: {
-    display: "inline-block",
-    padding: "10px 16px",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#DC2626",
-    border: "1px solid #DC2626",
-    borderRadius: 8,
-    textDecoration: "none",
-    marginTop: 8,
-  },
-  siteLink: {
-    display: "inline-block",
-    padding: "10px 16px",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#2563EB",
-    border: "1px solid #2563EB",
-    borderRadius: 8,
-    textDecoration: "none",
-    marginTop: 8,
-  },
-  slider: {
-    width: "100%",
-    height: 8,
-    cursor: "pointer",
-  },
-  sliderLabels: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 10,
-    color: "#9CA3AF",
-    marginTop: 2,
-  },
-  cScore: {
-    textAlign: "center" as const,
-    padding: 20,
-    background: "#fef2f2",
-    border: "1px solid #fecaca",
-    borderRadius: 12,
-    marginTop: 16,
-  },
-  nav: {
+  headerBar: {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    marginTop: 28,
-    paddingTop: 20,
-    borderTop: "1px solid #e5e7eb",
+    padding: "12px 24px",
+    background: "#fff",
+    borderBottom: "1px solid #e5e7eb",
   },
-  btnPrimary: {
-    padding: "12px 28px",
-    fontSize: 15,
+  logo: {
+    fontSize: 22,
+    fontFamily: "JetBrains Mono, monospace",
+    letterSpacing: 2,
+  },
+  headerBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 1,
+    padding: "4px 12px",
+    borderRadius: 6,
+    background: "#DC2626",
+    color: "#fff",
+  },
+  langBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "6px 12px",
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    fontSize: 12,
     fontWeight: 600,
+    color: "#374151",
+    cursor: "pointer",
+  },
+  tabsBar: {
+    display: "flex",
+    gap: 0,
+    padding: "0 24px",
+    background: "#fff",
+    borderBottom: "2px solid #e5e7eb",
+  },
+  tab: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "14px 20px",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#6B7280",
+    background: "none",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    marginBottom: -2,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  tabActive: {
+    color: "#DC2626",
+    borderBottomColor: "#DC2626",
+  },
+  content: {
+    maxWidth: 960,
+    margin: "0 auto",
+    padding: "24px 16px",
+  },
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 20,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: "#111827",
+    margin: 0,
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 4,
+  },
+  addCatBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 20px",
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: 0.5,
     color: "#fff",
     background: "#DC2626",
     border: "none",
     borderRadius: 8,
     cursor: "pointer",
-    transition: "opacity 0.15s",
   },
-  btnSecondary: {
-    padding: "12px 20px",
+  configCard: {
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+  },
+  configHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  configTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 2,
+    color: "#6B7280",
+  },
+  configGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: 12,
+  },
+  configItem: {
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    padding: 14,
+  },
+  configLabel: {
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: 1,
+    color: "#9CA3AF",
+    display: "block",
+    marginBottom: 8,
+  },
+  configFormula: {
+    fontSize: 20,
+    fontWeight: 700,
+    fontFamily: "JetBrains Mono, monospace",
+  },
+  configValue: {
     fontSize: 14,
+    fontWeight: 600,
+    color: "#374151",
+  },
+  catCard: {
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    marginBottom: 8,
+    overflow: "hidden",
+    borderLeft: "3px solid transparent",
+  },
+  catRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "12px 16px",
+    minHeight: 52,
+  },
+  catDrag: {
+    cursor: "grab",
+    display: "flex",
+    alignItems: "center",
+    padding: "2px 0",
+  },
+  catBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    padding: "4px 10px",
+    borderRadius: 4,
+    color: "#fff",
+    whiteSpace: "nowrap" as const,
+  },
+  catName: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: "#111827",
+    flex: 1,
+  },
+  catCount: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: 500,
+    whiteSpace: "nowrap" as const,
+    padding: "3px 10px",
+    background: "#f3f4f6",
+    borderRadius: 12,
+  },
+  catActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+  },
+  catEditRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  catEditInput: {
+    flex: 1,
+    padding: "6px 10px",
+    fontSize: 14,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    color: "#111827",
+  },
+  colorPicker: {
+    width: 32,
+    height: 32,
+    padding: 0,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  iconBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 30,
+    height: 30,
+    border: "none",
+    borderRadius: 6,
+    background: "transparent",
+    color: "#6B7280",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  iconBtnDanger: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 30,
+    height: 30,
+    border: "none",
+    borderRadius: 6,
+    background: "transparent",
+    color: "#DC2626",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  iconBtnSave: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 28,
+    height: 28,
+    border: "none",
+    borderRadius: 6,
+    background: "#059669",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  iconBtnCancel: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 28,
+    height: 28,
+    border: "none",
+    borderRadius: 6,
+    background: "#e5e7eb",
+    color: "#6B7280",
+    cursor: "pointer",
+  },
+  materialsWrap: {
+    padding: "0 16px 16px 56px",
+    borderTop: "1px solid #f3f4f6",
+  },
+  emptyMsg: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    padding: "16px 0 8px",
+    fontStyle: "italic",
+  },
+  stimCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 12px",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  stimIdx: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#9CA3AF",
+    fontFamily: "JetBrains Mono, monospace",
+    minWidth: 20,
+  },
+  stimName: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#111827",
+    flex: 1,
+  },
+  stimIndustry: {
+    fontSize: 11,
+    fontWeight: 500,
+    padding: "2px 8px",
+    borderRadius: 4,
+    background: "#e5e7eb",
+    color: "#374151",
+  },
+  stimMediaIcons: {
+    display: "flex",
+    gap: 4,
+  },
+  mediaIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    background: "#e5e7eb",
+    color: "#6B7280",
+  },
+  stimActions: {
+    display: "flex",
+    gap: 2,
+  },
+  stimEditForm: {
+    background: "#fff",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    padding: 16,
+    marginTop: 10,
+  },
+  stimEditHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  stimEditTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#374151",
+  },
+  stimEditGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+  },
+  formField: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 4,
+  },
+  formLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#6B7280",
+  },
+  formInput: {
+    padding: "8px 10px",
+    fontSize: 13,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    color: "#111827",
+    boxSizing: "border-box" as const,
+    width: "100%",
+    fontFamily: "inherit",
+  },
+  stimEditActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTop: "1px solid #e5e7eb",
+  },
+  btnCancel: {
+    padding: "8px 16px",
+    fontSize: 13,
     fontWeight: 500,
     color: "#6B7280",
     background: "transparent",
     border: "1px solid #d1d5db",
-    borderRadius: 8,
+    borderRadius: 6,
     cursor: "pointer",
   },
-  footer: {
-    marginTop: 24,
-    fontSize: 12,
-    color: "#9CA3AF",
+  btnSave: {
+    padding: "8px 20px",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#fff",
+    background: "#DC2626",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  addStimBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 14px",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#059669",
+    background: "transparent",
+    border: "1px dashed #bbf7d0",
+    borderRadius: 8,
+    cursor: "pointer",
+    marginTop: 8,
+    width: "100%",
+    justifyContent: "center",
+  },
+  placeholderTab: {
     textAlign: "center" as const,
+    padding: 60,
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
   },
 };
