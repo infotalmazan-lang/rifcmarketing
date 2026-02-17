@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Settings,
   Eye,
@@ -30,11 +30,13 @@ import {
   QrCode,
   Users,
   ExternalLink,
+  UserCheck,
+  Bot,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu Admin — Structura Sondaj
-   4 tabs: SONDAJ | REZULTATE | DISTRIBUTIE | PREVIEW
+   6 tabs: SONDAJ | REZULTATE | DISTRIBUTIE | PANEL EXPERTI | AI BENCHMARK | PREVIEW
    ═══════════════════════════════════════════════════════════ */
 
 // ── Types ──────────────────────────────────────────────────
@@ -62,6 +64,37 @@ interface Stimulus {
   site_url: string | null;
   display_order: number;
   is_active: boolean;
+  variant_label: string | null;
+  execution_quality: string | null;
+}
+
+interface ExpertEvaluation {
+  id: string;
+  stimulus_id: string;
+  expert_name: string;
+  expert_role: string | null;
+  r_score: number;
+  i_score: number;
+  f_score: number;
+  c_computed: number;
+  r_justification: string | null;
+  i_justification: string | null;
+  f_justification: string | null;
+  notes: string | null;
+  evaluated_at: string;
+}
+
+interface AiEvaluation {
+  id: string;
+  stimulus_id: string;
+  model_name: string;
+  r_score: number;
+  i_score: number;
+  f_score: number;
+  c_computed: number;
+  justification: Record<string, string>;
+  prompt_version: string;
+  evaluated_at: string;
 }
 
 interface Distribution {
@@ -75,14 +108,34 @@ interface Distribution {
   created_at: string;
 }
 
-type TabKey = "sondaj" | "rezultate" | "distributie" | "preview";
+type TabKey = "sondaj" | "rezultate" | "distributie" | "experti" | "ai" | "preview";
 
 const TABS: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "sondaj", label: "SONDAJ", icon: ClipboardList },
   { key: "rezultate", label: "REZULTATE", icon: BarChart3 },
   { key: "distributie", label: "DISTRIBUTIE", icon: Share2 },
+  { key: "experti", label: "PANEL EXPERTI", icon: UserCheck },
+  { key: "ai", label: "AI BENCHMARK", icon: Bot },
   { key: "preview", label: "PREVIEW", icon: PlayCircle },
 ];
+
+const INDUSTRIES = [
+  "Education / Tech",
+  "Healthcare / Beauty",
+  "E-commerce / Retail",
+  "Food / Hospitality",
+  "B2B Services",
+] as const;
+
+const EXECUTION_QUALITIES = [
+  { value: "strong", label: "Strong", color: "#059669" },
+  { value: "moderate", label: "Moderate", color: "#D97706" },
+  { value: "weak", label: "Weak", color: "#DC2626" },
+] as const;
+
+const VARIANT_LABELS = ["A", "B", "C"] as const;
+
+const AI_MODELS = ["Claude", "Gemini", "GPT"] as const;
 
 // ── Empty stimulus template ─────────────────────────────────
 const emptyStimulus = (type: string, order: number): Partial<Stimulus> => ({
@@ -96,6 +149,8 @@ const emptyStimulus = (type: string, order: number): Partial<Stimulus> => ({
   pdf_url: "",
   site_url: "",
   display_order: order,
+  variant_label: null,
+  execution_quality: null,
 });
 
 // ── Main Component ─────────────────────────────────────────
@@ -155,6 +210,20 @@ export default function StudiuAdminPage() {
   const [results, setResults] = useState<ResultsData | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsSegment, setResultsSegment] = useState<string>("general"); // "general" or distribution_id
+
+  // Expert panel state
+  const [expertEvals, setExpertEvals] = useState<ExpertEvaluation[]>([]);
+  const [expertLoading, setExpertLoading] = useState(false);
+  const [showAddExpert, setShowAddExpert] = useState(false);
+  const [expertForm, setExpertForm] = useState({ stimulus_id: "", expert_name: "", expert_role: "", r_score: 5, i_score: 5, f_score: 5, r_justification: "", i_justification: "", f_justification: "", notes: "" });
+  const [expertSaving, setExpertSaving] = useState(false);
+
+  // AI benchmark state
+  const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAddAi, setShowAddAi] = useState(false);
+  const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
+  const [aiSaving, setAiSaving] = useState(false);
 
   // ── Upload helper ──────────────────────────────────────
   const uploadFile = async (file: File, fieldKey: string): Promise<string | null> => {
@@ -229,6 +298,89 @@ export default function StudiuAdminPage() {
   useEffect(() => {
     if (activeTab === "rezultate") fetchResults(resultsSegment);
   }, [activeTab, resultsSegment, fetchResults]);
+
+  // ── Expert evaluations data ──────────────────────────────
+  const fetchExpertEvals = useCallback(async () => {
+    setExpertLoading(true);
+    try {
+      const res = await fetch("/api/survey/expert-evaluations");
+      const data = await res.json();
+      if (data.success) setExpertEvals(data.evaluations);
+    } catch { /* ignore */ }
+    setExpertLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "experti") fetchExpertEvals();
+  }, [activeTab, fetchExpertEvals]);
+
+  const addExpertEval = async () => {
+    if (!expertForm.stimulus_id || !expertForm.expert_name) return;
+    setExpertSaving(true);
+    try {
+      const res = await fetch("/api/survey/expert-evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(expertForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddExpert(false);
+        setExpertForm({ stimulus_id: "", expert_name: "", expert_role: "", r_score: 5, i_score: 5, f_score: 5, r_justification: "", i_justification: "", f_justification: "", notes: "" });
+        fetchExpertEvals();
+      }
+    } catch { /* ignore */ }
+    setExpertSaving(false);
+  };
+
+  const deleteExpertEval = async (id: string) => {
+    if (!confirm("Stergi aceasta evaluare?")) return;
+    await fetch(`/api/survey/expert-evaluations?id=${id}`, { method: "DELETE" });
+    fetchExpertEvals();
+  };
+
+  // ── AI evaluations data ──────────────────────────────────
+  const fetchAiEvals = useCallback(async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/survey/ai-evaluations");
+      const data = await res.json();
+      if (data.success) setAiEvals(data.evaluations);
+    } catch { /* ignore */ }
+    setAiLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "ai") fetchAiEvals();
+  }, [activeTab, fetchAiEvals]);
+
+  const addAiEval = async () => {
+    if (!aiForm.stimulus_id || !aiForm.model_name) return;
+    setAiSaving(true);
+    try {
+      const res = await fetch("/api/survey/ai-evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...aiForm,
+          justification: aiForm.justification ? { text: aiForm.justification } : {},
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddAi(false);
+        setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
+        fetchAiEvals();
+      }
+    } catch { /* ignore */ }
+    setAiSaving(false);
+  };
+
+  const deleteAiEval = async (id: string) => {
+    if (!confirm("Stergi aceasta evaluare AI?")) return;
+    await fetch(`/api/survey/ai-evaluations?id=${id}`, { method: "DELETE" });
+    fetchAiEvals();
+  };
 
   const baseUrl = typeof window !== "undefined"
     ? window.location.origin
@@ -520,8 +672,8 @@ export default function StudiuAdminPage() {
                   <div style={S.configValue}>R, I, F, C, CTA (1-10)</div>
                 </div>
                 <div style={S.configItem}>
-                  <span style={S.configLabel}>PER CATEGORIE</span>
-                  <div style={S.configValue}>Max 3 materiale</div>
+                  <span style={S.configLabel}>DESIGN</span>
+                  <div style={S.configValue}>10 canale &times; 3 variante = 30 stimuli</div>
                 </div>
               </div>
             </div>
@@ -664,8 +816,13 @@ export default function StudiuAdminPage() {
                           <div style={S.matFormWide}>
                             <div style={S.formRow3}>
                               <div style={S.formField}><label style={S.formLabel}>Nume *</label><input style={S.formInput} value={newStimData.name || ""} onChange={(e) => setNewStimData({ ...newStimData, name: e.target.value })} autoFocus placeholder="Ex: Maison Noir — FB Ad" /></div>
-                              <div style={S.formField}><label style={S.formLabel}>Industrie</label><input style={S.formInput} value={newStimData.industry || ""} onChange={(e) => setNewStimData({ ...newStimData, industry: e.target.value })} placeholder="Ex: Restaurant, SaaS" /></div>
+                              <div style={S.formField}><label style={S.formLabel}>Industrie</label><select style={S.formInput} value={newStimData.industry || ""} onChange={(e) => setNewStimData({ ...newStimData, industry: e.target.value })}><option value="">Selecteaza...</option>{INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}</select></div>
                               <div style={S.formField}><label style={S.formLabel}>Display Order</label><input style={S.formInput} type="number" value={newStimData.display_order || 0} onChange={(e) => setNewStimData({ ...newStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
+                            </div>
+                            <div style={S.formRow3}>
+                              <div style={S.formField}><label style={S.formLabel}>Varianta (A/B/C)</label><select style={S.formInput} value={newStimData.variant_label || ""} onChange={(e) => setNewStimData({ ...newStimData, variant_label: e.target.value || null })}><option value="">Neasignat</option>{VARIANT_LABELS.map(v => <option key={v} value={v}>Varianta {v}</option>)}</select></div>
+                              <div style={S.formField}><label style={S.formLabel}>Calitate Executie</label><select style={S.formInput} value={newStimData.execution_quality || ""} onChange={(e) => setNewStimData({ ...newStimData, execution_quality: e.target.value || null })}><option value="">Neasignat</option>{EXECUTION_QUALITIES.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}</select></div>
+                              <div />
                             </div>
                             <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={newStimData.description || ""} onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })} /></div>
                             <div style={S.formRow2}>
@@ -731,6 +888,8 @@ export default function StudiuAdminPage() {
                               <span style={{ ...S.matNum, background: cat.color, width: 36, height: 36, fontSize: 16 }}>{activeMatIdx + 1}</span>
                               <h3 style={S.matWorkTitle}>{activeStim.name}</h3>
                               {activeStim.industry && <span style={S.stimIndustry}>{activeStim.industry}</span>}
+                              {activeStim.variant_label && <span style={{ ...S.stimIndustry, background: "#dbeafe", color: "#1d4ed8" }}>V{activeStim.variant_label}</span>}
+                              {activeStim.execution_quality && <span style={{ ...S.stimIndustry, background: EXECUTION_QUALITIES.find(q => q.value === activeStim.execution_quality)?.color || "#6B7280", color: "#fff" }}>{EXECUTION_QUALITIES.find(q => q.value === activeStim.execution_quality)?.label || activeStim.execution_quality}</span>}
                               <div style={S.matMediaRow}>
                                 {getMediaIcons(activeStim).map((m, i) => { const MIcon = m.icon; return <span key={i} title={m.label} style={S.matMediaTag}><MIcon size={12} /> {m.label}</span>; })}
                               </div>
@@ -754,8 +913,13 @@ export default function StudiuAdminPage() {
                             <div style={S.matFormWide}>
                               <div style={S.formRow3}>
                                 <div style={S.formField}><label style={S.formLabel}>Nume</label><input style={S.formInput} value={editStimData.name || ""} onChange={(e) => setEditStimData({ ...editStimData, name: e.target.value })} /></div>
-                                <div style={S.formField}><label style={S.formLabel}>Industrie</label><input style={S.formInput} value={editStimData.industry || ""} onChange={(e) => setEditStimData({ ...editStimData, industry: e.target.value })} /></div>
+                                <div style={S.formField}><label style={S.formLabel}>Industrie</label><select style={S.formInput} value={editStimData.industry || ""} onChange={(e) => setEditStimData({ ...editStimData, industry: e.target.value })}><option value="">Selecteaza...</option>{INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}</select></div>
                                 <div style={S.formField}><label style={S.formLabel}>Display Order</label><input style={S.formInput} type="number" value={editStimData.display_order || 0} onChange={(e) => setEditStimData({ ...editStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
+                              </div>
+                              <div style={S.formRow3}>
+                                <div style={S.formField}><label style={S.formLabel}>Varianta (A/B/C)</label><select style={S.formInput} value={editStimData.variant_label || ""} onChange={(e) => setEditStimData({ ...editStimData, variant_label: e.target.value || null })}><option value="">Neasignat</option>{VARIANT_LABELS.map(v => <option key={v} value={v}>Varianta {v}</option>)}</select></div>
+                                <div style={S.formField}><label style={S.formLabel}>Calitate Executie</label><select style={S.formInput} value={editStimData.execution_quality || ""} onChange={(e) => setEditStimData({ ...editStimData, execution_quality: e.target.value || null })}><option value="">Neasignat</option>{EXECUTION_QUALITIES.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}</select></div>
+                                <div />
                               </div>
                               <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={editStimData.description || ""} onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })} /></div>
                               <div style={S.formRow2}>
@@ -1292,6 +1456,327 @@ export default function StudiuAdminPage() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ PANEL EXPERTI (Layer 1) ═══ */}
+        {activeTab === "experti" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Panel Experti (Stratul 1)</h2>
+                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  Evaluari R, I, F de catre experti in marketing. Fiecare expert scoreaza stimulii cu justificari.
+                </p>
+              </div>
+              <button style={S.addCatBtn} onClick={() => setShowAddExpert(true)}>
+                <Plus size={16} />
+                ADAUGA EVALUARE
+              </button>
+            </div>
+
+            {/* Add expert form */}
+            {showAddExpert && (
+              <div style={{ ...S.configCard, borderColor: "#059669", borderWidth: 2, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <UserCheck size={16} style={{ color: "#059669" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#059669" }}>EVALUARE NOUA EXPERT</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div><label style={S.configLabel}>MATERIAL *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={expertForm.stimulus_id} onChange={(e) => setExpertForm({ ...expertForm, stimulus_id: e.target.value })}>
+                      <option value="">Selecteaza material...</option>
+                      {stimuli.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>EXPERT *</label><input style={{ ...S.catEditInput, width: "100%" }} value={expertForm.expert_name} onChange={(e) => setExpertForm({ ...expertForm, expert_name: e.target.value })} placeholder="Nume expert" /></div>
+                  <div><label style={S.configLabel}>ROL</label><input style={{ ...S.catEditInput, width: "100%" }} value={expertForm.expert_role} onChange={(e) => setExpertForm({ ...expertForm, expert_role: e.target.value })} placeholder="Ex: Marketing Director" /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#DC2626" }}>R (RELEVANTA) *</label>
+                    <input type="number" min={1} max={10} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#DC2626" }} value={expertForm.r_score} onChange={(e) => setExpertForm({ ...expertForm, r_score: parseInt(e.target.value) || 1 })} />
+                    <textarea style={{ ...S.catEditInput, width: "100%", marginTop: 4, fontSize: 12 }} value={expertForm.r_justification} onChange={(e) => setExpertForm({ ...expertForm, r_justification: e.target.value })} placeholder="Justificare R..." rows={2} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#D97706" }}>I (INTERES) *</label>
+                    <input type="number" min={1} max={10} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#D97706" }} value={expertForm.i_score} onChange={(e) => setExpertForm({ ...expertForm, i_score: parseInt(e.target.value) || 1 })} />
+                    <textarea style={{ ...S.catEditInput, width: "100%", marginTop: 4, fontSize: 12 }} value={expertForm.i_justification} onChange={(e) => setExpertForm({ ...expertForm, i_justification: e.target.value })} placeholder="Justificare I..." rows={2} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#7C3AED" }}>F (FORMA) *</label>
+                    <input type="number" min={1} max={10} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#7C3AED" }} value={expertForm.f_score} onChange={(e) => setExpertForm({ ...expertForm, f_score: parseInt(e.target.value) || 1 })} />
+                    <textarea style={{ ...S.catEditInput, width: "100%", marginTop: 4, fontSize: 12 }} value={expertForm.f_justification} onChange={(e) => setExpertForm({ ...expertForm, f_justification: e.target.value })} placeholder="Justificare F..." rows={2} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}><label style={S.configLabel}>NOTE</label><textarea style={{ ...S.catEditInput, width: "100%" }} value={expertForm.notes} onChange={(e) => setExpertForm({ ...expertForm, notes: e.target.value })} placeholder="Note suplimentare..." rows={2} /></div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...S.addCatBtn, background: "#059669", opacity: expertSaving ? 0.6 : 1 }} onClick={addExpertEval} disabled={expertSaving}>
+                    {expertSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    {expertSaving ? "Se salveaza..." : "Salveaza"}
+                  </button>
+                  <button style={S.galleryEditBtn} onClick={() => setShowAddExpert(false)}><X size={14} /> Anuleaza</button>
+                </div>
+              </div>
+            )}
+
+            {/* Expert evaluations table */}
+            {expertLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}><Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} /></div>
+            ) : expertEvals.length === 0 ? (
+              <div style={S.placeholderTab}>
+                <UserCheck size={48} style={{ color: "#d1d5db" }} />
+                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio evaluare de expert</h3>
+                <p style={{ color: "#6B7280", fontSize: 14 }}>Apasa &quot;Adauga Evaluare&quot; pentru a inregistra scorurile expertilor pe fiecare material.</p>
+              </div>
+            ) : (
+              <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb" }}>
+                      <th style={{ ...thStyle, textAlign: "left", minWidth: 160 }}>MATERIAL</th>
+                      <th style={{ ...thStyle, textAlign: "left", minWidth: 120 }}>EXPERT</th>
+                      <th style={thStyle}>ROL</th>
+                      <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                      <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                      <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                      <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
+                      <th style={thStyle}>DATA</th>
+                      <th style={thStyle}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expertEvals.map((ev) => {
+                      const stim = stimuli.find(s => s.id === ev.stimulus_id);
+                      return (
+                        <tr key={ev.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, color: "#111827" }}>{stim?.name || "?"}</td>
+                          <td style={{ ...tdStyle, textAlign: "left" }}>{ev.expert_name}</td>
+                          <td style={tdStyle}><span style={{ fontSize: 11, color: "#6B7280" }}>{ev.expert_role || "—"}</span></td>
+                          <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
+                          <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                          <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                          <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{ev.c_computed}</td>
+                          <td style={{ ...tdStyle, fontSize: 11, color: "#9CA3AF" }}>{new Date(ev.evaluated_at).toLocaleDateString("ro-RO")}</td>
+                          <td style={tdStyle}><button style={S.iconBtnDanger} onClick={() => deleteExpertEval(ev.id)}><Trash2 size={14} /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Summary by stimulus */}
+            {expertEvals.length > 0 && (
+              <div style={{ ...S.configCard, marginTop: 20 }}>
+                <div style={S.configHeader}>
+                  <Settings size={16} style={{ color: "#6B7280" }} />
+                  <span style={S.configTitle}>SUMAR PER MATERIAL</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+                  {stimuli.filter(s => s.is_active).map(stim => {
+                    const evals = expertEvals.filter(e => e.stimulus_id === stim.id);
+                    if (evals.length === 0) return null;
+                    const avgR = (evals.reduce((s, e) => s + e.r_score, 0) / evals.length).toFixed(1);
+                    const avgI = (evals.reduce((s, e) => s + e.i_score, 0) / evals.length).toFixed(1);
+                    const avgF = (evals.reduce((s, e) => s + e.f_score, 0) / evals.length).toFixed(1);
+                    const avgC = (evals.reduce((s, e) => s + e.c_computed, 0) / evals.length).toFixed(1);
+                    return (
+                      <div key={stim.id} style={S.configItem}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", display: "block", marginBottom: 6 }}>{stim.name}</span>
+                        <span style={{ fontSize: 10, color: "#9CA3AF" }}>{evals.length} evaluari</span>
+                        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#DC2626" }}>{avgR}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#D97706" }}>{avgI}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#7C3AED" }}>{avgF}</span>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>C={avgC}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ AI BENCHMARK (Layer 3) ═══ */}
+        {activeTab === "ai" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>AI Benchmark (Stratul 3)</h2>
+                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  3 modele AI (Claude, Gemini, GPT) scoreaza aceleasi 30 de stimuli cu prompt-uri identice.
+                </p>
+              </div>
+              <button style={S.addCatBtn} onClick={() => setShowAddAi(true)}>
+                <Plus size={16} />
+                ADAUGA EVALUARE AI
+              </button>
+            </div>
+
+            {/* Add AI eval form */}
+            {showAddAi && (
+              <div style={{ ...S.configCard, borderColor: "#7C3AED", borderWidth: 2, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Bot size={16} style={{ color: "#7C3AED" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#7C3AED" }}>EVALUARE AI NOUA</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div><label style={S.configLabel}>MATERIAL *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.stimulus_id} onChange={(e) => setAiForm({ ...aiForm, stimulus_id: e.target.value })}>
+                      <option value="">Selecteaza material...</option>
+                      {stimuli.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>MODEL AI *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.model_name} onChange={(e) => setAiForm({ ...aiForm, model_name: e.target.value })}>
+                      {AI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>VERSIUNE PROMPT</label><input style={{ ...S.catEditInput, width: "100%", fontFamily: "JetBrains Mono, monospace" }} value={aiForm.prompt_version} onChange={(e) => setAiForm({ ...aiForm, prompt_version: e.target.value })} placeholder="v1" /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#DC2626" }}>R (RELEVANTA) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#DC2626" }} value={aiForm.r_score} onChange={(e) => setAiForm({ ...aiForm, r_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#D97706" }}>I (INTERES) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#D97706" }} value={aiForm.i_score} onChange={(e) => setAiForm({ ...aiForm, i_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#7C3AED" }}>F (FORMA) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#7C3AED" }} value={aiForm.f_score} onChange={(e) => setAiForm({ ...aiForm, f_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}><label style={S.configLabel}>JUSTIFICARE AI</label><textarea style={{ ...S.catEditInput, width: "100%" }} value={aiForm.justification} onChange={(e) => setAiForm({ ...aiForm, justification: e.target.value })} placeholder="Output-ul modelului AI..." rows={3} /></div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...S.addCatBtn, background: "#7C3AED", opacity: aiSaving ? 0.6 : 1 }} onClick={addAiEval} disabled={aiSaving}>
+                    {aiSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    {aiSaving ? "Se salveaza..." : "Salveaza"}
+                  </button>
+                  <button style={S.galleryEditBtn} onClick={() => setShowAddAi(false)}><X size={14} /> Anuleaza</button>
+                </div>
+              </div>
+            )}
+
+            {/* AI evaluations table */}
+            {aiLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}><Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} /></div>
+            ) : aiEvals.length === 0 ? (
+              <div style={S.placeholderTab}>
+                <Bot size={48} style={{ color: "#d1d5db" }} />
+                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio evaluare AI</h3>
+                <p style={{ color: "#6B7280", fontSize: 14 }}>Adauga scorurile modelelor AI (Claude, Gemini, GPT) pe fiecare material.</p>
+              </div>
+            ) : (
+              <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb" }}>
+                      <th style={{ ...thStyle, textAlign: "left", minWidth: 160 }}>MATERIAL</th>
+                      <th style={thStyle}>MODEL</th>
+                      <th style={thStyle}>PROMPT</th>
+                      <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                      <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                      <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                      <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
+                      <th style={thStyle}>DATA</th>
+                      <th style={thStyle}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiEvals.map((ev) => {
+                      const stim = stimuli.find(s => s.id === ev.stimulus_id);
+                      const modelColors: Record<string, string> = { Claude: "#D97706", Gemini: "#2563EB", GPT: "#059669" };
+                      return (
+                        <tr key={ev.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, color: "#111827" }}>{stim?.name || "?"}</td>
+                          <td style={tdStyle}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 4, background: modelColors[ev.model_name] || "#6B7280", color: "#fff" }}>{ev.model_name}</span>
+                          </td>
+                          <td style={{ ...tdStyle, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{ev.prompt_version}</td>
+                          <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
+                          <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                          <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                          <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{ev.c_computed}</td>
+                          <td style={{ ...tdStyle, fontSize: 11, color: "#9CA3AF" }}>{new Date(ev.evaluated_at).toLocaleDateString("ro-RO")}</td>
+                          <td style={tdStyle}><button style={S.iconBtnDanger} onClick={() => deleteAiEval(ev.id)}><Trash2 size={14} /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Comparison matrix: per stimulus, show all 3 models side by side */}
+            {aiEvals.length > 0 && (
+              <div style={{ ...S.configCard, marginTop: 20 }}>
+                <div style={S.configHeader}>
+                  <BarChart3 size={16} style={{ color: "#6B7280" }} />
+                  <span style={S.configTitle}>COMPARATIE AI vs CONSUMATORI</span>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={{ ...thStyle, textAlign: "left" }}>MATERIAL</th>
+                        {AI_MODELS.map(m => (
+                          <th key={m} colSpan={4} style={{ ...thStyle, borderLeft: "2px solid #e5e7eb" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{m.toUpperCase()}</span>
+                          </th>
+                        ))}
+                      </tr>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={thStyle}></th>
+                        {AI_MODELS.map(m => (
+                          <React.Fragment key={m}>
+                            <th style={{ ...thStyle, color: "#DC2626", borderLeft: "2px solid #e5e7eb" }}>R</th>
+                            <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                            <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                            <th style={{ ...thStyle, fontWeight: 800 }}>C</th>
+                          </React.Fragment>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stimuli.filter(s => s.is_active).map(stim => {
+                        const hasAny = aiEvals.some(e => e.stimulus_id === stim.id);
+                        if (!hasAny) return null;
+                        return (
+                          <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, fontSize: 12 }}>{stim.name}</td>
+                            {AI_MODELS.map(m => {
+                              const ev = aiEvals.find(e => e.stimulus_id === stim.id && e.model_name === m);
+                              if (!ev) return (
+                                <React.Fragment key={m}>
+                                  <td style={{ ...tdStyle, borderLeft: "2px solid #f3f4f6", color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                </React.Fragment>
+                              );
+                              return (
+                                <React.Fragment key={m}>
+                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600, borderLeft: "2px solid #f3f4f6" }}>{ev.r_score}</td>
+                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                                  <td style={{ ...tdStyle, fontWeight: 800 }}>{ev.c_computed}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

@@ -101,6 +101,8 @@ function StudiuWizardInner() {
   const [stimulusScores, setStimulusScores] = useState<
     Record<string, { r: number; i: number; f: number }>
   >({});
+  // Attention check (embedded at midpoint of stimuli)
+  const [attentionAnswer, setAttentionAnswer] = useState<number | null>(null);
   const timerRef = useRef<number>(0);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -478,6 +480,8 @@ function StudiuWizardInner() {
       const stimId = session.stimuliOrder[idx];
       const scores = stimulusScores[stimId] || { r: 5, i: 5, f: 5 };
       type = "stimulus";
+      const stimIdx = step - 4;
+      const isAttentionStep = stimIdx === Math.floor(numStimuli / 2);
       data = {
         stimulusId: stimId,
         rScore: scores.r,
@@ -485,6 +489,7 @@ function StudiuWizardInner() {
         fScore: scores.f,
         timeSpentSeconds: timerRef.current,
         isLast: step === lastStimulusStep,
+        ...(isAttentionStep ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === 7 } : {}),
       };
     }
 
@@ -516,7 +521,7 @@ function StudiuWizardInner() {
       setError("Eroare de conexiune.");
     }
     setSaving(false);
-  }, [session, step, saving, demographics, behavioral, psychographic, stimulusScores, lastStimulusStep, thankYouStep]);
+  }, [session, step, saving, demographics, behavioral, psychographic, stimulusScores, lastStimulusStep, thankYouStep, attentionAnswer, numStimuli]);
 
   const goBack = () => {
     if (step > 1) {
@@ -1151,6 +1156,35 @@ function StudiuWizardInner() {
               ))}
 
               {/* Score summary hidden from participants — C computed server-side */}
+
+              {/* Attention check — appears at midpoint of stimuli */}
+              {currentStimIdx === Math.floor(numStimuli / 2) && (
+                <div style={{ marginTop: m ? 16 : 20, padding: m ? 14 : 18, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8 }}>
+                  <div style={{ fontSize: m ? 13 : 14, fontWeight: 600, color: "#166534", marginBottom: 8 }}>
+                    Verificare atentie
+                  </div>
+                  <p style={{ fontSize: m ? 12 : 13, color: "#374151", marginBottom: 10, lineHeight: 1.5 }}>
+                    Pentru a ne asigura ca citesti cu atentie, te rugam sa selectezi valoarea <strong>7</strong> mai jos.
+                  </p>
+                  <div style={S.likertRow}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
+                      <button
+                        key={v}
+                        style={{
+                          ...S.likertBtn,
+                          width: m ? 32 : 36,
+                          height: m ? 32 : 36,
+                          fontSize: m ? 12 : 13,
+                          ...(attentionAnswer === v ? { background: "#059669", color: "#fff", borderColor: "#059669" } : {}),
+                        }}
+                        onClick={() => setAttentionAnswer(v)}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

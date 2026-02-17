@@ -80,6 +80,14 @@ export async function PUT(request: Request) {
         );
       }
 
+      // Save attention check result if present
+      if (data.attentionCheckPassed !== undefined) {
+        await supabase
+          .from("survey_respondents")
+          .update({ attention_check_passed: data.attentionCheckPassed })
+          .eq("id", respondentId);
+      }
+
       // Update step — mark complete if client says this is the last stimulus
       const isComplete = !!data.isLast;
       await supabase
