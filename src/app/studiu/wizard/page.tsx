@@ -113,6 +113,7 @@ function StudiuWizardInner() {
   const m = isMobile;
   const searchParams = useSearchParams();
   const tag = searchParams.get("tag") || "";
+  const forceReset = searchParams.get("reset") === "1";
 
   const [session, setSession] = useState<SessionData | null>(null);
   const [step, setStep] = useState(-1); // -1=loading, 0=welcome, 1+=active steps
@@ -177,13 +178,17 @@ function StudiuWizardInner() {
   // ── Init: load session or create new ────────────────────
   useEffect(() => {
     const init = async () => {
+      // ?reset=1 forces a fresh session (useful after changing stimuli in DB)
+      if (forceReset) {
+        localStorage.removeItem(LS_KEY);
+      }
+
       try {
         const saved = localStorage.getItem(LS_KEY);
-        if (saved) {
+        if (saved && !forceReset) {
           const s: SessionData = JSON.parse(saved);
           if (s.sessionId && s.stimuli?.length > 0) {
             setSession(s);
-            // Map old step numbers to new ones
             const savedStep = s.currentStep || 0;
             setStep(savedStep);
             return;
@@ -216,7 +221,7 @@ function StudiuWizardInner() {
       }
     };
     init();
-  }, [tag]);
+  }, [tag, forceReset]);
 
   // ── Timer for stimulus steps (reset at first sub-step of each stimulus group) ──
   const stimGroupIdx = step >= firstStimulusStep && step <= lastStimulusStep
