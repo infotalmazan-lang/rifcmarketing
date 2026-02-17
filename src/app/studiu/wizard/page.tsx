@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslation } from "@/lib/i18n";
+import type { Locale } from "@/lib/i18n";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu de Perceptie Consumator
@@ -125,6 +127,7 @@ export default function StudiuPage() {
 function StudiuWizardInner() {
   const isMobile = useIsMobile();
   const m = isMobile;
+  const { locale, setLocale } = useTranslation();
   const searchParams = useSearchParams();
   const tag = searchParams.get("tag") || "";
   const forceReset = searchParams.get("reset") === "1";
@@ -943,6 +946,31 @@ function StudiuWizardInner() {
           {step === 0 && (
             <>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+                {/* Language selector */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                  {(["ro", "en", "ru"] as Locale[]).map((loc) => (
+                    <button
+                      key={loc}
+                      onClick={() => setLocale(loc)}
+                      style={{
+                        padding: "6px 16px",
+                        borderRadius: 20,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        border: locale === loc ? "1px solid transparent" : "1px solid #ddd",
+                        background: locale === loc ? accentRed : "transparent",
+                        color: locale === loc ? "#fff" : textMuted,
+                        outline: "none",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {loc.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Logo / brand mark */}
                 <div style={{
                   width: 64, height: 64, borderRadius: 16,
