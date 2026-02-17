@@ -960,31 +960,6 @@ function StudiuWizardInner() {
           {step === 0 && (
             <>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-                {/* Language selector */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                  {(["ro", "en", "ru"] as Locale[]).map((loc) => (
-                    <button
-                      key={loc}
-                      onClick={() => setLocale(loc)}
-                      style={{
-                        padding: "6px 16px",
-                        borderRadius: 20,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        border: locale === loc ? "1px solid transparent" : "1px solid #ddd",
-                        background: locale === loc ? accentRed : "transparent",
-                        color: locale === loc ? "#fff" : textMuted,
-                        outline: "none",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      {loc.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-
                 {/* Logo / brand mark */}
                 <div style={{
                   width: 64, height: 64, borderRadius: 16,
@@ -1003,9 +978,24 @@ function StudiuWizardInner() {
                 <p style={{ fontSize: m ? 14 : 16, color: textMuted, lineHeight: 1.6, marginBottom: 8, maxWidth: 320 }}>
                   Salut! Te invitam sa participi la un studiu stiintific despre cum percepi materialele de marketing.
                 </p>
-                <p style={{ fontSize: m ? 13 : 14, color: textMuted, lineHeight: 1.6, marginBottom: 32, maxWidth: 320 }}>
+                <p style={{ fontSize: m ? 13 : 14, color: textMuted, lineHeight: 1.6, marginBottom: 20, maxWidth: 320 }}>
                   Dureaza aproximativ <strong style={{ color: textDark }}>5-8 minute</strong>. Toate raspunsurile sunt <strong style={{ color: textDark }}>complet anonime</strong>.
                 </p>
+
+                {/* Privacy notice */}
+                <div style={{
+                  display: "flex", alignItems: "flex-start", gap: 10,
+                  background: "#f0fdf4", border: "1px solid #bbf7d0",
+                  borderRadius: 10, padding: m ? "10px 14px" : "12px 16px",
+                  marginBottom: 24, maxWidth: 340, textAlign: "left" as const,
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                  </svg>
+                  <p style={{ fontSize: m ? 12 : 13, color: "#15803d", lineHeight: 1.5, margin: 0 }}>
+                    <strong>Nu colectam date personale.</strong> Nu cerem email, telefon sau alte informatii de identificare. Totul este complet anonim.
+                  </p>
+                </div>
 
                 <button
                   style={S.btnStart}
@@ -1019,6 +1009,33 @@ function StudiuWizardInner() {
                 <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.7 }}>
                   {numStimuli} materiale de evaluat
                 </p>
+
+                {/* Language switcher — small, bottom */}
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 11, color: textMuted, opacity: 0.6 }}>Limba:</span>
+                  {(["ro", "en", "ru"] as Locale[]).map((loc) => (
+                    <button
+                      key={loc}
+                      onClick={() => setLocale(loc)}
+                      style={{
+                        padding: "3px 10px",
+                        borderRadius: 12,
+                        fontSize: 11,
+                        fontWeight: locale === loc ? 700 : 500,
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        border: "none",
+                        background: locale === loc ? "#e5e1d9" : "transparent",
+                        color: locale === loc ? textDark : textMuted,
+                        outline: "none",
+                        fontFamily: "inherit",
+                        opacity: locale === loc ? 1 : 0.6,
+                      }}
+                    >
+                      {loc.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
