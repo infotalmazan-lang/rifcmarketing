@@ -563,7 +563,7 @@ function StudiuWizardInner() {
       letterSpacing: 2,
       textTransform: "uppercase" as const,
       color: textMuted,
-      marginBottom: 8,
+      marginBottom: m ? 4 : 6,
     },
     questionTitle: {
       fontSize: m ? 22 : 26,
@@ -724,9 +724,9 @@ function StudiuWizardInner() {
     stimulusBox: {
       border: "1.5px solid #e5e1d9",
       borderRadius: 12,
-      padding: m ? 14 : 18,
+      padding: m ? 10 : 14,
       background: "#faf9f6",
-      marginBottom: 16,
+      marginBottom: m ? 6 : 10,
     },
     typeBadge: {
       fontSize: 10,
@@ -1589,35 +1589,35 @@ function StudiuWizardInner() {
                       <span style={S.industryBadge}>{currentStim.industry}</span>
                     )}
                   </div>
-                  <h3 style={{ fontSize: m ? 15 : 17, color: textDark, marginBottom: 12, fontWeight: 600 }}>
+                  <h3 style={{ fontSize: m ? 14 : 16, color: textDark, marginBottom: 8, fontWeight: 600 }}>
                     {currentStim.name}
                   </h3>
 
                   {currentStim.image_url && (
-                    <div style={{ position: "relative" as const }}>
+                    <>
                       <img src={currentStim.image_url} alt={currentStim.name}
                         style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 180 : 300, objectFit: "cover" as const, cursor: "pointer" }}
                         loading="lazy"
                         onClick={() => setFullscreenImage(currentStim.image_url)} />
-                      {/* Expand hint — full width bar at bottom of image */}
-                      <div
+                      {/* Expand button — separate solid button below image */}
+                      <button
                         onClick={() => setFullscreenImage(currentStim.image_url)}
                         style={{
-                          position: "absolute" as const, bottom: 0, left: 0, right: 0,
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                          padding: "8px 0", fontSize: 13, fontWeight: 600,
-                          background: "linear-gradient(transparent, rgba(0,0,0,0.65))",
-                          color: "#fff", cursor: "pointer",
-                          borderRadius: "0 0 8px 8px",
+                          width: "100%", marginTop: 8,
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          padding: "10px 0", fontSize: 13, fontWeight: 700,
+                          background: "#1a1a1a", color: "#fff",
+                          border: "none", borderRadius: 8, cursor: "pointer",
+                          letterSpacing: 0.3,
                         }}
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
                           <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
                         </svg>
-                        Apasa pentru a vedea mai mare
-                      </div>
-                    </div>
+                        Vezi imaginea mai mare
+                      </button>
+                    </>
                   )}
 
                   {currentStim.video_url && extractYoutubeId(currentStim.video_url) && (
@@ -1666,9 +1666,9 @@ function StudiuWizardInner() {
                 </div>
 
                 {/* Current question */}
-                <div style={{ marginTop: 16 }}>
+                <div style={{ marginTop: m ? 4 : 8 }}>
                   {/* Step indicator mini: R · I · F · C · CTA */}
-                  <div style={{ display: "flex", justifyContent: "center", gap: m ? 6 : 8, marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "center", gap: m ? 6 : 8, marginBottom: m ? 6 : 10 }}>
                     {dimensions.map((d, idx) => {
                       const isActive = idx === currentStimSubStep;
                       const isDone = idx < currentStimSubStep;
@@ -1694,8 +1694,8 @@ function StudiuWizardInner() {
                     key={`q-${currentStimGroupIdx}-${currentStimSubStep}`}
                     className="question-flash"
                     style={{
-                      fontSize: m ? 14 : 16, fontWeight: 600, color: textDark, lineHeight: 1.5,
-                      marginBottom: 16, padding: m ? "12px 14px" : "14px 18px",
+                      fontSize: m ? 13 : 15, fontWeight: 600, color: textDark, lineHeight: 1.4,
+                      marginBottom: m ? 10 : 12, padding: m ? "8px 12px" : "10px 16px",
                       background: `${dim.color}08`, border: `2px solid ${dim.color}`, borderRadius: 10,
                       textAlign: "center" as const,
                       // @ts-expect-error CSS custom property
@@ -1704,27 +1704,35 @@ function StudiuWizardInner() {
                     {dim.question}
                   </div>
 
-                  {/* 1-10 buttons */}
-                  <div style={{ display: "flex", gap: m ? 4 : 6, justifyContent: "center", flexWrap: "wrap" as const }}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
-                      <button
-                        key={v}
-                        style={{
-                          width: m ? 36 : 44, height: m ? 36 : 44, fontSize: m ? 14 : 16,
-                          fontWeight: 700, fontFamily: "Inter, sans-serif",
-                          background: currentScores[dim.key] === v ? dim.color : "#faf8f5",
-                          color: currentScores[dim.key] === v ? "#fff" : textDark,
-                          border: `2px solid ${currentScores[dim.key] === v ? dim.color : "#e5e1d9"}`,
-                          borderRadius: 8, cursor: "pointer",
-                          transition: "all 150ms ease",
-                        }}
-                        onClick={() => autoAdvanceStimulus(dim.key, v)}
-                      >
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: m ? 9 : 10, color: textMuted, marginTop: 6, padding: "0 4px" }}>
+                  {/* 1-10 buttons — 2 rows of 5, well-spaced */}
+                  {[
+                    [1, 2, 3, 4, 5],
+                    [6, 7, 8, 9, 10],
+                  ].map((row, rowIdx) => (
+                    <div key={rowIdx} style={{
+                      display: "flex", gap: m ? 8 : 10, justifyContent: "center",
+                      marginBottom: rowIdx === 0 ? (m ? 8 : 10) : 0,
+                    }}>
+                      {row.map((v) => (
+                        <button
+                          key={v}
+                          style={{
+                            width: m ? 48 : 52, height: m ? 48 : 52, fontSize: m ? 16 : 18,
+                            fontWeight: 700, fontFamily: "Inter, sans-serif",
+                            background: currentScores[dim.key] === v ? dim.color : "#faf8f5",
+                            color: currentScores[dim.key] === v ? "#fff" : textDark,
+                            border: `2px solid ${currentScores[dim.key] === v ? dim.color : "#e5e1d9"}`,
+                            borderRadius: 10, cursor: "pointer",
+                            transition: "all 150ms ease",
+                          }}
+                          onClick={() => autoAdvanceStimulus(dim.key, v)}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: m ? 9 : 10, color: textMuted, marginTop: 8, padding: "0 4px" }}>
                     <span>1 = {dim.anchorLow}</span>
                     <span>10 = {dim.anchorHigh}</span>
                   </div>
