@@ -68,6 +68,8 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .nav-item.active + .nav-sub-tasks { display:block; }
 .nav-sub-item { font-size:11px; color:var(--text3); padding:3px 8px; cursor:pointer; border-radius:4px; transition:all .15s; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .nav-sub-item:hover { color:var(--text); background:var(--surface2); }
+.nav-sub-item.active-sub { color:var(--red); font-weight:600; background:var(--red-dim); }
+.nav-sub-item.active-sub::before { color:var(--red); opacity:1; }
 .nav-sub-item.done { color:var(--green); text-decoration:line-through; opacity:.6; }
 .nav-sub-item::before { content:'\\2022'; margin-right:6px; opacity:.4; }
 
@@ -511,6 +513,7 @@ const STAGES = [
 function App() {
   var app = document.getElementById('app');
   var activeStage = 'overview';
+  var activeTask = null; // index of focused task within stage, null = show all
   var checkedTasks = {};
   var openTasks = {};
   var openWorkspaces = {};
@@ -528,14 +531,14 @@ function App() {
 
   function render() {
     var p = getProgress();
-    app.innerHTML = '<nav class="sidebar"><div class="sidebar-header"><div class="logo">R IF C</div><h2>Roadmap Articol \\u0218tiin\\u021Bific</h2><p>Validare Empiric\\u0103 Framework</p><div class="version">v2 \\u2014 cu integrare site</div></div><div class="progress-bar"><div class="label">PROGRES TOTAL</div><div class="bar"><div class="fill" style="width:'+p.pct+'%"></div></div><div class="stats"><span>'+p.done+'/'+p.total+' sarcini</span><span>'+p.pct+'%</span></div></div><div class="nav-section"><div class="nav-section-label">Etape</div>'+STAGES.map(function(s){var isDone=s.tasks.length>0&&s.tasks.every(function(t){return checkedTasks[s.id+'-'+t.title]});var sDone=0;var sTotal=s.tasks.length;s.tasks.forEach(function(t){if(checkedTasks[s.id+'-'+t.title])sDone++;});var sPct=sTotal?Math.round(sDone/sTotal*100):0;var subHtml='';if(s.tasks.length>0){subHtml='<div class="nav-sub-tasks">'+s.tasks.map(function(t){var tDone=checkedTasks[s.id+'-'+t.title];return '<div class="nav-sub-item'+(tDone?' done':'')+'" data-stage="'+s.id+'" data-task="'+t.title+'">'+t.title+'</div>'}).join('')+'</div>';}return '<div class="nav-item '+(activeStage===s.id?'active':'')+' '+(isDone?'completed':'')+'" data-stage="'+s.id+'"><span class="num">'+s.icon+'</span><span>'+s.label+(sTotal>0?' <span style="font-size:10px;opacity:.6;">('+sDone+'/'+sTotal+')</span>':'')+'</span>'+(s.hasSite?'<span class="site-badge">SITE</span>':'')+'<span class="check">\\u2713</span></div>'+subHtml}).join('')+'</div><div class="sidebar-sondaj" data-sondaj="1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg> SONDAJ ADMIN</div></nav><div class="main">'+(activeStage==='sondaj'?'<div class="main-header"><h1>Sondaj Admin</h1><div class="subtitle">Gestionare categorii, materiale \\u0219i stimuli pentru sondaj</div></div><div style="height:calc(100vh - 70px);"><iframe src="/studiu" style="width:100%;height:100%;border:none;"></iframe></div>':'<div class="main-header"><h1>'+(activeStage==='overview'?'R IF C \\u2014 Plan de Cercetare v2':STAGES.find(function(s){return s.id===activeStage}).label)+'</h1><div class="subtitle">Integrat cu rifcmarketing.com \\u00B7 '+p.siteInputs+' sarcini alimentate de site</div></div><div class="content">'+(activeStage==='overview'?renderOverview(p):renderStage(STAGES.find(function(s){return s.id===activeStage})))+'</div>')+'</div>';
+    app.innerHTML = '<nav class="sidebar"><div class="sidebar-header"><div class="logo">R IF C</div><h2>Roadmap Articol \\u0218tiin\\u021Bific</h2><p>Validare Empiric\\u0103 Framework</p><div class="version">v2 \\u2014 cu integrare site</div></div><div class="progress-bar"><div class="label">PROGRES TOTAL</div><div class="bar"><div class="fill" style="width:'+p.pct+'%"></div></div><div class="stats"><span>'+p.done+'/'+p.total+' sarcini</span><span>'+p.pct+'%</span></div></div><div class="nav-section"><div class="nav-section-label">Etape</div>'+STAGES.map(function(s){var isDone=s.tasks.length>0&&s.tasks.every(function(t){return checkedTasks[s.id+'-'+t.title]});var sDone=0;var sTotal=s.tasks.length;s.tasks.forEach(function(t){if(checkedTasks[s.id+'-'+t.title])sDone++;});var sPct=sTotal?Math.round(sDone/sTotal*100):0;var subHtml='';if(s.tasks.length>0){subHtml='<div class="nav-sub-tasks"'+(activeStage===s.id?' style="display:block"':'')+'>'+s.tasks.map(function(t,tIdx){var tDone=checkedTasks[s.id+'-'+t.title];var isActiveSub=(activeStage===s.id&&activeTask===tIdx);return '<div class="nav-sub-item'+(tDone?' done':'')+(isActiveSub?' active-sub':'')+'" data-stage="'+s.id+'" data-task="'+t.title+'" data-taskidx="'+tIdx+'">'+t.title+'</div>'}).join('')+'</div>';}return '<div class="nav-item '+(activeStage===s.id?'active':'')+' '+(isDone?'completed':'')+'" data-stage="'+s.id+'"><span class="num">'+s.icon+'</span><span>'+s.label+(sTotal>0?' <span style="font-size:10px;opacity:.6;">('+sDone+'/'+sTotal+')</span>':'')+'</span>'+(s.hasSite?'<span class="site-badge">SITE</span>':'')+'<span class="check">\\u2713</span></div>'+subHtml}).join('')+'</div><div class="sidebar-sondaj" data-sondaj="1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6"/><path d="M9 13h6"/><path d="M9 17h4"/></svg> SONDAJ ADMIN</div></nav><div class="main">'+(activeStage==='sondaj'?'<div class="main-header"><h1>Sondaj Admin</h1><div class="subtitle">Gestionare categorii, materiale \\u0219i stimuli pentru sondaj</div></div><div style="height:calc(100vh - 70px);"><iframe src="/studiu" style="width:100%;height:100%;border:none;"></iframe></div>':function(){var stg=STAGES.find(function(s){return s.id===activeStage});var headerTitle=activeStage==='overview'?'R IF C \\u2014 Plan de Cercetare v2':(activeTask!==null&&stg&&stg.tasks[activeTask]?stg.tasks[activeTask].title:stg?stg.label:'');return '<div class="main-header"><h1>'+headerTitle+'</h1><div class="subtitle">Integrat cu rifcmarketing.com \\u00B7 '+p.siteInputs+' sarcini alimentate de site</div></div><div class="content">'+(activeStage==='overview'?renderOverview(p):(activeTask!==null?renderSingleTask(stg,activeTask):renderStage(stg)))+'</div>'}())+'</div>';
     bindEvents();
     /* Restore open state */
     Object.keys(openTasks).forEach(function(k){ if(openTasks[k]){ var el=document.querySelector('[data-taskkey="'+k+'"]'); if(el) el.classList.add('open'); } });
     Object.keys(openWorkspaces).forEach(function(k){ if(openWorkspaces[k]){ var el=document.getElementById('dw-'+k); if(el) el.classList.add('open'); } });
-    /* Auto-open first unchecked task if none are manually open */
+    /* Auto-open first unchecked task if none are manually open (skip in single task mode) */
     var anyOpen = Object.keys(openTasks).some(function(k){ return openTasks[k]; });
-    if (!anyOpen && activeStage !== 'overview') {
+    if (!anyOpen && activeStage !== 'overview' && activeTask === null) {
       var stage = STAGES.find(function(s){return s.id===activeStage;});
       if (stage) {
         for (var ti=0; ti<stage.tasks.length; ti++) {
@@ -668,6 +671,64 @@ function App() {
       html += '<div class="site-map"><div class="sm-title"><span class="globe">\\uD83C\\uDF10</span> CE VINE DE PE RIFCMARKETING.COM \\u2192 UNDE AJUNGE \\u00CEN PAPER</div><div class="sm-items">'+stage.siteMap.map(function(m){return '<div class="sm-item '+m.status+'"><span class="arrow">\\u2192</span><div><span class="from">'+m.from+'</span><br><span class="to">'+m.to+'</span></div></div>'}).join('')+'</div></div>';
     }
     html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;var tabKey=stage.id+'-tab-'+i;var activeTab=taskTabs[tabKey]||'exemplu';var hasDeliverables=(t.deliverables&&t.deliverables.length>0);var hasWorkspace=!!t.dataType;var shortTitle=t.title.length>30?t.title.substring(0,30)+'\\u2026':t.title;return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-tabs"><div class="task-tab '+(activeTab==='exemplu'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab '+(activeTab==='work'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> '+shortTitle+'</div></div><div class="task-tab-panel exemplu-panel '+(activeTab==='exemplu'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasDeliverables?(t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>'+shortTitle+'</strong>.</div></div>')+'</div><div class="task-tab-panel work-panel '+(activeTab==='work'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasWorkspace?renderDataWorkspace(stage.id, i, t):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDEE0</div><div class="ee-text">Aceast\\u0103 sarcin\\u0103 nu are instrumente de lucru.<br>Verific\\u0103 tab-ul <strong>Exemplu</strong> pentru detalii.</div></div>')+'</div></div></div>'}).join('')+'</div>';
+    return html;
+  }
+
+  /* ═══ SINGLE TASK VIEW ═══ */
+  function renderSingleTask(stage, taskIdx) {
+    var t = stage.tasks[taskIdx];
+    if (!t) return '<p>Sarcina nu a fost g\\u0103sit\\u0103.</p>';
+    var key = stage.id + '-' + t.title;
+    var isChecked = checkedTasks[key];
+    var stepNum = taskIdx + 1;
+    var tabKey = stage.id + '-tab-' + taskIdx;
+    var activeTab = taskTabs[tabKey] || 'exemplu';
+    var hasDeliverables = (t.deliverables && t.deliverables.length > 0);
+    var hasWorkspace = !!t.dataType;
+    var shortTitle = t.title.length > 30 ? t.title.substring(0, 30) + '\\u2026' : t.title;
+    var sp = getStageProgress(stage);
+
+    var html = '<div class="stage-header">';
+    html += '<div class="stage-label" style="color:' + stage.color + '">' + stage.priority + ' \\u2014 SARCINA ' + stepNum + '/' + stage.tasks.length + '</div>';
+    html += '<div class="stage-title">' + t.title + '</div>';
+    html += '<div class="stage-meta">';
+    html += '<span class="tag" style="background:var(--surface2);color:var(--text2);">' + stage.label + '</span>';
+    if (t.hasSite) html += '<span class="tag" style="background:var(--pink-dim);color:var(--pink);">input din site</span>';
+    html += '<span class="tag" style="background:' + (t.priority === 'urgent' ? 'var(--red-dim)' : t.priority === 'high' ? 'var(--amber-dim)' : 'var(--blue-dim)') + ';color:' + (t.priority === 'urgent' ? 'var(--red)' : t.priority === 'high' ? 'var(--amber)' : 'var(--blue)') + ';">' + t.priority.toUpperCase() + '</span>';
+    html += '<span class="tag" style="background:' + (isChecked ? 'var(--green-dim2)' : 'var(--surface2)') + ';color:' + (isChecked ? 'var(--green)' : 'var(--text2)') + ';">' + (isChecked ? '\\u2713 COMPLETAT' : 'In Progress') + '</span>';
+    html += '</div></div>';
+
+    /* Navigation between tasks */
+    html += '<div style="display:flex;gap:8px;margin-bottom:24px;">';
+    if (taskIdx > 0) {
+      html += '<button class="dw-btn" data-singlenav="' + (taskIdx - 1) + '" style="display:flex;align-items:center;gap:4px;"><span style="font-size:14px;">\\u2190</span> ' + stage.tasks[taskIdx - 1].title.substring(0, 30) + '</button>';
+    }
+    html += '<button class="dw-btn" data-singlenav="all" style="display:flex;align-items:center;gap:4px;"><span style="font-size:14px;">\\u2630</span> Toate sarcinile</button>';
+    if (taskIdx < stage.tasks.length - 1) {
+      html += '<button class="dw-btn" data-singlenav="' + (taskIdx + 1) + '" style="margin-left:auto;display:flex;align-items:center;gap:4px;">' + stage.tasks[taskIdx + 1].title.substring(0, 30) + ' <span style="font-size:14px;">\\u2192</span></button>';
+    }
+    html += '</div>';
+
+    /* Tabs + content — always open */
+    html += '<div class="task ' + (t.hasSite ? 'has-site' : '') + ' open" data-task="' + taskIdx + '" data-taskkey="' + key + '" style="border-width:2px;">';
+    html += '<div class="task-header" style="cursor:default;"><div class="task-checkbox ' + (isChecked ? 'checked' : '') + '" data-key="' + key + '">' + (isChecked ? '\\u2713' : '') + '</div><div class="task-step">' + stepNum + '</div><div class="title" style="font-size:17px;font-weight:600;' + (isChecked ? 'text-decoration:line-through;opacity:.5' : '') + '">' + t.title + '</div><div class="badges">' + (t.hasSite ? '<span class="site-tag">SITE</span>' : '') + '<span class="priority ' + t.priority + '">' + t.priority.toUpperCase() + '</span></div></div>';
+    html += '<div class="task-body" style="display:block;">';
+    html += '<div class="task-tabs"><div class="task-tab ' + (activeTab === 'exemplu' ? 'active' : '') + '" data-tabkey="' + tabKey + '" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab ' + (activeTab === 'work' ? 'active' : '') + '" data-tabkey="' + tabKey + '" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> ' + shortTitle + '</div></div>';
+    html += '<div class="task-tab-panel exemplu-panel ' + (activeTab === 'exemplu' ? 'active' : '') + '"><div class="task-detail" style="margin-bottom:12px;">' + t.detail + '</div>';
+    if (hasDeliverables) {
+      (t.deliverables || []).forEach(function(d) { html += '<div class="deliverable"><div class="dlabel ' + d.type + '">' + d.label + '</div><div class="dtext">' + d.text.replace(/\\n/g, '<br>') + '</div></div>'; });
+    } else {
+      html += '<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>' + shortTitle + '</strong>.</div></div>';
+    }
+    html += '</div>';
+    html += '<div class="task-tab-panel work-panel ' + (activeTab === 'work' ? 'active' : '') + '"><div class="task-detail" style="margin-bottom:12px;">' + t.detail + '</div>';
+    if (hasWorkspace) {
+      html += renderDataWorkspace(stage.id, taskIdx, t);
+    } else {
+      html += '<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDEE0</div><div class="ee-text">Aceast\\u0103 sarcin\\u0103 nu are instrumente de lucru.<br>Verific\\u0103 tab-ul <strong>Exemplu</strong> pentru detalii.</div></div>';
+    }
+    html += '</div></div></div>';
+
     return html;
   }
 
@@ -1178,13 +1239,21 @@ function App() {
   /* ═══ BIND EVENTS ═══ */
   function bindEvents() {
     document.querySelectorAll('.nav-item').forEach(function(el) {
-      el.addEventListener('click', function() { activeStage = el.dataset.stage; render(); window.scrollTo(0,0); });
+      el.addEventListener('click', function() { activeStage = el.dataset.stage; activeTask = null; render(); window.scrollTo(0,0); });
     });
     document.querySelectorAll('.nav-sub-item').forEach(function(el) {
-      el.addEventListener('click', function(e) { e.stopPropagation(); activeStage = el.dataset.stage; render(); var tTitle = el.dataset.task; var taskEl = document.querySelector('[data-taskkey="'+activeStage+'-'+tTitle+'"]'); if(taskEl) { taskEl.classList.add('open'); openTasks[activeStage+'-'+tTitle]=true; taskEl.scrollIntoView({behavior:'smooth',block:'center'}); } });
+      el.addEventListener('click', function(e) { e.stopPropagation(); activeStage = el.dataset.stage; activeTask = parseInt(el.dataset.taskidx, 10); render(); window.scrollTo(0,0); });
     });
     var sondajBtn = document.querySelector('[data-sondaj]');
-    if(sondajBtn) { sondajBtn.addEventListener('click', function() { activeStage = 'sondaj'; render(); }); }
+    if(sondajBtn) { sondajBtn.addEventListener('click', function() { activeStage = 'sondaj'; activeTask = null; render(); }); }
+    /* Single task view navigation buttons */
+    document.querySelectorAll('[data-singlenav]').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var val = el.dataset.singlenav;
+        if (val === 'all') { activeTask = null; } else { activeTask = parseInt(val, 10); }
+        render(); window.scrollTo(0, 0);
+      });
+    });
     document.querySelectorAll('.task-header').forEach(function(el) {
       el.addEventListener('click', function(e) {
         if(e.target.classList.contains('task-checkbox')) return;
