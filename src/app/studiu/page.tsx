@@ -120,11 +120,75 @@ const TABS: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
 ];
 
 const INDUSTRIES = [
-  "Education / Tech",
-  "Healthcare / Beauty",
-  "E-commerce / Retail",
-  "Food / Hospitality",
+  // Tech & Digital
+  "SaaS / Software",
+  "IT Services",
+  "FinTech",
+  "EdTech",
+  "HealthTech",
+  "AI / Machine Learning",
+  "Cybersecurity",
+  "Cloud / Infrastructure",
+  "Gaming / Entertainment",
+  "Telecom",
+  // E-commerce & Retail
+  "E-commerce",
+  "Retail (fizic)",
+  "Marketplace",
+  "D2C (Direct to Consumer)",
+  // Finance & Insurance
+  "Banci / Servicii Financiare",
+  "Asigurari",
+  "Investitii / Trading",
+  "Crypto / Blockchain",
+  // Healthcare & Wellness
+  "Sanatate / Medicina",
+  "Farma",
+  "Wellness / Fitness",
+  "Beauty / Cosmetice",
+  // Food & Beverage
+  "Food & Beverage",
+  "Restaurante / HoReCa",
+  "FMCG (bunuri de consum)",
+  // Real Estate & Construction
+  "Imobiliare",
+  "Constructii",
+  "Arhitectura / Design Interior",
+  // Education
+  "Educatie / Training",
+  "Universitati / Scoli",
+  "Cursuri Online",
+  // Professional Services
+  "Consultanta",
+  "Marketing / Agentie",
+  "Legal / Juridic",
+  "Contabilitate / Audit",
+  "HR / Recrutare",
+  // Media & Creative
+  "Media / Publicatii",
+  "Publicitate / Branding",
+  "Film / Video Production",
+  "Muzica / Evenimente",
+  // Travel & Lifestyle
+  "Turism / Travel",
+  "Hoteluri / Hospitality",
+  "Fashion / Imbracaminte",
+  "Luxury / Premium",
+  "Sport / Outdoor",
+  // Industry & Manufacturing
+  "Automotive",
+  "Manufacturing / Productie",
+  "Energie / Utilities",
+  "Agricultura / Agribusiness",
+  "Logistica / Transport",
+  // B2B
   "B2B Services",
+  "B2B SaaS",
+  // Non-profit & Government
+  "ONG / Non-profit",
+  "Guvern / Administratie Publica",
+  // Other
+  "Altele",
 ] as const;
 
 const EXECUTION_QUALITIES = [
