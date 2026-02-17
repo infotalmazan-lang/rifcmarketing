@@ -476,7 +476,7 @@ const STAGES = [
   },
   { id:'s1', label:'Fundamentare Teoretic\\u0103', icon:'01', num:1, color:'var(--red)', hasSite:true, duration:'Luna 1 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 1-3', priority:'FUNDAMENT', description:'Stabilirea bazei teoretice. Site-ul furnizeaz\\u0103 con\\u021Binutu brut \\u2014 \\u00EEl transform\\u0103m \\u00EEn limbaj academic cu referin\\u021Be peer-reviewed.', siteMap:[ { from:'Ch01 Filozofia', to:'Sec\\u021Biunea 1: Introducere \\u2014 "Claritatea ca premis\\u0103"', status:'partial' }, { from:'Ch02 Ecua\\u021Bia', to:'Sec\\u021Biunea 3.2: Specifica\\u021Bie matematic\\u0103', status:'partial' }, { from:'Ch03 Anatomia (28 sub-factori)', to:'Sec\\u021Biunea 3.1: Defini\\u021Bii constructe', status:'ready' }, { from:'Ch07 R IF C vs Altele', to:'Sec\\u021Biunea 2.1: Analiza gap-ului din literatur\\u0103', status:'ready' } ], tasks:[ { title:'Reformulare academic\\u0103 a defini\\u021Biilor R, I, F, C', priority:'urgent', hasSite:true, dataType:'definitions', dataKey:'definitions', detail:'Con\\u021Binutul de pe Ch01 + Ch02 + Ch03 al site-ului con\\u021Bine defini\\u021Biile \\u2014 dar sunt scrise pentru marketeri, nu pentru revieweri academici. Trebuie rescrise cu formatul: <strong>defini\\u021Bie conceptual\\u0103 + defini\\u021Bie opera\\u021Bional\\u0103 + baz\\u0103 teoretic\\u0103 + distinc\\u021Bie fa\\u021B\\u0103 de constructe similare.</strong>', deliverables:[ { type:'site', label:'INPUT GATA DE PE SITE', text:'\\u2705 Ch03 Anatomia Variabilelor \\u2014 toate sub-factorii sunt deja lista\\u021Bi\\n\\u2705 Ch02 Ecua\\u021Bia \\u2014 metafora "construc\\u021Bie" (Funda\\u021Bia, Structura, Arhitectura, Valoarea)\\n\\u2705 Ch01 Filozofia \\u2014 "Economia Cognitiv\\u0103", "Eliminarea Anxiet\\u0103\\u021Bii", "Ireversibilitatea Ac\\u021Biunii"' }, { type:'output', label:'LIVRABIL', text:'Defini\\u021Biile formale ale fiec\\u0103rui construct conform APA. ~1.500 cuvinte. Cu referin\\u021Be: ELM (Petty & Cacioppo), Cognitive Load Theory (Sweller), Banner Blindness (Benway & Lane).' }, { type:'standard', label:'CRITERIU', text:'Parasuraman et al. (1988) \\u2014 model de referin\\u021B\\u0103 pentru definirea constructelor. Churchill (1979) \\u2014 paradigma de scale development.' } ] }, { title:'Formalizarea matematic\\u0103 a ecua\\u021Biei', priority:'urgent', hasSite:true, dataType:'notes', dataKey:'equationNotes', detail:'Ecua\\u021Bia e pe site ca "R + (I \\u00D7 F) = C" cu explica\\u021Bii vizuale. Pentru paper, trebuie: nota\\u021Bie formal\\u0103, justificarea domeniului (1-110), explicarea termenului multiplicativ, \\u0219i compararea cu modele additive.', deliverables:[ { type:'site', label:'INPUT GATA DE PE SITE', text:'\\u2705 Ecua\\u021Bia cu scoring 0-110\\n\\u2705 Explica\\u021Bia "De ce I \\u00D7 F" de pe Ch02 (Forma amplific\\u0103, nu adaug\\u0103)\\n\\u2705 Exemplele numerice: 10\\u00D72=20 vs 10\\u00D79=90\\n\\u2705 Tabelul scoring: 0-20/21-50/51-80/81-110 cu impact financiar' }, { type:'output', label:'LIVRABIL', text:'Sec\\u021Biune 2.000 cuvinte: formalizare C = R + (I \\u00D7 F), justificarea I\\u00D7F vs I+F cu referin\\u021Be la marketing mix modeling (multiplicative specifications), ELM (forma modereaz\\u0103 procesarea), hybrid models. 15-20 referin\\u021Be.' } ] }, { title:'Justificarea Por\\u021Bii Relevan\\u021Bei', priority:'urgent', hasSite:true, dataType:'notes', dataKey:'gateNotes', detail:'Poarta Relevan\\u021Bei e deja argumentat\\u0103 pe site cu simul\\u0103ri de dezastru (R=2, I=8, F=9 \\u2192 74 pe h\\u00E2rtie, 0 \\u00EEn realitate). Trebuie doar tradus\\u0103 \\u00EEn limbaj academic cu referin\\u021Be la threshold effects.', deliverables:[ { type:'site', label:'INPUT GATA DE PE SITE', text:'\\u2705 Simularea Dezastrului (2 scenarii cu scoruri)\\n\\u2705 Consecin\\u021Be: CTR<0.1%, CPL infinit, Bounce 85%+\\n\\u2705 Compara\\u021Bie R=1/R=2/R=3\\n\\u2705 Exemple reale: hotel f\\u0103r\\u0103 aeroport, veganism la v\\u00E2n\\u0103toare' }, { type:'output', label:'LIVRABIL', text:'Sec\\u021Biune 1.000 cuvinte cu referin\\u021Be: Vakratsas et al. (2004) \\u2014 threshold effects \\u00EEn advertising, Bemmaor (1984), ELM \\u2014 relevance as processing switch, Baker & Lutz (2000) \\u2014 Relevance-Accessibility Model.' } ] }, { title:'Literature Review \\u2014 reformulare compara\\u021Bii', priority:'high', hasSite:true, dataType:'references', dataKey:'references', detail:'Ch07 de pe site compar\\u0103 deja R IF C vs AIDA, RACE, StoryBrand, 4Ps. Plus enciclopedia ta cu 35 framework-uri. <strong>Nu refacem analiza \\u2014 o reformul\\u0103m academic</strong> \\u0219i ad\\u0103ug\\u0103m referin\\u021Be originale.', deliverables:[ { type:'site', label:'INPUT GATA DE PE SITE', text:'\\u2705 Ch07: 4 compara\\u021Bii detaliate cu limit\\u0103ri identificate\\n\\u2705 Enciclopedia 35 framework-uri (cercetare anterioar\\u0103)\\n\\u2705 Gap identificat: "Niciun framework nu diagnosticheaz\\u0103 \\u2014 toate construiesc"' }, { type:'output', label:'LIVRABIL', text:'Tabel comparativ academic + narativ 2.500 cuvinte: 10-15 framework-uri \\u00D7 6 criterii. Gap-ul central: niciun framework nu ofer\\u0103 scoring numeric de diagnostic pre-expunere la nivel de mesaj.' }, { type:'standard', label:'REFERIN\\u021AE OBLIGATORII', text:'Vakratsas & Ambler (1999) JM, AIDA \\u2014 Strong (1925), DAGMAR \\u2014 Colley (1961), FCB Grid \\u2014 Vaughn (1986), ELM \\u2014 Petty & Cacioppo (1986), RACE \\u2014 Chaffey (2010).' } ] } ] },
   { id:'s2', label:'Dezvoltare Scal\\u0103', icon:'02', num:2, color:'var(--blue)', hasSite:true, duration:'Luna 1-2 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 2-6', priority:'STUDIUL 1', description:'Transformarea sub-factorilor de pe site \\u00EEn itemi de chestionar valida\\u021Bi. Paradigma Churchill (1979).', siteMap:[ { from:'Ch03 R: 7 sub-factori', to:'7-10 itemi Likert pentru Relevan\\u021B\\u0103', status:'ready' }, { from:'Ch03 I: 10 sub-factori', to:'10-12 itemi Likert pentru Interes', status:'ready' }, { from:'Ch03 F: 11 sub-factori', to:'10-12 itemi Likert pentru Form\\u0103', status:'ready' }, { from:'Ch04 Scoring 1-10 descriptori', to:'Ancore fixe pentru evaluatori', status:'ready' } ], tasks:[ { title:'Transformare sub-factori \\u2192 itemi Likert', priority:'urgent', hasSite:true, dataType:'likertItems', dataKey:'likertItems', detail:'Sub-factorii de pe site devin sursa principal\\u0103. Ex: R \\u2192 "Audien\\u021Ba" devine itemul: <em>"Mesajul se adreseaz\\u0103 unui segment cu o nevoie specific\\u0103 pe care produsul o rezolv\\u0103"</em> (1=Total dezacord \\u2192 7=Total acord).', deliverables:[ { type:'site', label:'INPUT DIRECT DE PE SITE', text:'\\u2705 R: Audien\\u021Ba, Timing, Etapa Journey, Context, Geografie, Canal, Segmentare \\u2192 7 sub-factori = min 7 itemi\\n\\u2705 I: 10 sub-factori \\u2192 min 10 itemi\\n\\u2705 F: 11 sub-factori \\u2192 min 11 itemi\\nTOTAL: 28 sub-factori \\u2192 30-36 itemi ini\\u021Biali' }, { type:'output', label:'LIVRABIL', text:'Pool de 30-36 itemi formula\\u021Bi ca afirma\\u021Bii Likert 1-7. Format: ID item, text item, construct (R/I/F), sub-factor surs\\u0103, referin\\u021B\\u0103 teoretic\\u0103.' } ] }, { title:'Construire Scoring Rubric standardizat', priority:'urgent', hasSite:true, dataType:'notes', dataKey:'scoringNotes', detail:'Ch04 de pe site are deja descriptori per nivel (1-10). Ace\\u0219tia devin <strong>ancore fixe</strong> pentru evaluatori.', deliverables:[ { type:'site', label:'INPUT DE PE SITE', text:'\\u2705 Ch04: Tabelul 0-110 cu 4 niveluri de Claritate\\n\\u2705 Descriptori per variabil\\u0103 (detalii din Anatomia Variabilelor)\\n\\u2705 Arhetipurile de E\\u0219ec \\u2192 exemple negative de calibrare' }, { type:'output', label:'LIVRABIL', text:'Scoring Rubric cu ancore fixe: 10 niveluri per variabil\\u0103, fiecare cu defini\\u021Bie opera\\u021Bional\\u0103 + exemplu concret + contra-exemplu.' } ] }, { title:'Panel de exper\\u021Bi (15-20 persoane)', priority:'urgent', dataType:'expertPanel', dataKey:'expertPanel', detail:'Recrutezi 15-20 marketeri/lectori. Fiecare evalueaz\\u0103 relevan\\u021Ba itemilor pe scala 1-4. Calcul\\u0103m Content Validity Index.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'Lista de 15-20 exper\\u021Bi: colegi marketeri, lectori USM/UTM, clien\\u021Bi Talmazan School avansa\\u021Bi. Tu organizezi sesiunile.' }, { type:'output', label:'LIVRABIL', text:'CVI \\u2265 0.80 per item. Pool rafinat de 24-30 itemi. Raport panel.' } ] }, { title:'Interviuri cognitive (10-15 utilizatori)', priority:'high', dataType:'cognitiveTests', dataKey:'cognitiveTests', detail:'Testezi comprehensiunea itemilor cu marketeri reali.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'10-15 marketeri care citesc itemii \\u0219i verbalizeaz\\u0103 ce \\u00EEn\\u021Beleg. Tu conduci. Notezi ambiguit\\u0103\\u021Bile.' }, { type:'output', label:'LIVRABIL', text:'Raport cognitive testing. Pool final pre-EFA.' } ] } ] },
-  { id:'s3', label:'Colectare Date & EFA', icon:'03', num:3, color:'var(--amber)', hasSite:true, duration:'Lunile 2-3 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 5-12', priority:'STUDIUL 2', description:'Colectarea primului set de date + Exploratory Factor Analysis. Studiile de caz de pe site devin pilot data.', siteMap:[ { from:'Ch09 Studii de Caz (5 cazuri)', to:'Pilot stimuli + calibrare', status:'partial' }, { from:'Ch05 Matricea de Aplicare (6 canale)', to:'Categorii stimuli: LP, Social, Email, Ads, Pitch, Web', status:'ready' }, { from:'Omnichannel (17 canale)', to:'Generalizabilitate cross-canal', status:'ready' } ], tasks:[ { title:'Construire set stimuli (20-30 mesaje reale)', priority:'urgent', hasSite:true, dataType:'stimuli', dataKey:'stimuli', detail:'Cele 5 studii de caz de pe site devin primele 5 stimuli. Adaugi 15-25 campanii noi.', deliverables:[ { type:'site', label:'PILOT DATA DE PE SITE', text:'\\u2705 Maison Noir (R=2, I=7, F=8, C=58) \\u2014 Restaurant, FB Ads\\n\\u2705 CloudMetric \\u2014 SaaS B2B\\n\\u2705 CodeNest \\u2014 EdTech\\n\\u2705 VELA Fashion \\u2014 Fashion\\n\\u2705 Mentor Biz \\u2014 Consultan\\u021B\\u0103' }, { type:'input', label:'CAMPANII NOI DE LA TINE', text:'15-25 campanii reale suplimentare: screenshots emailuri, reclame, landing pages, pitch decks.' }, { type:'output', label:'LIVRABIL', text:'Set standardizat de 20-30 stimuli cu: ID, screenshot/text, tip canal, industrie, target audience. Anonimizat.' } ] }, { title:'Colectare date \\u2014 N = 250-350', priority:'urgent', dataType:'kvForm', dataKey:'respondents', detail:'Fiecare evaluator scoreaz\\u0103 8-10 mesaje randomizate.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'Distribuie chestionarul: studen\\u021Bi USM/UTM (100+), comunitate Talmazan School (50+), LinkedIn (100+).' }, { type:'output', label:'LIVRABIL', text:'Dataset: min 250 r\\u0103spunsuri \\u00D7 24-30 itemi \\u00D7 8-10 mesaje. Export\u0103 CSV.' }, { type:'standard', label:'CRITERIU', text:'Ratio 10:1 respondenti:itemi (Nunnally, 1978). Cu 30 itemi = ideal 300.' } ] }, { title:'Exploratory Factor Analysis', priority:'high', dataType:'kvForm', dataKey:'efaResults', detail:'EFA pe date: Principal Axis Factoring, rota\\u021Bie Oblimin. Verific\\u0103m structura cu 3 factori.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Factor loadings, eigenvalues, scree plot, % varian\\u021B\\u0103, Cronbach \\u03B1 \\u2265 0.80 per factor. Scal\\u0103 final\\u0103: 4-6 itemi per construct.' }, { type:'standard', label:'PRAGURI', text:'Loading \\u2265 0.50, cross-loading < 0.35, \\u03B1 \\u2265 0.80, KMO \\u2265 0.80. Hair et al. (2019).' } ] } ] },
+  { id:'s3', label:'Colectare Date & EFA', icon:'03', num:3, color:'var(--amber)', hasSite:true, duration:'Lunile 2-3 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 5-12', priority:'STUDIUL 2', description:'Colectarea primului set de date + Exploratory Factor Analysis. Studiile de caz de pe site devin pilot data.', siteMap:[ { from:'Ch09 Studii de Caz (5 cazuri)', to:'Pilot stimuli + calibrare', status:'partial' }, { from:'Ch05 Matricea de Aplicare (6 canale)', to:'Categorii stimuli: LP, Social, Email, Ads, Pitch, Web', status:'ready' }, { from:'Omnichannel (17 canale)', to:'Generalizabilitate cross-canal', status:'ready' } ], tasks:[ { title:'Construire set stimuli (20-30 mesaje reale)', priority:'urgent', hasSite:true, dataType:'stimuli', dataKey:'stimuli', detail:'Cele 5 studii de caz de pe site devin primele 5 stimuli. Adaugi 15-25 campanii noi.', deliverables:[ { type:'site', label:'PILOT DATA DE PE SITE', text:'\\u2705 Maison Noir (R=2, I=7, F=8, C=58) \\u2014 Restaurant, FB Ads\\n\\u2705 CloudMetric \\u2014 SaaS B2B\\n\\u2705 CodeNest \\u2014 EdTech\\n\\u2705 VELA Fashion \\u2014 Fashion\\n\\u2705 Mentor Biz \\u2014 Consultan\\u021B\\u0103' }, { type:'input', label:'CAMPANII NOI DE LA TINE', text:'15-25 campanii reale suplimentare: screenshots emailuri, reclame, landing pages, pitch decks.' }, { type:'output', label:'LIVRABIL', text:'Set standardizat de 20-30 stimuli cu: ID, screenshot/text, tip canal, industrie, target audience. Anonimizat.' } ] }, { title:'Studiu Cantitativ \\u2014 Percep\\u021Bie Consumator + AI vs Human', priority:'urgent', hasSite:true, dataType:'surveyResults', dataKey:'consumerSurvey', detail:'<strong>Stratul 2: Cantitativ.</strong> 1.000-5.000 consumatori evalueaz\\u0103 8-10 stimuli de marketing (R, I, F pe 1-10). Datele se colecteaz\\u0103 prin link partajabil <strong>rifcmarketing.com/studiu</strong>.<br><br><strong>Compara\\u021Bie AI vs Human:</strong> Acelea\\u0219i stimuli sunt evaluate manual prin diferite LLM-uri (Claude, GPT, Gemini). Scorurile AI se introduc manual \\u00EEn tabelul de mai jos. Compar\\u0103m media uman\\u0103 cu fiecare model AI.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Dataset: N\\u00D78-10 stimuli \\u00D7 RIFC + profil demografic/comportamental/psihografic + compara\\u021Bie AI per model' }, { type:'site', label:'LINK SONDAJ', text:'\\u2705 rifcmarketing.com/studiu \\u2014 wizard 12 pa\\u0219i cu auto-save, resume din localStorage, mobile-first' } ] }, { title:'Colectare date \\u2014 N = 250-350', priority:'urgent', dataType:'kvForm', dataKey:'respondents', detail:'Fiecare evaluator scoreaz\\u0103 8-10 mesaje randomizate.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'Distribuie chestionarul: studen\\u021Bi USM/UTM (100+), comunitate Talmazan School (50+), LinkedIn (100+).' }, { type:'output', label:'LIVRABIL', text:'Dataset: min 250 r\\u0103spunsuri \\u00D7 24-30 itemi \\u00D7 8-10 mesaje. Export\u0103 CSV.' }, { type:'standard', label:'CRITERIU', text:'Ratio 10:1 respondenti:itemi (Nunnally, 1978). Cu 30 itemi = ideal 300.' } ] }, { title:'Exploratory Factor Analysis', priority:'high', dataType:'kvForm', dataKey:'efaResults', detail:'EFA pe date: Principal Axis Factoring, rota\\u021Bie Oblimin. Verific\\u0103m structura cu 3 factori.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Factor loadings, eigenvalues, scree plot, % varian\\u021B\\u0103, Cronbach \\u03B1 \\u2265 0.80 per factor. Scal\\u0103 final\\u0103: 4-6 itemi per construct.' }, { type:'standard', label:'PRAGURI', text:'Loading \\u2265 0.50, cross-loading < 0.35, \\u03B1 \\u2265 0.80, KMO \\u2265 0.80. Hair et al. (2019).' } ] } ] },
   { id:'s4', label:'CFA & Model Comparison', icon:'04', num:4, color:'var(--green)', duration:'Lunile 3-4 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 10-16', priority:'STUDIUL 3 \\u2014 CENTRAL', description:'Confirmatory Factor Analysis + TESTUL CRITIC: Additive vs Multiplicative + Threshold test. Contribu\\u021Bia empiric\\u0103 principal\\u0103.', tasks:[ { title:'Colectare e\\u0219antion nou \\u2014 N = 300-500', priority:'urgent', dataType:'kvForm', dataKey:'respondents', detail:'E\\u0219antion SEPARAT (obligatoriu). Aceea\\u0219i stimuli, itemi rafina\\u021Bi. Recrutare nou\\u0103.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'Al doilea val: studen\\u021Bi noi, marketeri noi, conferin\\u021Be, colabor\\u0103ri cu universit\\u0103\\u021Bi din Rom\\u00E2nia. ZERO overlap cu Studiul 2.' }, { type:'output', label:'LIVRABIL', text:'Dataset: 300-500 r\\u0103spunsuri noi.' } ] }, { title:'CFA \\u2014 Confirmatory Factor Analysis', priority:'urgent', dataType:'kvForm', dataKey:'cfaResults', detail:'Test\\u0103m structura 3 factori (R, I, F) pe date noi. SEM cu lavaan (R) sau AMOS.', deliverables:[ { type:'output', label:'LIVRABIL', text:'CFI \\u2265 0.95, RMSEA \\u2264 0.06, SRMR \\u2264 0.08. AVE \\u2265 0.50, CR \\u2265 0.70. Fornell-Larcker + HTMT < 0.85.' }, { type:'standard', label:'CRITERIU', text:'Anderson & Gerbing (1988) two-step. Fornell & Larcker (1981). Hu & Bentler (1999).' } ] }, { title:'\\u26A1 TESTUL CENTRAL: Additive vs Multiplicative', priority:'urgent', dataType:'modelComparison', dataKey:'modelComparison', detail:'<strong>Cel mai important test.</strong> 3 modele comparate:<br>Model A (Additiv): C = \\u03B2\\u2080 + \\u03B2\\u2081R + \\u03B2\\u2082I + \\u03B2\\u2083F<br>Model B (R IF C): C = \\u03B2\\u2080 + \\u03B2\\u2081R + \\u03B2\\u2082(I\\u00D7F)<br>Model C (Full): C = \\u03B2\\u2080 + \\u03B2\\u2081R + \\u03B2\\u2082I + \\u03B2\\u2083F + \\u03B2\\u2084(I\\u00D7F)<br><br>Dac\\u0103 B > A \\u2192 ecua\\u021Bia R IF C e validat\\u0103 statistic.', deliverables:[ { type:'output', label:'LIVRABIL', text:'R\\u00B2, AIC, BIC, nested F-test \\u00EEntre modele. Tabel coeficien\\u021Bi. Grafic scatter C predict vs C actual.' }, { type:'standard', label:'CRITERIU', text:'\\u0394R\\u00B2 semnificativ (p < 0.05). AIC/BIC mai mic = model superior.' } ] }, { title:'Testul Por\\u021Bii Relevan\\u021Bei (Threshold)', priority:'urgent', hasSite:true, dataType:'kvForm', dataKey:'thresholdTest', detail:'Test\\u0103m dac\\u0103 rela\\u021Bia I\\u00D7F \\u2192 C dispare sub R = 3. Ipoteza de pe site devine test statistic.', deliverables:[ { type:'site', label:'IPOTEZA DE PE SITE', text:'\\u2705 "Dac\\u0103 R < 3 \\u2192 E\\u0219ec Critic Automat" \\u2014 Poarta Relevan\\u021Bei\\n\\u2705 Simularea Dezastrului: R=2, I=8, F=9 \\u2192 pe h\\u00E2rtie 74, \\u00EEn realitate 0\\n\\u2705 Exemplele concrete devin PREDIC\\u021AII TESTABILE' }, { type:'output', label:'LIVRABIL', text:'Sensitivity analysis: threshold la R=2,3,4,5. Davies test. Grafic I\\u00D7F vs C separat sub/peste threshold.' } ] } ] },
   { id:'s5', label:'Validare Predictiv\\u0103', icon:'05', num:5, color:'var(--violet)', hasSite:true, duration:'Lunile 4-5 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 14-20', priority:'STUDIUL 4', description:'Scorurile R IF C prezic performan\\u021B\\u0103 real\\u0103? + AI Audit de pe site ca instrument suplimentar de validare.', siteMap:[ { from:'Ch06 Arhetipuri de E\\u0219ec (3 tipuri)', to:'Known-Groups Validity: Fantoma, Zgomot, Diamant', status:'ready' }, { from:'/audit (AI scoring)', to:'Study 5 op\\u021Bional: AI vs Human agreement', status:'partial' }, { from:'Ch09 Studii de Caz (KPI-uri)', to:'Pilot predictive data', status:'partial' } ], tasks:[ { title:'Colectare KPI-uri reale \\u2014 30-50 campanii', priority:'urgent', dataType:'campaigns', dataKey:'campaigns', detail:'<strong>Cel mai important input de la tine.</strong> Campaniile cu scoruri R IF C + metrici reale de performan\\u021B\\u0103.', deliverables:[ { type:'input', label:'DATE CRITICE DE LA TINE', text:'30-50 campanii cu KPI-uri reale:\\n\\u2022 CTR, CPL, ROAS, Conversion Rate, Bounce Rate\\n\\u2022 Din Google Analytics, Facebook Ads, email platforms, CRM\\n\\u2022 Surse: clien\\u021Bi Talmazan School, CONTINUUM, campanii proprii\\n\\u2022 Formular de consim\\u021B\\u0103m\\u00E2nt semnat per client (OBLIGATORIU)' }, { type:'output', label:'LIVRABIL', text:'Dataset merged: Scor C (medie evaluatori) + KPI-uri reale. Corela\\u021Bii Pearson: C vs CTR (target r > 0.4), C vs CPL (target r < -0.3).' } ] }, { title:'Known-Groups Validity (via Arhetipuri)', priority:'high', hasSite:true, dataType:'notes', dataKey:'knownGroupsNotes', detail:'Cele 3 arhetipuri de pe site devin categorii de testare.', deliverables:[ { type:'site', label:'CATEGORII DE PE SITE', text:'\\u2705 Fantoma Invizibil\\u0103: "0 + (I\\u00D7F) = Irelevant" \\u2192 predic\\u021Bie: C slab, KPI-uri zero\\n\\u2705 Zgomotul Estetic: "R + (1\\u00D710) = Slab" \\u2192 predic\\u021Bie: engagement fals, zero conversii\\n\\u2705 Diamantul \\u00CEngropat: "R + (10\\u00D71) = Irosit" \\u2192 predic\\u021Bie: poten\\u021Bial mascat de form\\u0103 slab\\u0103' }, { type:'output', label:'LIVRABIL', text:'ANOVA/Kruskal-Wallis: diferen\\u021Be semnificative \\u00EEntre cele 3 arhetipuri pe scor C \\u0219i KPI-uri. Cohen d per pereche.' } ] }, { title:'Inter-Rater Reliability', priority:'high', dataType:'interRater', dataKey:'interRater', detail:'3 evaluatori independen\\u021Bi, 25-30 campanii, scoruri independente.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'Recrutezi 3 marketeri experimenta\\u021Bi. Training 1 or\\u0103 cu Scoring Rubric-ul. Scorare independent\\u0103.' }, { type:'output', label:'LIVRABIL', text:'ICC sau Krippendorff \\u03B1 > 0.70 (acceptabil), > 0.80 (excelent).' } ] }, { title:'[OP\\u021AIONAL] Study 5: AI Audit vs Human Raters', priority:'low', hasSite:true, dataType:'aiAudit', dataKey:'aiAudit', detail:'AI Audit-ul de pe /audit scoreaz\\u0103 acelea\\u0219i 20-30 mesaje. Compar\\u0103m scorurile AI cu media evaluatorilor umani.', deliverables:[ { type:'site', label:'INSTRUMENT DE PE SITE', text:'\\u2705 /audit \\u2014 AI scoring automat cu prompt R IF C integrat\\n\\u2705 /calculator \\u2014 simulator interactiv' }, { type:'output', label:'LIVRABIL', text:'Corela\\u021Bie AI scores vs Human scores. Dac\\u0103 r > 0.70 \\u2192 contribu\\u021Bie original\\u0103: "automated R IF C diagnostic shows strong agreement with expert raters." RAR\\u0102 \\u00CEN LITERATUR\\u0102.' }, { type:'standard', label:'BONUS ACADEMIC', text:'Dac\\u0103 incluzi asta, paper-ul c\\u00E2\\u0219tig\\u0103 un avantaj competitiv major: AI-augmented marketing diagnostics este un topic fierbinte.' } ] } ] },
   { id:'s6', label:'Scriere & Submisie', icon:'06', num:6, color:'var(--cyan)', duration:'Lunile 5-6 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 18-24', priority:'REDACTARE', description:'Paper-ul final: 12.000-15.000 cuvinte + cover letter + submisie. Site-ul e citat ca "practitioner implementation" a framework-ului.', tasks:[ { title:'Introduction + Literature Review', priority:'high', dataType:'sectionProgress', dataKey:'sections', detail:'2.000 + 3.500 cuvinte. Gap central: niciun framework nu diagnosticheaz\\u0103 cantitativ mesaje individuale.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Introduction: 2.000 cuvinte. Literature Review: 3.500 cuvinte, 4 sec\\u021Biuni, 40-50 referin\\u021Be.' } ] }, { title:'Framework + Methodology + Results', priority:'high', dataType:'sectionProgress', dataKey:'sections', detail:'Framework: ecua\\u021Bia formalizat\\u0103. Methodology: 4 studii detaliate. Results: tabele, grafice, coeficien\\u021Bi.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Framework: 2.500 cuvinte. Methodology: 3.000 cuvinte. Results: 4.000 cuvinte, 8-12 tabele/figuri.' } ] }, { title:'Discussion + Conclusion + AI Declaration', priority:'high', dataType:'sectionProgress', dataKey:'sections', detail:'Interpretare, contribu\\u021Bii, limit\\u0103ri, direc\\u021Bii viitoare, declara\\u021Bia AI.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Discussion: 2.500 cuvinte. Conclusion: 800 cuvinte.\\nAI Declaration + Citare White Paper + Citare rifcmarketing.com ca implementare practitioner.' } ] }, { title:'Citarea site-ului \\u00EEn paper', priority:'medium', hasSite:true, dataType:'notes', dataKey:'citationNotes', detail:'Site-ul rifcmarketing.com se citeaz\\u0103 ca <strong>implementare practitioner a framework-ului</strong>, nu ca surs\\u0103 academic\\u0103.', deliverables:[ { type:'site', label:'ELEMENTE CITATE DIN SITE', text:'\\u2705 rifcmarketing.com \\u2014 practitioner implementation\\n\\u2705 /audit \\u2014 AI diagnostic tool (dac\\u0103 includem Study 5)\\n\\u2705 /calculator \\u2014 interactive scoring tool\\n\\u2705 White Paper \\u2014 gray literature reference' }, { type:'output', label:'LIVRABIL', text:'References section: site-ul apare ca 2-3 referin\\u021Be separate (website, White Paper, AI tool). Demonstreaz\\u0103 c\\u0103 framework-ul nu e doar teorie \\u2014 e implementat \\u0219i utilizat.' } ] }, { title:'Review intern + Formatare + Submisie', priority:'medium', dataType:'submission', dataKey:'submission', detail:'Lector USM/UTM verific\\u0103 metodologia. Formatare APA 7th. Cover letter personalizat.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'Contact lector USM/UTM. Download Author Guidelines jurnal \\u021Bint\\u0103.' }, { type:'output', label:'LIVRABIL', text:'Paper final ~12.000-15.000 cuvinte, 80-100 referin\\u021Be, APA 7th. Cover letter. Submisie.' }, { type:'standard', label:'JURNALE \\u021AINT\\u0102', text:'1. Journal of Business Research (IF ~10.5)\\n2. JAMS (IF ~15.8)\\n3. European Journal of Marketing (IF ~3.7)\\n4. Journal of Advertising (IF ~5.8)\\n5. Studia Universitatis Moldaviae (start regional)' } ] } ] }
@@ -642,6 +642,7 @@ function App() {
     else if (task.dataType === 'campaigns') inner = renderCampaignsWS(stageId, data);
     else if (task.dataType === 'interRater') inner = renderInterRaterWS(stageId, data);
     else if (task.dataType === 'aiAudit') inner = renderAiAuditWS(stageId, data);
+    else if (task.dataType === 'surveyResults') inner = renderSurveyResultsWS(stageId, data);
     else if (task.dataType === 'kvForm') inner = renderKvFormWS(stageId, task.dataKey, data);
     else if (task.dataType === 'modelComparison') inner = renderModelCompWS(stageId, data);
     else if (task.dataType === 'sectionProgress') inner = renderSectionProgressWS(stageId, data);
@@ -657,6 +658,7 @@ function App() {
     if (type === 'modelComparison') { var mc=data.modelComparison; if(!mc) return 0; return (mc.modelA&&mc.modelA.r2!==''?1:0)+(mc.modelB&&mc.modelB.r2!==''?1:0)+(mc.modelC&&mc.modelC.r2!==''?1:0); }
     if (type === 'sectionProgress') { var ss=data.sections; if(!ss) return 0; var c=0; Object.keys(ss).forEach(function(k){if(ss[k].words!=='') c++;}); return c; }
     if (type === 'submission') { return data.submission&&data.submission.journal!=='' ? 1 : 0; }
+    if (type === 'surveyResults') { return _surveyCache ? (_surveyCache.totalRespondents || 0) : 0; }
     if (Array.isArray(data[key])) return data[key].length;
     return 0;
   }
@@ -792,6 +794,106 @@ function App() {
       html += '<tr><td>'+((it.campaignName)||'-')+'</td><td>'+((it.aiR)||'-')+'</td><td>'+((it.aiI)||'-')+'</td><td>'+((it.aiF)||'-')+'</td><td><span class="dw-computed">'+c+'</span></td><td class="dw-row-actions"><button class="dw-btn xs" data-action="editAiAudit" data-stage="'+stageId+'" data-idx="'+idx+'">\\u270E</button> <button class="dw-btn xs danger" data-action="delAiAudit" data-stage="'+stageId+'" data-idx="'+idx+'">\\u2715</button></td></tr>';
     });
     html += '</tbody></table>';
+    return html;
+  }
+
+  /* ═══ SURVEY RESULTS WORKSPACE (S3 — Consumator + AI) ═══ */
+  var _surveyCache = null;
+  var _surveyLoading = false;
+  var _surveyError = '';
+
+  function fetchSurveyResults() {
+    if (_surveyLoading) return;
+    _surveyLoading = true;
+    _surveyError = '';
+    fetch('/api/survey/results')
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(d) { _surveyCache = d; _surveyLoading = false; render(); })
+      .catch(function(e) { _surveyError = e.message; _surveyLoading = false; render(); });
+  }
+
+  function renderSurveyResultsWS(stageId, data) {
+    var html = '<div class="dw-header"><div class="dw-title">SONDAJ CONSUMATOR + AI COMPARISON</div><div style="display:flex;gap:6px;"><button class="dw-btn primary" data-action="refreshSurvey">\\u21BB Actualizeaz\\u0103</button><button class="dw-btn" data-action="copySurveyLink">\\uD83D\\uDD17 Copiaz\\u0103 Link Sondaj</button><button class="dw-btn success" data-action="addAiEvaluation" data-stage="'+stageId+'">+ Adaug\\u0103 Scor AI</button></div></div>';
+
+    if (_surveyLoading) return html + '<div class="dw-empty"><div class="dw-empty-icon">\\u23F3</div>Se \\u00EEncarc\\u0103 datele...</div>';
+    if (_surveyError) return html + '<div class="dw-empty" style="color:var(--red);">Eroare: ' + _surveyError + '</div>';
+    if (!_surveyCache) {
+      html += '<div class="dw-empty"><div class="dw-empty-icon">\\uD83D\\uDCCA</div>Ap\\u0103sa\\u021Bi "Actualizeaz\\u0103" pentru a \\u00EEnc\\u0103rca datele din Supabase.</div>';
+      return html;
+    }
+
+    var sr = _surveyCache;
+
+    /* Sec\\u021Biunea 1 \\u2014 Statistici */
+    html += '<div class="dw-summary"><div class="dw-sum-item">Responden\\u021Bi total: <strong>' + (sr.totalRespondents||0) + '</strong></div><div class="dw-sum-item">Completa\\u021Bi: <strong>' + (sr.completedRespondents||0) + '</strong></div><div class="dw-sum-item">Rat\\u0103 completare: <strong>' + (sr.completionRate||0) + '%</strong></div><div class="dw-sum-item">R\\u0103spunsuri totale: <strong>' + (sr.totalResponses||0) + '</strong></div></div>';
+
+    /* Sec\\u021Biunea 2 \\u2014 Tabel stimuli */
+    var stimuli = sr.stimuliResults || [];
+    if (stimuli.length > 0) {
+      html += '<h4 style="font-size:12px;color:var(--text3);letter-spacing:1px;margin:16px 0 8px;text-transform:uppercase;">Rezultate per Stimulus (Media Uman\\u0103)</h4>';
+      html += '<div style="overflow-x:auto;"><table class="dw-table"><thead><tr><th>Stimulus</th><th>Tip</th><th>N</th><th>Avg R</th><th>Avg I</th><th>Avg F</th><th>Avg C</th><th>SD C</th></tr></thead><tbody>';
+      stimuli.forEach(function(s) {
+        html += '<tr><td>' + (s.name||'-') + '</td><td>' + (s.type||'-') + '</td><td>' + (s.response_count||0) + '</td><td>' + (s.avg_r||'-') + '</td><td>' + (s.avg_i||'-') + '</td><td>' + (s.avg_f||'-') + '</td><td><span class="dw-computed">' + (s.avg_c||0) + '</span></td><td>' + (s.sd_c||'-') + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    }
+
+    /* Sec\\u021Biunea 3 \\u2014 Scoruri AI (CRUD manual) */
+    var aiEvals = sr.aiEvaluations || [];
+    html += '<h4 style="font-size:12px;color:var(--text3);letter-spacing:1px;margin:16px 0 8px;text-transform:uppercase;">Scoruri AI Manuale (' + aiEvals.length + ')</h4>';
+    if (aiEvals.length > 0) {
+      html += '<div style="overflow-x:auto;"><table class="dw-table"><thead><tr><th>Stimulus</th><th>Model AI</th><th>R</th><th>I</th><th>F</th><th>C</th><th>Versiune Prompt</th><th>Data</th></tr></thead><tbody>';
+      aiEvals.forEach(function(ev) {
+        var stimName = '-';
+        stimuli.forEach(function(s) { if (s.id === ev.stimulus_id) stimName = s.name; });
+        html += '<tr><td>' + stimName + '</td><td style="font-weight:600;">' + (ev.model_name||'-') + '</td><td>' + (ev.r_score||'-') + '</td><td>' + (ev.i_score||'-') + '</td><td>' + (ev.f_score||'-') + '</td><td><span class="dw-computed">' + (ev.c_computed||0) + '</span></td><td>' + (ev.prompt_version||'v1') + '</td><td style="font-size:10px;">' + (ev.evaluated_at ? new Date(ev.evaluated_at).toLocaleDateString('ro-RO') : '-') + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+    } else {
+      html += '<div class="dw-empty" style="padding:12px;"><div class="dw-empty-icon">\\uD83E\\uDD16</div>Niciun scor AI ad\\u0103ugat. Apas\\u0103 "+ Adaug\\u0103 Scor AI" pentru a introduce scoruri manuale.</div>';
+    }
+
+    /* Sec\\u021Biunea 4 \\u2014 Compara\\u021Bie AI vs Human */
+    if (stimuli.length > 0 && aiEvals.length > 0) {
+      html += '<h4 style="font-size:12px;color:var(--text3);letter-spacing:1px;margin:16px 0 8px;text-transform:uppercase;">Compara\\u021Bie AI vs Human</h4>';
+      var models = {};
+      aiEvals.forEach(function(ev) { if (!models[ev.model_name]) models[ev.model_name] = []; models[ev.model_name].push(ev); });
+      html += '<div class="dw-model-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));">';
+      Object.keys(models).forEach(function(modelName) {
+        var evals = models[modelName];
+        var avgAiC = 0; evals.forEach(function(e) { avgAiC += parseFloat(e.c_computed)||0; }); avgAiC = evals.length > 0 ? Math.round(avgAiC/evals.length*100)/100 : 0;
+        var avgHumanC = 0; var hCount = 0; stimuli.forEach(function(s) { if (s.response_count > 0) { avgHumanC += s.avg_c; hCount++; } }); avgHumanC = hCount > 0 ? Math.round(avgHumanC/hCount*100)/100 : 0;
+        var diff = Math.round((avgAiC - avgHumanC)*100)/100;
+        html += '<div class="dw-model-card"><div class="mc-label">' + modelName + '</div><div class="mc-val" style="color:var(--blue);">' + avgAiC + '</div><div style="font-size:10px;color:var(--text3);">AI C mediu</div><div style="font-size:10px;margin-top:4px;color:var(--text3);">Human C: ' + avgHumanC + '</div><div style="font-size:11px;margin-top:4px;font-weight:600;color:' + (Math.abs(diff) < 5 ? 'var(--green)' : 'var(--amber)') + ';">\\u0394 = ' + diff + '</div></div>';
+      });
+      html += '</div>';
+
+      /* Corela\\u021Bii per model (Pearson simplu) */
+      html += '<h4 style="font-size:12px;color:var(--text3);letter-spacing:1px;margin:16px 0 8px;text-transform:uppercase;">Corela\\u021Bii Pearson (AI vs Human C)</h4>';
+      html += '<table class="dw-table" style="max-width:400px;"><thead><tr><th>Model</th><th>r (Pearson)</th><th>N stimuli</th></tr></thead><tbody>';
+      Object.keys(models).forEach(function(modelName) {
+        var evals = models[modelName];
+        var pairs = [];
+        evals.forEach(function(ev) {
+          stimuli.forEach(function(s) {
+            if (s.id === ev.stimulus_id && s.response_count > 0) {
+              pairs.push({ ai: parseFloat(ev.c_computed)||0, human: s.avg_c||0 });
+            }
+          });
+        });
+        var r = '-';
+        if (pairs.length >= 3) {
+          var n = pairs.length;
+          var sumX=0, sumY=0, sumXY=0, sumX2=0, sumY2=0;
+          pairs.forEach(function(p) { sumX+=p.ai; sumY+=p.human; sumXY+=p.ai*p.human; sumX2+=p.ai*p.ai; sumY2+=p.human*p.human; });
+          var denom = Math.sqrt((n*sumX2-sumX*sumX)*(n*sumY2-sumY*sumY));
+          r = denom > 0 ? ((n*sumXY - sumX*sumY)/denom).toFixed(3) : '0.000';
+        }
+        html += '<tr><td style="font-weight:600;">' + modelName + '</td><td style="font-family:JetBrains Mono,monospace;font-weight:700;color:' + (parseFloat(r) > 0.7 ? 'var(--green)' : parseFloat(r) > 0.4 ? 'var(--amber)' : 'var(--red)') + ';">' + r + '</td><td>' + pairs.length + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+
     return html;
   }
 
@@ -980,6 +1082,17 @@ function App() {
     aiAudit: [
       {key:'campaignName',label:'Campanie',type:'text'},
       {key:'aiR',label:'AI R',type:'text'},{key:'aiI',label:'AI I',type:'text'},{key:'aiF',label:'AI F',type:'text'}
+    ],
+    aiEvaluation: [
+      {key:'stimulusName',label:'Nume Stimulus',type:'text'},
+      {key:'modelName',label:'Model AI',type:'select',options:['claude-sonnet-4','claude-opus-4','gpt-4o','gpt-4.1','gemini-2.0-flash','gemini-2.5-pro','llama-3','mistral-large','deepseek-v3','altul']},
+      {key:'rScore',label:'R (0-10)',type:'text'},
+      {key:'iScore',label:'I (0-10)',type:'text'},
+      {key:'fScore',label:'F (0-10)',type:'text'},
+      {key:'promptVersion',label:'Versiune Prompt',type:'text',defaultVal:'v1'},
+      {key:'rJustification',label:'Justificare R',type:'textarea'},
+      {key:'iJustification',label:'Justificare I',type:'textarea'},
+      {key:'fJustification',label:'Justificare F',type:'textarea'}
     ]
   };
 
@@ -1172,6 +1285,46 @@ function App() {
         if (action === 'addAiAudit') addEntry(sid, 'aiAudit', 'AA', MODAL_FIELDS.aiAudit, 'Adaug\\u0103 Scor AI');
         if (action === 'editAiAudit') editEntry(sid, 'aiAudit', idx, MODAL_FIELDS.aiAudit, 'Editeaz\\u0103 Scor AI');
         if (action === 'delAiAudit') { var d=DataStore.load(sid); deleteEntry(sid, 'aiAudit', idx, (d.aiAudit[idx]||{}).campaignName || 'Scor AI'); }
+        /* ── SURVEY RESULTS ── */
+        if (action === 'refreshSurvey') fetchSurveyResults();
+        if (action === 'copySurveyLink') {
+          var surveyUrl = window.location.origin.replace('/articolstiintific','') + '/studiu';
+          if (navigator.clipboard) navigator.clipboard.writeText(surveyUrl);
+          else { var ta=document.createElement('textarea'); ta.value=surveyUrl; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+          var btn=el; btn.textContent='\\u2705 Copiat!'; setTimeout(function(){btn.textContent='\\uD83D\\uDD17 Copiaz\\u0103 Link Sondaj';},2000);
+        }
+        if (action === 'addAiEvaluation') {
+          showEntryModal('Adaug\\u0103 Scor AI Manual', MODAL_FIELDS.aiEvaluation, function(result) {
+            fetch('/api/survey/stimuli').then(function(r){return r.json();}).then(function(d) {
+              var stimuli = d.stimuli || [];
+              var matchStim = stimuli.find(function(s) { return s.name.toLowerCase().indexOf(result.stimulusName.toLowerCase()) >= 0; });
+              if (!matchStim) { alert('Stimulus negasit. Verific\\u0103 numele.'); return; }
+              /* Salv\\u0103m \\u00EEn Supabase via fetch direct (no admin route needed, use results endpoint as reference) */
+              /* For now store locally since we do NOT have admin API for ai_evaluations — store in localStorage as queue */
+              var localKey = 'rifc-ai-evals-queue';
+              var queue = []; try { queue = JSON.parse(localStorage.getItem(localKey) || '[]'); } catch(e) {}
+              queue.push({
+                stimulus_id: matchStim.id,
+                stimulus_name: matchStim.name,
+                model_name: result.modelName,
+                r_score: parseFloat(result.rScore) || 0,
+                i_score: parseFloat(result.iScore) || 0,
+                f_score: parseFloat(result.fScore) || 0,
+                c_computed: (parseFloat(result.rScore)||0) + (parseFloat(result.iScore)||0) * (parseFloat(result.fScore)||0),
+                prompt_version: result.promptVersion || 'v1',
+                justification: { r: result.rJustification, i: result.iJustification, f: result.fJustification },
+                evaluated_at: new Date().toISOString()
+              });
+              localStorage.setItem(localKey, JSON.stringify(queue));
+              /* Merge into cache for immediate display */
+              if (_surveyCache) {
+                if (!_surveyCache.aiEvaluations) _surveyCache.aiEvaluations = [];
+                _surveyCache.aiEvaluations.push(queue[queue.length-1]);
+              }
+              render();
+            });
+          });
+        }
         /* ── EXPORT CSV ── */
         if (action === 'exportCSV') exportCSV(sid, key);
       });
