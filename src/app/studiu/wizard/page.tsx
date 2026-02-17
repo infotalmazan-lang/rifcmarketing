@@ -54,15 +54,16 @@ function useIsMobile(breakpoint = 640): boolean {
 }
 
 // ── Sub-step definitions for profile section ───────────────
-// Steps: 0=welcome, 1=gender, 2=age, 3=location, 4=income, 5=education, 6=occupation,
-//        7=purchaseFreq, 8=channels, 9=onlineTime, 10=device, 11=psychographic,
-//        12..N=stimulus eval, N+1=thank you
+// Steps: 0=welcome, 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education, 7=occupation,
+//        8=purchaseFreq, 9=channels, 10=onlineTime, 11=device, 12=psychographic,
+//        13..N=stimulus eval, N+1=thank you
 
 const PROFILE_STEPS = [
   { id: "welcome", title: "Bine ai venit!" },
   { id: "gender", title: "Care este genul tau?" },
   { id: "age", title: "Care este varsta ta?" },
-  { id: "location", title: "Unde locuiesti?" },
+  { id: "country", title: "In ce tara locuiesti?" },
+  { id: "urbanRural", title: "Unde locuiesti?" },
   { id: "income", title: "Care este venitul tau lunar net?" },
   { id: "education", title: "Ce nivel de educatie ai?" },
   { id: "occupation", title: "Cu ce te ocupi?" },
@@ -71,6 +72,26 @@ const PROFILE_STEPS = [
   { id: "onlineTime", title: "Cat timp petreci online zilnic?" },
   { id: "device", title: "Ce dispozitiv folosesti cel mai des?" },
   { id: "psychographic", title: "Profil Psihografic" },
+];
+
+// ── Countries list for autocomplete ──────────────────────
+const COUNTRIES = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Argentina", "Armenia",
+  "Australia", "Austria", "Azerbaijan", "Bahrain", "Bangladesh", "Belarus", "Belgium",
+  "Bolivia", "Bosnia si Hertegovina", "Brazilia", "Bulgaria", "Canada", "Chile", "China",
+  "Cipru", "Colombia", "Congo", "Corea de Sud", "Costa Rica", "Croatia", "Cuba", "Cehia",
+  "Danemarca", "Ecuador", "Egipt", "Elvetia", "Emiratele Arabe Unite", "Estonia",
+  "Etiopia", "Filipine", "Finlanda", "Franta", "Georgia", "Germania", "Grecia",
+  "Guatemala", "Haiti", "Honduras", "India", "Indonezia", "Irak", "Iran", "Irlanda",
+  "Islanda", "Israel", "Italia", "Jamaica", "Japonia", "Iordania", "Kazakhstan",
+  "Kenya", "Kuweit", "Letonia", "Liban", "Libia", "Lituania", "Luxemburg",
+  "Macedonia de Nord", "Malaezia", "Malta", "Maroc", "Mexic", "Mongolia",
+  "Muntenegru", "Nepal", "Nigeria", "Norvegia", "Noua Zeelanda", "Olanda",
+  "Pakistan", "Panama", "Paraguay", "Peru", "Polonia", "Portugalia", "Qatar",
+  "Rusia", "Serbia", "Singapore", "Slovacia", "Slovenia", "Spania", "Sri Lanka",
+  "Statele Unite", "Suedia", "Siria", "Taiwan", "Tanzania", "Thailanda",
+  "Tunisia", "Turcia", "Ucraina", "Ungaria", "Uruguay", "Uzbekistan", "Venezuela",
+  "Vietnam",
 ];
 
 // ── Suspense wrapper (useSearchParams needs it) ──────────
@@ -99,11 +120,15 @@ function StudiuWizardInner() {
   const [demographics, setDemographics] = useState({
     ageRange: "",
     gender: "",
+    country: "",
     locationType: "",
     incomeRange: "",
     education: "",
     occupation: "",
   });
+  // Country autocomplete state
+  const [countrySearch, setCountrySearch] = useState("");
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [behavioral, setBehavioral] = useState({
     purchaseFrequency: "",
     preferredChannels: [] as string[],
@@ -237,26 +262,28 @@ function StudiuWizardInner() {
   }, [session]);
 
   // ── Auto-advance for single-select profile steps ───────
+  // Steps: 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education, 7=occupation(manual),
+  //        8=purchaseFreq, 9=channels(manual), 10=onlineTime, 11=device, 12=psychographic(manual)
   const autoAdvanceProfile = useCallback((field: string, value: string, stepOffset: number) => {
-    if (stepOffset >= 1 && stepOffset <= 5) {
-      // demographics steps (not step 6 = occupation, which is manual)
-      const fieldMap: Record<number, string> = { 1: "gender", 2: "ageRange", 3: "locationType", 4: "incomeRange", 5: "education" };
-      const key = fieldMap[stepOffset];
-      if (key) {
-        setDemographics(prev => ({ ...prev, [key]: value }));
-      }
-    } else if (stepOffset >= 7 && stepOffset <= 10) {
-      const fieldMap: Record<number, string> = { 7: "purchaseFrequency", 9: "dailyOnlineTime", 10: "primaryDevice" };
-      const key = fieldMap[stepOffset];
-      if (key) {
-        const updatedBehavioral = { ...behavioral, [key]: value };
-        setBehavioral(updatedBehavioral);
-        // At step 10 (device = last behavioral), save behavioral to API
-        if (stepOffset === 10) {
-          saveProfileToApi("behavioral", updatedBehavioral);
-        }
+    // Demographics auto-advance steps: 1=gender, 2=ageRange, 3=country, 4=locationType, 5=incomeRange, 6=education
+    const demoFieldMap: Record<number, string> = { 1: "gender", 2: "ageRange", 3: "country", 4: "locationType", 5: "incomeRange", 6: "education" };
+    const demoKey = demoFieldMap[stepOffset];
+    if (demoKey) {
+      setDemographics(prev => ({ ...prev, [demoKey]: value }));
+    }
+
+    // Behavioral auto-advance steps: 8=purchaseFrequency, 10=dailyOnlineTime, 11=primaryDevice
+    const behFieldMap: Record<number, string> = { 8: "purchaseFrequency", 10: "dailyOnlineTime", 11: "primaryDevice" };
+    const behKey = behFieldMap[stepOffset];
+    if (behKey) {
+      const updatedBehavioral = { ...behavioral, [behKey]: value };
+      setBehavioral(updatedBehavioral);
+      // At step 11 (device = last behavioral), save behavioral to API
+      if (stepOffset === 11) {
+        saveProfileToApi("behavioral", updatedBehavioral);
       }
     }
+
     // Auto-advance after brief delay
     setTimeout(() => advanceTo(step + 1), 350);
   }, [step, advanceTo, behavioral, saveProfileToApi]);
@@ -271,15 +298,15 @@ function StudiuWizardInner() {
     let data: Record<string, unknown> = {};
 
     // Map profile completion to API save
-    if (step === 6) {
+    if (step === 7) {
       // After occupation (last demographic field), save demographics
       type = "demographic";
       data = demographics;
-    } else if (step === 10) {
-      // After device (last behavioral field), save behavioral
+    } else if (step === 11) {
+      // After device (last behavioral field), save behavioral — handled by autoAdvanceProfile
       type = "behavioral";
       data = behavioral;
-    } else if (step === 11) {
+    } else if (step === 12) {
       // Psychographic
       type = "psychographic";
       data = psychographic;
@@ -873,16 +900,114 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 3: Location ═══ */}
+          {/* ═══ Step 3: Country ═══ */}
           {step === 3 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Unde locuiesti?</h2>
+              <h2 style={S.questionTitle}>In ce tara locuiesti?</h2>
               <div style={S.selectHint}>SELECTEAZA UNA</div>
 
-              <OptionCard label="Urban (oras)" value="urban" selected={demographics.locationType === "urban"} onSelect={(v) => autoAdvanceProfile("locationType", v, 3)} />
-              <OptionCard label="Rural (sat, comuna)" value="rural" selected={demographics.locationType === "rural"} onSelect={(v) => autoAdvanceProfile("locationType", v, 3)} />
+              <OptionCard label="Moldova" value="Moldova" selected={demographics.country === "Moldova"} onSelect={(v) => autoAdvanceProfile("country", v, 3)} />
+              <OptionCard label="Romania" value="Romania" selected={demographics.country === "Romania"} onSelect={(v) => autoAdvanceProfile("country", v, 3)} />
+
+              {/* Altele — with autocomplete */}
+              <div style={{ position: "relative", marginBottom: 8 }}>
+                <div
+                  style={{
+                    ...S.optionCard,
+                    ...(demographics.country && demographics.country !== "Moldova" && demographics.country !== "Romania" ? S.optionCardSelected : {}),
+                    flexDirection: "column" as const,
+                    alignItems: "stretch",
+                    gap: 8,
+                  }}
+                  onClick={() => {
+                    if (!countryDropdownOpen && demographics.country !== "Moldova" && demographics.country !== "Romania") {
+                      setCountryDropdownOpen(true);
+                    }
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{
+                      ...S.optionRadio,
+                      ...(demographics.country && demographics.country !== "Moldova" && demographics.country !== "Romania" ? S.optionRadioSelected : {}),
+                    }}>
+                      {demographics.country && demographics.country !== "Moldova" && demographics.country !== "Romania" && <div style={S.optionDot} />}
+                    </div>
+                    <span>
+                      {demographics.country && demographics.country !== "Moldova" && demographics.country !== "Romania"
+                        ? `Alta tara: ${demographics.country}`
+                        : "Alta tara..."}
+                    </span>
+                  </div>
+
+                  {/* Autocomplete input — always show when this option is interacted with */}
+                  {(countryDropdownOpen || (demographics.country && demographics.country !== "Moldova" && demographics.country !== "Romania")) && (
+                    <div style={{ paddingLeft: 34 }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        style={{
+                          ...S.input,
+                          fontSize: 14,
+                          padding: "10px 12px",
+                        }}
+                        placeholder="Scrie numele tarii..."
+                        value={countrySearch}
+                        autoFocus
+                        onChange={(e) => {
+                          setCountrySearch(e.target.value);
+                          setCountryDropdownOpen(true);
+                        }}
+                        onFocus={() => setCountryDropdownOpen(true)}
+                      />
+                      {countryDropdownOpen && countrySearch.length >= 1 && (
+                        <div style={{
+                          maxHeight: 180,
+                          overflowY: "auto",
+                          border: "1.5px solid #e5e1d9",
+                          borderTop: "none",
+                          borderRadius: "0 0 10px 10px",
+                          background: "#fff",
+                        }}>
+                          {COUNTRIES.filter(c =>
+                            c.toLowerCase().includes(countrySearch.toLowerCase())
+                          ).slice(0, 8).map(c => (
+                            <div
+                              key={c}
+                              style={{
+                                padding: "10px 14px",
+                                fontSize: 14,
+                                cursor: "pointer",
+                                borderBottom: "1px solid #f0ece4",
+                                color: textDark,
+                                transition: "background 0.1s",
+                              }}
+                              onMouseEnter={(e) => (e.currentTarget.style.background = "#f5f0e8")}
+                              onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
+                              onClick={() => {
+                                setDemographics(prev => ({ ...prev, country: c }));
+                                setCountrySearch(c);
+                                setCountryDropdownOpen(false);
+                                // Auto-advance after selection
+                                setTimeout(() => advanceTo(step + 1), 350);
+                              }}
+                            >
+                              {c}
+                            </div>
+                          ))}
+                          {COUNTRIES.filter(c =>
+                            c.toLowerCase().includes(countrySearch.toLowerCase())
+                          ).length === 0 && (
+                            <div style={{ padding: "10px 14px", fontSize: 13, color: textMuted }}>
+                              Nicio tara gasita
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div style={S.nav}>
                 <button style={S.btnBack} onClick={goBack}>Inapoi</button>
@@ -891,8 +1016,26 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 4: Income ═══ */}
+          {/* ═══ Step 4: Urban / Rural ═══ */}
           {step === 4 && (
+            <>
+              {renderDashes()}
+              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>Unde locuiesti?</h2>
+              <div style={S.selectHint}>SELECTEAZA UNA</div>
+
+              <OptionCard label="Urban (oras)" value="urban" selected={demographics.locationType === "urban"} onSelect={(v) => autoAdvanceProfile("locationType", v, 4)} />
+              <OptionCard label="Rural (sat, comuna)" value="rural" selected={demographics.locationType === "rural"} onSelect={(v) => autoAdvanceProfile("locationType", v, 4)} />
+
+              <div style={S.nav}>
+                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <div />
+              </div>
+            </>
+          )}
+
+          {/* ═══ Step 5: Income ═══ */}
+          {step === 5 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -905,7 +1048,7 @@ function StudiuWizardInner() {
                 { label: "1.000 - 2.000 EUR", value: "1000_2000" },
                 { label: "Peste 2.000 EUR", value: "peste_2000" },
               ].map(opt => (
-                <OptionCard key={opt.value} {...opt} selected={demographics.incomeRange === opt.value} onSelect={(v) => autoAdvanceProfile("incomeRange", v, 4)} />
+                <OptionCard key={opt.value} {...opt} selected={demographics.incomeRange === opt.value} onSelect={(v) => autoAdvanceProfile("incomeRange", v, 5)} />
               ))}
 
               <div style={S.nav}>
@@ -915,8 +1058,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 5: Education ═══ */}
-          {step === 5 && (
+          {/* ═══ Step 6: Education ═══ */}
+          {step === 6 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -930,7 +1073,7 @@ function StudiuWizardInner() {
                 { label: "Doctorat", value: "doctorat" },
                 { label: "Altul", value: "altul" },
               ].map(opt => (
-                <OptionCard key={opt.value} {...opt} selected={demographics.education === opt.value} onSelect={(v) => autoAdvanceProfile("education", v, 5)} />
+                <OptionCard key={opt.value} {...opt} selected={demographics.education === opt.value} onSelect={(v) => autoAdvanceProfile("education", v, 6)} />
               ))}
 
               <div style={S.nav}>
@@ -940,8 +1083,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 6: Occupation (text input — needs manual Next) ═══ */}
-          {step === 6 && (
+          {/* ═══ Step 7: Occupation (text input — needs manual Next + saves demographics) ═══ */}
+          {step === 7 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -969,8 +1112,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 7: Purchase Frequency ═══ */}
-          {step === 7 && (
+          {/* ═══ Step 8: Purchase Frequency ═══ */}
+          {step === 8 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -983,7 +1126,7 @@ function StudiuWizardInner() {
                 { label: "Lunar", value: "lunar" },
                 { label: "Rar (cateva ori pe an)", value: "rar" },
               ].map(opt => (
-                <OptionCard key={opt.value} {...opt} selected={behavioral.purchaseFrequency === opt.value} onSelect={(v) => autoAdvanceProfile("purchaseFrequency", v, 7)} />
+                <OptionCard key={opt.value} {...opt} selected={behavioral.purchaseFrequency === opt.value} onSelect={(v) => autoAdvanceProfile("purchaseFrequency", v, 8)} />
               ))}
 
               <div style={S.nav}>
@@ -993,8 +1136,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 8: Channels (multi-select — needs manual Next) ═══ */}
-          {step === 8 && (
+          {/* ═══ Step 9: Channels (multi-select — needs manual Next) ═══ */}
+          {step === 9 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -1036,8 +1179,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 9: Online Time ═══ */}
-          {step === 9 && (
+          {/* ═══ Step 10: Online Time ═══ */}
+          {step === 10 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -1050,7 +1193,7 @@ function StudiuWizardInner() {
                 { label: "3-5 ore", value: "3_5h" },
                 { label: "Peste 5 ore", value: "peste_5h" },
               ].map(opt => (
-                <OptionCard key={opt.value} {...opt} selected={behavioral.dailyOnlineTime === opt.value} onSelect={(v) => autoAdvanceProfile("dailyOnlineTime", v, 9)} />
+                <OptionCard key={opt.value} {...opt} selected={behavioral.dailyOnlineTime === opt.value} onSelect={(v) => autoAdvanceProfile("dailyOnlineTime", v, 10)} />
               ))}
 
               <div style={S.nav}>
@@ -1060,8 +1203,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 10: Device ═══ */}
-          {step === 10 && (
+          {/* ═══ Step 11: Device ═══ */}
+          {step === 11 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -1074,7 +1217,7 @@ function StudiuWizardInner() {
                 { label: "Tableta", value: "tableta" },
               ].map(opt => (
                 <OptionCard key={opt.value} {...opt} selected={behavioral.primaryDevice === opt.value} onSelect={(v) => {
-                  autoAdvanceProfile("primaryDevice", v, 10);
+                  autoAdvanceProfile("primaryDevice", v, 11);
                 }} />
               ))}
 
@@ -1085,8 +1228,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 11: Psychographic (Likert — needs manual Next) ═══ */}
-          {step === 11 && (
+          {/* ═══ Step 12: Psychographic (Likert — needs manual Next) ═══ */}
+          {step === 12 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
