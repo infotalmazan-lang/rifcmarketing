@@ -54,9 +54,9 @@ function useIsMobile(breakpoint = 640): boolean {
 }
 
 // ── Sub-step definitions for profile section ───────────────
-// Steps: 0=welcome, 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education, 7=occupation,
-//        8=purchaseFreq, 9=channels, 10=onlineTime, 11=device, 12=psychographic,
-//        13..N=stimulus eval, N+1=thank you
+// Steps: 0=welcome, 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education,
+//        7=purchaseFreq, 8=channels, 9=onlineTime, 10=device, 11=psychographic,
+//        12..N=stimulus eval, N+1=thank you
 
 const PROFILE_STEPS = [
   { id: "welcome", title: "Bine ai venit!" },
@@ -66,7 +66,6 @@ const PROFILE_STEPS = [
   { id: "urbanRural", title: "Unde locuiesti?" },
   { id: "income", title: "Care este venitul tau lunar net?" },
   { id: "education", title: "Ce nivel de educatie ai?" },
-  { id: "occupation", title: "Cu ce te ocupi?" },
   { id: "purchaseFreq", title: "Cat de des cumperi online?" },
   { id: "channels", title: "Ce canale media preferi?" },
   { id: "onlineTime", title: "Cat timp petreci online zilnic?" },
@@ -124,7 +123,6 @@ function StudiuWizardInner() {
     locationType: "",
     incomeRange: "",
     education: "",
-    occupation: "",
   });
   // Country autocomplete state
   const [countrySearch, setCountrySearch] = useState("");
@@ -262,31 +260,36 @@ function StudiuWizardInner() {
   }, [session]);
 
   // ── Auto-advance for single-select profile steps ───────
-  // Steps: 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education, 7=occupation(manual),
-  //        8=purchaseFreq, 9=channels(manual), 10=onlineTime, 11=device, 12=psychographic(manual)
+  // Steps: 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education,
+  //        7=purchaseFreq, 8=channels(manual), 9=onlineTime, 10=device, 11=psychographic(manual)
   const autoAdvanceProfile = useCallback((field: string, value: string, stepOffset: number) => {
     // Demographics auto-advance steps: 1=gender, 2=ageRange, 3=country, 4=locationType, 5=incomeRange, 6=education
     const demoFieldMap: Record<number, string> = { 1: "gender", 2: "ageRange", 3: "country", 4: "locationType", 5: "incomeRange", 6: "education" };
     const demoKey = demoFieldMap[stepOffset];
     if (demoKey) {
-      setDemographics(prev => ({ ...prev, [demoKey]: value }));
+      const updatedDemographics = { ...demographics, [demoKey]: value };
+      setDemographics(updatedDemographics);
+      // At step 6 (education = last demographic), save demographics to API
+      if (stepOffset === 6) {
+        saveProfileToApi("demographic", updatedDemographics);
+      }
     }
 
-    // Behavioral auto-advance steps: 8=purchaseFrequency, 10=dailyOnlineTime, 11=primaryDevice
-    const behFieldMap: Record<number, string> = { 8: "purchaseFrequency", 10: "dailyOnlineTime", 11: "primaryDevice" };
+    // Behavioral auto-advance steps: 7=purchaseFrequency, 9=dailyOnlineTime, 10=primaryDevice
+    const behFieldMap: Record<number, string> = { 7: "purchaseFrequency", 9: "dailyOnlineTime", 10: "primaryDevice" };
     const behKey = behFieldMap[stepOffset];
     if (behKey) {
       const updatedBehavioral = { ...behavioral, [behKey]: value };
       setBehavioral(updatedBehavioral);
-      // At step 11 (device = last behavioral), save behavioral to API
-      if (stepOffset === 11) {
+      // At step 10 (device = last behavioral), save behavioral to API
+      if (stepOffset === 10) {
         saveProfileToApi("behavioral", updatedBehavioral);
       }
     }
 
     // Auto-advance after brief delay
     setTimeout(() => advanceTo(step + 1), 350);
-  }, [step, advanceTo, behavioral, saveProfileToApi]);
+  }, [step, advanceTo, demographics, behavioral, saveProfileToApi]);
 
   // ── Save & advance step (for steps that need API save) ──
   const saveAndNext = useCallback(async () => {
@@ -298,15 +301,9 @@ function StudiuWizardInner() {
     let data: Record<string, unknown> = {};
 
     // Map profile completion to API save
-    if (step === 7) {
-      // After occupation (last demographic field), save demographics
-      type = "demographic";
-      data = demographics;
-    } else if (step === 11) {
-      // After device (last behavioral field), save behavioral — handled by autoAdvanceProfile
-      type = "behavioral";
-      data = behavioral;
-    } else if (step === 12) {
+    // Demographics saved by autoAdvanceProfile at step 6 (education)
+    // Behavioral saved by autoAdvanceProfile at step 10 (device)
+    if (step === 11) {
       // Psychographic
       type = "psychographic";
       data = psychographic;
@@ -1083,37 +1080,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 7: Occupation (text input — needs manual Next + saves demographics) ═══ */}
+          {/* ═══ Step 7: Purchase Frequency ═══ */}
           {step === 7 && (
-            <>
-              {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Cu ce te ocupi?</h2>
-
-              <input
-                type="text"
-                style={S.input}
-                placeholder="Ex: Manager Marketing, Student, Antreprenor..."
-                value={demographics.occupation}
-                onChange={(e) => setDemographics({ ...demographics, occupation: e.target.value })}
-                autoFocus
-              />
-
-              <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
-                <button
-                  style={{ ...S.btnNext, opacity: saving ? 0.6 : 1 }}
-                  onClick={saveAndNext}
-                  disabled={saving}
-                >
-                  {saving ? "..." : "Urmatorul"} <span style={{ fontSize: 18 }}>&rarr;</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* ═══ Step 8: Purchase Frequency ═══ */}
-          {step === 8 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -1126,7 +1094,7 @@ function StudiuWizardInner() {
                 { label: "Lunar", value: "lunar" },
                 { label: "Rar (cateva ori pe an)", value: "rar" },
               ].map(opt => (
-                <OptionCard key={opt.value} {...opt} selected={behavioral.purchaseFrequency === opt.value} onSelect={(v) => autoAdvanceProfile("purchaseFrequency", v, 8)} />
+                <OptionCard key={opt.value} {...opt} selected={behavioral.purchaseFrequency === opt.value} onSelect={(v) => autoAdvanceProfile("purchaseFrequency", v, 7)} />
               ))}
 
               <div style={S.nav}>
@@ -1136,8 +1104,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 9: Channels (multi-select — needs manual Next) ═══ */}
-          {step === 9 && (
+          {/* ═══ Step 8: Channels (multi-select — needs manual Next) ═══ */}
+          {step === 8 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -1179,8 +1147,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 10: Online Time ═══ */}
-          {step === 10 && (
+          {/* ═══ Step 9: Online Time ═══ */}
+          {step === 9 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -1193,7 +1161,7 @@ function StudiuWizardInner() {
                 { label: "3-5 ore", value: "3_5h" },
                 { label: "Peste 5 ore", value: "peste_5h" },
               ].map(opt => (
-                <OptionCard key={opt.value} {...opt} selected={behavioral.dailyOnlineTime === opt.value} onSelect={(v) => autoAdvanceProfile("dailyOnlineTime", v, 10)} />
+                <OptionCard key={opt.value} {...opt} selected={behavioral.dailyOnlineTime === opt.value} onSelect={(v) => autoAdvanceProfile("dailyOnlineTime", v, 9)} />
               ))}
 
               <div style={S.nav}>
@@ -1203,8 +1171,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 11: Device ═══ */}
-          {step === 11 && (
+          {/* ═══ Step 10: Device ═══ */}
+          {step === 10 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
@@ -1217,7 +1185,7 @@ function StudiuWizardInner() {
                 { label: "Tableta", value: "tableta" },
               ].map(opt => (
                 <OptionCard key={opt.value} {...opt} selected={behavioral.primaryDevice === opt.value} onSelect={(v) => {
-                  autoAdvanceProfile("primaryDevice", v, 11);
+                  autoAdvanceProfile("primaryDevice", v, 10);
                 }} />
               ))}
 
@@ -1228,8 +1196,8 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 12: Psychographic (Likert — needs manual Next) ═══ */}
-          {step === 12 && (
+          {/* ═══ Step 11: Psychographic (Likert — needs manual Next) ═══ */}
+          {step === 11 && (
             <>
               {renderDashes()}
               <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
