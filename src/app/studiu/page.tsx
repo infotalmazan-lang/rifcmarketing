@@ -371,27 +371,42 @@ export default function StudiuAdminPage() {
             {loading && <p style={{ textAlign: "center", color: "#6B7280", padding: 40 }}>Se incarca...</p>}
             {error && <p style={{ textAlign: "center", color: "#DC2626", padding: 20 }}>{error}</p>}
 
-            {/* Categories list */}
-            {!loading &&
-              categories
-                .sort((a, b) => a.display_order - b.display_order)
-                .map((cat) => {
-                  const catStimuli = getStimuliForType(cat.type);
-                  const isExpanded = expandedCat === cat.id;
-                  const isEditing = editingCatId === cat.id;
-                  const maxMat = cat.max_materials;
+            {/* Categories gallery */}
+            {!loading && (
+              <div style={S.galleryGrid}>
+                {categories
+                  .sort((a, b) => a.display_order - b.display_order)
+                  .map((cat, catIdx) => {
+                    const catStimuli = getStimuliForType(cat.type);
+                    const isExpanded = expandedCat === cat.id;
+                    const isEditing = editingCatId === cat.id;
+                    const maxMat = cat.max_materials;
 
-                  return (
-                    <div key={cat.id} style={S.catCard}>
-                      {/* Category row */}
-                      <div style={S.catRow}>
-                        <div style={S.catDrag}>
-                          <GripVertical size={16} style={{ color: "#d1d5db" }} />
+                    return (
+                      <div
+                        key={cat.id}
+                        style={{
+                          ...S.galleryCard,
+                          borderTopColor: cat.color,
+                          opacity: cat.is_visible ? 1 : 0.5,
+                        }}
+                      >
+                        {/* Number badge */}
+                        <div style={{ ...S.galleryNum, background: cat.color }}>
+                          {String(catIdx + 1).padStart(2, "0")}
                         </div>
 
+                        {/* Visibility toggle */}
+                        <button
+                          style={S.galleryVisBtn}
+                          title={cat.is_visible ? "Ascunde" : "Arata"}
+                          onClick={() => toggleVisibility(cat)}
+                        >
+                          {cat.is_visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </button>
+
                         {isEditing ? (
-                          /* Edit mode */
-                          <div style={S.catEditRow}>
+                          <div style={S.galleryEditWrap}>
                             <input
                               type="color"
                               value={editCatColor}
@@ -402,7 +417,7 @@ export default function StudiuAdminPage() {
                               type="text"
                               value={editCatLabel}
                               onChange={(e) => setEditCatLabel(e.target.value)}
-                              style={S.catEditInput}
+                              style={{ ...S.catEditInput, fontSize: 13 }}
                               autoFocus
                             />
                             <button style={S.iconBtnSave} onClick={saveEditCategory} disabled={saving}>
@@ -413,307 +428,205 @@ export default function StudiuAdminPage() {
                             </button>
                           </div>
                         ) : (
-                          /* Display mode */
                           <>
-                            <span
-                              style={{
-                                ...S.catBadge,
-                                background: cat.color,
-                              }}
-                            >
-                              {cat.short_code}
-                            </span>
-                            <span style={S.catName}>{cat.label}</span>
-                            <span style={S.catCount}>
-                              {catStimuli.length}/{maxMat} materiale
-                            </span>
-
-                            {/* Action buttons */}
-                            <div style={S.catActions}>
-                              <button
-                                style={S.iconBtn}
-                                title={cat.is_visible ? "Ascunde" : "Arata"}
-                                onClick={() => toggleVisibility(cat)}
-                              >
-                                {cat.is_visible ? (
-                                  <Eye size={15} style={{ color: "#059669" }} />
-                                ) : (
-                                  <EyeOff size={15} style={{ color: "#9CA3AF" }} />
-                                )}
-                              </button>
-                              <button style={S.iconBtn} title="Muta sus" onClick={() => moveCategory(cat, "up")}>
-                                <ChevronUp size={15} />
-                              </button>
-                              <button style={S.iconBtn} title="Muta jos" onClick={() => moveCategory(cat, "down")}>
-                                <ChevronDown size={15} />
-                              </button>
-                              <button style={S.iconBtn} title="Editeaza" onClick={() => startEditCategory(cat)}>
-                                <Pencil size={14} />
-                              </button>
-                              <button style={S.iconBtnDanger} title="Sterge" onClick={() => deleteCategory(cat)}>
-                                <Trash2 size={14} />
-                              </button>
-                              <button
-                                style={S.iconBtn}
-                                title={isExpanded ? "Restringe" : "Expandeaza"}
-                                onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
-                              >
-                                {isExpanded ? (
-                                  <ChevronExpand size={16} style={{ transform: "rotate(180deg)" }} />
-                                ) : (
-                                  <ChevronRight size={16} />
-                                )}
-                              </button>
+                            {/* Badge + name */}
+                            <div style={S.galleryTop}>
+                              <span style={{ ...S.galleryBadge, background: cat.color }}>
+                                {cat.short_code}
+                              </span>
                             </div>
+                            <div style={S.galleryName}>{cat.label}</div>
+
+                            {/* Materials counter */}
+                            <div style={S.galleryCounter}>
+                              <div style={S.counterBar}>
+                                <div
+                                  style={{
+                                    ...S.counterFill,
+                                    width: `${(catStimuli.length / maxMat) * 100}%`,
+                                    background: cat.color,
+                                  }}
+                                />
+                              </div>
+                              <span style={S.counterText}>
+                                {catStimuli.length}/{maxMat} materiale
+                              </span>
+                            </div>
+
+                            {/* Action row */}
+                            <div style={S.galleryActions}>
+                              <button
+                                style={S.galleryEditBtn}
+                                onClick={() => startEditCategory(cat)}
+                              >
+                                <Pencil size={13} />
+                                <span>Editeaza</span>
+                              </button>
+                              <div style={{ display: "flex", gap: 2 }}>
+                                <button style={S.iconBtnSm} title="Muta sus" onClick={() => moveCategory(cat, "up")}>
+                                  <ChevronUp size={14} />
+                                </button>
+                                <button style={S.iconBtnSm} title="Muta jos" onClick={() => moveCategory(cat, "down")}>
+                                  <ChevronDown size={14} />
+                                </button>
+                                <button style={{ ...S.iconBtnSm, color: "#DC2626" }} title="Sterge" onClick={() => deleteCategory(cat)}>
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Expand materials */}
+                            <button
+                              style={{
+                                ...S.galleryExpandBtn,
+                                ...(isExpanded ? { background: "#f0fdf4", borderColor: "#bbf7d0", color: "#059669" } : {}),
+                              }}
+                              onClick={() => setExpandedCat(isExpanded ? null : cat.id)}
+                            >
+                              {isExpanded ? (
+                                <ChevronExpand size={14} style={{ transform: "rotate(180deg)" }} />
+                              ) : (
+                                <ChevronRight size={14} />
+                              )}
+                              <span>{isExpanded ? "Inchide" : `Vezi ${catStimuli.length} materiale`}</span>
+                            </button>
                           </>
                         )}
+
+                        {/* Expanded materials */}
+                        {isExpanded && (
+                          <div style={S.galleryMaterials}>
+                            {catStimuli.length === 0 && addingToType !== cat.type && (
+                              <p style={S.emptyMsg}>Niciun material. Adauga primul.</p>
+                            )}
+
+                            {catStimuli.map((stim, idx) => (
+                              <div key={stim.id}>
+                                {editingStimId === stim.id ? (
+                                  <div style={S.stimEditForm}>
+                                    <div style={S.stimEditHeader}>
+                                      <Pencil size={14} style={{ color: "#6B7280" }} />
+                                      <span style={S.stimEditTitle}>Editare Material</span>
+                                    </div>
+                                    <div style={S.stimEditGrid}>
+                                      <div style={S.formField}>
+                                        <label style={S.formLabel}>Nume</label>
+                                        <input style={S.formInput} value={editStimData.name || ""} onChange={(e) => setEditStimData({ ...editStimData, name: e.target.value })} />
+                                      </div>
+                                      <div style={S.formField}>
+                                        <label style={S.formLabel}>Industrie</label>
+                                        <input style={S.formInput} value={editStimData.industry || ""} onChange={(e) => setEditStimData({ ...editStimData, industry: e.target.value })} />
+                                      </div>
+                                      <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                        <label style={S.formLabel}>Descriere</label>
+                                        <textarea style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }} value={editStimData.description || ""} onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })} />
+                                      </div>
+                                      <div style={S.formField}>
+                                        <label style={S.formLabel}>URL Imagine</label>
+                                        <input style={S.formInput} value={editStimData.image_url || ""} onChange={(e) => setEditStimData({ ...editStimData, image_url: e.target.value })} placeholder="https://..." />
+                                      </div>
+                                      <div style={S.formField}>
+                                        <label style={S.formLabel}>URL Video</label>
+                                        <input style={S.formInput} value={editStimData.video_url || ""} onChange={(e) => setEditStimData({ ...editStimData, video_url: e.target.value })} placeholder="https://youtube.com/..." />
+                                      </div>
+                                      <div style={S.formField}>
+                                        <label style={S.formLabel}>URL PDF</label>
+                                        <input style={S.formInput} value={editStimData.pdf_url || ""} onChange={(e) => setEditStimData({ ...editStimData, pdf_url: e.target.value })} placeholder="https://..." />
+                                      </div>
+                                      <div style={S.formField}>
+                                        <label style={S.formLabel}>URL Site</label>
+                                        <input style={S.formInput} value={editStimData.site_url || ""} onChange={(e) => setEditStimData({ ...editStimData, site_url: e.target.value })} placeholder="https://..." />
+                                      </div>
+                                      <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                        <label style={S.formLabel}>Text Content</label>
+                                        <textarea style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }} value={editStimData.text_content || ""} onChange={(e) => setEditStimData({ ...editStimData, text_content: e.target.value })} />
+                                      </div>
+                                    </div>
+                                    <div style={S.stimEditActions}>
+                                      <button style={S.btnCancel} onClick={() => setEditingStimId(null)}>Anuleaza</button>
+                                      <button style={S.btnSave} onClick={saveEditStimulus} disabled={saving}>{saving ? "Se salveaza..." : "Salveaza"}</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div style={S.stimCard}>
+                                    <span style={S.stimIdx}>{idx + 1}.</span>
+                                    <span style={S.stimName}>{stim.name}</span>
+                                    {stim.industry && <span style={S.stimIndustry}>{stim.industry}</span>}
+                                    <div style={S.stimMediaIcons}>
+                                      {getMediaIcons(stim).map((m, i) => {
+                                        const MIcon = m.icon;
+                                        return <span key={i} title={m.label} style={S.mediaIcon}><MIcon size={13} /></span>;
+                                      })}
+                                    </div>
+                                    <div style={S.stimActions}>
+                                      <button style={S.iconBtn} title="Editeaza" onClick={() => startEditStimulus(stim)}><Pencil size={13} /></button>
+                                      <button style={S.iconBtnDanger} title="Sterge" onClick={() => deleteStimulus(stim)}><Trash2 size={13} /></button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+
+                            {addingToType === cat.type ? (
+                              <div style={S.stimEditForm}>
+                                <div style={S.stimEditHeader}>
+                                  <Plus size={14} style={{ color: "#059669" }} />
+                                  <span style={S.stimEditTitle}>Material nou</span>
+                                </div>
+                                <div style={S.stimEditGrid}>
+                                  <div style={S.formField}>
+                                    <label style={S.formLabel}>Nume *</label>
+                                    <input style={S.formInput} value={newStimData.name || ""} onChange={(e) => setNewStimData({ ...newStimData, name: e.target.value })} autoFocus placeholder="Ex: Maison Noir — FB Ad" />
+                                  </div>
+                                  <div style={S.formField}>
+                                    <label style={S.formLabel}>Industrie</label>
+                                    <input style={S.formInput} value={newStimData.industry || ""} onChange={(e) => setNewStimData({ ...newStimData, industry: e.target.value })} placeholder="Ex: Restaurant, SaaS" />
+                                  </div>
+                                  <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                    <label style={S.formLabel}>Descriere</label>
+                                    <textarea style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }} value={newStimData.description || ""} onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })} />
+                                  </div>
+                                  <div style={S.formField}>
+                                    <label style={S.formLabel}>URL Imagine</label>
+                                    <input style={S.formInput} value={newStimData.image_url || ""} onChange={(e) => setNewStimData({ ...newStimData, image_url: e.target.value })} placeholder="https://..." />
+                                  </div>
+                                  <div style={S.formField}>
+                                    <label style={S.formLabel}>URL Video</label>
+                                    <input style={S.formInput} value={newStimData.video_url || ""} onChange={(e) => setNewStimData({ ...newStimData, video_url: e.target.value })} placeholder="https://youtube.com/..." />
+                                  </div>
+                                  <div style={S.formField}>
+                                    <label style={S.formLabel}>URL PDF</label>
+                                    <input style={S.formInput} value={newStimData.pdf_url || ""} onChange={(e) => setNewStimData({ ...newStimData, pdf_url: e.target.value })} placeholder="https://..." />
+                                  </div>
+                                  <div style={S.formField}>
+                                    <label style={S.formLabel}>URL Site</label>
+                                    <input style={S.formInput} value={newStimData.site_url || ""} onChange={(e) => setNewStimData({ ...newStimData, site_url: e.target.value })} placeholder="https://..." />
+                                  </div>
+                                  <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
+                                    <label style={S.formLabel}>Text Content</label>
+                                    <textarea style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }} value={newStimData.text_content || ""} onChange={(e) => setNewStimData({ ...newStimData, text_content: e.target.value })} />
+                                  </div>
+                                </div>
+                                <div style={S.stimEditActions}>
+                                  <button style={S.btnCancel} onClick={() => { setAddingToType(null); setNewStimData({}); }}>Anuleaza</button>
+                                  <button style={{ ...S.btnSave, opacity: !newStimData.name ? 0.5 : 1 }} onClick={saveNewStimulus} disabled={saving || !newStimData.name}>{saving ? "Se salveaza..." : "Adauga"}</button>
+                                </div>
+                              </div>
+                            ) : (
+                              catStimuli.length < maxMat && (
+                                <button style={S.addStimBtn} onClick={() => startAddStimulus(cat.type)}>
+                                  <Plus size={14} />
+                                  <span>Adauga material</span>
+                                </button>
+                              )
+                            )}
+                          </div>
+                        )}
                       </div>
-
-                      {/* Expanded materials */}
-                      {isExpanded && (
-                        <div style={S.materialsWrap}>
-                          {catStimuli.length === 0 && addingToType !== cat.type && (
-                            <p style={S.emptyMsg}>
-                              Niciun material adaugat. Adauga primul material de marketing.
-                            </p>
-                          )}
-
-                          {catStimuli.map((stim, idx) => (
-                            <div key={stim.id}>
-                              {editingStimId === stim.id ? (
-                                /* Edit stimulus form */
-                                <div style={S.stimEditForm}>
-                                  <div style={S.stimEditHeader}>
-                                    <Pencil size={14} style={{ color: "#6B7280" }} />
-                                    <span style={S.stimEditTitle}>Editare Material</span>
-                                  </div>
-                                  <div style={S.stimEditGrid}>
-                                    <div style={S.formField}>
-                                      <label style={S.formLabel}>Nume</label>
-                                      <input
-                                        style={S.formInput}
-                                        value={editStimData.name || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, name: e.target.value })}
-                                      />
-                                    </div>
-                                    <div style={S.formField}>
-                                      <label style={S.formLabel}>Industrie</label>
-                                      <input
-                                        style={S.formInput}
-                                        value={editStimData.industry || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, industry: e.target.value })}
-                                      />
-                                    </div>
-                                    <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
-                                      <label style={S.formLabel}>Descriere</label>
-                                      <textarea
-                                        style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
-                                        value={editStimData.description || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })}
-                                      />
-                                    </div>
-                                    <div style={S.formField}>
-                                      <label style={S.formLabel}>URL Imagine</label>
-                                      <input
-                                        style={S.formInput}
-                                        value={editStimData.image_url || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, image_url: e.target.value })}
-                                        placeholder="https://..."
-                                      />
-                                    </div>
-                                    <div style={S.formField}>
-                                      <label style={S.formLabel}>URL Video (YouTube)</label>
-                                      <input
-                                        style={S.formInput}
-                                        value={editStimData.video_url || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, video_url: e.target.value })}
-                                        placeholder="https://youtube.com/..."
-                                      />
-                                    </div>
-                                    <div style={S.formField}>
-                                      <label style={S.formLabel}>URL PDF</label>
-                                      <input
-                                        style={S.formInput}
-                                        value={editStimData.pdf_url || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, pdf_url: e.target.value })}
-                                        placeholder="https://..."
-                                      />
-                                    </div>
-                                    <div style={S.formField}>
-                                      <label style={S.formLabel}>URL Site</label>
-                                      <input
-                                        style={S.formInput}
-                                        value={editStimData.site_url || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, site_url: e.target.value })}
-                                        placeholder="https://..."
-                                      />
-                                    </div>
-                                    <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
-                                      <label style={S.formLabel}>Text Content</label>
-                                      <textarea
-                                        style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
-                                        value={editStimData.text_content || ""}
-                                        onChange={(e) => setEditStimData({ ...editStimData, text_content: e.target.value })}
-                                      />
-                                    </div>
-                                  </div>
-                                  <div style={S.stimEditActions}>
-                                    <button style={S.btnCancel} onClick={() => setEditingStimId(null)}>
-                                      Anuleaza
-                                    </button>
-                                    <button style={S.btnSave} onClick={saveEditStimulus} disabled={saving}>
-                                      {saving ? "Se salveaza..." : "Salveaza"}
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                /* Display stimulus */
-                                <div style={S.stimCard}>
-                                  <span style={S.stimIdx}>{idx + 1}.</span>
-                                  <span style={S.stimName}>{stim.name}</span>
-                                  {stim.industry && (
-                                    <span style={S.stimIndustry}>{stim.industry}</span>
-                                  )}
-                                  <div style={S.stimMediaIcons}>
-                                    {getMediaIcons(stim).map((m, i) => {
-                                      const MIcon = m.icon;
-                                      return (
-                                        <span key={i} title={m.label} style={S.mediaIcon}>
-                                          <MIcon size={13} />
-                                        </span>
-                                      );
-                                    })}
-                                  </div>
-                                  <div style={S.stimActions}>
-                                    <button style={S.iconBtn} title="Editeaza" onClick={() => startEditStimulus(stim)}>
-                                      <Pencil size={13} />
-                                    </button>
-                                    <button style={S.iconBtnDanger} title="Sterge" onClick={() => deleteStimulus(stim)}>
-                                      <Trash2 size={13} />
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ))}
-
-                          {/* Add new stimulus form */}
-                          {addingToType === cat.type ? (
-                            <div style={S.stimEditForm}>
-                              <div style={S.stimEditHeader}>
-                                <Plus size={14} style={{ color: "#059669" }} />
-                                <span style={S.stimEditTitle}>Material nou</span>
-                              </div>
-                              <div style={S.stimEditGrid}>
-                                <div style={S.formField}>
-                                  <label style={S.formLabel}>Nume *</label>
-                                  <input
-                                    style={S.formInput}
-                                    value={newStimData.name || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, name: e.target.value })}
-                                    autoFocus
-                                    placeholder="Ex: Maison Noir — FB Ad"
-                                  />
-                                </div>
-                                <div style={S.formField}>
-                                  <label style={S.formLabel}>Industrie</label>
-                                  <input
-                                    style={S.formInput}
-                                    value={newStimData.industry || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, industry: e.target.value })}
-                                    placeholder="Ex: Restaurant, SaaS, Fashion"
-                                  />
-                                </div>
-                                <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
-                                  <label style={S.formLabel}>Descriere</label>
-                                  <textarea
-                                    style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
-                                    value={newStimData.description || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })}
-                                    placeholder="Scurta descriere a materialului..."
-                                  />
-                                </div>
-                                <div style={S.formField}>
-                                  <label style={S.formLabel}>URL Imagine</label>
-                                  <input
-                                    style={S.formInput}
-                                    value={newStimData.image_url || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, image_url: e.target.value })}
-                                    placeholder="https://..."
-                                  />
-                                </div>
-                                <div style={S.formField}>
-                                  <label style={S.formLabel}>URL Video (YouTube)</label>
-                                  <input
-                                    style={S.formInput}
-                                    value={newStimData.video_url || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, video_url: e.target.value })}
-                                    placeholder="https://youtube.com/..."
-                                  />
-                                </div>
-                                <div style={S.formField}>
-                                  <label style={S.formLabel}>URL PDF</label>
-                                  <input
-                                    style={S.formInput}
-                                    value={newStimData.pdf_url || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, pdf_url: e.target.value })}
-                                    placeholder="https://..."
-                                  />
-                                </div>
-                                <div style={S.formField}>
-                                  <label style={S.formLabel}>URL Site</label>
-                                  <input
-                                    style={S.formInput}
-                                    value={newStimData.site_url || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, site_url: e.target.value })}
-                                    placeholder="https://..."
-                                  />
-                                </div>
-                                <div style={{ ...S.formField, gridColumn: "1 / -1" }}>
-                                  <label style={S.formLabel}>Text Content</label>
-                                  <textarea
-                                    style={{ ...S.formInput, minHeight: 60, resize: "vertical" as const }}
-                                    value={newStimData.text_content || ""}
-                                    onChange={(e) => setNewStimData({ ...newStimData, text_content: e.target.value })}
-                                    placeholder="Continut text al materialului..."
-                                  />
-                                </div>
-                              </div>
-                              <div style={S.stimEditActions}>
-                                <button
-                                  style={S.btnCancel}
-                                  onClick={() => {
-                                    setAddingToType(null);
-                                    setNewStimData({});
-                                  }}
-                                >
-                                  Anuleaza
-                                </button>
-                                <button
-                                  style={{
-                                    ...S.btnSave,
-                                    opacity: !newStimData.name ? 0.5 : 1,
-                                  }}
-                                  onClick={saveNewStimulus}
-                                  disabled={saving || !newStimData.name}
-                                >
-                                  {saving ? "Se salveaza..." : "Adauga"}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            catStimuli.length < maxMat && (
-                              <button style={S.addStimBtn} onClick={() => startAddStimulus(cat.type)}>
-                                <Plus size={14} />
-                                <span>Adauga material</span>
-                              </button>
-                            )
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+              </div>
+            )}
           </>
         )}
 
@@ -823,9 +736,9 @@ const S: Record<string, React.CSSProperties> = {
     borderBottomColor: "#DC2626",
   },
   content: {
-    maxWidth: 960,
+    maxWidth: 1200,
     margin: "0 auto",
-    padding: "24px 16px",
+    padding: "24px 24px",
   },
   sectionHeader: {
     display: "flex",
@@ -906,55 +819,155 @@ const S: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     color: "#374151",
   },
-  catCard: {
+  galleryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+    gap: 16,
+  },
+  galleryCard: {
     background: "#fff",
     border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    marginBottom: 8,
-    overflow: "hidden",
-    borderLeft: "3px solid transparent",
+    borderTop: "4px solid transparent",
+    borderRadius: 14,
+    padding: 20,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 12,
+    position: "relative" as const,
+    transition: "box-shadow 0.2s, transform 0.2s",
   },
-  catRow: {
+  galleryNum: {
+    position: "absolute" as const,
+    top: -14,
+    left: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 11,
+    fontWeight: 800,
+    color: "#fff",
+    fontFamily: "JetBrains Mono, monospace",
+    letterSpacing: 0.5,
+  },
+  galleryVisBtn: {
+    position: "absolute" as const,
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    borderRadius: 6,
+    background: "#f3f4f6",
+    color: "#6B7280",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  galleryTop: {
     display: "flex",
     alignItems: "center",
     gap: 10,
-    padding: "12px 16px",
-    minHeight: 52,
+    marginTop: 4,
   },
-  catDrag: {
-    cursor: "grab",
-    display: "flex",
-    alignItems: "center",
-    padding: "2px 0",
-  },
-  catBadge: {
+  galleryBadge: {
     fontSize: 10,
     fontWeight: 700,
     letterSpacing: 0.5,
-    padding: "4px 10px",
-    borderRadius: 4,
+    padding: "4px 12px",
+    borderRadius: 6,
     color: "#fff",
     whiteSpace: "nowrap" as const,
   },
-  catName: {
-    fontSize: 15,
-    fontWeight: 600,
+  galleryName: {
+    fontSize: 16,
+    fontWeight: 700,
     color: "#111827",
-    flex: 1,
+    lineHeight: 1.3,
   },
-  catCount: {
+  galleryCounter: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+  },
+  counterBar: {
+    height: 4,
+    background: "#f3f4f6",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  counterFill: {
+    height: "100%",
+    borderRadius: 2,
+    transition: "width 0.3s",
+  },
+  counterText: {
     fontSize: 12,
     color: "#9CA3AF",
     fontWeight: 500,
-    whiteSpace: "nowrap" as const,
-    padding: "3px 10px",
-    background: "#f3f4f6",
-    borderRadius: 12,
   },
-  catActions: {
+  galleryActions: {
     display: "flex",
     alignItems: "center",
-    gap: 2,
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  galleryEditBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "6px 14px",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#374151",
+    background: "#f3f4f6",
+    border: "1px solid #e5e7eb",
+    borderRadius: 6,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  galleryExpandBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: "8px 12px",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#6B7280",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    width: "100%",
+  },
+  galleryMaterials: {
+    borderTop: "1px solid #e5e7eb",
+    paddingTop: 12,
+  },
+  galleryEditWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  iconBtnSm: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 26,
+    height: 26,
+    border: "none",
+    borderRadius: 5,
+    background: "#f3f4f6",
+    color: "#6B7280",
+    cursor: "pointer",
+    transition: "background 0.15s",
   },
   catEditRow: {
     display: "flex",
@@ -1030,7 +1043,7 @@ const S: Record<string, React.CSSProperties> = {
     cursor: "pointer",
   },
   materialsWrap: {
-    padding: "0 16px 16px 56px",
+    padding: "0 0 0 0",
     borderTop: "1px solid #f3f4f6",
   },
   emptyMsg: {
