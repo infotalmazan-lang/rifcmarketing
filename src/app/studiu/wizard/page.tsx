@@ -1599,23 +1599,24 @@ function StudiuWizardInner() {
                         style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 180 : 300, objectFit: "cover" as const, cursor: "pointer" }}
                         loading="lazy"
                         onClick={() => setFullscreenImage(currentStim.image_url)} />
-                      <button
+                      {/* Expand hint — full width bar at bottom of image */}
+                      <div
                         onClick={() => setFullscreenImage(currentStim.image_url)}
                         style={{
-                          position: "absolute" as const, bottom: 8, right: 8,
-                          display: "flex", alignItems: "center", gap: 5,
-                          padding: "6px 12px", fontSize: 12, fontWeight: 600,
-                          background: "rgba(0,0,0,0.7)", color: "#fff",
-                          border: "none", borderRadius: 6, cursor: "pointer",
-                          backdropFilter: "blur(4px)",
+                          position: "absolute" as const, bottom: 0, left: 0, right: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                          padding: "8px 0", fontSize: 13, fontWeight: 600,
+                          background: "linear-gradient(transparent, rgba(0,0,0,0.65))",
+                          color: "#fff", cursor: "pointer",
+                          borderRadius: "0 0 8px 8px",
                         }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
                           <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
                         </svg>
-                        Vezi mai mare
-                      </button>
+                        Apasa pentru a vedea mai mare
+                      </div>
                     </div>
                   )}
 
@@ -1667,26 +1668,39 @@ function StudiuWizardInner() {
                 {/* Current question */}
                 <div style={{ marginTop: 16 }}>
                   {/* Step indicator mini: R · I · F · C · CTA */}
-                  <div style={{ display: "flex", justifyContent: "center", gap: m ? 8 : 12, marginBottom: 14 }}>
-                    {dimensions.map((d, idx) => (
-                      <div key={d.key} style={{
-                        fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
-                        color: idx === currentStimSubStep ? d.color : idx < currentStimSubStep ? "#a3a3a3" : "#d4d4d4",
-                        borderBottom: idx === currentStimSubStep ? `2px solid ${d.color}` : "2px solid transparent",
-                        paddingBottom: 3,
-                      }}>
-                        {d.shortLabel}
-                      </div>
-                    ))}
+                  <div style={{ display: "flex", justifyContent: "center", gap: m ? 6 : 8, marginBottom: 14 }}>
+                    {dimensions.map((d, idx) => {
+                      const isActive = idx === currentStimSubStep;
+                      const isDone = idx < currentStimSubStep;
+                      return (
+                        <div key={d.key} style={{
+                          fontSize: isActive ? 12 : 10,
+                          fontWeight: 700,
+                          letterSpacing: 0.5,
+                          padding: isActive ? "4px 12px" : "4px 8px",
+                          borderRadius: 12,
+                          background: isActive ? d.color : isDone ? "#e5e1d9" : "transparent",
+                          color: isActive ? "#fff" : isDone ? "#888" : "#ccc",
+                          transition: "all 0.3s ease",
+                        }}>
+                          {d.shortLabel}
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  {/* Question text */}
-                  <div style={{
-                    fontSize: m ? 14 : 16, fontWeight: 500, color: textDark, lineHeight: 1.5,
-                    marginBottom: 16, padding: m ? "12px 14px" : "14px 18px",
-                    background: "#faf8f5", border: `2px solid ${dim.color}20`, borderRadius: 10,
-                    textAlign: "center" as const,
-                  }}>
+                  {/* Question text — colored border + flash animation on step change */}
+                  <div
+                    key={`q-${currentStimGroupIdx}-${currentStimSubStep}`}
+                    className="question-flash"
+                    style={{
+                      fontSize: m ? 14 : 16, fontWeight: 600, color: textDark, lineHeight: 1.5,
+                      marginBottom: 16, padding: m ? "12px 14px" : "14px 18px",
+                      background: `${dim.color}08`, border: `2px solid ${dim.color}`, borderRadius: 10,
+                      textAlign: "center" as const,
+                      // @ts-expect-error CSS custom property
+                      "--flash-color": `${dim.color}40`,
+                    }}>
                     {dim.question}
                   </div>
 
@@ -1798,6 +1812,13 @@ function StudiuWizardInner() {
       {/* Global styles */}
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
+        @keyframes questionFlash {
+          0% { transform: scale(1.03); box-shadow: 0 0 0 4px var(--flash-color, #DC262640); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0px var(--flash-color, #DC262600); }
+        }
+        .question-flash {
+          animation: questionFlash 0.5s ease-out;
+        }
 
         /* Slider styling */
         input[type="range"].wizard-slider {
