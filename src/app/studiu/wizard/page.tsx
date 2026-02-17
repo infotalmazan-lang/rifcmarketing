@@ -851,10 +851,11 @@ function StudiuWizardInner() {
               </p>
             </div>
 
-            {/* Author follow section */}
+            {/* Telegram follow section */}
             <div style={{
               background: "#faf8f5", border: "1px solid #e5e1d9",
               borderRadius: 12, padding: m ? 20 : 24, marginBottom: 24, width: "100%",
+              textAlign: "center" as const,
             }}>
               <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 10, textTransform: "uppercase" as const }}>
                 A MARKETING PROTOCOL BY
@@ -865,28 +866,23 @@ function StudiuWizardInner() {
               <p style={{ fontSize: m ? 14 : 15, fontWeight: 600, color: accentRed, marginBottom: 16 }}>
                 Dumitru Talmazan
               </p>
-              <p style={{ fontSize: 13, color: textMuted, lineHeight: 1.5, marginBottom: 16 }}>
-                Urmareste pentru actualizari despre rezultatele studiului, insights si noi cercetari.
-              </p>
               <a
-                href="https://instagram.com/talmazan.md"
+                href="https://t.me/talmazan_rifc"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  padding: "12px 24px", borderRadius: 10,
-                  background: "linear-gradient(135deg, #833AB4, #FD1D1D, #F77737)",
-                  color: "#fff", fontSize: m ? 14 : 15, fontWeight: 700,
+                  display: "inline-flex", alignItems: "center", gap: 10,
+                  padding: "14px 28px", borderRadius: 12,
+                  background: "#0088cc",
+                  color: "#fff", fontSize: m ? 15 : 16, fontWeight: 700,
                   textDecoration: "none", cursor: "pointer",
                   border: "none", letterSpacing: 0.3,
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.492-1.302.48-.428-.013-1.252-.242-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
                 </svg>
-                Urmareste @talmazan.md
+                Urmareste pe Telegram
               </a>
             </div>
 
