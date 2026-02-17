@@ -2,68 +2,70 @@ import { NextResponse } from "next/server";
 import { createServiceRole } from "@/lib/supabase/server";
 
 /**
- * One-time migration endpoint for survey_distributions.
- * POST /api/survey/migrate — creates table + adds column if not exists.
- * Safe to call multiple times (idempotent).
+ * Migration endpoint. POST /api/survey/migrate
+ * Checks current schema and reports what needs to be done.
+ * Also attempts simple column additions via PostgREST workarounds.
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const body = await request.json().catch(() => ({}));
+    const migration = body.migration || "check";
     const supabase = createServiceRole();
 
-    // Check if table already exists
-    const { error: checkErr } = await supabase
-      .from("survey_distributions")
-      .select("id")
-      .limit(1);
+    if (migration === "008" || migration === 8) {
+      // Migration 008: Add c_score and cta_score to survey_responses
+      // PostgREST can't run DDL, so we test if columns exist by selecting them
+      const { error: testErr } = await supabase
+        .from("survey_responses")
+        .select("c_score, cta_score")
+        .limit(1);
 
-    if (checkErr && checkErr.code === "42P01") {
-      // Table doesn't exist — create it via raw SQL isn't possible with PostgREST
-      // Instead, try to create via rpc if available
+      if (testErr) {
+        return NextResponse.json({
+          migrated: false,
+          error: "Columns c_score/cta_score don't exist yet.",
+          action: "Run the following SQL in Supabase Dashboard > SQL Editor:",
+          sql: `-- Migration 008: Add c_score and cta_score
+ALTER TABLE public.survey_responses
+  ADD COLUMN IF NOT EXISTS c_score smallint check (c_score >= 1 and c_score <= 10),
+  ADD COLUMN IF NOT EXISTS cta_score smallint check (cta_score >= 1 and cta_score <= 10);
+
+ALTER TABLE public.survey_ai_evaluations
+  ADD COLUMN IF NOT EXISTS c_score numeric(4,2),
+  ADD COLUMN IF NOT EXISTS cta_score numeric(4,2);
+
+ALTER TABLE public.expert_evaluations
+  ADD COLUMN IF NOT EXISTS c_score numeric(4,2),
+  ADD COLUMN IF NOT EXISTS cta_score numeric(4,2);
+
+-- Allow upsert (update) on survey_responses
+DO $$ BEGIN
+  CREATE POLICY "Anyone can update own response"
+    ON public.survey_responses FOR UPDATE USING (true);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;`,
+        });
+      }
+
       return NextResponse.json({
-        migrated: false,
-        error: "Table survey_distributions does not exist yet.",
-        action: "Run the following SQL in Supabase Dashboard > SQL Editor",
-        sql: `
--- Create survey_distributions table
-create table public.survey_distributions (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  description text default '',
-  tag text not null unique,
-  estimated_completions integer not null default 0,
-  created_at timestamptz not null default now()
-);
-
-alter table public.survey_distributions enable row level security;
-
-create policy "Anyone can view distributions" on public.survey_distributions for select using (true);
-create policy "Anyone can insert distributions" on public.survey_distributions for insert with check (true);
-create policy "Anyone can update distributions" on public.survey_distributions for update using (true);
-create policy "Anyone can delete distributions" on public.survey_distributions for delete using (true);
-
-create index idx_distributions_tag on public.survey_distributions(tag);
-
--- Add distribution_id column to survey_respondents
-alter table public.survey_respondents
-  add column if not exists distribution_id uuid references public.survey_distributions(id) on delete set null;
-
-create index if not exists idx_respondents_distribution on public.survey_respondents(distribution_id);
-        `.trim(),
+        migrated: true,
+        message: "Migration 008 already applied. Columns c_score and cta_score exist.",
       });
     }
 
-    // Table exists — check if column exists on respondents
-    const { error: colErr } = await supabase
-      .from("survey_respondents")
-      .select("distribution_id")
-      .limit(1);
+    // Default: check status
+    const checks: Record<string, boolean> = {};
 
-    return NextResponse.json({
-      migrated: true,
-      tableExists: true,
-      columnExists: !colErr,
-      note: colErr ? "Column distribution_id missing on survey_respondents. Run ALTER TABLE." : "All good!",
-    });
+    const { error: e1 } = await supabase.from("survey_distributions").select("id").limit(1);
+    checks.distributions = !e1;
+
+    const { error: e2 } = await supabase.from("survey_responses").select("c_score").limit(1);
+    checks.c_score = !e2;
+
+    const { error: e3 } = await supabase.from("survey_responses").select("cta_score").limit(1);
+    checks.cta_score = !e3;
+
+    return NextResponse.json({ status: "ok", checks });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

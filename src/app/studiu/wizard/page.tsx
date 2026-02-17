@@ -148,7 +148,7 @@ function StudiuWizardInner() {
 
   // Stimulus evaluation
   const [stimulusScores, setStimulusScores] = useState<
-    Record<string, { r: number; i: number; f: number }>
+    Record<string, { r: number; i: number; f: number; c: number; cta: number }>
   >({});
   const [attentionAnswer, setAttentionAnswer] = useState<number | null>(null);
   const timerRef = useRef<number>(0);
@@ -157,7 +157,7 @@ function StudiuWizardInner() {
   // ── Computed step boundaries ────────────────────────────
   const profileStepCount = PROFILE_STEPS.length; // 16 (0=welcome, 1-15=profile)
   const numStimuli = session?.stimuli?.length || 8;
-  const stepsPerStimulus = 3; // R, I, F — each on its own page
+  const stepsPerStimulus = 5; // R, I, F, C, CTA — each on its own page
   const firstStimulusStep = profileStepCount; // 16
   const lastStimulusStep = firstStimulusStep + (numStimuli * stepsPerStimulus) - 1;
   const thankYouStep = lastStimulusStep + 1;
@@ -319,17 +319,17 @@ function StudiuWizardInner() {
     setTimeout(() => advanceTo(step + 1), 350);
   }, [step, advanceTo, demographics, behavioral, psychographic, saveProfileToApi]);
 
-  // ── Auto-advance for stimulus sub-steps (R, I, F) ──────
-  const autoAdvanceStimulus = useCallback((dimension: "r" | "i" | "f", value: number) => {
+  // ── Auto-advance for stimulus sub-steps (R, I, F, C, CTA) ──────
+  const autoAdvanceStimulus = useCallback((dimension: "r" | "i" | "f" | "c" | "cta", value: number) => {
     if (!session) return;
     const groupIdx = Math.floor((step - firstStimulusStep) / stepsPerStimulus);
     const stimId = session.stimuliOrder[groupIdx];
-    const prev = stimulusScores[stimId] || { r: 0, i: 0, f: 0 };
+    const prev = stimulusScores[stimId] || { r: 0, i: 0, f: 0, c: 0, cta: 0 };
     const updated = { ...prev, [dimension]: value };
     setStimulusScores(s => ({ ...s, [stimId]: updated }));
 
-    // On last sub-step (F, dimension === "f"), fire-and-forget save to API
-    if (dimension === "f") {
+    // On last sub-step (CTA, dimension === "cta"), fire-and-forget save to API
+    if (dimension === "cta") {
       const isAttentionGroup = groupIdx === Math.floor(numStimuli / 2);
       const isLastStimulus = step === lastStimulusStep;
       fetch("/api/survey/step", {
@@ -344,6 +344,8 @@ function StudiuWizardInner() {
             rScore: updated.r,
             iScore: updated.i,
             fScore: updated.f,
+            cScore: updated.c,
+            ctaScore: updated.cta,
             timeSpentSeconds: timerRef.current,
             isLast: isLastStimulus,
             ...(isAttentionGroup ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === 7 } : {}),
@@ -374,7 +376,7 @@ function StudiuWizardInner() {
       // But keep as fallback
       const groupIdx = Math.floor((step - firstStimulusStep) / stepsPerStimulus);
       const stimId = session.stimuliOrder[groupIdx];
-      const scores = stimulusScores[stimId] || { r: 0, i: 0, f: 0 };
+      const scores = stimulusScores[stimId] || { r: 0, i: 0, f: 0, c: 0, cta: 0 };
       type = "stimulus";
       const isAttentionStep = groupIdx === Math.floor(numStimuli / 2);
       data = {
@@ -382,6 +384,8 @@ function StudiuWizardInner() {
         rScore: scores.r,
         iScore: scores.i,
         fScore: scores.f,
+        cScore: scores.c,
+        ctaScore: scores.cta,
         timeSpentSeconds: timerRef.current,
         isLast: step === lastStimulusStep,
         ...(isAttentionStep ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === 7 } : {}),
@@ -863,8 +867,8 @@ function StudiuWizardInner() {
     ? session.stimuli[currentStimGroupIdx]
     : null;
   const currentScores = currentStim
-    ? stimulusScores[currentStim.id] || { r: 0, i: 0, f: 0 }
-    : { r: 5, i: 5, f: 5 };
+    ? stimulusScores[currentStim.id] || { r: 0, i: 0, f: 0, c: 0, cta: 0 }
+    : { r: 0, i: 0, f: 0, c: 0, cta: 0 };
 
   // ── Profile step question number ────────────────────────
   const profileQuestionNum = step >= 1 && step < profileStepCount ? step : 0;
@@ -1318,16 +1322,48 @@ function StudiuWizardInner() {
             );
           })()}
 
-          {/* ═══ Stimulus evaluation steps (3 per stimulus: R, I, F) ═══ */}
+          {/* ═══ Stimulus evaluation steps (5 per stimulus: R, I, F, C, CTA) ═══ */}
           {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && (() => {
-            const dimensions = [
-              { key: "r" as const, label: "Relevanta", desc: "Cat de relevant este pentru publicul tinta?", color: "#DC2626" },
-              { key: "i" as const, label: "Impact & Interes", desc: "Cat de captivant este continutul?", color: "#D97706" },
-              { key: "f" as const, label: "Calitate Executie", desc: "Cat de bine este executat?", color: "#7C3AED" },
+            const dimensions: { key: "r" | "i" | "f" | "c" | "cta"; question: string; anchorLow: string; anchorHigh: string; color: string; shortLabel: string }[] = [
+              {
+                key: "r", shortLabel: "R",
+                question: "Cat de relevant este acest mesaj pentru tine personal \u2014 pentru nevoile, interesele sau situatia ta de acum?",
+                anchorLow: "Nu are nicio legatura cu mine",
+                anchorHigh: "Exact ce aveam nevoie sa vad acum",
+                color: "#DC2626",
+              },
+              {
+                key: "i", shortLabel: "I",
+                question: "Cat de interesant este ceea ce spune acest mesaj \u2014 informatia, oferta sau ideea din spatele lui?",
+                anchorLow: "Nu ma atrage deloc, nimic nou sau util",
+                anchorHigh: "Vreau imediat sa aflu mai multe",
+                color: "#D97706",
+              },
+              {
+                key: "f", shortLabel: "F",
+                question: "Cat de bine este prezentat acest mesaj \u2014 vizual, structura, claritatea textului, calitatea executiei?",
+                anchorLow: "Confuz, urat sau greu de parcurs",
+                anchorHigh: "Impecabil, atractiv si usor de inteles",
+                color: "#7C3AED",
+              },
+              {
+                key: "c", shortLabel: "C",
+                question: "Cat de clar ai inteles ce ti se ofera si ce ar trebui sa faci in continuare?",
+                anchorLow: "Nu am inteles nimic din acest mesaj",
+                anchorHigh: "Am inteles perfect: ce e, pentru cine e si ce pas urmeaza",
+                color: "#059669",
+              },
+              {
+                key: "cta", shortLabel: "CTA",
+                question: "Cat de probabil este sa actionezi pe baza acestui mesaj \u2014 click, achizitie, inscriere, contactare?",
+                anchorLow: "Nu as actiona sub nicio forma",
+                anchorHigh: "As actiona imediat, fara ezitare",
+                color: "#2563EB",
+              },
             ];
             const dim = dimensions[currentStimSubStep];
             const isAttentionGroup = currentStimGroupIdx === Math.floor(numStimuli / 2);
-            const showAttention = isAttentionGroup && currentStimSubStep === 2; // show on F step
+            const showAttention = isAttentionGroup && currentStimSubStep === 4; // show on CTA step (last)
 
             return (
               <>
@@ -1335,9 +1371,6 @@ function StudiuWizardInner() {
                 <div style={S.questionNum}>
                   MATERIAL {currentStimGroupIdx + 1} DIN {session.stimuli.length}
                 </div>
-                <h2 style={{ ...S.questionTitle, fontSize: m ? 18 : 22, marginBottom: 16 }}>
-                  Evalueaza materialul
-                </h2>
 
                 {/* Stimulus display */}
                 <div style={S.stimulusBox}>
@@ -1353,7 +1386,7 @@ function StudiuWizardInner() {
 
                   {currentStim.image_url && (
                     <img src={currentStim.image_url} alt={currentStim.name}
-                      style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 220 : 360, objectFit: "cover" as const }}
+                      style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 180 : 300, objectFit: "cover" as const }}
                       loading="lazy" />
                   )}
 
@@ -1367,7 +1400,7 @@ function StudiuWizardInner() {
 
                   {currentStim.video_url && !extractYoutubeId(currentStim.video_url) && (
                     <video src={currentStim.video_url} controls playsInline preload="metadata"
-                      style={{ width: "100%", maxHeight: m ? 220 : 360, borderRadius: 8, border: "1px solid #e5e1d9", background: "#000" }} />
+                      style={{ width: "100%", maxHeight: m ? 180 : 300, borderRadius: 8, border: "1px solid #e5e1d9", background: "#000" }} />
                   )}
 
                   {currentStim.text_content && (
@@ -1402,29 +1435,30 @@ function StudiuWizardInner() {
                   )}
                 </div>
 
-                {/* Current dimension evaluation */}
+                {/* Current question */}
                 <div style={{ marginTop: 16 }}>
-                  <div style={{ textAlign: "center" as const, marginBottom: 12 }}>
-                    <span style={{
-                      fontSize: m ? 18 : 22, fontWeight: 800, color: dim.color, letterSpacing: 0.5,
-                    }}>
-                      {dim.label}
-                    </span>
-                    <p style={{ fontSize: m ? 12 : 13, color: textMuted, marginTop: 4 }}>{dim.desc}</p>
-                  </div>
-
-                  {/* Step indicator mini: R · I · F */}
-                  <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 }}>
+                  {/* Step indicator mini: R · I · F · C · CTA */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: m ? 8 : 12, marginBottom: 14 }}>
                     {dimensions.map((d, idx) => (
                       <div key={d.key} style={{
-                        fontSize: 11, fontWeight: 700, letterSpacing: 1,
+                        fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
                         color: idx === currentStimSubStep ? d.color : idx < currentStimSubStep ? "#a3a3a3" : "#d4d4d4",
                         borderBottom: idx === currentStimSubStep ? `2px solid ${d.color}` : "2px solid transparent",
-                        paddingBottom: 4,
+                        paddingBottom: 3,
                       }}>
-                        {d.label.split(" ")[0].toUpperCase()}
+                        {d.shortLabel}
                       </div>
                     ))}
+                  </div>
+
+                  {/* Question text */}
+                  <div style={{
+                    fontSize: m ? 14 : 16, fontWeight: 500, color: textDark, lineHeight: 1.5,
+                    marginBottom: 16, padding: m ? "12px 14px" : "14px 18px",
+                    background: "#faf8f5", border: `2px solid ${dim.color}20`, borderRadius: 10,
+                    textAlign: "center" as const,
+                  }}>
+                    {dim.question}
                   </div>
 
                   {/* 1-10 buttons */}
@@ -1447,13 +1481,13 @@ function StudiuWizardInner() {
                       </button>
                     ))}
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: textMuted, marginTop: 6, padding: "0 4px" }}>
-                    <span>Slab</span>
-                    <span>Excelent</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: m ? 9 : 10, color: textMuted, marginTop: 6, padding: "0 4px" }}>
+                    <span>1 = {dim.anchorLow}</span>
+                    <span>10 = {dim.anchorHigh}</span>
                   </div>
                 </div>
 
-                {/* Attention check at midpoint (on F step of middle stimulus) */}
+                {/* Attention check at midpoint (on CTA step of middle stimulus) */}
                 {showAttention && (
                   <div style={{ marginTop: 16, padding: m ? 14 : 18, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10 }}>
                     <div style={{ fontSize: m ? 13 : 14, fontWeight: 600, color: "#166534", marginBottom: 8 }}>
