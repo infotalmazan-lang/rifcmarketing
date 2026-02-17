@@ -269,6 +269,20 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .dw-confirm-actions { display:flex; gap:8px; justify-content:flex-end; }
 .dw-export-bar { display:flex; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
 
+/* ═══ INTERNAL TASK TABS ═══ */
+.task-tabs { display:flex; gap:0; border-bottom:2px solid var(--border); margin-bottom:16px; }
+.task-tab { padding:10px 20px; font-size:12px; font-weight:600; letter-spacing:.5px; color:var(--text3); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; transition:all .2s; user-select:none; display:flex; align-items:center; gap:6px; }
+.task-tab:hover { color:var(--text2); background:var(--surface2); }
+.task-tab.active { color:var(--blue); border-bottom-color:var(--blue); }
+.task-tab .tab-icon { font-size:14px; opacity:.7; }
+.task-tab-panel { display:none; }
+.task-tab-panel.active { display:block; }
+.task-tab-panel.exemplu-panel { }
+.task-tab-panel.work-panel { }
+.exemplu-empty { text-align:center; padding:32px 20px; color:var(--text3); }
+.exemplu-empty .ee-icon { font-size:32px; margin-bottom:8px; opacity:.4; }
+.exemplu-empty .ee-text { font-size:13px; line-height:1.6; }
+
 /* ═══ BEST PRACTICE EXAMPLES ═══ */
 .dw-example { border:1px dashed var(--green); border-radius:8px; padding:14px 16px; margin-bottom:14px; background:rgba(5,150,105,0.04); }
 .dw-example .dw-ex-toggle { display:flex; align-items:center; gap:8px; cursor:pointer; font-size:11px; font-weight:700; letter-spacing:1px; color:var(--green); user-select:none; }
@@ -500,6 +514,7 @@ function App() {
   var checkedTasks = {};
   var openTasks = {};
   var openWorkspaces = {};
+  var taskTabs = {};
   var editingRow = {};
   try { checkedTasks = JSON.parse(localStorage.getItem('rifc-tasks-v2') || '{}'); } catch(e) {}
 
@@ -652,7 +667,7 @@ function App() {
     if(stage.siteMap) {
       html += '<div class="site-map"><div class="sm-title"><span class="globe">\\uD83C\\uDF10</span> CE VINE DE PE RIFCMARKETING.COM \\u2192 UNDE AJUNGE \\u00CEN PAPER</div><div class="sm-items">'+stage.siteMap.map(function(m){return '<div class="sm-item '+m.status+'"><span class="arrow">\\u2192</span><div><span class="from">'+m.from+'</span><br><span class="to">'+m.to+'</span></div></div>'}).join('')+'</div></div>';
     }
-    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-detail">'+t.detail+'</div>'+((t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''))+(t.dataType ? renderDataWorkspace(stage.id, i, t) : '')+'</div></div>'}).join('')+'</div>';
+    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;var tabKey=stage.id+'-tab-'+i;var activeTab=taskTabs[tabKey]||'exemplu';var hasDeliverables=(t.deliverables&&t.deliverables.length>0);var hasWorkspace=!!t.dataType;var shortTitle=t.title.length>30?t.title.substring(0,30)+'\\u2026':t.title;return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-tabs"><div class="task-tab '+(activeTab==='exemplu'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab '+(activeTab==='work'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> '+shortTitle+'</div></div><div class="task-tab-panel exemplu-panel '+(activeTab==='exemplu'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasDeliverables?(t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>'+shortTitle+'</strong>.</div></div>')+'</div><div class="task-tab-panel work-panel '+(activeTab==='work'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasWorkspace?renderDataWorkspace(stage.id, i, t):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDEE0</div><div class="ee-text">Aceast\\u0103 sarcin\\u0103 nu are instrumente de lucru.<br>Verific\\u0103 tab-ul <strong>Exemplu</strong> pentru detalii.</div></div>')+'</div></div></div>'}).join('')+'</div>';
     return html;
   }
 
@@ -1186,6 +1201,25 @@ function App() {
         checkedTasks[key] = !checkedTasks[key];
         try { localStorage.setItem('rifc-tasks-v2', JSON.stringify(checkedTasks)); } catch(e) {}
         render();
+      });
+    });
+    /* Task internal tab switching */
+    document.querySelectorAll('.task-tab').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var tabKey = el.dataset.tabkey;
+        var tabVal = el.dataset.tabval;
+        taskTabs[tabKey] = tabVal;
+        /* Switch tabs without full re-render */
+        var taskBody = el.closest('.task-body');
+        if (taskBody) {
+          taskBody.querySelectorAll('.task-tab').forEach(function(t) { t.classList.remove('active'); });
+          taskBody.querySelectorAll('.task-tab-panel').forEach(function(p) { p.classList.remove('active'); });
+          el.classList.add('active');
+          var panels = taskBody.querySelectorAll('.task-tab-panel');
+          if (tabVal === 'exemplu' && panels[0]) panels[0].classList.add('active');
+          if (tabVal === 'work' && panels[1]) panels[1].classList.add('active');
+        }
       });
     });
     /* Data workspace toggles */
