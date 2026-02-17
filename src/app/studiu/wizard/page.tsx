@@ -53,6 +53,20 @@ function useIsMobile(breakpoint = 640): boolean {
   return isMobile;
 }
 
+// ── Category labels & colors for interstitial screens ──────
+const CATEGORY_META: Record<string, { label: string; color: string; icon: string }> = {
+  LP:        { label: "Landing Page (Site)", color: "#DC2626", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" },
+  Social:    { label: "Social Media", color: "#2563EB", icon: "M18 8A6 6 0 006 8c0 7-3 9-6 9h12c-3 0-6-2-6-9M13.73 21a2 2 0 01-3.46 0" },
+  Video:     { label: "Video Advertising", color: "#7C3AED", icon: "M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
+  Email:     { label: "Email Marketing", color: "#059669", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
+  Billboard: { label: "Billboard / Outdoor", color: "#D97706", icon: "M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" },
+  Print:     { label: "Print Advertising", color: "#6366f1", icon: "M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2" },
+  SMS:       { label: "SMS Marketing", color: "#EC4899", icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" },
+  Ads:       { label: "Display / Programmatic", color: "#0891B2", icon: "M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
+  PitchDeck: { label: "Pitch Deck", color: "#4338CA", icon: "M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" },
+  Radio:     { label: "Radio / Audio", color: "#B45309", icon: "M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" },
+};
+
 // ── Sub-step definitions for profile section ───────────────
 // Steps: 0=welcome, 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education,
 //        7=purchaseFreq, 8=channels, 9=onlineTime, 10=device,
@@ -155,6 +169,8 @@ function StudiuWizardInner() {
   const attentionTarget = useRef<number>(Math.floor(Math.random() * 10) + 1); // random 1-10, stable per session
   const timerRef = useRef<number>(0);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+  // Interstitial: show category intro before first sub-step (R) of each stimulus
+  const [interstitialDismissed, setInterstitialDismissed] = useState<Set<number>>(new Set());
 
   // ── Computed step boundaries ────────────────────────────
   const profileStepCount = PROFILE_STEPS.length; // 16 (0=welcome, 1-15=profile)
@@ -1364,8 +1380,100 @@ function StudiuWizardInner() {
             );
           })()}
 
+          {/* ═══ Category Interstitial Screen ═══ */}
+          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && currentStimSubStep === 0 && !interstitialDismissed.has(currentStimGroupIdx) && (() => {
+            const catMeta = CATEGORY_META[currentStim.type] || { label: currentStim.type, color: "#6B7280", icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" };
+            const isFirst = currentStimGroupIdx === 0;
+            return (
+              <>
+                {renderDashes()}
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: m ? "20px 0" : "40px 0" }}>
+                  {/* Thank you message (not on first) */}
+                  {!isFirst && (
+                    <div style={{
+                      background: "#f0fdf4", border: "1px solid #bbf7d0",
+                      borderRadius: 10, padding: m ? "10px 16px" : "12px 20px", marginBottom: 28,
+                    }}>
+                      <p style={{ fontSize: m ? 13 : 14, color: "#166534", fontWeight: 500, lineHeight: 1.5 }}>
+                        Multumim pentru raspunsurile anterioare!
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Category icon */}
+                  <div style={{
+                    width: 72, height: 72, borderRadius: 18,
+                    background: `linear-gradient(135deg, ${catMeta.color}, ${catMeta.color}cc)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    marginBottom: 20, boxShadow: `0 8px 24px ${catMeta.color}30`,
+                  }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d={catMeta.icon} />
+                    </svg>
+                  </div>
+
+                  {/* Category label */}
+                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 6, textTransform: "uppercase" as const }}>
+                    URMATOAREA CATEGORIE
+                  </div>
+                  <h2 style={{ fontSize: m ? 22 : 26, fontWeight: 800, color: textDark, marginBottom: 8, lineHeight: 1.2 }}>
+                    {catMeta.label}
+                  </h2>
+
+                  {/* Material count */}
+                  <p style={{ fontSize: m ? 13 : 14, color: textMuted, marginBottom: 6 }}>
+                    Materialul {currentStimGroupIdx + 1} din {session.stimuli.length}
+                  </p>
+
+                  {/* Instruction */}
+                  <div style={{
+                    background: "#fefce8", border: "1px solid #fde047",
+                    borderRadius: 10, padding: m ? "10px 16px" : "12px 20px", marginBottom: 28,
+                    maxWidth: 320,
+                  }}>
+                    <p style={{ fontSize: m ? 13 : 14, color: "#854d0e", lineHeight: 1.5, fontWeight: 500 }}>
+                      Analizeaza materialul timp de <strong>30 secunde</strong>, apoi raspunde la 5 intrebari scurte.
+                    </p>
+                  </div>
+
+                  {/* Start button */}
+                  <button
+                    style={{
+                      padding: m ? "16px 40px" : "18px 48px",
+                      fontSize: m ? 17 : 19,
+                      fontWeight: 800,
+                      color: "#fff",
+                      background: `linear-gradient(135deg, ${catMeta.color}, ${catMeta.color}dd)`,
+                      border: "none",
+                      borderRadius: 14,
+                      cursor: "pointer",
+                      letterSpacing: 1,
+                      textTransform: "uppercase" as const,
+                      boxShadow: `0 4px 16px ${catMeta.color}40`,
+                      transition: "transform 0.15s, box-shadow 0.15s",
+                      minHeight: 56,
+                    }}
+                    onClick={() => {
+                      setInterstitialDismissed(prev => new Set(prev).add(currentStimGroupIdx));
+                    }}
+                    onMouseDown={(e) => ((e.target as HTMLElement).style.transform = "scale(0.96)")}
+                    onMouseUp={(e) => ((e.target as HTMLElement).style.transform = "scale(1)")}
+                  >
+                    INCEPE
+                  </button>
+
+                  {isFirst && (
+                    <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.6 }}>
+                      {session.stimuli.length} materiale de evaluat in total
+                    </p>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+
           {/* ═══ Stimulus evaluation steps (5 per stimulus: R, I, F, C, CTA) ═══ */}
-          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && (() => {
+          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && (currentStimSubStep > 0 || interstitialDismissed.has(currentStimGroupIdx)) && (() => {
             const dimensions: { key: "r" | "i" | "f" | "c" | "cta"; question: string; anchorLow: string; anchorHigh: string; color: string; shortLabel: string }[] = [
               {
                 key: "r", shortLabel: "R",
