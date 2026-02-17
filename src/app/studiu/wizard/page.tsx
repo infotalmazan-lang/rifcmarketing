@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu de Percepție Consumator
    Wizard cu 12 steps, auto-save la fiecare pas, resume din localStorage
+   Mobile-first design (99% users on phone)
    ═══════════════════════════════════════════════════════════ */
 
 const LS_KEY = "rifc-survey-session";
@@ -44,8 +45,22 @@ function computeC(r: number, i: number, f: number): number {
   return r > 0 ? Math.round((r + i * f) * 10) / 10 : 0;
 }
 
+function useIsMobile(breakpoint = 640): boolean {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 // ── Main Component ─────────────────────────────────────────
 export default function StudiuPage() {
+  const isMobile = useIsMobile();
+  const m = isMobile;
+
   const [session, setSession] = useState<SessionData | null>(null);
   const [step, setStep] = useState(0); // 0=loading, 1-12=active steps
   const [saving, setSaving] = useState(false);
@@ -80,6 +95,309 @@ export default function StudiuPage() {
   >({});
   const timerRef = useRef<number>(0);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
+
+  // ── Styles (inside component for isMobile access) ───────
+  const S: Record<string, React.CSSProperties> = {
+    container: {
+      minHeight: "100vh",
+      background: "#f8f9fa",
+      fontFamily: "Outfit, system-ui, sans-serif",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      padding: m ? "12px 8px" : "20px 16px",
+    },
+    progressWrap: {
+      width: "100%",
+      maxWidth: m ? "100%" : 700,
+      marginBottom: m ? 12 : 20,
+    },
+    progressBar: {
+      height: 6,
+      borderRadius: 3,
+      background: "#e5e7eb",
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 3,
+      background: "linear-gradient(90deg, #DC2626, #059669)",
+      transition: "width 0.3s ease",
+    },
+    progressText: {
+      fontSize: m ? 11 : 12,
+      color: "#9CA3AF",
+      marginTop: 6,
+      textAlign: "center" as const,
+    },
+    card: {
+      width: "100%",
+      maxWidth: m ? "100%" : 700,
+      background: "#ffffff",
+      borderRadius: m ? 10 : 12,
+      border: "1px solid #e5e7eb",
+      padding: m ? "20px 16px" : "32px 28px",
+    },
+    stepTitle: {
+      fontSize: m ? 18 : 22,
+      fontWeight: 700,
+      color: "#111827",
+      marginBottom: 6,
+    },
+    stepDesc: {
+      fontSize: m ? 13 : 14,
+      color: "#6B7280",
+      lineHeight: 1.6,
+      marginBottom: m ? 20 : 24,
+    },
+    label: {
+      display: "block",
+      fontSize: 13,
+      fontWeight: 600,
+      color: "#374151",
+      marginBottom: 6,
+      marginTop: m ? 14 : 16,
+    },
+    select: {
+      width: "100%",
+      padding: m ? "12px 14px" : "10px 12px",
+      fontSize: 16,
+      border: "1px solid #d1d5db",
+      borderRadius: 8,
+      background: "#fff",
+      color: "#111827",
+      appearance: "auto" as const,
+    },
+    input: {
+      width: "100%",
+      padding: m ? "12px 14px" : "10px 12px",
+      fontSize: 16,
+      border: "1px solid #d1d5db",
+      borderRadius: 8,
+      background: "#fff",
+      color: "#111827",
+      boxSizing: "border-box" as const,
+    },
+    chip: {
+      padding: m ? "10px 16px" : "8px 14px",
+      fontSize: m ? 14 : 13,
+      borderRadius: 20,
+      border: "1px solid #d1d5db",
+      background: "#fff",
+      color: "#374151",
+      cursor: "pointer",
+      userSelect: "none" as const,
+      transition: "all 0.15s",
+      display: "inline-flex",
+      alignItems: "center",
+      minHeight: 44,
+    },
+    chipActive: {
+      background: "#DC2626",
+      color: "#fff",
+      borderColor: "#DC2626",
+    },
+    likertNum: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: 22,
+      height: 22,
+      borderRadius: "50%",
+      background: "#DC2626",
+      color: "#fff",
+      fontSize: 11,
+      fontWeight: 700,
+      marginRight: 8,
+    },
+    likertRow: {
+      display: "flex",
+      gap: m ? 4 : 6,
+      justifyContent: "center",
+    },
+    likertBtn: {
+      width: m ? 40 : 44,
+      height: m ? 40 : 44,
+      borderRadius: 8,
+      border: "1px solid #d1d5db",
+      background: "#fff",
+      fontSize: m ? 14 : 16,
+      fontWeight: 600,
+      color: "#374151",
+      cursor: "pointer",
+      transition: "all 0.15s",
+    },
+    likertBtnActive: {
+      background: "#DC2626",
+      color: "#fff",
+      borderColor: "#DC2626",
+    },
+    likertLabels: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 10,
+      color: "#9CA3AF",
+      marginTop: 4,
+      padding: "0 4px",
+    },
+    stimulusBox: {
+      border: "1px solid #e5e7eb",
+      borderRadius: m ? 10 : 12,
+      padding: m ? 14 : 20,
+      background: "#fafafa",
+    },
+    stimulusMeta: {
+      display: "flex",
+      gap: 8,
+      marginBottom: 10,
+      flexWrap: "wrap" as const,
+    },
+    typeBadge: {
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: 1,
+      padding: "3px 8px",
+      borderRadius: 4,
+      background: "#DC2626",
+      color: "#fff",
+    },
+    industryBadge: {
+      fontSize: 10,
+      fontWeight: 600,
+      padding: "3px 8px",
+      borderRadius: 4,
+      background: "#e5e7eb",
+      color: "#374151",
+    },
+    stimulusImg: {
+      width: "100%",
+      borderRadius: 8,
+      border: "1px solid #e5e7eb",
+      maxHeight: m ? 240 : 400,
+      objectFit: "cover" as const,
+    },
+    videoWrap: {
+      position: "relative" as const,
+      paddingBottom: m ? "50%" : "56.25%",
+      height: 0,
+      overflow: "hidden",
+      borderRadius: 8,
+      border: "1px solid #e5e7eb",
+    },
+    videoIframe: {
+      position: "absolute" as const,
+      top: 0,
+      left: 0,
+      width: "100%",
+      height: "100%",
+      border: "none",
+    },
+    textContent: {
+      fontSize: m ? 14 : 14,
+      lineHeight: 1.7,
+      color: "#374151",
+      background: "#fff",
+      border: "1px solid #e5e7eb",
+      borderRadius: 8,
+      padding: m ? 12 : 16,
+      whiteSpace: "pre-wrap" as const,
+    },
+    textPrimary: {
+      fontSize: m ? 15 : 16,
+      lineHeight: 1.8,
+      fontWeight: 500,
+      color: "#374151",
+      background: "#fef3c7",
+      border: "1px solid #fcd34d",
+      borderRadius: 8,
+      padding: m ? 16 : 20,
+      whiteSpace: "pre-wrap" as const,
+    },
+    pdfLink: {
+      display: "inline-block",
+      padding: "10px 16px",
+      fontSize: 13,
+      fontWeight: 600,
+      color: "#DC2626",
+      border: "1px solid #DC2626",
+      borderRadius: 8,
+      textDecoration: "none",
+      marginTop: 8,
+    },
+    siteLink: {
+      display: "inline-block",
+      padding: "10px 16px",
+      fontSize: 13,
+      fontWeight: 600,
+      color: "#2563EB",
+      border: "1px solid #2563EB",
+      borderRadius: 8,
+      textDecoration: "none",
+      marginTop: 8,
+    },
+    sliderLabels: {
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: 10,
+      color: "#9CA3AF",
+      marginTop: 2,
+    },
+    cScoreDesktop: {
+      textAlign: "center" as const,
+      padding: 20,
+      background: "#fef2f2",
+      border: "1px solid #fecaca",
+      borderRadius: 12,
+      marginTop: 16,
+    },
+    cScoreMobile: {
+      margin: "16px -16px -20px",
+      padding: "12px 16px",
+      background: "rgba(254, 242, 242, 0.95)",
+      borderTop: "1px solid #fecaca",
+      borderRadius: "0 0 10px 10px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    nav: {
+      display: "flex",
+      alignItems: "center",
+      gap: 12,
+      marginTop: m ? 20 : 28,
+      paddingTop: m ? 16 : 20,
+      borderTop: "1px solid #e5e7eb",
+    },
+    btnPrimary: {
+      padding: m ? "14px 24px" : "12px 28px",
+      fontSize: m ? 16 : 15,
+      fontWeight: 600,
+      color: "#fff",
+      background: "#DC2626",
+      border: "none",
+      borderRadius: 8,
+      cursor: "pointer",
+      transition: "opacity 0.15s",
+      minHeight: 48,
+    },
+    btnSecondary: {
+      padding: m ? "14px 16px" : "12px 20px",
+      fontSize: m ? 15 : 14,
+      fontWeight: 500,
+      color: "#6B7280",
+      background: "transparent",
+      border: "1px solid #d1d5db",
+      borderRadius: 8,
+      cursor: "pointer",
+      minHeight: 48,
+    },
+    footer: {
+      marginTop: m ? 16 : 24,
+      fontSize: 12,
+      color: "#9CA3AF",
+      textAlign: "center" as const,
+    },
+  };
 
   // ── Init: load session or create new ────────────────────
   useEffect(() => {
@@ -124,10 +442,9 @@ export default function StudiuPage() {
   }, []);
 
   // ── Compute total steps ─────────────────────────────────
-  // Steps: 1=demographic, 2=behavioral, 3=psychographic, 4..3+N=stimuli, 3+N+1=thank you
   const numStimuli = session?.stimuli?.length || 8;
-  const lastStimulusStep = 3 + numStimuli; // e.g. 11 for 8 stimuli
-  const thankYouStep = lastStimulusStep + 1; // e.g. 12 for 8 stimuli
+  const lastStimulusStep = 3 + numStimuli;
+  const thankYouStep = lastStimulusStep + 1;
   const totalSteps = thankYouStep;
   const pct = step >= thankYouStep ? 100 : Math.round(((step - 1) / (totalSteps - 1)) * 100);
 
@@ -191,7 +508,6 @@ export default function StudiuPage() {
       const result = await res.json();
       if (result.success) {
         const nextStep = step + 1;
-        // After last stimulus, go to thank you
         const finalStep = Math.min(nextStep, thankYouStep);
 
         const updated = { ...session, currentStep: finalStep };
@@ -218,8 +534,8 @@ export default function StudiuPage() {
   // ── Loading state ───────────────────────────────────────
   if (step === 0 || !session) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
+      <div style={S.container}>
+        <div style={S.card}>
           {error ? (
             <p style={{ color: "#DC2626" }}>{error}</p>
           ) : (
@@ -245,29 +561,29 @@ export default function StudiuPage() {
           ) / 10
         : 0;
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <div style={{ textAlign: "center", padding: "40px 20px" }}>
+      <div style={S.container}>
+        <div style={S.card}>
+          <div style={{ textAlign: "center", padding: m ? "24px 12px" : "40px 20px" }}>
             <div
               style={{
-                width: 64,
-                height: 64,
+                width: m ? 52 : 64,
+                height: m ? 52 : 64,
                 borderRadius: "50%",
                 background: "#059669",
                 color: "#fff",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: 28,
+                fontSize: m ? 24 : 28,
                 margin: "0 auto 20px",
               }}
             >
               &#10003;
             </div>
-            <h2 style={{ fontSize: 24, marginBottom: 8, color: "#111827" }}>
+            <h2 style={{ fontSize: m ? 20 : 24, marginBottom: 8, color: "#111827" }}>
               Multumim pentru participare!
             </h2>
-            <p style={{ color: "#6B7280", marginBottom: 24 }}>
+            <p style={{ color: "#6B7280", marginBottom: 24, fontSize: m ? 14 : 16 }}>
               Ai evaluat {session.stimuli.length} materiale de marketing.
               <br />
               Scorul C mediu al evaluarilor tale:{" "}
@@ -278,7 +594,7 @@ export default function StudiuPage() {
                 background: "#f0fdf4",
                 border: "1px solid #bbf7d0",
                 borderRadius: 8,
-                padding: 16,
+                padding: m ? 12 : 16,
                 marginBottom: 24,
               }}
             >
@@ -309,35 +625,40 @@ export default function StudiuPage() {
 
   // ── Render ──────────────────────────────────────────────
   return (
-    <div style={styles.container}>
+    <div style={S.container}>
       {/* Progress bar */}
-      <div style={styles.progressWrap}>
-        <div style={styles.progressBar}>
+      <div style={S.progressWrap}>
+        <div style={S.progressBar}>
           <div
             style={{
-              ...styles.progressFill,
+              ...S.progressFill,
               width: `${pct}%`,
             }}
           />
         </div>
-        <div style={styles.progressText}>
-          Pasul {step} din {totalSteps} &mdash; {pct}% completat
+        <div style={S.progressText}>
+          {m ? (
+            <>Pas {step}/{totalSteps} &middot; {pct}%</>
+          ) : (
+            <>Pasul {step} din {totalSteps} &mdash; {pct}% completat</>
+          )}
         </div>
       </div>
 
-      <div style={styles.card}>
+      <div style={S.card}>
         {/* Step 1: Demographics */}
         {step === 1 && (
           <div>
-            <h2 style={styles.stepTitle}>Profil Demografic</h2>
-            <p style={styles.stepDesc}>
+            <h2 style={S.stepTitle}>Profil Demografic</h2>
+            <p style={S.stepDesc}>
               Aceste date ne ajuta sa intelegem perspectiva diferitelor segmente
               de audienta. Toate raspunsurile sunt anonime.
             </p>
 
-            <label style={styles.label}>Varsta</label>
+            <label style={S.label}>Varsta</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={demographics.ageRange}
               onChange={(e) =>
                 setDemographics({ ...demographics, ageRange: e.target.value })
@@ -352,9 +673,10 @@ export default function StudiuPage() {
               <option value="65+">65+ ani</option>
             </select>
 
-            <label style={styles.label}>Gen</label>
+            <label style={S.label}>Gen</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={demographics.gender}
               onChange={(e) =>
                 setDemographics({ ...demographics, gender: e.target.value })
@@ -367,9 +689,10 @@ export default function StudiuPage() {
               <option value="prefer_nu_spun">Prefer sa nu spun</option>
             </select>
 
-            <label style={styles.label}>Locatie</label>
+            <label style={S.label}>Locatie</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={demographics.locationType}
               onChange={(e) =>
                 setDemographics({
@@ -383,9 +706,10 @@ export default function StudiuPage() {
               <option value="rural">Rural</option>
             </select>
 
-            <label style={styles.label}>Venit lunar net (orientativ)</label>
+            <label style={S.label}>Venit lunar net (orientativ)</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={demographics.incomeRange}
               onChange={(e) =>
                 setDemographics({
@@ -401,9 +725,10 @@ export default function StudiuPage() {
               <option value="peste_2000">Peste 2.000 EUR</option>
             </select>
 
-            <label style={styles.label}>Nivel educatie</label>
+            <label style={S.label}>Nivel educatie</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={demographics.education}
               onChange={(e) =>
                 setDemographics({ ...demographics, education: e.target.value })
@@ -417,10 +742,11 @@ export default function StudiuPage() {
               <option value="altul">Altul</option>
             </select>
 
-            <label style={styles.label}>Ocupatie</label>
+            <label style={S.label}>Ocupatie</label>
             <input
               type="text"
-              style={styles.input}
+              className="wizard-input"
+              style={S.input}
               placeholder="Ex: Manager Marketing, Student, Antreprenor..."
               value={demographics.occupation}
               onChange={(e) =>
@@ -433,14 +759,15 @@ export default function StudiuPage() {
         {/* Step 2: Behavioral */}
         {step === 2 && (
           <div>
-            <h2 style={styles.stepTitle}>Profil Comportamental</h2>
-            <p style={styles.stepDesc}>
+            <h2 style={S.stepTitle}>Profil Comportamental</h2>
+            <p style={S.stepDesc}>
               Cum interactionezi cu mediul digital si reclamele.
             </p>
 
-            <label style={styles.label}>Cat de des cumperi online?</label>
+            <label style={S.label}>Cat de des cumperi online?</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={behavioral.purchaseFrequency}
               onChange={(e) =>
                 setBehavioral({
@@ -456,7 +783,7 @@ export default function StudiuPage() {
               <option value="rar">Rar (cateva ori pe an)</option>
             </select>
 
-            <label style={styles.label}>
+            <label style={S.label}>
               Canale media preferate (selecteaza mai multe)
             </label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
@@ -472,9 +799,9 @@ export default function StudiuPage() {
                 <label
                   key={ch}
                   style={{
-                    ...styles.chip,
+                    ...S.chip,
                     ...(behavioral.preferredChannels.includes(ch)
-                      ? styles.chipActive
+                      ? S.chipActive
                       : {}),
                   }}
                 >
@@ -494,9 +821,10 @@ export default function StudiuPage() {
               ))}
             </div>
 
-            <label style={styles.label}>Timp online zilnic</label>
+            <label style={S.label}>Timp online zilnic</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={behavioral.dailyOnlineTime}
               onChange={(e) =>
                 setBehavioral({
@@ -512,9 +840,10 @@ export default function StudiuPage() {
               <option value="peste_5h">Peste 5 ore</option>
             </select>
 
-            <label style={styles.label}>Dispozitiv principal</label>
+            <label style={S.label}>Dispozitiv principal</label>
             <select
-              style={styles.select}
+              className="wizard-select"
+              style={S.select}
               value={behavioral.primaryDevice}
               onChange={(e) =>
                 setBehavioral({
@@ -534,8 +863,8 @@ export default function StudiuPage() {
         {/* Step 3: Psychographic */}
         {step === 3 && (
           <div>
-            <h2 style={styles.stepTitle}>Profil Psihografic</h2>
-            <p style={styles.stepDesc}>
+            <h2 style={S.stepTitle}>Profil Psihografic</h2>
+            <p style={S.stepDesc}>
               Indica cat de mult esti de acord cu fiecare afirmatie (1 = Total
               dezacord, 7 = Total acord).
             </p>
@@ -562,19 +891,19 @@ export default function StudiuPage() {
                 text: "Ma opresc din scrollat cand vad o reclama interesanta",
               },
             ].map((item, idx) => (
-              <div key={item.key} style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 14, color: "#374151", marginBottom: 8 }}>
-                  <span style={styles.likertNum}>{idx + 1}</span>
+              <div key={item.key} style={{ marginBottom: m ? 20 : 24 }}>
+                <div style={{ fontSize: m ? 13 : 14, color: "#374151", marginBottom: 8, lineHeight: 1.5 }}>
+                  <span style={S.likertNum}>{idx + 1}</span>
                   {item.text}
                 </div>
-                <div style={styles.likertRow}>
+                <div className="wizard-likert-grid" style={S.likertRow}>
                   {[1, 2, 3, 4, 5, 6, 7].map((v) => (
                     <button
                       key={v}
                       style={{
-                        ...styles.likertBtn,
+                        ...S.likertBtn,
                         ...(psychographic[item.key] === v
-                          ? styles.likertBtnActive
+                          ? S.likertBtnActive
                           : {}),
                       }}
                       onClick={() =>
@@ -585,7 +914,7 @@ export default function StudiuPage() {
                     </button>
                   ))}
                 </div>
-                <div style={styles.likertLabels}>
+                <div style={S.likertLabels}>
                   <span>Total dezacord</span>
                   <span>Total acord</span>
                 </div>
@@ -597,26 +926,26 @@ export default function StudiuPage() {
         {/* Steps 4-N: Stimulus evaluation */}
         {step >= 4 && step <= lastStimulusStep && currentStim && (
           <div>
-            <h2 style={styles.stepTitle}>
+            <h2 style={S.stepTitle}>
               Evaluare Material {currentStimIdx + 1} din{" "}
               {session.stimuli.length}
             </h2>
-            <p style={styles.stepDesc}>
+            <p style={S.stepDesc}>
               Analizeaza materialul de mai jos si evalueaza-l pe cele 3
               dimensiuni.
             </p>
 
             {/* Stimulus display */}
-            <div style={styles.stimulusBox}>
-              <div style={styles.stimulusMeta}>
-                <span style={styles.typeBadge}>{currentStim.type}</span>
+            <div style={S.stimulusBox}>
+              <div style={S.stimulusMeta}>
+                <span style={S.typeBadge}>{currentStim.type}</span>
                 {currentStim.industry && (
-                  <span style={styles.industryBadge}>
+                  <span style={S.industryBadge}>
                     {currentStim.industry}
                   </span>
                 )}
               </div>
-              <h3 style={{ fontSize: 18, color: "#111827", marginBottom: 12 }}>
+              <h3 style={{ fontSize: m ? 16 : 18, color: "#111827", marginBottom: 12 }}>
                 {currentStim.name}
               </h3>
 
@@ -625,7 +954,7 @@ export default function StudiuPage() {
                 <img
                   src={currentStim.image_url}
                   alt={currentStim.name}
-                  style={styles.stimulusImg}
+                  style={S.stimulusImg}
                   loading="lazy"
                 />
               )}
@@ -633,7 +962,7 @@ export default function StudiuPage() {
               {/* YouTube video */}
               {currentStim.video_url &&
                 extractYoutubeId(currentStim.video_url) && (
-                  <div style={styles.videoWrap}>
+                  <div style={S.videoWrap}>
                     <iframe
                       src={`https://www.youtube.com/embed/${extractYoutubeId(
                         currentStim.video_url
@@ -641,14 +970,41 @@ export default function StudiuPage() {
                       title={currentStim.name}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
                       allowFullScreen
-                      style={styles.videoIframe}
+                      style={S.videoIframe}
                     />
                   </div>
                 )}
 
-              {/* Text content */}
+              {/* Direct video (uploaded files, non-YouTube) */}
+              {currentStim.video_url &&
+                !extractYoutubeId(currentStim.video_url) && (
+                  <video
+                    src={currentStim.video_url}
+                    controls
+                    playsInline
+                    preload="metadata"
+                    style={{
+                      width: "100%",
+                      maxHeight: m ? 240 : 400,
+                      borderRadius: 8,
+                      border: "1px solid #e5e7eb",
+                      background: "#000",
+                    }}
+                  />
+                )}
+
+              {/* Text content — primary if no image/video */}
               {currentStim.text_content && (
-                <div style={styles.textContent}>
+                <div style={
+                  !currentStim.image_url && !currentStim.video_url
+                    ? S.textPrimary
+                    : S.textContent
+                }>
+                  {!currentStim.image_url && !currentStim.video_url && (
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#92400e", marginBottom: 8 }}>
+                      CONTINUT PRINCIPAL
+                    </div>
+                  )}
                   {currentStim.text_content}
                 </div>
               )}
@@ -659,7 +1015,7 @@ export default function StudiuPage() {
                   href={currentStim.pdf_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={styles.pdfLink}
+                  style={S.pdfLink}
                 >
                   Deschide PDF-ul &rarr;
                 </a>
@@ -671,7 +1027,7 @@ export default function StudiuPage() {
                   href={currentStim.site_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={styles.siteLink}
+                  style={S.siteLink}
                 >
                   Viziteaza site-ul &rarr;
                 </a>
@@ -693,7 +1049,7 @@ export default function StudiuPage() {
             </div>
 
             {/* R, I, F Sliders */}
-            <div style={{ marginTop: 24 }}>
+            <div style={{ marginTop: m ? 20 : 24 }}>
               {[
                 {
                   key: "r" as const,
@@ -714,7 +1070,7 @@ export default function StudiuPage() {
                   color: "#7C3AED",
                 },
               ].map((dim) => (
-                <div key={dim.key} style={{ marginBottom: 20 }}>
+                <div key={dim.key} style={{ marginBottom: m ? 16 : 20 }}>
                   <div
                     style={{
                       display: "flex",
@@ -725,7 +1081,7 @@ export default function StudiuPage() {
                   >
                     <span
                       style={{
-                        fontSize: 14,
+                        fontSize: m ? 13 : 14,
                         fontWeight: 700,
                         color: dim.color,
                       }}
@@ -734,7 +1090,7 @@ export default function StudiuPage() {
                     </span>
                     <span
                       style={{
-                        fontSize: 24,
+                        fontSize: m ? 20 : 24,
                         fontWeight: 800,
                         fontFamily: "JetBrains Mono, monospace",
                         color: dim.color,
@@ -745,7 +1101,7 @@ export default function StudiuPage() {
                   </div>
                   <p
                     style={{
-                      fontSize: 12,
+                      fontSize: m ? 11 : 12,
                       color: "#9CA3AF",
                       marginBottom: 8,
                     }}
@@ -757,6 +1113,7 @@ export default function StudiuPage() {
                     min={1}
                     max={10}
                     value={currentScores[dim.key]}
+                    className={`wizard-slider slider-${dim.key}`}
                     onChange={(e) => {
                       const val = parseInt(e.target.value);
                       setStimulusScores({
@@ -767,39 +1124,97 @@ export default function StudiuPage() {
                         },
                       });
                     }}
-                    style={{
-                      ...styles.slider,
-                      accentColor: dim.color,
-                    }}
+                    style={{ width: "100%" }}
                   />
-                  <div style={styles.sliderLabels}>
-                    <span>1</span>
-                    <span>5</span>
-                    <span>10</span>
-                  </div>
+                  {/* Mobile tap buttons as slider alternative */}
+                  {m && (
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: 6,
+                      gap: 2,
+                    }}>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
+                        <button
+                          key={v}
+                          onClick={() => setStimulusScores({
+                            ...stimulusScores,
+                            [currentStim.id]: { ...currentScores, [dim.key]: v },
+                          })}
+                          style={{
+                            flex: 1,
+                            height: 30,
+                            fontSize: 11,
+                            fontWeight: currentScores[dim.key] === v ? 700 : 400,
+                            background: currentScores[dim.key] === v ? dim.color : "transparent",
+                            color: currentScores[dim.key] === v ? "#fff" : "#9CA3AF",
+                            border: "none",
+                            borderRadius: 4,
+                            cursor: "pointer",
+                            padding: 0,
+                          }}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!m && (
+                    <div style={S.sliderLabels}>
+                      <span>1</span>
+                      <span>5</span>
+                      <span>10</span>
+                    </div>
+                  )}
                 </div>
               ))}
 
-              {/* Computed C */}
-              <div style={styles.cScore}>
-                <span style={{ fontSize: 12, letterSpacing: 2, color: "#6B7280" }}>
-                  SCOR C CALCULAT
-                </span>
-                <div
-                  style={{
-                    fontSize: 36,
-                    fontWeight: 800,
-                    fontFamily: "JetBrains Mono, monospace",
-                    color: "#DC2626",
-                  }}
-                >
-                  {computeC(currentScores.r, currentScores.i, currentScores.f)}
-                </div>
-                <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                  {currentScores.r} + ({currentScores.i} &times;{" "}
-                  {currentScores.f}) ={" "}
-                  {computeC(currentScores.r, currentScores.i, currentScores.f)}
-                </span>
+              {/* Computed C — sticky on mobile, static on desktop */}
+              <div
+                className={m ? "wizard-sticky-score" : undefined}
+                style={m ? S.cScoreMobile : S.cScoreDesktop}
+              >
+                {m ? (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 11, letterSpacing: 1.5, color: "#6B7280", fontWeight: 600 }}>
+                        SCOR C
+                      </span>
+                      <span style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "JetBrains Mono, monospace" }}>
+                        {currentScores.r}+({currentScores.i}&times;{currentScores.f})
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: 28,
+                      fontWeight: 800,
+                      fontFamily: "JetBrains Mono, monospace",
+                      color: "#DC2626",
+                    }}>
+                      {computeC(currentScores.r, currentScores.i, currentScores.f)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 12, letterSpacing: 2, color: "#6B7280" }}>
+                      SCOR C CALCULAT
+                    </span>
+                    <div
+                      style={{
+                        fontSize: 36,
+                        fontWeight: 800,
+                        fontFamily: "JetBrains Mono, monospace",
+                        color: "#DC2626",
+                      }}
+                    >
+                      {computeC(currentScores.r, currentScores.i, currentScores.f)}
+                    </div>
+                    <span style={{ fontSize: 11, color: "#9CA3AF" }}>
+                      {currentScores.r} + ({currentScores.i} &times;{" "}
+                      {currentScores.f}) ={" "}
+                      {computeC(currentScores.r, currentScores.i, currentScores.f)}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -820,16 +1235,16 @@ export default function StudiuPage() {
         )}
 
         {/* Navigation */}
-        <div style={styles.nav}>
+        <div style={S.nav}>
           {step > 1 && (
-            <button style={styles.btnSecondary} onClick={goBack}>
+            <button style={S.btnSecondary} onClick={goBack}>
               &larr; Inapoi
             </button>
           )}
           <div style={{ flex: 1 }} />
           <button
             style={{
-              ...styles.btnPrimary,
+              ...S.btnPrimary,
               opacity: saving ? 0.6 : 1,
             }}
             onClick={saveAndNext}
@@ -845,7 +1260,7 @@ export default function StudiuPage() {
       </div>
 
       {/* Footer */}
-      <div style={styles.footer}>
+      <div style={S.footer}>
         <span>R IF C &mdash; Studiu de Perceptie &middot; </span>
         <a href="https://rifcmarketing.com" style={{ color: "#DC2626" }}>
           rifcmarketing.com
@@ -854,284 +1269,3 @@ export default function StudiuPage() {
     </div>
   );
 }
-
-// ── Styles ─────────────────────────────────────────────────
-const styles: Record<string, React.CSSProperties> = {
-  container: {
-    minHeight: "100vh",
-    background: "#f8f9fa",
-    fontFamily: "Outfit, system-ui, sans-serif",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "20px 16px",
-  },
-  progressWrap: {
-    width: "100%",
-    maxWidth: 700,
-    marginBottom: 20,
-  },
-  progressBar: {
-    height: 6,
-    borderRadius: 3,
-    background: "#e5e7eb",
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-    background: "linear-gradient(90deg, #DC2626, #059669)",
-    transition: "width 0.3s ease",
-  },
-  progressText: {
-    fontSize: 12,
-    color: "#9CA3AF",
-    marginTop: 6,
-    textAlign: "center" as const,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 700,
-    background: "#ffffff",
-    borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    padding: "32px 28px",
-  },
-  stepTitle: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: "#111827",
-    marginBottom: 6,
-  },
-  stepDesc: {
-    fontSize: 14,
-    color: "#6B7280",
-    lineHeight: 1.6,
-    marginBottom: 24,
-  },
-  label: {
-    display: "block",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#374151",
-    marginBottom: 6,
-    marginTop: 16,
-  },
-  select: {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: 14,
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    background: "#fff",
-    color: "#111827",
-    appearance: "auto" as const,
-  },
-  input: {
-    width: "100%",
-    padding: "10px 12px",
-    fontSize: 14,
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    background: "#fff",
-    color: "#111827",
-    boxSizing: "border-box" as const,
-  },
-  chip: {
-    padding: "8px 14px",
-    fontSize: 13,
-    borderRadius: 20,
-    border: "1px solid #d1d5db",
-    background: "#fff",
-    color: "#374151",
-    cursor: "pointer",
-    userSelect: "none" as const,
-    transition: "all 0.15s",
-  },
-  chipActive: {
-    background: "#DC2626",
-    color: "#fff",
-    borderColor: "#DC2626",
-  },
-  likertNum: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 22,
-    height: 22,
-    borderRadius: "50%",
-    background: "#DC2626",
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: 700,
-    marginRight: 8,
-  },
-  likertRow: {
-    display: "flex",
-    gap: 6,
-    justifyContent: "center",
-  },
-  likertBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 8,
-    border: "1px solid #d1d5db",
-    background: "#fff",
-    fontSize: 16,
-    fontWeight: 600,
-    color: "#374151",
-    cursor: "pointer",
-    transition: "all 0.15s",
-  },
-  likertBtnActive: {
-    background: "#DC2626",
-    color: "#fff",
-    borderColor: "#DC2626",
-  },
-  likertLabels: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 10,
-    color: "#9CA3AF",
-    marginTop: 4,
-    padding: "0 4px",
-  },
-  stimulusBox: {
-    border: "1px solid #e5e7eb",
-    borderRadius: 12,
-    padding: 20,
-    background: "#fafafa",
-  },
-  stimulusMeta: {
-    display: "flex",
-    gap: 8,
-    marginBottom: 10,
-  },
-  typeBadge: {
-    fontSize: 10,
-    fontWeight: 700,
-    letterSpacing: 1,
-    padding: "3px 8px",
-    borderRadius: 4,
-    background: "#DC2626",
-    color: "#fff",
-  },
-  industryBadge: {
-    fontSize: 10,
-    fontWeight: 600,
-    padding: "3px 8px",
-    borderRadius: 4,
-    background: "#e5e7eb",
-    color: "#374151",
-  },
-  stimulusImg: {
-    width: "100%",
-    borderRadius: 8,
-    border: "1px solid #e5e7eb",
-    maxHeight: 400,
-    objectFit: "cover" as const,
-  },
-  videoWrap: {
-    position: "relative" as const,
-    paddingBottom: "56.25%",
-    height: 0,
-    overflow: "hidden",
-    borderRadius: 8,
-    border: "1px solid #e5e7eb",
-  },
-  videoIframe: {
-    position: "absolute" as const,
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    border: "none",
-  },
-  textContent: {
-    fontSize: 14,
-    lineHeight: 1.7,
-    color: "#374151",
-    background: "#fff",
-    border: "1px solid #e5e7eb",
-    borderRadius: 8,
-    padding: 16,
-    whiteSpace: "pre-wrap" as const,
-  },
-  pdfLink: {
-    display: "inline-block",
-    padding: "10px 16px",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#DC2626",
-    border: "1px solid #DC2626",
-    borderRadius: 8,
-    textDecoration: "none",
-    marginTop: 8,
-  },
-  siteLink: {
-    display: "inline-block",
-    padding: "10px 16px",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#2563EB",
-    border: "1px solid #2563EB",
-    borderRadius: 8,
-    textDecoration: "none",
-    marginTop: 8,
-  },
-  slider: {
-    width: "100%",
-    height: 8,
-    cursor: "pointer",
-  },
-  sliderLabels: {
-    display: "flex",
-    justifyContent: "space-between",
-    fontSize: 10,
-    color: "#9CA3AF",
-    marginTop: 2,
-  },
-  cScore: {
-    textAlign: "center" as const,
-    padding: 20,
-    background: "#fef2f2",
-    border: "1px solid #fecaca",
-    borderRadius: 12,
-    marginTop: 16,
-  },
-  nav: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 28,
-    paddingTop: 20,
-    borderTop: "1px solid #e5e7eb",
-  },
-  btnPrimary: {
-    padding: "12px 28px",
-    fontSize: 15,
-    fontWeight: 600,
-    color: "#fff",
-    background: "#DC2626",
-    border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
-    transition: "opacity 0.15s",
-  },
-  btnSecondary: {
-    padding: "12px 20px",
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#6B7280",
-    background: "transparent",
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    cursor: "pointer",
-  },
-  footer: {
-    marginTop: 24,
-    fontSize: 12,
-    color: "#9CA3AF",
-    textAlign: "center" as const,
-  },
-};

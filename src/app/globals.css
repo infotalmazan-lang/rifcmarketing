@@ -83,3 +83,80 @@ html {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* ── Survey Wizard: Mobile-friendly range sliders ── */
+.wizard-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  outline: none;
+  cursor: pointer;
+  touch-action: pan-x;
+  background: #e5e7eb;
+}
+.wizard-slider::-webkit-slider-track {
+  height: 10px;
+  border-radius: 5px;
+  background: #e5e7eb;
+}
+.wizard-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  cursor: pointer;
+  margin-top: -11px;
+}
+.wizard-slider::-moz-range-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+.wizard-slider::-moz-range-track {
+  height: 10px;
+  border-radius: 5px;
+  background: #e5e7eb;
+}
+.wizard-slider.slider-r::-webkit-slider-thumb { background: #DC2626; }
+.wizard-slider.slider-r::-moz-range-thumb { background: #DC2626; }
+.wizard-slider.slider-i::-webkit-slider-thumb { background: #D97706; }
+.wizard-slider.slider-i::-moz-range-thumb { background: #D97706; }
+.wizard-slider.slider-f::-webkit-slider-thumb { background: #7C3AED; }
+.wizard-slider.slider-f::-moz-range-thumb { background: #7C3AED; }
+
+/* ── Sticky C score bar ── */
+.wizard-sticky-score {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── Likert grid on narrow screens ── */
+@media (max-width: 380px) {
+  .wizard-likert-grid {
+    gap: 3px !important;
+  }
+  .wizard-likert-grid button {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ── Survey wizard focus states ── */
+.wizard-select:focus,
+.wizard-input:focus {
+  outline: 2px solid #DC2626;
+  outline-offset: 2px;
+  border-color: #DC2626;
+}
