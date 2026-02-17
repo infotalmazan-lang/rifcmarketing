@@ -25,6 +25,17 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
+// Group stimuli by category (type), shuffle category order, shuffle within each category
+function shuffleByCategoryGroups<T extends { type: string }>(items: T[]): T[] {
+  const groups: Record<string, T[]> = {};
+  for (const item of items) {
+    if (!groups[item.type]) groups[item.type] = [];
+    groups[item.type].push(item);
+  }
+  const categoryKeys = shuffleArray(Object.keys(groups));
+  return categoryKeys.flatMap(key => shuffleArray(groups[key]));
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = createServiceRole();
@@ -90,8 +101,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Randomize order per respondent
-    const shuffledStimuli = shuffleArray(stimuli || []);
+    // Group by category, randomize category order + within each category
+    const shuffledStimuli = shuffleByCategoryGroups(stimuli || []);
 
     return NextResponse.json({
       success: true,

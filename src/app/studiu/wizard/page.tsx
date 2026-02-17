@@ -945,6 +945,22 @@ function StudiuWizardInner() {
     return !prevStim || prevStim.type !== currentStim.type;
   })();
 
+  // ── Category grouping info (for interstitial) ──────────
+  const categoryStimCount = currentStim && session
+    ? session.stimuli.filter(s => s.type === currentStim.type).length : 0;
+  // Unique categories in order of appearance (since stimuli are grouped by category)
+  const uniqueCategories = session
+    ? session.stimuli.reduce<string[]>((acc, s) => {
+        if (!acc.includes(s.type)) acc.push(s.type);
+        return acc;
+      }, [])
+    : [];
+  const currentCategoryNum = currentStim ? uniqueCategories.indexOf(currentStim.type) + 1 : 0;
+  const totalCategories = uniqueCategories.length;
+  // Previous category label (for transition message)
+  const prevCategoryType = currentStimGroupIdx > 0 && session
+    ? session.stimuli[currentStimGroupIdx - 1]?.type : null;
+
   // ── Profile step question number ────────────────────────
   const profileQuestionNum = step >= 1 && step < profileStepCount ? step : 0;
 
@@ -1443,21 +1459,39 @@ function StudiuWizardInner() {
           {showInterstitialForGroup && currentStim && (() => {
             const catMeta = CATEGORY_META[currentStim.type] || { label: currentStim.type, color: "#6B7280", icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" };
             const isFirst = currentStimGroupIdx === 0;
+            const prevCatMeta = prevCategoryType ? (CATEGORY_META[prevCategoryType] || { label: prevCategoryType, color: "#6B7280" }) : null;
             return (
               <>
                 {renderDashes()}
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: m ? "20px 0" : "40px 0" }}>
-                  {/* Thank you message (not on first) */}
-                  {!isFirst && (
+                  {/* Completed category message (not on first) */}
+                  {!isFirst && prevCatMeta && (
                     <div style={{
                       background: "#f0fdf4", border: "1px solid #bbf7d0",
-                      borderRadius: 10, padding: m ? "10px 16px" : "12px 20px", marginBottom: 28,
+                      borderRadius: 12, padding: m ? "12px 16px" : "14px 20px", marginBottom: 24,
+                      maxWidth: 340,
                     }}>
-                      <p style={{ fontSize: m ? 13 : 14, color: "#166534", fontWeight: 500, lineHeight: 1.5 }}>
-                        Multumim pentru raspunsurile anterioare!
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 4 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span style={{ fontSize: m ? 13 : 14, color: "#166534", fontWeight: 700 }}>
+                          Categoria &quot;{prevCatMeta.label}&quot; finalizata!
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12, color: "#166534", opacity: 0.7 }}>
+                        Multumim pentru raspunsuri.
                       </p>
                     </div>
                   )}
+
+                  {/* Category progress indicator */}
+                  <div style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: 2, color: textMuted,
+                    marginBottom: 16, textTransform: "uppercase" as const,
+                  }}>
+                    CATEGORIE {currentCategoryNum} DIN {totalCategories}
+                  </div>
 
                   {/* Category icon */}
                   <div style={{
@@ -1473,16 +1507,25 @@ function StudiuWizardInner() {
 
                   {/* Category label */}
                   <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 6, textTransform: "uppercase" as const }}>
-                    URMATOAREA CATEGORIE
+                    {isFirst ? "PRIMA CATEGORIE" : "URMATOAREA CATEGORIE"}
                   </div>
-                  <h2 style={{ fontSize: m ? 22 : 26, fontWeight: 800, color: textDark, marginBottom: 8, lineHeight: 1.2 }}>
+                  <h2 style={{ fontSize: m ? 22 : 26, fontWeight: 800, color: textDark, marginBottom: 10, lineHeight: 1.2 }}>
                     {catMeta.label}
                   </h2>
 
-                  {/* Material count */}
-                  <p style={{ fontSize: m ? 13 : 14, color: textMuted, marginBottom: 6 }}>
-                    Materialul {currentStimGroupIdx + 1} din {session.stimuli.length}
-                  </p>
+                  {/* Material count in this category */}
+                  <div style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    background: `${catMeta.color}10`, border: `1px solid ${catMeta.color}25`,
+                    borderRadius: 20, padding: "6px 14px", marginBottom: 20,
+                  }}>
+                    <span style={{ fontSize: m ? 13 : 14, fontWeight: 700, color: catMeta.color }}>
+                      {categoryStimCount}
+                    </span>
+                    <span style={{ fontSize: m ? 12 : 13, color: catMeta.color, opacity: 0.8 }}>
+                      {categoryStimCount === 1 ? "material de evaluat" : "materiale de evaluat"}
+                    </span>
+                  </div>
 
                   {/* Instruction */}
                   <div style={{
@@ -1491,7 +1534,7 @@ function StudiuWizardInner() {
                     maxWidth: 320,
                   }}>
                     <p style={{ fontSize: m ? 13 : 14, color: "#854d0e", lineHeight: 1.5, fontWeight: 500 }}>
-                      Analizeaza materialul timp de <strong>30 secunde</strong>, apoi raspunde la 5 intrebari scurte.
+                      Analizeaza fiecare material, apoi raspunde la 5 intrebari scurte.
                     </p>
                   </div>
 
@@ -1518,12 +1561,12 @@ function StudiuWizardInner() {
                     onMouseDown={(e) => ((e.target as HTMLElement).style.transform = "scale(0.96)")}
                     onMouseUp={(e) => ((e.target as HTMLElement).style.transform = "scale(1)")}
                   >
-                    INCEPE
+                    {isFirst ? "INCEPE" : "CONTINUA"}
                   </button>
 
                   {isFirst && (
                     <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.6 }}>
-                      {session.stimuli.length} materiale de evaluat in total
+                      {totalCategories} categorii &middot; {session.stimuli.length} materiale in total
                     </p>
                   )}
                 </div>
