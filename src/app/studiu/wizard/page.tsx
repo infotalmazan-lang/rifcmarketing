@@ -151,6 +151,7 @@ function StudiuWizardInner() {
     Record<string, { r: number; i: number; f: number; c: number; cta: number }>
   >({});
   const [attentionAnswer, setAttentionAnswer] = useState<number | null>(null);
+  const attentionTarget = useRef<number>(Math.floor(Math.random() * 10) + 1); // random 1-10, stable per session
   const timerRef = useRef<number>(0);
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -348,7 +349,7 @@ function StudiuWizardInner() {
             ctaScore: updated.cta,
             timeSpentSeconds: timerRef.current,
             isLast: isLastStimulus,
-            ...(isAttentionGroup ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === 7 } : {}),
+            ...(isAttentionGroup ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === attentionTarget.current } : {}),
           },
         }),
       }).catch(() => {});
@@ -388,7 +389,7 @@ function StudiuWizardInner() {
         ctaScore: scores.cta,
         timeSpentSeconds: timerRef.current,
         isLast: step === lastStimulusStep,
-        ...(isAttentionStep ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === 7 } : {}),
+        ...(isAttentionStep ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === attentionTarget.current } : {}),
       };
     }
 
@@ -1487,14 +1488,14 @@ function StudiuWizardInner() {
                   </div>
                 </div>
 
-                {/* Attention check at midpoint (on CTA step of middle stimulus) */}
+                {/* Attention check at midpoint — anti-robot verification */}
                 {showAttention && (
-                  <div style={{ marginTop: 16, padding: m ? 14 : 18, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10 }}>
-                    <div style={{ fontSize: m ? 13 : 14, fontWeight: 600, color: "#166534", marginBottom: 8 }}>
-                      Verificare atentie
+                  <div style={{ marginTop: 16, padding: m ? 14 : 18, background: "#fefce8", border: "1px solid #fde047", borderRadius: 10 }}>
+                    <div style={{ fontSize: m ? 13 : 14, fontWeight: 700, color: "#854d0e", marginBottom: 8 }}>
+                      Verifica ca nu esti robot
                     </div>
                     <p style={{ fontSize: m ? 12 : 13, color: textDark, marginBottom: 10, lineHeight: 1.5 }}>
-                      Selecteaza valoarea <strong>7</strong> mai jos.
+                      Alege cifra <strong style={{ fontSize: m ? 18 : 22, color: "#b45309" }}>{attentionTarget.current}</strong> din cele de mai jos.
                     </p>
                     <div style={{ display: "flex", gap: m ? 4 : 6, justifyContent: "center" }}>
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
@@ -1502,7 +1503,7 @@ function StudiuWizardInner() {
                           style={{
                             ...S.likertBtn,
                             width: m ? 30 : 34, height: m ? 30 : 34, fontSize: m ? 12 : 13,
-                            ...(attentionAnswer === v ? { background: "#059669", color: "#fff", borderColor: "#059669" } : {}),
+                            ...(attentionAnswer === v ? { background: "#b45309", color: "#fff", borderColor: "#b45309" } : {}),
                           }}
                           onClick={() => setAttentionAnswer(v)}>{v}</button>
                       ))}
