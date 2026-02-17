@@ -55,8 +55,9 @@ function useIsMobile(breakpoint = 640): boolean {
 
 // ── Sub-step definitions for profile section ───────────────
 // Steps: 0=welcome, 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education,
-//        7=purchaseFreq, 8=channels, 9=onlineTime, 10=device, 11=psychographic,
-//        12..N=stimulus eval, N+1=thank you
+//        7=purchaseFreq, 8=channels, 9=onlineTime, 10=device,
+//        11-15=psychographic (5 separate Likert questions, auto-advance),
+//        16..N=stimulus eval, N+1=thank you
 
 const PROFILE_STEPS = [
   { id: "welcome", title: "Bine ai venit!" },
@@ -70,7 +71,11 @@ const PROFILE_STEPS = [
   { id: "channels", title: "Ce canale media preferi?" },
   { id: "onlineTime", title: "Cat timp petreci online zilnic?" },
   { id: "device", title: "Ce dispozitiv folosesti cel mai des?" },
-  { id: "psychographic", title: "Profil Psihografic" },
+  { id: "psych1", title: "Cat de mult esti de acord?" },
+  { id: "psych2", title: "Cat de mult esti de acord?" },
+  { id: "psych3", title: "Cat de mult esti de acord?" },
+  { id: "psych4", title: "Cat de mult esti de acord?" },
+  { id: "psych5", title: "Cat de mult esti de acord?" },
 ];
 
 // ── Countries list for autocomplete ──────────────────────
@@ -134,11 +139,11 @@ function StudiuWizardInner() {
     primaryDevice: "",
   });
   const [psychographic, setPsychographic] = useState({
-    adReceptivity: 4,
-    visualPreference: 4,
-    impulseBuying: 4,
-    irrelevanceAnnoyance: 4,
-    attentionCapture: 4,
+    adReceptivity: 0,
+    visualPreference: 0,
+    impulseBuying: 0,
+    irrelevanceAnnoyance: 0,
+    attentionCapture: 0,
   });
 
   // Stimulus evaluation
@@ -150,10 +155,11 @@ function StudiuWizardInner() {
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
 
   // ── Computed step boundaries ────────────────────────────
-  const profileStepCount = PROFILE_STEPS.length; // 12 (0=welcome, 1-11=profile)
+  const profileStepCount = PROFILE_STEPS.length; // 16 (0=welcome, 1-15=profile)
   const numStimuli = session?.stimuli?.length || 8;
-  const firstStimulusStep = profileStepCount; // 12
-  const lastStimulusStep = firstStimulusStep + numStimuli - 1;
+  const stepsPerStimulus = 3; // R, I, F — each on its own page
+  const firstStimulusStep = profileStepCount; // 16
+  const lastStimulusStep = firstStimulusStep + (numStimuli * stepsPerStimulus) - 1;
   const thankYouStep = lastStimulusStep + 1;
   const totalSteps = thankYouStep;
 
@@ -161,10 +167,11 @@ function StudiuWizardInner() {
   const pct = step <= 0 ? 0 : step >= thankYouStep ? 100 : Math.round((step / totalSteps) * 100);
 
   // ── Step indicator dashes ──────────────────────────────
-  // Group profile steps, then each stimulus is a dash
+  // Group profile steps, then each stimulus group (3 steps) = 1 dash
   const profileDashCount = profileStepCount - 1; // exclude welcome
   const totalDashes = profileDashCount + numStimuli;
-  const currentDash = step <= 0 ? -1 : step >= thankYouStep ? totalDashes : step - 1;
+  const stimDashIdx = step >= firstStimulusStep ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
+  const currentDash = step <= 0 ? -1 : step >= thankYouStep ? totalDashes : step < firstStimulusStep ? step - 1 : profileDashCount + stimDashIdx;
 
   // ── Init: load session or create new ────────────────────
   useEffect(() => {
@@ -210,10 +217,17 @@ function StudiuWizardInner() {
     init();
   }, [tag]);
 
-  // ── Timer for stimulus steps ────────────────────────────
+  // ── Timer for stimulus steps (reset at first sub-step of each stimulus group) ──
+  const stimGroupIdx = step >= firstStimulusStep && step <= lastStimulusStep
+    ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
+  const stimSubStep = step >= firstStimulusStep && step <= lastStimulusStep
+    ? (step - firstStimulusStep) % stepsPerStimulus : -1; // 0=R, 1=I, 2=F
   useEffect(() => {
     if (step >= firstStimulusStep && step <= lastStimulusStep) {
-      timerRef.current = 0;
+      // Only reset timer on first sub-step (R) of each stimulus
+      if (stimSubStep === 0) {
+        timerRef.current = 0;
+      }
       timerInterval.current = setInterval(() => {
         timerRef.current += 1;
       }, 1000);
@@ -221,7 +235,7 @@ function StudiuWizardInner() {
     return () => {
       if (timerInterval.current) clearInterval(timerInterval.current);
     };
-  }, [step, firstStimulusStep, lastStimulusStep]);
+  }, [step, firstStimulusStep, lastStimulusStep, stimSubStep]);
 
   // ── Advance with transition ────────────────────────────
   const advanceTo = useCallback((nextStep: number) => {
@@ -261,7 +275,8 @@ function StudiuWizardInner() {
 
   // ── Auto-advance for single-select profile steps ───────
   // Steps: 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education,
-  //        7=purchaseFreq, 8=channels(manual), 9=onlineTime, 10=device, 11=psychographic(manual)
+  //        7=purchaseFreq, 8=channels(manual), 9=onlineTime, 10=device,
+  //        11-15=psychographic (5 Likert, auto-advance each)
   const autoAdvanceProfile = useCallback((field: string, value: string, stepOffset: number) => {
     // Demographics auto-advance steps: 1=gender, 2=ageRange, 3=country, 4=locationType, 5=incomeRange, 6=education
     const demoFieldMap: Record<number, string> = { 1: "gender", 2: "ageRange", 3: "country", 4: "locationType", 5: "incomeRange", 6: "education" };
@@ -287,9 +302,58 @@ function StudiuWizardInner() {
       }
     }
 
+    // Psychographic auto-advance steps: 11=adReceptivity, 12=visualPreference, 13=impulseBuying, 14=irrelevanceAnnoyance, 15=attentionCapture
+    const psychFieldMap: Record<number, string> = { 11: "adReceptivity", 12: "visualPreference", 13: "impulseBuying", 14: "irrelevanceAnnoyance", 15: "attentionCapture" };
+    const psychKey = psychFieldMap[stepOffset];
+    if (psychKey) {
+      const numVal = parseInt(value, 10);
+      const updatedPsychographic = { ...psychographic, [psychKey]: numVal };
+      setPsychographic(updatedPsychographic);
+      // At step 15 (attentionCapture = last psychographic), save to API
+      if (stepOffset === 15) {
+        saveProfileToApi("psychographic", updatedPsychographic);
+      }
+    }
+
     // Auto-advance after brief delay
     setTimeout(() => advanceTo(step + 1), 350);
-  }, [step, advanceTo, demographics, behavioral, saveProfileToApi]);
+  }, [step, advanceTo, demographics, behavioral, psychographic, saveProfileToApi]);
+
+  // ── Auto-advance for stimulus sub-steps (R, I, F) ──────
+  const autoAdvanceStimulus = useCallback((dimension: "r" | "i" | "f", value: number) => {
+    if (!session) return;
+    const groupIdx = Math.floor((step - firstStimulusStep) / stepsPerStimulus);
+    const stimId = session.stimuliOrder[groupIdx];
+    const prev = stimulusScores[stimId] || { r: 0, i: 0, f: 0 };
+    const updated = { ...prev, [dimension]: value };
+    setStimulusScores(s => ({ ...s, [stimId]: updated }));
+
+    // On last sub-step (F, dimension === "f"), fire-and-forget save to API
+    if (dimension === "f") {
+      const isAttentionGroup = groupIdx === Math.floor(numStimuli / 2);
+      const isLastStimulus = step === lastStimulusStep;
+      fetch("/api/survey/step", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: session.sessionId,
+          step: groupIdx + 4, // offset for API step tracking
+          type: "stimulus",
+          data: {
+            stimulusId: stimId,
+            rScore: updated.r,
+            iScore: updated.i,
+            fScore: updated.f,
+            timeSpentSeconds: timerRef.current,
+            isLast: isLastStimulus,
+            ...(isAttentionGroup ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === 7 } : {}),
+          },
+        }),
+      }).catch(() => {});
+    }
+
+    setTimeout(() => advanceTo(step + 1), 350);
+  }, [step, session, firstStimulusStep, stepsPerStimulus, stimulusScores, numStimuli, lastStimulusStep, attentionAnswer, advanceTo]);
 
   // ── Save & advance step (for steps that need API save) ──
   const saveAndNext = useCallback(async () => {
@@ -303,17 +367,16 @@ function StudiuWizardInner() {
     // Map profile completion to API save
     // Demographics saved by autoAdvanceProfile at step 6 (education)
     // Behavioral saved by autoAdvanceProfile at step 10 (device)
-    if (step === 11) {
-      // Psychographic
-      type = "psychographic";
-      data = psychographic;
-    } else if (step >= firstStimulusStep && step <= lastStimulusStep) {
-      const idx = step - firstStimulusStep;
-      const stimId = session.stimuliOrder[idx];
-      const scores = stimulusScores[stimId] || { r: 5, i: 5, f: 5 };
+    // Psychographic saved by autoAdvanceProfile at step 15 (attentionCapture)
+    // Stimulus: channels (step 8) still uses saveAndNext for multi-select
+    if (step >= firstStimulusStep && step <= lastStimulusStep) {
+      // This shouldn't be called for stimulus steps anymore (they use autoAdvanceStimulus)
+      // But keep as fallback
+      const groupIdx = Math.floor((step - firstStimulusStep) / stepsPerStimulus);
+      const stimId = session.stimuliOrder[groupIdx];
+      const scores = stimulusScores[stimId] || { r: 0, i: 0, f: 0 };
       type = "stimulus";
-      const stimIdx = step - firstStimulusStep;
-      const isAttentionStep = stimIdx === Math.floor(numStimuli / 2);
+      const isAttentionStep = groupIdx === Math.floor(numStimuli / 2);
       data = {
         stimulusId: stimId,
         rScore: scores.r,
@@ -694,28 +757,30 @@ function StudiuWizardInner() {
 
   // ── Render step indicator (dashes) ─────────────────────
   const renderDashes = () => {
-    // Show max ~8 dashes to keep it clean, group them
-    const maxDashes = m ? 6 : 8;
-    const showDashes = Math.min(totalDashes, maxDashes);
-    const dashProgress = currentDash;
-
     return (
-      <div style={S.dashWrap}>
-        {Array.from({ length: showDashes }).map((_, i) => {
-          const mappedIdx = Math.floor((i / showDashes) * totalDashes);
-          const isDone = dashProgress > mappedIdx;
-          const isActive = dashProgress === mappedIdx;
-          return (
-            <div
-              key={i}
-              style={{
-                ...S.dash,
-                ...(isDone ? S.dashDone : {}),
-                ...(isActive ? S.dashActive : {}),
-              }}
-            />
-          );
-        })}
+      <div style={{ marginBottom: 16 }}>
+        {/* Progress bar with percentage */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <div style={{
+            flex: 1, height: 6, borderRadius: 3,
+            background: "#e5e1d9",
+            overflow: "hidden",
+          }}>
+            <div style={{
+              height: "100%", borderRadius: 3,
+              background: `linear-gradient(90deg, ${accentRed}, #D97706)`,
+              width: `${pct}%`,
+              transition: "width 300ms ease",
+            }} />
+          </div>
+          <span style={{
+            fontSize: 13, fontWeight: 700, color: accentRed,
+            fontFamily: "Inter, sans-serif",
+            minWidth: 38, textAlign: "right" as const,
+          }}>
+            {pct}%
+          </span>
+        </div>
       </div>
     );
   };
@@ -790,12 +855,15 @@ function StudiuWizardInner() {
   }
 
   // ── Get current stimulus ────────────────────────────────
-  const currentStimIdx = step >= firstStimulusStep && step <= lastStimulusStep ? step - firstStimulusStep : -1;
-  const currentStim = currentStimIdx >= 0 && currentStimIdx < session.stimuli.length
-    ? session.stimuli[currentStimIdx]
+  const currentStimGroupIdx = step >= firstStimulusStep && step <= lastStimulusStep
+    ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
+  const currentStimSubStep = step >= firstStimulusStep && step <= lastStimulusStep
+    ? (step - firstStimulusStep) % stepsPerStimulus : -1; // 0=R, 1=I, 2=F
+  const currentStim = currentStimGroupIdx >= 0 && currentStimGroupIdx < session.stimuli.length
+    ? session.stimuli[currentStimGroupIdx]
     : null;
   const currentScores = currentStim
-    ? stimulusScores[currentStim.id] || { r: 5, i: 5, f: 5 }
+    ? stimulusScores[currentStim.id] || { r: 0, i: 0, f: 0 }
     : { r: 5, i: 5, f: 5 };
 
   // ── Profile step question number ────────────────────────
@@ -1196,202 +1264,198 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Step 11: Psychographic (Likert — needs manual Next) ═══ */}
-          {step === 11 && (
-            <>
-              {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={{ ...S.questionTitle, fontSize: m ? 20 : 24 }}>Cat de mult esti de acord?</h2>
-              <p style={{ fontSize: m ? 12 : 13, color: textMuted, marginBottom: 20, lineHeight: 1.5 }}>
-                1 = Total dezacord &nbsp;&middot;&nbsp; 7 = Total acord
-              </p>
+          {/* ═══ Steps 11-15: Psychographic (5 separate Likert pages, auto-advance) ═══ */}
+          {step >= 11 && step <= 15 && (() => {
+            const psychQuestions = [
+              { key: "adReceptivity" as const, text: "Acord atentie reclamelor relevante pentru mine", num: 1 },
+              { key: "visualPreference" as const, text: "Prefer reclamele cu design vizual atractiv", num: 2 },
+              { key: "impulseBuying" as const, text: "Uneori cumpar impulsiv dupa ce vad o reclama", num: 3 },
+              { key: "irrelevanceAnnoyance" as const, text: "Ma irita reclamele irelevante", num: 4 },
+              { key: "attentionCapture" as const, text: "Ma opresc din scrollat la reclame interesante", num: 5 },
+            ];
+            const qIdx = step - 11;
+            const q = psychQuestions[qIdx];
+            return (
+              <>
+                {renderDashes()}
+                <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
+                <h2 style={{ ...S.questionTitle, fontSize: m ? 20 : 24, marginBottom: 8 }}>Cat de mult esti de acord?</h2>
+                <p style={{ fontSize: m ? 11 : 12, color: textMuted, marginBottom: 6 }}>
+                  Intrebarea {q.num} din 5
+                </p>
+                <div style={{
+                  fontSize: m ? 16 : 18, fontWeight: 600, color: textDark, lineHeight: 1.5,
+                  marginBottom: 20, padding: m ? "14px 16px" : "18px 20px",
+                  background: "#faf8f5", border: "1px solid #e5e1d9", borderRadius: 10,
+                  textAlign: "center" as const,
+                }}>
+                  {q.text}
+                </div>
+                <div style={{ fontSize: m ? 11 : 12, color: textMuted, marginBottom: 10, display: "flex", justifyContent: "space-between", padding: "0 4px" }}>
+                  <span>1 = Total dezacord</span>
+                  <span>7 = Total acord</span>
+                </div>
+                <div style={{ display: "flex", gap: m ? 6 : 8, justifyContent: "center", flexWrap: "wrap" as const }}>
+                  {[1, 2, 3, 4, 5, 6, 7].map((v) => (
+                    <button
+                      key={v}
+                      style={{
+                        ...S.likertBtn,
+                        width: m ? 40 : 48, height: m ? 40 : 48, fontSize: m ? 16 : 18,
+                        ...(psychographic[q.key] === v ? S.likertBtnActive : {}),
+                      }}
+                      onClick={() => autoAdvanceProfile(q.key, String(v), step)}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <div style={S.nav}>
+                  <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                  <div />
+                </div>
+              </>
+            );
+          })()}
 
-              {[
-                { key: "adReceptivity" as const, text: "Acord atentie reclamelor relevante pentru mine" },
-                { key: "visualPreference" as const, text: "Prefer reclamele cu design vizual atractiv" },
-                { key: "impulseBuying" as const, text: "Uneori cumpar impulsiv dupa ce vad o reclama" },
-                { key: "irrelevanceAnnoyance" as const, text: "Ma irita reclamele irelevante" },
-                { key: "attentionCapture" as const, text: "Ma opresc din scrollat la reclame interesante" },
-              ].map((item, idx) => (
-                <div key={item.key} style={{ marginBottom: m ? 16 : 20 }}>
-                  <div style={{ fontSize: m ? 13 : 14, color: textDark, marginBottom: 8, lineHeight: 1.4 }}>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      width: 22, height: 22, borderRadius: "50%",
-                      background: accentRed, color: "#fff", fontSize: 11, fontWeight: 700,
-                      marginRight: 8,
-                    }}>{idx + 1}</span>
-                    {item.text}
+          {/* ═══ Stimulus evaluation steps (3 per stimulus: R, I, F) ═══ */}
+          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && (() => {
+            const dimensions = [
+              { key: "r" as const, label: "Relevanta", desc: "Cat de relevant este pentru publicul tinta?", color: "#DC2626" },
+              { key: "i" as const, label: "Impact & Interes", desc: "Cat de captivant este continutul?", color: "#D97706" },
+              { key: "f" as const, label: "Calitate Executie", desc: "Cat de bine este executat?", color: "#7C3AED" },
+            ];
+            const dim = dimensions[currentStimSubStep];
+            const isAttentionGroup = currentStimGroupIdx === Math.floor(numStimuli / 2);
+            const showAttention = isAttentionGroup && currentStimSubStep === 2; // show on F step
+
+            return (
+              <>
+                {renderDashes()}
+                <div style={S.questionNum}>
+                  MATERIAL {currentStimGroupIdx + 1} DIN {session.stimuli.length}
+                </div>
+                <h2 style={{ ...S.questionTitle, fontSize: m ? 18 : 22, marginBottom: 16 }}>
+                  Evalueaza materialul
+                </h2>
+
+                {/* Stimulus display */}
+                <div style={S.stimulusBox}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" as const }}>
+                    <span style={S.typeBadge}>{currentStim.type}</span>
+                    {currentStim.industry && (
+                      <span style={S.industryBadge}>{currentStim.industry}</span>
+                    )}
                   </div>
-                  <div style={{ display: "flex", gap: m ? 4 : 6, justifyContent: "center" }}>
-                    {[1, 2, 3, 4, 5, 6, 7].map((v) => (
+                  <h3 style={{ fontSize: m ? 15 : 17, color: textDark, marginBottom: 12, fontWeight: 600 }}>
+                    {currentStim.name}
+                  </h3>
+
+                  {currentStim.image_url && (
+                    <img src={currentStim.image_url} alt={currentStim.name}
+                      style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 220 : 360, objectFit: "cover" as const }}
+                      loading="lazy" />
+                  )}
+
+                  {currentStim.video_url && extractYoutubeId(currentStim.video_url) && (
+                    <div style={{ position: "relative" as const, paddingBottom: m ? "50%" : "56.25%", height: 0, overflow: "hidden", borderRadius: 8, border: "1px solid #e5e1d9" }}>
+                      <iframe src={`https://www.youtube.com/embed/${extractYoutubeId(currentStim.video_url)}`}
+                        title={currentStim.name} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                        allowFullScreen style={{ position: "absolute" as const, top: 0, left: 0, width: "100%", height: "100%", border: "none" }} />
+                    </div>
+                  )}
+
+                  {currentStim.video_url && !extractYoutubeId(currentStim.video_url) && (
+                    <video src={currentStim.video_url} controls playsInline preload="metadata"
+                      style={{ width: "100%", maxHeight: m ? 220 : 360, borderRadius: 8, border: "1px solid #e5e1d9", background: "#000" }} />
+                  )}
+
+                  {currentStim.text_content && (
+                    <div style={{
+                      fontSize: 14, lineHeight: 1.7, color: textDark,
+                      background: !currentStim.image_url && !currentStim.video_url ? "#fef3c7" : "#fff",
+                      border: `1px solid ${!currentStim.image_url && !currentStim.video_url ? "#fcd34d" : "#e5e1d9"}`,
+                      borderRadius: 8, padding: m ? 12 : 16, whiteSpace: "pre-wrap" as const, marginTop: 10,
+                    }}>
+                      {currentStim.text_content}
+                    </div>
+                  )}
+
+                  {currentStim.pdf_url && (
+                    <a href={currentStim.pdf_url} target="_blank" rel="noopener noreferrer"
+                      style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: accentRed, border: `1px solid ${accentRed}`, borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
+                      Deschide PDF-ul &rarr;
+                    </a>
+                  )}
+
+                  {currentStim.site_url && (
+                    <a href={currentStim.site_url} target="_blank" rel="noopener noreferrer"
+                      style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "#2563EB", border: "1px solid #2563EB", borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
+                      Viziteaza site-ul &rarr;
+                    </a>
+                  )}
+
+                  {currentStim.description && (
+                    <p style={{ fontSize: 13, color: textMuted, marginTop: 12, lineHeight: 1.6 }}>
+                      {currentStim.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Current dimension evaluation */}
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ textAlign: "center" as const, marginBottom: 12 }}>
+                    <span style={{
+                      fontSize: m ? 18 : 22, fontWeight: 800, color: dim.color, letterSpacing: 0.5,
+                    }}>
+                      {dim.label}
+                    </span>
+                    <p style={{ fontSize: m ? 12 : 13, color: textMuted, marginTop: 4 }}>{dim.desc}</p>
+                  </div>
+
+                  {/* Step indicator mini: R · I · F */}
+                  <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 }}>
+                    {dimensions.map((d, idx) => (
+                      <div key={d.key} style={{
+                        fontSize: 11, fontWeight: 700, letterSpacing: 1,
+                        color: idx === currentStimSubStep ? d.color : idx < currentStimSubStep ? "#a3a3a3" : "#d4d4d4",
+                        borderBottom: idx === currentStimSubStep ? `2px solid ${d.color}` : "2px solid transparent",
+                        paddingBottom: 4,
+                      }}>
+                        {d.label.split(" ")[0].toUpperCase()}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 1-10 buttons */}
+                  <div style={{ display: "flex", gap: m ? 4 : 6, justifyContent: "center", flexWrap: "wrap" as const }}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((v) => (
                       <button
                         key={v}
                         style={{
-                          ...S.likertBtn,
-                          ...(psychographic[item.key] === v ? S.likertBtnActive : {}),
+                          width: m ? 36 : 44, height: m ? 36 : 44, fontSize: m ? 14 : 16,
+                          fontWeight: 700, fontFamily: "Inter, sans-serif",
+                          background: currentScores[dim.key] === v ? dim.color : "#faf8f5",
+                          color: currentScores[dim.key] === v ? "#fff" : textDark,
+                          border: `2px solid ${currentScores[dim.key] === v ? dim.color : "#e5e1d9"}`,
+                          borderRadius: 8, cursor: "pointer",
+                          transition: "all 150ms ease",
                         }}
-                        onClick={() => setPsychographic({ ...psychographic, [item.key]: v })}
+                        onClick={() => autoAdvanceStimulus(dim.key, v)}
                       >
                         {v}
                       </button>
                     ))}
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: textMuted, marginTop: 3, padding: "0 4px" }}>
-                    <span>Dezacord</span>
-                    <span>Acord</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: textMuted, marginTop: 6, padding: "0 4px" }}>
+                    <span>Slab</span>
+                    <span>Excelent</span>
                   </div>
                 </div>
-              ))}
 
-              <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
-                <button
-                  style={{ ...S.btnNext, opacity: saving ? 0.6 : 1 }}
-                  onClick={saveAndNext}
-                  disabled={saving}
-                >
-                  {saving ? "..." : "Urmatorul"} <span style={{ fontSize: 18 }}>&rarr;</span>
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* ═══ Stimulus evaluation steps ═══ */}
-          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && (
-            <>
-              {renderDashes()}
-              <div style={S.questionNum}>
-                MATERIAL {currentStimIdx + 1} DIN {session.stimuli.length}
-              </div>
-              <h2 style={{ ...S.questionTitle, fontSize: m ? 18 : 22, marginBottom: 16 }}>
-                Evalueaza materialul
-              </h2>
-
-              {/* Stimulus display */}
-              <div style={S.stimulusBox}>
-                <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" as const }}>
-                  <span style={S.typeBadge}>{currentStim.type}</span>
-                  {currentStim.industry && (
-                    <span style={S.industryBadge}>{currentStim.industry}</span>
-                  )}
-                </div>
-                <h3 style={{ fontSize: m ? 15 : 17, color: textDark, marginBottom: 12, fontWeight: 600 }}>
-                  {currentStim.name}
-                </h3>
-
-                {/* Image */}
-                {currentStim.image_url && (
-                  <img
-                    src={currentStim.image_url}
-                    alt={currentStim.name}
-                    style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 220 : 360, objectFit: "cover" as const }}
-                    loading="lazy"
-                  />
-                )}
-
-                {/* YouTube video */}
-                {currentStim.video_url && extractYoutubeId(currentStim.video_url) && (
-                  <div style={{ position: "relative" as const, paddingBottom: m ? "50%" : "56.25%", height: 0, overflow: "hidden", borderRadius: 8, border: "1px solid #e5e1d9" }}>
-                    <iframe
-                      src={`https://www.youtube.com/embed/${extractYoutubeId(currentStim.video_url)}`}
-                      title={currentStim.name}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-                      allowFullScreen
-                      style={{ position: "absolute" as const, top: 0, left: 0, width: "100%", height: "100%", border: "none" }}
-                    />
-                  </div>
-                )}
-
-                {/* Direct video */}
-                {currentStim.video_url && !extractYoutubeId(currentStim.video_url) && (
-                  <video src={currentStim.video_url} controls playsInline preload="metadata"
-                    style={{ width: "100%", maxHeight: m ? 220 : 360, borderRadius: 8, border: "1px solid #e5e1d9", background: "#000" }} />
-                )}
-
-                {/* Text content */}
-                {currentStim.text_content && (
-                  <div style={{
-                    fontSize: m ? 14 : 14, lineHeight: 1.7, color: textDark,
-                    background: !currentStim.image_url && !currentStim.video_url ? "#fef3c7" : "#fff",
-                    border: `1px solid ${!currentStim.image_url && !currentStim.video_url ? "#fcd34d" : "#e5e1d9"}`,
-                    borderRadius: 8, padding: m ? 12 : 16, whiteSpace: "pre-wrap" as const, marginTop: 10,
-                  }}>
-                    {currentStim.text_content}
-                  </div>
-                )}
-
-                {/* PDF */}
-                {currentStim.pdf_url && (
-                  <a href={currentStim.pdf_url} target="_blank" rel="noopener noreferrer"
-                    style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: accentRed, border: `1px solid ${accentRed}`, borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
-                    Deschide PDF-ul &rarr;
-                  </a>
-                )}
-
-                {/* Site URL */}
-                {currentStim.site_url && (
-                  <a href={currentStim.site_url} target="_blank" rel="noopener noreferrer"
-                    style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "#2563EB", border: "1px solid #2563EB", borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
-                    Viziteaza site-ul &rarr;
-                  </a>
-                )}
-
-                {currentStim.description && (
-                  <p style={{ fontSize: 13, color: textMuted, marginTop: 12, lineHeight: 1.6 }}>
-                    {currentStim.description}
-                  </p>
-                )}
-              </div>
-
-              {/* R, I, F Evaluation */}
-              <div style={{ marginTop: 8 }}>
-                {[
-                  { key: "r" as const, label: "Relevanta", desc: "Cat de relevant este pentru publicul tinta?", color: "#DC2626" },
-                  { key: "i" as const, label: "Impact & Interes", desc: "Cat de captivant este continutul?", color: "#D97706" },
-                  { key: "f" as const, label: "Calitate Executie", desc: "Cat de bine este executat?", color: "#7C3AED" },
-                ].map((dim) => (
-                  <div key={dim.key} style={{ marginBottom: m ? 14 : 18 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4 }}>
-                      <span style={{ fontSize: m ? 13 : 14, fontWeight: 700, color: dim.color }}>{dim.label}</span>
-                      <span style={{ fontSize: m ? 20 : 24, fontWeight: 800, fontFamily: "JetBrains Mono, monospace", color: dim.color }}>{currentScores[dim.key]}</span>
-                    </div>
-                    <p style={{ fontSize: m ? 11 : 12, color: textMuted, marginBottom: 8 }}>{dim.desc}</p>
-                    <input
-                      type="range" min={1} max={10}
-                      value={currentScores[dim.key]}
-                      className={`wizard-slider slider-${dim.key}`}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setStimulusScores({ ...stimulusScores, [currentStim.id]: { ...currentScores, [dim.key]: val } });
-                      }}
-                      style={{ width: "100%" }}
-                    />
-                    {/* Tap buttons for mobile */}
-                    {m && (
-                      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, gap: 2 }}>
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
-                          <button key={v}
-                            onClick={() => setStimulusScores({ ...stimulusScores, [currentStim.id]: { ...currentScores, [dim.key]: v } })}
-                            style={{
-                              flex: 1, height: 28, fontSize: 11,
-                              fontWeight: currentScores[dim.key] === v ? 700 : 400,
-                              background: currentScores[dim.key] === v ? dim.color : "transparent",
-                              color: currentScores[dim.key] === v ? "#fff" : textMuted,
-                              border: "none", borderRadius: 4, cursor: "pointer", padding: 0,
-                            }}>{v}</button>
-                        ))}
-                      </div>
-                    )}
-                    {!m && (
-                      <div style={S.sliderLabels}><span>1</span><span>5</span><span>10</span></div>
-                    )}
-                  </div>
-                ))}
-
-                {/* Attention check at midpoint */}
-                {currentStimIdx === Math.floor(numStimuli / 2) && (
-                  <div style={{ marginTop: 12, padding: m ? 14 : 18, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10 }}>
+                {/* Attention check at midpoint (on F step of middle stimulus) */}
+                {showAttention && (
+                  <div style={{ marginTop: 16, padding: m ? 14 : 18, background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10 }}>
                     <div style={{ fontSize: m ? 13 : 14, fontWeight: 600, color: "#166534", marginBottom: 8 }}>
                       Verificare atentie
                     </div>
@@ -1411,23 +1475,14 @@ function StudiuWizardInner() {
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Error */}
-              {error && <p style={{ color: accentRed, fontSize: 13, marginTop: 12, textAlign: "center" }}>{error}</p>}
-
-              <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
-                <button
-                  style={{ ...S.btnNext, opacity: saving ? 0.6 : 1 }}
-                  onClick={saveAndNext}
-                  disabled={saving}
-                >
-                  {saving ? "..." : step === lastStimulusStep ? "Finalizeaza" : "Urmatorul"} <span style={{ fontSize: 18 }}>&rarr;</span>
-                </button>
-              </div>
-            </>
-          )}
+                <div style={S.nav}>
+                  <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                  <div />
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
 
