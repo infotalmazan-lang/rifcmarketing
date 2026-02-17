@@ -174,6 +174,8 @@ function StudiuWizardInner() {
   const timerInterval = useRef<NodeJS.Timeout | null>(null);
   // Interstitial: show category intro before first sub-step (R) of each stimulus
   const [interstitialDismissed, setInterstitialDismissed] = useState<Set<number>>(new Set());
+  // Fullscreen image viewer
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   // ── Computed step boundaries ────────────────────────────
   const profileStepCount = PROFILE_STEPS.length; // 16 (0=welcome, 1-15=profile)
@@ -931,6 +933,18 @@ function StudiuWizardInner() {
     ? stimulusScores[currentStim.id] || { r: 0, i: 0, f: 0, c: 0, cta: 0 }
     : { r: 0, i: 0, f: 0, c: 0, cta: 0 };
 
+  // ── Should we show interstitial? Only when category TYPE changes ──
+  const showInterstitialForGroup = (() => {
+    if (currentStimGroupIdx < 0 || !currentStim || !session) return false;
+    if (currentStimSubStep !== 0) return false; // only on R step
+    if (interstitialDismissed.has(currentStimGroupIdx)) return false;
+    // First stimulus always gets interstitial
+    if (currentStimGroupIdx === 0) return true;
+    // Show only if type changed from previous stimulus
+    const prevStim = session.stimuli[currentStimGroupIdx - 1];
+    return !prevStim || prevStim.type !== currentStim.type;
+  })();
+
   // ── Profile step question number ────────────────────────
   const profileQuestionNum = step >= 1 && step < profileStepCount ? step : 0;
 
@@ -1409,7 +1423,7 @@ function StudiuWizardInner() {
           })()}
 
           {/* ═══ Category Interstitial Screen ═══ */}
-          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && currentStimSubStep === 0 && !interstitialDismissed.has(currentStimGroupIdx) && (() => {
+          {showInterstitialForGroup && currentStim && (() => {
             const catMeta = CATEGORY_META[currentStim.type] || { label: currentStim.type, color: "#6B7280", icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" };
             const isFirst = currentStimGroupIdx === 0;
             return (
@@ -1501,7 +1515,7 @@ function StudiuWizardInner() {
           })()}
 
           {/* ═══ Stimulus evaluation steps (5 per stimulus: R, I, F, C, CTA) ═══ */}
-          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && (currentStimSubStep > 0 || interstitialDismissed.has(currentStimGroupIdx)) && (() => {
+          {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && !showInterstitialForGroup && (() => {
             const dimensions: { key: "r" | "i" | "f" | "c" | "cta"; question: string; anchorLow: string; anchorHigh: string; color: string; shortLabel: string }[] = [
               {
                 key: "r", shortLabel: "R",
@@ -1563,9 +1577,29 @@ function StudiuWizardInner() {
                   </h3>
 
                   {currentStim.image_url && (
-                    <img src={currentStim.image_url} alt={currentStim.name}
-                      style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 180 : 300, objectFit: "cover" as const }}
-                      loading="lazy" />
+                    <div style={{ position: "relative" as const }}>
+                      <img src={currentStim.image_url} alt={currentStim.name}
+                        style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 180 : 300, objectFit: "cover" as const, cursor: "pointer" }}
+                        loading="lazy"
+                        onClick={() => setFullscreenImage(currentStim.image_url)} />
+                      <button
+                        onClick={() => setFullscreenImage(currentStim.image_url)}
+                        style={{
+                          position: "absolute" as const, bottom: 8, right: 8,
+                          display: "flex", alignItems: "center", gap: 5,
+                          padding: "6px 12px", fontSize: 12, fontWeight: 600,
+                          background: "rgba(0,0,0,0.7)", color: "#fff",
+                          border: "none", borderRadius: 6, cursor: "pointer",
+                          backdropFilter: "blur(4px)",
+                        }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
+                          <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
+                        </svg>
+                        Vezi mai mare
+                      </button>
+                    </div>
                   )}
 
                   {currentStim.video_url && extractYoutubeId(currentStim.video_url) && (
@@ -1697,6 +1731,44 @@ function StudiuWizardInner() {
           })()}
         </div>
       </div>
+
+      {/* ═══ Fullscreen Image Overlay ═══ */}
+      {fullscreenImage && (
+        <div
+          onClick={() => setFullscreenImage(null)}
+          style={{
+            position: "fixed" as const, inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.92)", display: "flex",
+            alignItems: "center", justifyContent: "center",
+            flexDirection: "column" as const, cursor: "pointer",
+          }}
+        >
+          <img
+            src={fullscreenImage}
+            alt="Fullscreen"
+            style={{
+              maxWidth: "95vw", maxHeight: "85vh",
+              objectFit: "contain" as const, borderRadius: 8,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setFullscreenImage(null)}
+            style={{
+              marginTop: 16, padding: "10px 28px",
+              fontSize: 15, fontWeight: 700,
+              background: "#fff", color: "#1a1a1a",
+              border: "none", borderRadius: 8, cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 8,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+            Inchide
+          </button>
+        </div>
+      )}
 
       {/* Footer */}
       {step > 0 && step < thankYouStep && (
