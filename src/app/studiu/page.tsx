@@ -33,7 +33,6 @@ import {
   UserCheck,
   Bot,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu Admin — Structura Sondaj
@@ -413,35 +412,38 @@ export default function StudiuAdminPage() {
   const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
   const [aiSaving, setAiSaving] = useState(false);
 
-  // ── Upload helper (direct to Supabase Storage — supports large files up to 500MB) ──
+  // ── Upload helper (signed URL → direct to Supabase Storage, supports large files up to 500MB) ──
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const uploadFile = async (file: File, fieldKey: string): Promise<string | null> => {
     setUploading((prev) => ({ ...prev, [fieldKey]: true }));
     setUploadProgress((prev) => ({ ...prev, [fieldKey]: 0 }));
     try {
-      const supabase = createClient();
-      const ext = file.name.split(".").pop() || "bin";
-      const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-      const path = `materials/${uniqueName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("survey-media")
-        .upload(path, file, {
-          contentType: file.type,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
+      // Step 1: Get signed upload URL from our API (uses service role)
+      const signedRes = await fetch("/api/upload/signed-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      });
+      const signedData = await signedRes.json();
+      if (!signedData.signedUrl) {
+        console.error("Failed to get signed URL:", signedData.error);
         return null;
       }
 
-      const { data: urlData } = supabase.storage
-        .from("survey-media")
-        .getPublicUrl(path);
+      // Step 2: Upload file directly to Supabase Storage using signed URL
+      const uploadRes = await fetch(signedData.signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        console.error("Upload failed:", uploadRes.status, await uploadRes.text());
+        return null;
+      }
 
       setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
-      return urlData.publicUrl;
+      return signedData.publicUrl;
     } catch (err) {
       console.error("Upload failed:", err);
       return null;
