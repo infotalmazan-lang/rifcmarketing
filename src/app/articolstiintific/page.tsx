@@ -308,6 +308,49 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .dw-ex-section .es-bar { flex:1; height:4px; background:var(--surface3); border-radius:2px; overflow:hidden; }
 .dw-ex-section .es-fill { height:100%; border-radius:2px; background:var(--green); }
 
+/* ═══ MODEL EXAMPLE PANELS (read-only) ═══ */
+.ex-model { padding:0; }
+.ex-model .ex-badge { display:inline-block; font-size:9px; letter-spacing:2px; font-weight:700; padding:3px 10px; border-radius:12px; margin-bottom:16px; }
+.ex-model .ex-badge.exemplu { background:var(--green-dim2); color:var(--green); }
+.ex-section { margin-bottom:20px; }
+.ex-section .ex-title { font-size:12px; font-weight:700; letter-spacing:1px; color:var(--text); margin-bottom:10px; display:flex; align-items:center; gap:8px; text-transform:uppercase; }
+.ex-section .ex-title .ex-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+.ex-table { width:100%; border-collapse:collapse; font-size:12px; margin-bottom:12px; }
+.ex-table th { text-align:left; padding:8px 10px; border-bottom:2px solid var(--border); font-size:10px; letter-spacing:1px; color:var(--text3); text-transform:uppercase; font-weight:700; white-space:nowrap; background:var(--surface2); }
+.ex-table td { padding:7px 10px; border-bottom:1px solid var(--border); color:var(--text2); vertical-align:top; line-height:1.5; }
+.ex-table tr:hover { background:var(--surface2); }
+.ex-table td:first-child { font-weight:500; color:var(--text); }
+.ex-table .mono { font-family:'JetBrains Mono',monospace; font-size:11px; }
+.ex-table .tag { font-size:9px; padding:2px 6px; border-radius:8px; font-weight:700; display:inline-block; }
+.ex-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px 20px; margin-bottom:12px; }
+.ex-card .ex-card-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+.ex-card .ex-card-body { font-size:12px; color:var(--text2); line-height:1.7; }
+.ex-card .ex-card-body strong { color:var(--text); }
+.ex-stat-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; margin-bottom:16px; }
+.ex-stat { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; text-align:center; }
+.ex-stat .ex-stat-val { font-family:'JetBrains Mono',monospace; font-size:22px; font-weight:800; }
+.ex-stat .ex-stat-label { font-size:10px; color:var(--text3); letter-spacing:.5px; margin-top:2px; }
+.ex-quote { border-left:3px solid var(--blue); background:var(--blue-dim); padding:12px 16px; border-radius:0 8px 8px 0; margin:10px 0; font-size:12px; color:var(--text2); line-height:1.7; font-style:italic; }
+.ex-formula { text-align:center; padding:20px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin:12px 0; }
+.ex-formula .eq { font-family:'JetBrains Mono',monospace; font-size:20px; font-weight:700; color:var(--red); }
+.ex-formula .eq-note { font-size:11px; color:var(--text3); margin-top:6px; }
+.ex-chips { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+.ex-chip { font-size:11px; padding:4px 10px; border-radius:16px; background:var(--surface2); border:1px solid var(--border); color:var(--text2); }
+.ex-progress { display:flex; align-items:center; gap:10px; margin:6px 0; font-size:11px; }
+.ex-progress .bar { flex:1; height:6px; background:var(--surface3); border-radius:3px; overflow:hidden; }
+.ex-progress .fill { height:100%; border-radius:3px; }
+.ex-progress .pct { font-family:'JetBrains Mono',monospace; font-weight:700; min-width:36px; }
+.ex-divider { border:none; border-top:1px dashed var(--border); margin:16px 0; }
+.ex-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.ex-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.ex-note { font-size:10px; color:var(--text3); font-style:italic; padding:6px 0; }
+.ex-highlight { background:linear-gradient(135deg, var(--red-dim), var(--amber-dim)); border:1px solid var(--red); border-radius:10px; padding:16px 20px; margin:12px 0; }
+.ex-highlight .ex-h-title { font-size:12px; font-weight:700; color:var(--red); letter-spacing:1px; }
+.ex-highlight .ex-h-body { font-size:13px; color:var(--text); margin-top:6px; line-height:1.6; }
+.ex-likert-row { display:flex; gap:4px; align-items:center; }
+.ex-likert-cell { width:28px; height:28px; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:10px; font-weight:700; font-family:'JetBrains Mono',monospace; border:1px solid var(--border); }
+.ex-likert-cell.filled { background:var(--blue); color:#fff; border-color:var(--blue); }
+
 @media(max-width:768px) {
   .sidebar { display:none; }
   .main { margin-left:0; }
@@ -510,6 +553,577 @@ const STAGES = [
   { id:'s6', label:'Scriere & Submisie', icon:'06', num:6, color:'var(--cyan)', duration:'Lunile 5-6 \\u2014 S\\u0103pt\\u0103m\\u00E2nile 18-24', priority:'REDACTARE', description:'Paper-ul final: 12.000-15.000 cuvinte + cover letter + submisie. Site-ul e citat ca "practitioner implementation" a framework-ului.', tasks:[ { title:'Introduction + Literature Review', priority:'high', dataType:'sectionProgress', dataKey:'sections', detail:'2.000 + 3.500 cuvinte. Gap central: niciun framework nu diagnosticheaz\\u0103 cantitativ mesaje individuale.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Introduction: 2.000 cuvinte. Literature Review: 3.500 cuvinte, 4 sec\\u021Biuni, 40-50 referin\\u021Be.' } ] }, { title:'Framework + Methodology + Results', priority:'high', dataType:'sectionProgress', dataKey:'sections', detail:'Framework: ecua\\u021Bia formalizat\\u0103. Methodology: 4 studii detaliate. Results: tabele, grafice, coeficien\\u021Bi.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Framework: 2.500 cuvinte. Methodology: 3.000 cuvinte. Results: 4.000 cuvinte, 8-12 tabele/figuri.' } ] }, { title:'Discussion + Conclusion + AI Declaration', priority:'high', dataType:'sectionProgress', dataKey:'sections', detail:'Interpretare, contribu\\u021Bii, limit\\u0103ri, direc\\u021Bii viitoare, declara\\u021Bia AI.', deliverables:[ { type:'output', label:'LIVRABIL', text:'Discussion: 2.500 cuvinte. Conclusion: 800 cuvinte.\\nAI Declaration + Citare White Paper + Citare rifcmarketing.com ca implementare practitioner.' } ] }, { title:'Citarea site-ului \\u00EEn paper', priority:'medium', hasSite:true, dataType:'notes', dataKey:'citationNotes', detail:'Site-ul rifcmarketing.com se citeaz\\u0103 ca <strong>implementare practitioner a framework-ului</strong>, nu ca surs\\u0103 academic\\u0103.', deliverables:[ { type:'site', label:'ELEMENTE CITATE DIN SITE', text:'\\u2705 rifcmarketing.com \\u2014 practitioner implementation\\n\\u2705 /audit \\u2014 AI diagnostic tool (dac\\u0103 includem Study 5)\\n\\u2705 /calculator \\u2014 interactive scoring tool\\n\\u2705 White Paper \\u2014 gray literature reference' }, { type:'output', label:'LIVRABIL', text:'References section: site-ul apare ca 2-3 referin\\u021Be separate (website, White Paper, AI tool). Demonstreaz\\u0103 c\\u0103 framework-ul nu e doar teorie \\u2014 e implementat \\u0219i utilizat.' } ] }, { title:'Review intern + Formatare + Submisie', priority:'medium', dataType:'submission', dataKey:'submission', detail:'Lector USM/UTM verific\\u0103 metodologia. Formatare APA 7th. Cover letter personalizat.', deliverables:[ { type:'input', label:'DATE DE LA TINE', text:'Contact lector USM/UTM. Download Author Guidelines jurnal \\u021Bint\\u0103.' }, { type:'output', label:'LIVRABIL', text:'Paper final ~12.000-15.000 cuvinte, 80-100 referin\\u021Be, APA 7th. Cover letter. Submisie.' }, { type:'standard', label:'JURNALE \\u021AINT\\u0102', text:'1. Journal of Business Research (IF ~10.5)\\n2. JAMS (IF ~15.8)\\n3. European Journal of Marketing (IF ~3.7)\\n4. Journal of Advertising (IF ~5.8)\\n5. Studia Universitatis Moldaviae (start regional)' } ] } ] }
 ];
 
+/* ═══════════════════════════════════════════════════
+   EXAMPLES — Read-only model content for Exemplu tab
+   Key format: "stageId-taskIdx"
+   ═══════════════════════════════════════════════════ */
+var EXAMPLES = {
+
+/* ─── S0: AUDIT RESURSE SITE ─── */
+'s0-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--pink)"></span> Site-to-Paper Mapping</div>'
++'<table class="ex-table"><tr><th>Sectiune Site</th><th>Continut</th><th>Etapa Cercetare</th><th>Actiune</th></tr>'
++'<tr><td>Ch03 Anatomia Variabilelor</td><td>R:7, I:10, F:11 sub-factori cu descriptori</td><td>Etapa 2 \u2014 Generare itemi Likert</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green);">FOLOSIT DIRECT</span></td></tr>'
++'<tr><td>Ch04 Scoring 1-10</td><td>Descriptori per nivel pentru fiecare variabila</td><td>Etapa 2 \u2014 Scoring Rubric</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green);">FOLOSIT DIRECT</span></td></tr>'
++'<tr><td>Ch07 Comparatii Framework</td><td>R IF C vs AIDA, RACE, StoryBrand, 4Ps</td><td>Etapa 1 \u2014 Literature Review</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber);">REFORMULARE</span></td></tr>'
++'<tr><td>Ch09 Studii de Caz (5)</td><td>Maison Noir, CloudMetric, CodeNest, VELA, Mentor</td><td>Etapa 3 \u2014 Pilot stimuli</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green);">FOLOSIT DIRECT</span></td></tr>'
++'<tr><td>Ch06 Arhetipuri de Esec</td><td>Fantoma, Zgomotul, Diamantul</td><td>Etapa 5 \u2014 Known-Groups</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green);">FOLOSIT DIRECT</span></td></tr>'
++'<tr><td>Ch01 Filozofia</td><td>Economia Cognitiva, Eliminarea Anxietatii</td><td>Etapa 1 \u2014 Introducere</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber);">REFORMULARE</span></td></tr>'
++'<tr><td>Ch02 Ecuatia</td><td>R + (I \u00D7 F) = C, metafora constructie</td><td>Etapa 1 \u2014 Formalizare</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber);">REFORMULARE</span></td></tr>'
++'<tr><td>Poarta Relevantei</td><td>Simulari dezastru, threshold R=3</td><td>Etapa 4 \u2014 Threshold Test</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue);">FORMALIZARE</span></td></tr>'
++'<tr><td>White Paper (84 pag.)</td><td>Document fondator complet</td><td>Etapa 6 \u2014 Referinta</td><td><span class="tag" style="background:var(--violet-dim);color:var(--violet);">GRAY LIT.</span></td></tr>'
++'<tr><td>/audit</td><td>AI scoring automat</td><td>Etapa 5 \u2014 Study 5 (optional)</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue);">INSTRUMENT</span></td></tr>'
++'<tr><td>/calculator</td><td>Simulator interactiv R IF C</td><td>Etapa 5 \u2014 Validare</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue);">INSTRUMENT</span></td></tr>'
++'</table>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">7</div><div class="ex-stat-label">FOLOSIT DIRECT</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--amber)">3</div><div class="ex-stat-label">REFORMULARE</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--blue)">3</div><div class="ex-stat-label">INSTRUMENTE</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--violet)">1</div><div class="ex-stat-label">GRAY LIT.</div></div></div>'
++'</div></div>',
+
+'s0-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--pink)"></span> Instrumente Cercetare din Site</div>'
++'<div class="ex-grid-2">'
++'<div class="ex-card"><div class="ex-card-title"><span style="color:var(--pink)">/audit</span> \u2014 AI Scoring</div><div class="ex-card-body"><strong>Functie:</strong> Scoreaza automat orice mesaj de marketing pe R, I, F folosind AI.<br><strong>Utilizare in cercetare:</strong> Study 5 (optional) \u2014 comparam scoruri AI vs scoruri evaluatori umani.<br><strong>Avantaj academic:</strong> "Automated R IF C diagnostic" = topic rar in literatura.<br><strong>Output:</strong> Scor R, I, F, C + explicatii per sub-factor + recomandari.</div></div>'
++'<div class="ex-card"><div class="ex-card-title"><span style="color:var(--pink)">/calculator</span> \u2014 Simulator</div><div class="ex-card-body"><strong>Functie:</strong> Calculator interactiv R + (I \u00D7 F) = C cu slidere vizuale.<br><strong>Utilizare in cercetare:</strong> Instrument standardizat de scoring pentru evaluatori.<br><strong>Avantaj academic:</strong> Demonstreaza ca framework-ul are implementare practica functionala.<br><strong>Output:</strong> Scor C calculat in timp real + zona de impact.</div></div>'
++'</div>'
++'<div class="ex-highlight" style="margin-top:16px"><div class="ex-h-title">DECIZIE STUDY 5</div><div class="ex-h-body">Includem Study 5 (AI vs Human)? <strong>DA</strong> \u2014 contribu\u021Bie originala rara. Daca r > 0.70 intre AI si evaluatori umani, paper-ul castiga un avantaj competitiv major in contextul AI-augmented marketing diagnostics.</div></div>'
++'</div></div>',
+
+'s0-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--pink)"></span> Pozitionare White Paper vs Paper Academic</div>'
++'<div class="ex-grid-2">'
++'<div class="ex-card" style="border-left:3px solid var(--amber)"><div class="ex-card-title">White Paper "Codul Sursa"</div><div class="ex-card-body"><strong>Tip:</strong> Gray literature (document practitioner)<br><strong>Lungime:</strong> 84 pagini<br><strong>Continut:</strong> Filozofia R IF C, metodologia de scoring, 35 exemple diagnostic, matricea de aplicare<br><strong>Rol in paper:</strong> Se citeaza ca <em>"preceding practitioner framework documentation"</em><br><strong>Format citare:</strong> Talmazan, D. (2025). <em>R IF C: Codul Sursa al Claritatii in Marketing.</em> White Paper, Talmazan School.</div></div>'
++'<div class="ex-card" style="border-left:3px solid var(--green)"><div class="ex-card-title">Paper Academic (aceasta cercetare)</div><div class="ex-card-body"><strong>Tip:</strong> Peer-reviewed journal article<br><strong>Lungime:</strong> 12.000-15.000 cuvinte<br><strong>Continut:</strong> Validare empirica cu 4 studii, EFA+CFA, teste statistice<br><strong>Rol:</strong> Valideaza empiric framework-ul din White Paper<br><strong>Format citare:</strong> Talmazan, D. (2026). Measuring Marketing Message Clarity: Development and Validation of the R IF C Scale. <em>Journal of Business Research.</em></div></div>'
++'</div>'
++'<div class="ex-quote">White Paper-ul este documentul fondator (practitioner perspective). Paper-ul academic il valideaza empiric, nu il repeta. Sunt complementare: unul descrie, celalalt demonstreaza.</div>'
++'</div></div>',
+
+/* ─── S1: FUNDAMENTARE TEORETICA ─── */
+'s1-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--red)"></span> Definitii Formale R, I, F, C</div>'
++'<div class="ex-card" style="border-left:3px solid #dc2626;margin-bottom:10px"><div class="ex-card-title">Relevanta (R)</div><div class="ex-card-body"><strong>Definitie conceptuala:</strong> Relevanta (R) este gradul de aliniere perceputa intre un mesaj de marketing si nevoile actuale, contextul si etapa decizionala a receptorului.<br><br><strong>Definitie operationala:</strong> Masurata ca media scorurilor pe 7 itemi Likert (scala 1-7) care surprind: potrivirea cu audienta, timing, etapa din journey, potrivire contextuala, relevanta geografica, adecvarea canalului, precizia segmentarii.<br><br><strong>Baza teoretica:</strong> Petty &amp; Cacioppo (1986) \u2014 relevanta personala ca trigger al rutei centrale; Zaichkowsky (1985) \u2014 Personal Involvement Inventory; Celsi &amp; Olson (1988) \u2014 implicare resimtita.<br><br><strong>Distinctie:</strong> Spre deosebire de "involvement" (Zaichkowsky), R masoara alinierea mesaj-receptor, nu implicarea generala in categorie.</div></div>'
++'<div class="ex-card" style="border-left:3px solid #2563eb;margin-bottom:10px"><div class="ex-card-title">Interesul (I)</div><div class="ex-card-body"><strong>Definitie conceptuala:</strong> Interesul (I) este capacitatea intrinseca a continutului mesajului de a capta si mentine atentia receptorului, independent de forma.<br><br><strong>Definitie operationala:</strong> Masurat ca media pe 10 itemi Likert care acopera: hook, propunere unica de valoare, storytelling, beneficii concrete, urgenta, dovada sociala, noutate, claritate CTA, apel emotional, credibilitate.<br><br><strong>Baza teoretica:</strong> Berlyne (1960) \u2014 curiositate si noutate; Kahneman (1973) \u2014 atentie ca resursa limitata; Sweller (1988) \u2014 teoria sarcinii cognitive.</div></div>'
++'<div class="ex-card" style="border-left:3px solid #059669;margin-bottom:10px"><div class="ex-card-title">Forma (F)</div><div class="ex-card-body"><strong>Definitie conceptuala:</strong> Forma (F) este calitatea executiei vizuale, structurale si senzoriale a mesajului care faciliteaza sau impiedica procesarea continutului.<br><br><strong>Definitie operationala:</strong> Masurata ca media pe 11 itemi Likert acoperind: layout, tipografie, contrast, ierarhie vizuala, calitate imagini, spatiu alb, consistenta brand, adaptabilitate dispozitiv, viteza incarcare, accesibilitate, apel estetic.<br><br><strong>Baza teoretica:</strong> Norman (2004) \u2014 emotional design; Tractinsky et al. (2000) \u2014 "what is beautiful is usable"; Lidwell et al. (2010) \u2014 principii universale de design.</div></div>'
++'<div class="ex-card" style="border-left:3px solid #d97706"><div class="ex-card-title">Claritatea (C) \u2014 Scor Compozit</div><div class="ex-card-body"><strong>Definitie:</strong> C cuantifica eficacitatea totala a unui mesaj de marketing.<br><strong>Formula:</strong> C = R + (I \u00D7 F)<br><strong>Domeniu:</strong> [0, 110] unde R \u2208 [0,10], I \u2208 [0,10], F \u2208 [0,10]<br><strong>Justificare I\u00D7F:</strong> Termenul multiplicativ reflecta faptul ca forma modereaza impactul continutului (ELM, Petty &amp; Cacioppo, 1986).</div></div>'
++'<div class="ex-note">~1.500 cuvinte. Referinte: ELM, Cognitive Load Theory, Banner Blindness, SERVQUAL paradigm.</div>'
++'</div></div>',
+
+'s1-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--red)"></span> Formalizare Matematica</div>'
++'<div class="ex-formula"><div class="eq">C = R + (I \u00D7 F)</div><div class="eq-note">unde R \u2208 [0,10], I \u2208 [0,10], F \u2208 [0,10] \u2192 C \u2208 [0, 110]</div></div>'
++'<table class="ex-table"><tr><th>Proprietate</th><th>Detaliu</th><th>Justificare</th></tr>'
++'<tr><td>Domeniu C</td><td class="mono">[0, 110]</td><td>R contribuie aditiv (max 10), I\u00D7F contribuie multiplicativ (max 100)</td></tr>'
++'<tr><td>Termenul I\u00D7F</td><td>Multiplicativ, nu aditiv</td><td>ELM: forma modereaza procesarea. Marketing mix: efecte multiplicative (Naik &amp; Raman, 2003)</td></tr>'
++'<tr><td>Simetrie I\u2194F</td><td class="mono">I=2,F=10 \u2192 20 = I=10,F=2</td><td>Continut slab in forma buna = irosit. Continut bun in forma slaba = irosit.</td></tr>'
++'<tr><td>Efect Poarta R</td><td>Daca R&lt;3 \u2192 C\u22480</td><td>Threshold effects (Vakratsas et al., 2004). Mesaj irelevant = esec automat.</td></tr>'
++'</table>'
++'<div class="ex-section" style="margin-top:16px"><div class="ex-title"><span class="ex-dot" style="background:var(--amber)"></span> Comparatie Modele</div>'
++'<table class="ex-table"><tr><th>Model</th><th>Formula</th><th>Predictie (I=8, F=9, R=7)</th><th>Status</th></tr>'
++'<tr><td>Aditiv</td><td class="mono">C = R + I + F</td><td class="mono">7 + 8 + 9 = 24</td><td><span class="tag" style="background:var(--surface3);color:var(--text3)">Inferior</span></td></tr>'
++'<tr><td><strong>R IF C</strong></td><td class="mono">C = R + (I\u00D7F)</td><td class="mono">7 + 72 = 79</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">Superior</span></td></tr>'
++'<tr><td>Full</td><td class="mono">C = R + I + F + I\u00D7F</td><td class="mono">7 + 8 + 9 + 72 = 96</td><td><span class="tag" style="background:var(--surface3);color:var(--text3)">Testat</span></td></tr>'
++'</table></div>'
++'<div class="ex-note">~2.000 cuvinte cu 15-20 referinte. Include marketing mix modeling, ELM, hybrid models.</div>'
++'</div></div>',
+
+'s1-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--red)"></span> Poarta Relevantei \u2014 Justificare Academica</div>'
++'<div class="ex-highlight"><div class="ex-h-title">IPOTEZA CENTRALA</div><div class="ex-h-body">Daca R &lt; prag (propunem R=3), atunci relatia I\u00D7F \u2192 C dispare. Mesajul devine irelevant indiferent de calitatea continutului sau formei.</div></div>'
++'<table class="ex-table"><tr><th>Scenariu</th><th>R</th><th>I</th><th>F</th><th>C (formula)</th><th>C (real)</th><th>Explicatie</th></tr>'
++'<tr><td><strong>Dezastru</strong></td><td class="mono" style="color:var(--red)">2</td><td class="mono">8</td><td class="mono">9</td><td class="mono">74</td><td class="mono" style="color:var(--red)">~0</td><td>Hotel fara aeroport: nimeni nu vede mesajul</td></tr>'
++'<tr><td><strong>Sub prag</strong></td><td class="mono" style="color:var(--amber)">3</td><td class="mono">8</td><td class="mono">9</td><td class="mono">75</td><td class="mono" style="color:var(--amber)">~12</td><td>Atentie minima, conversie aproape zero</td></tr>'
++'<tr><td><strong>Functional</strong></td><td class="mono" style="color:var(--green)">7</td><td class="mono">8</td><td class="mono">9</td><td class="mono">79</td><td class="mono" style="color:var(--green)">~79</td><td>Formula si realitatea converg</td></tr>'
++'</table>'
++'<div class="ex-section" style="margin-top:16px"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> Referinte Threshold Effects</div>'
++'<div class="ex-chips"><span class="ex-chip">Vakratsas et al. (2004) \u2014 efecte de prag in publicitate</span><span class="ex-chip">Bemmaor (1984) \u2014 modele de raspuns neliniar</span><span class="ex-chip">Baker &amp; Lutz (2000) \u2014 Relevance-Accessibility Model</span><span class="ex-chip">ELM \u2014 relevanta ca switch de procesare</span></div></div>'
++'<div class="ex-note">~1.000 cuvinte. Simularea Dezastrului de pe site devine predictie testabila in Etapa 4.</div>'
++'</div></div>',
+
+'s1-3': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--red)"></span> Literature Review \u2014 Tabel Comparativ Academic</div>'
++'<table class="ex-table"><tr><th>Framework</th><th>Autori</th><th>An</th><th>Scop</th><th>Diagnostic Cantitativ?</th><th>Nivel Mesaj?</th></tr>'
++'<tr><td>AIDA</td><td>Strong</td><td>1925</td><td>Secventiere atentie</td><td style="color:var(--red)">NU</td><td style="color:var(--red)">NU</td></tr>'
++'<tr><td>DAGMAR</td><td>Colley</td><td>1961</td><td>Obiective publicitate</td><td style="color:var(--amber)">PARTIAL</td><td style="color:var(--red)">NU</td></tr>'
++'<tr><td>FCB Grid</td><td>Vaughn</td><td>1986</td><td>Clasificare produs</td><td style="color:var(--red)">NU</td><td style="color:var(--red)">NU</td></tr>'
++'<tr><td>ELM</td><td>Petty &amp; Cacioppo</td><td>1986</td><td>Procesare mesaj</td><td style="color:var(--red)">NU</td><td style="color:var(--amber)">PARTIAL</td></tr>'
++'<tr><td>RACE</td><td>Chaffey</td><td>2010</td><td>Planificare digital</td><td style="color:var(--red)">NU</td><td style="color:var(--red)">NU</td></tr>'
++'<tr><td>StoryBrand</td><td>Miller</td><td>2017</td><td>Storytelling brand</td><td style="color:var(--red)">NU</td><td style="color:var(--red)">NU</td></tr>'
++'<tr><td>4Ps/7Ps</td><td>McCarthy/Booms</td><td>1960/81</td><td>Marketing mix</td><td style="color:var(--red)">NU</td><td style="color:var(--red)">NU</td></tr>'
++'<tr><td>SERVQUAL</td><td>Parasuraman et al.</td><td>1988</td><td>Calitate servicii</td><td style="color:var(--green)">DA</td><td style="color:var(--red)">NU</td></tr>'
++'<tr><td>NPS</td><td>Reichheld</td><td>2003</td><td>Loialitate client</td><td style="color:var(--green)">DA</td><td style="color:var(--red)">NU</td></tr>'
++'<tr style="background:var(--red-dim)"><td><strong>R IF C</strong></td><td><strong>Talmazan</strong></td><td><strong>2025</strong></td><td><strong>Diagnostic mesaj</strong></td><td style="color:var(--green)"><strong>DA</strong></td><td style="color:var(--green)"><strong>DA</strong></td></tr>'
++'</table>'
++'<div class="ex-highlight"><div class="ex-h-title">GAP CENTRAL IDENTIFICAT</div><div class="ex-h-body">Niciun framework existent nu ofera scoring numeric de diagnostic pre-expunere la nivel de mesaj individual. R IF C este primul care propune o ecuatie cantitativa de evaluare a claritatii mesajelor de marketing.</div></div>'
++'<div class="ex-note">~2.500 cuvinte. 10-15 framework-uri \u00D7 6 criterii. 40-50 referinte. Gap: diagnostic cantitativ la nivel de mesaj.</div>'
++'</div></div>',
+
+'s1-4': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--red)"></span> Pre-registration OSF.io</div>'
++'<div class="ex-card"><div class="ex-card-title">Document Pre-registration</div><div class="ex-card-body">'
++'<strong>Titlu:</strong> "Development and Validation of the R IF C Scale for Marketing Message Clarity Assessment"<br><br>'
++'<strong>Ipoteze:</strong><br>'
++'H1: Structura factoriala cu 3 factori (R, I, F) se confirma prin CFA (CFI \u2265 0.95).<br>'
++'H2: Modelul multiplicativ C = R + (I\u00D7F) explica mai multa varianta decat modelul aditiv (\u0394R\u00B2 semnificativ).<br>'
++'H3: Exista un prag al Relevantei (R \u2248 3) sub care relatia I\u00D7F \u2192 C dispare.<br>'
++'H4: Scorurile C coreleaza semnificativ cu KPI-uri reale (r > 0.40 pentru CTR).<br>'
++'H5: ICC inter-rater \u2265 0.70 pentru scoruri pe Scoring Rubric.<br><br>'
++'<strong>Design:</strong> 4 studii secventiale (Scale Development + EFA + CFA/Model Testing + Predictive Validation)<br>'
++'<strong>Esantioane planificate:</strong> Study 1: 15-20 experti + 10-15 cognitive; Study 2: N=300; Study 3: N=400; Study 4: 30-50 campanii<br>'
++'<strong>Analize planificate:</strong> EFA (PAF, Oblimin), CFA (lavaan), Nested F-test, Davies threshold test, ICC, Pearson correlations<br>'
++'<strong>Criterii de succes:</strong> \u03B1 \u2265 0.80, CFI \u2265 0.95, RMSEA \u2264 0.06, \u0394R\u00B2 p&lt;0.05, ICC > 0.70'
++'</div></div>'
++'<div class="ex-note">Link public OSF. Timestamp anterior colectarii datelor. Referinta: Nosek et al. (2018) \u2014 pre-registration as transparency tool.</div>'
++'</div></div>',
+
+/* ─── S2: DEZVOLTARE SCALA ─── */
+'s2-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--blue)"></span> Pool Itemi Likert (30 itemi)</div>'
++'<table class="ex-table"><tr><th>ID</th><th>Text Item</th><th>Construct</th><th>Sub-factor</th><th>Scala</th></tr>'
++'<tr><td class="mono">LI-001</td><td>Mesajul se adreseaza unui segment cu o nevoie specifica pe care produsul o rezolva.</td><td><span class="tag" style="background:var(--red-dim);color:var(--red)">R</span></td><td>Audienta</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-002</td><td>Momentul livrarii mesajului coincide cu o nevoie activa a receptorului.</td><td><span class="tag" style="background:var(--red-dim);color:var(--red)">R</span></td><td>Timing</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-003</td><td>Mesajul tine cont de etapa in care se afla receptorul in procesul de decizie.</td><td><span class="tag" style="background:var(--red-dim);color:var(--red)">R</span></td><td>Etapa Journey</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-004</td><td>Continutul este adaptat contextului cultural si social al audientei.</td><td><span class="tag" style="background:var(--red-dim);color:var(--red)">R</span></td><td>Context</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-005</td><td>Mesajul este livrat pe canalul preferat de audienta tinta.</td><td><span class="tag" style="background:var(--red-dim);color:var(--red)">R</span></td><td>Canal</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-008</td><td>Titlul capteaza atentia in primele 3 secunde.</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">I</span></td><td>Hook</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-009</td><td>Mesajul prezinta o propunere unica de valoare clara si diferentiata.</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">I</span></td><td>Propunere Valoare</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-010</td><td>Continutul foloseste o structura narativa care mentine interesul.</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">I</span></td><td>Storytelling</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-015</td><td>Mesajul include un apel la actiune (CTA) clar si convingator.</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">I</span></td><td>CTA</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-020</td><td>Designul vizual sustine ierarhia informatiei.</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">F</span></td><td>Layout</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-021</td><td>Tipografia este lizibila si consistenta pe toate dispozitivele.</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">F</span></td><td>Tipografie</td><td class="mono">1-7</td></tr>'
++'<tr><td class="mono">LI-025</td><td>Imaginile si elementele vizuale sunt de calitate profesionala.</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">F</span></td><td>Calitate Img</td><td class="mono">1-7</td></tr>'
++'</table>'
++'<div class="ex-note">Sunt afisati 12 din 30 itemi (exemplificativ). Pool complet: R=7 itemi, I=12 itemi, F=11 itemi. Format: afirmatie Likert 1-7 (Total dezacord \u2192 Total acord).</div>'
++'<div class="ex-stat-grid" style="margin-top:12px"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--red)">7</div><div class="ex-stat-label">ITEMI R</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--blue)">12</div><div class="ex-stat-label">ITEMI I</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">11</div><div class="ex-stat-label">ITEMI F</div></div><div class="ex-stat"><div class="ex-stat-val">30</div><div class="ex-stat-label">TOTAL POOL</div></div></div>'
++'</div></div>',
+
+'s2-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--blue)"></span> Conversie Likert 1-7 \u2192 Scoring 1-10</div>'
++'<table class="ex-table"><tr><th>Likert (1-7)</th><th>Scor R/I/F (1-10)</th><th>Interpretare</th></tr>'
++'<tr><td class="mono">1.0 - 1.5</td><td class="mono">1</td><td>Total inadecvat</td></tr>'
++'<tr><td class="mono">1.6 - 2.3</td><td class="mono">2</td><td>Foarte slab</td></tr>'
++'<tr><td class="mono">2.4 - 3.0</td><td class="mono">3</td><td>Slab</td></tr>'
++'<tr><td class="mono">3.1 - 3.7</td><td class="mono">4</td><td>Sub medie</td></tr>'
++'<tr><td class="mono">3.8 - 4.3</td><td class="mono">5</td><td>Mediu</td></tr>'
++'<tr><td class="mono">4.4 - 5.0</td><td class="mono">6</td><td>Peste medie</td></tr>'
++'<tr><td class="mono">5.1 - 5.7</td><td class="mono">7</td><td>Bun</td></tr>'
++'<tr><td class="mono">5.8 - 6.3</td><td class="mono">8</td><td>Foarte bun</td></tr>'
++'<tr><td class="mono">6.4 - 6.7</td><td class="mono">9</td><td>Excelent</td></tr>'
++'<tr><td class="mono">6.8 - 7.0</td><td class="mono">10</td><td>Exceptional</td></tr>'
++'</table>'
++'<div class="ex-formula"><div class="eq">Scor_R = round(mean(itemi_R) \u00D7 10/7)</div><div class="eq-note">Transformare liniara: media Likert \u00D7 (10/7), rotunjita la intreg. Similar pentru I si F.</div></div>'
++'<div class="ex-note">Referinta: DeVellis (2016) \u2014 Scale Development. Consistenta interna si validitatea de construct mentinuta dupa transformare.</div>'
++'</div></div>',
+
+'s2-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--blue)"></span> Scoring Rubric cu Ancore Fixe</div>'
++'<table class="ex-table"><tr><th>Nivel</th><th>R (Relevanta)</th><th>I (Interes)</th><th>F (Forma)</th></tr>'
++'<tr><td class="mono" style="color:var(--red)">1-2</td><td>Mesajul nu are nicio legatura cu audienta, contextul sau nevoia.</td><td>Continut generic, fara hook, fara propunere clara.</td><td>Layout haotic, text ilizibil, incarcare lenta.</td></tr>'
++'<tr><td class="mono" style="color:var(--amber)">3-4</td><td>Audienta vag definita, timing nealiniat, canal nepotrivit.</td><td>Hook slab, beneficii neclare, CTA ascuns.</td><td>Design amateur, inconsistenta vizuala, probleme mobile.</td></tr>'
++'<tr><td class="mono">5-6</td><td>Audienta corecta dar fara segmentare fina. Canal adecvat.</td><td>Continut decent, diferentiere medie, CTA vizibil.</td><td>Design profesional de baza, functional pe desktop.</td></tr>'
++'<tr><td class="mono" style="color:var(--blue)">7-8</td><td>Segment precis, timing bun, etapa journey corecta.</td><td>Hook puternic, storytelling angajant, CTA convingator.</td><td>Design premium, ierarhie clara, responsive complet.</td></tr>'
++'<tr><td class="mono" style="color:var(--green)">9-10</td><td>Mesajul se adreseaza exact segmentului cu nevoia specifica, in momentul optim, pe canalul preferat.</td><td>Continutul capteaza atentia instant, ofera valoare unica si motiveaza actiunea.</td><td>Executia vizuala impecabila, ierarhia clara, adaptare multi-dispozitiv.</td></tr>'
++'</table>'
++'<div class="ex-section" style="margin-top:16px"><div class="ex-title"><span class="ex-dot" style="background:var(--amber)"></span> Arhetipuri de Calibrare</div>'
++'<div class="ex-grid-3">'
++'<div class="ex-card"><div class="ex-card-title" style="color:var(--red)">Fantoma Invizibila</div><div class="ex-card-body"><span class="mono">R=1, I=9, F=9</span><br>C pe hartie: 82<br>C real: <strong style="color:var(--red)">0</strong><br><em>Mesaj irelevant total</em></div></div>'
++'<div class="ex-card"><div class="ex-card-title" style="color:var(--amber)">Zgomotul Estetic</div><div class="ex-card-body"><span class="mono">R=8, I=1, F=10</span><br>C pe hartie: 18<br>C real: <strong style="color:var(--amber)">~18</strong><br><em>Frumos dar gol</em></div></div>'
++'<div class="ex-card"><div class="ex-card-title" style="color:var(--blue)">Diamantul Ingropat</div><div class="ex-card-body"><span class="mono">R=8, I=9, F=1</span><br>C pe hartie: 17<br>C real: <strong style="color:var(--blue)">~17</strong><br><em>Potential irosit</em></div></div>'
++'</div></div>'
++'</div></div>',
+
+'s2-3': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--blue)"></span> Panel de Experti \u2014 Content Validity Index</div>'
++'<table class="ex-table"><tr><th>ID</th><th>Nume</th><th>Rol</th><th>Institutie</th><th>Experienta</th><th>CVI mediu</th></tr>'
++'<tr><td class="mono">EP-001</td><td>Dr. Maria Popescu</td><td>Lector Marketing</td><td>USM</td><td>12 ani</td><td class="mono" style="color:var(--green)">0.87</td></tr>'
++'<tr><td class="mono">EP-002</td><td>Andrei Rusu</td><td>Director Marketing</td><td>Agentie Digitala</td><td>15 ani</td><td class="mono" style="color:var(--green)">0.91</td></tr>'
++'<tr><td class="mono">EP-003</td><td>Prof. Elena Cojocaru</td><td>Cercetator Senior</td><td>ASEM</td><td>20 ani</td><td class="mono" style="color:var(--green)">0.84</td></tr>'
++'<tr><td class="mono">EP-004</td><td>Cristina Moldovan</td><td>Brand Manager</td><td>Corporate</td><td>8 ani</td><td class="mono" style="color:var(--green)">0.89</td></tr>'
++'<tr><td class="mono">EP-005</td><td>Ion Ceban</td><td>Digital Strategist</td><td>Freelance</td><td>10 ani</td><td class="mono" style="color:var(--green)">0.86</td></tr>'
++'</table>'
++'<div class="ex-note">Afisati 5 din 18 experti (exemplificativ). CVI \u2265 0.80 per item. Pool rafinat de 24-30 itemi din 36 initiali.</div>'
++'<div class="ex-stat-grid" style="margin-top:12px"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">18</div><div class="ex-stat-label">EXPERTI TOTAL</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.87</div><div class="ex-stat-label">CVI MEDIU</div></div><div class="ex-stat"><div class="ex-stat-val">24</div><div class="ex-stat-label">ITEMI RETINUTI</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--red)">6</div><div class="ex-stat-label">ITEMI ELIMINATI</div></div></div>'
++'</div></div>',
+
+'s2-4': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--blue)"></span> Interviuri Cognitive \u2014 Raport</div>'
++'<table class="ex-table"><tr><th>ID</th><th>Participant</th><th>Data</th><th>Itemi Intelesi</th><th>Ambiguitati Semnalate</th></tr>'
++'<tr><td class="mono">CT-001</td><td>Ion Munteanu</td><td class="mono">2026-03-15</td><td class="mono">28/30</td><td>LI-012: "procesare" confuz \u2192 sugereaza "prelucrare"</td></tr>'
++'<tr><td class="mono">CT-002</td><td>Ana Veres</td><td class="mono">2026-03-17</td><td class="mono">26/30</td><td>LI-005: "segmentarii" prea tehnic; LI-019: "ierarhie" ambiguu</td></tr>'
++'<tr><td class="mono">CT-003</td><td>Mihai Grosu</td><td class="mono">2026-03-19</td><td class="mono">29/30</td><td>LI-022: "adaptabilitate dispozitiv" \u2192 sugereaza "functioneaza bine pe telefon"</td></tr>'
++'<tr><td class="mono">CT-004</td><td>Diana Pavel</td><td class="mono">2026-03-20</td><td class="mono">27/30</td><td>LI-008: "3 secunde" prea prescriptiv; LI-027: scara prea larga</td></tr>'
++'</table>'
++'<div class="ex-note">Afisati 4 din 12 participanti. Rata medie intelegere: 27.5/30 (91.7%). Itemi reformulati: 4. Pool final pre-EFA: 24 itemi.</div>'
++'</div></div>',
+
+'s2-5': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--blue)"></span> Etica &amp; Consimtamant</div>'
++'<div class="ex-card"><div class="ex-card-title">Aprobare Comitet de Etica</div><div class="ex-card-body">'
++'<strong>Institutie:</strong> Universitatea de Stat din Moldova (USM), Comitetul de Etica<br>'
++'<strong>Nr. aprobare:</strong> CE-2026-0147<br>'
++'<strong>Data:</strong> 15 februarie 2026<br>'
++'<strong>Tip studiu:</strong> Cercetare nonclinica pe participanti umani (chestionar online)<br>'
++'<strong>Risc evaluat:</strong> Minim (nicio interventie, doar completare chestionar)<br>'
++'<strong>Durata aprobare:</strong> 12 luni (feb 2026 \u2014 feb 2027)'
++'</div></div>'
++'<div class="ex-card"><div class="ex-card-title">Formular Consimtamant Informat</div><div class="ex-card-body">'
++'<strong>Limba:</strong> Romana + Engleza<br>'
++'<strong>Continut obligatoriu:</strong><br>'
++'\u2022 Scopul cercetarii (validarea scalei R IF C)<br>'
++'\u2022 Durata participarii (~15-20 minute)<br>'
++'\u2022 Drepturi: retragere oricand fara consecinte<br>'
++'\u2022 Anonimizare: niciun raspuns nu poate fi asociat cu identitatea<br>'
++'\u2022 Stocare date: server securizat, acces limitat la echipa de cercetare<br>'
++'\u2022 Contact cercetator principal + comitet etica'
++'</div></div>'
++'<div class="ex-chips"><span class="ex-chip">Declaratia de la Helsinki</span><span class="ex-chip">GDPR compliance</span><span class="ex-chip">APA Standard 8</span></div>'
++'</div></div>',
+
+/* ─── S2B: PILOT STUDY ─── */
+'s2b-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--teal)"></span> Test Instrument Pilot</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val">12</div><div class="ex-stat-label">EVALUATORI</div></div><div class="ex-stat"><div class="ex-stat-val">8</div><div class="ex-stat-label">STIMULI</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">4.2 min</div><div class="ex-stat-label">TIMP MEDIU/STIMUL</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">8%</div><div class="ex-stat-label">RATA ABANDON</div></div></div>'
++'<table class="ex-table"><tr><th>Evaluator</th><th>Stimuli Evaluati</th><th>Timp Total</th><th>Probleme Semnalate</th></tr>'
++'<tr><td>Evaluator #01</td><td class="mono">8/8</td><td class="mono">38 min</td><td>LI-012 confuz, ordinea intrebarilor neintuitiva</td></tr>'
++'<tr><td>Evaluator #02</td><td class="mono">8/8</td><td class="mono">42 min</td><td>Imagini prea mici pe mobil, scara 1-7 greu de diferentiat</td></tr>'
++'<tr><td>Evaluator #03</td><td class="mono">7/8</td><td class="mono">35 min</td><td>Abandon stimul #6 (video nu s-a incarcat)</td></tr>'
++'<tr><td>Evaluator #04</td><td class="mono">8/8</td><td class="mono">31 min</td><td>Nicio problema semnificativa</td></tr>'
++'</table>'
++'<div class="ex-note">Afisati 4 din 12 evaluatori. Rata completare: 92%. Timp mediu: 36.5 min pentru 8 stimuli.</div>'
++'</div></div>',
+
+'s2b-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--teal)"></span> Raport Pilot \u2014 Verificare</div>'
++'<table class="ex-table"><tr><th>Criteriu</th><th>Rezultat</th><th>Prag</th><th>Status</th></tr>'
++'<tr><td>Timp mediu per stimul</td><td class="mono">4.2 min</td><td class="mono">\u2264 5 min</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">OK</span></td></tr>'
++'<tr><td>Rata de abandon</td><td class="mono">8%</td><td class="mono">&lt; 15%</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">OK</span></td></tr>'
++'<tr><td>Cronbach \u03B1 (R)</td><td class="mono">0.78</td><td class="mono">\u2265 0.70</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">OK</span></td></tr>'
++'<tr><td>Cronbach \u03B1 (I)</td><td class="mono">0.82</td><td class="mono">\u2265 0.70</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">OK</span></td></tr>'
++'<tr><td>Cronbach \u03B1 (F)</td><td class="mono">0.79</td><td class="mono">\u2265 0.70</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">OK</span></td></tr>'
++'<tr><td>Floor/ceiling effects</td><td>2 itemi cu ceiling</td><td>&lt; 3 itemi</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber)">ATENTIE</span></td></tr>'
++'<tr><td>Confuzii semnalate (&gt;20%)</td><td>1 item (LI-012)</td><td>0 itemi</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber)">REFORMULARE</span></td></tr>'
++'</table>'
++'<div class="ex-highlight"><div class="ex-h-title">DECIZIE</div><div class="ex-h-body">GO pentru colectarea principala. Item LI-012 reformulat. 2 itemi cu ceiling monitorizati in studiul principal.</div></div>'
++'</div></div>',
+
+'s2b-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--teal)"></span> Chestionar Final v2.0</div>'
++'<div class="ex-card"><div class="ex-card-title">Modificari post-pilot</div><div class="ex-card-body">'
++'<strong>Itemi reformulati:</strong><br>'
++'\u2022 LI-012: "procesarea informatiei" \u2192 "prelucrarea continutului" (mai intuitiv)<br>'
++'\u2022 LI-019: "ierarhia vizuala" \u2192 "ordinea in care privirea parcurge elementele"<br><br>'
++'<strong>Ordine optimizata:</strong> Itemi randomizati per construct (nu grupati R-I-F) pentru evitarea response bias.<br><br>'
++'<strong>UI ajustat:</strong><br>'
++'\u2022 Imaginile stimulilor marite 40% pe mobil<br>'
++'\u2022 Scala 1-7 cu labels vizibile la fiecare punct (nu doar extremele)<br>'
++'\u2022 Auto-save activat la fiecare raspuns<br>'
++'\u2022 Progress bar adaugat per stimul<br><br>'
++'<strong>Set stimuli final:</strong> 8 stimuli per respondent (din 30 total), randomizare Latin Square.'
++'</div></div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">24</div><div class="ex-stat-label">ITEMI FINALI</div></div><div class="ex-stat"><div class="ex-stat-val">8</div><div class="ex-stat-label">STIMULI/RESPONDENT</div></div><div class="ex-stat"><div class="ex-stat-val">~35 min</div><div class="ex-stat-label">DURATA ESTIMATA</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">GO</div><div class="ex-stat-label">DECIZIE</div></div></div>'
++'</div></div>',
+
+/* ─── S3: COLECTARE DATE & EFA ─── */
+'s3-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--amber)"></span> Set Stimuli \u2014 10 Canale \u00D7 3 Variante</div>'
++'<table class="ex-table"><tr><th>ID</th><th>Nume</th><th>Canal</th><th>Industrie</th><th>R</th><th>I</th><th>F</th><th>C</th><th>Tip</th></tr>'
++'<tr><td class="mono">STM-001</td><td>Maison Noir FB Ad</td><td>Social</td><td>Restaurant</td><td class="mono" style="color:var(--red)">2</td><td class="mono">7</td><td class="mono">8</td><td class="mono">58</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber)">PILOT</span></td></tr>'
++'<tr><td class="mono">STM-002</td><td>CloudMetric Landing</td><td>LP</td><td>SaaS B2B</td><td class="mono" style="color:var(--green)">8</td><td class="mono">7</td><td class="mono">9</td><td class="mono">71</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber)">PILOT</span></td></tr>'
++'<tr><td class="mono">STM-003</td><td>CodeNest Email</td><td>Email</td><td>EdTech</td><td class="mono" style="color:var(--green)">7</td><td class="mono">8</td><td class="mono">6</td><td class="mono">55</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber)">PILOT</span></td></tr>'
++'<tr><td class="mono">STM-006</td><td>FreshBite Instagram Story</td><td>Social</td><td>Food Delivery</td><td class="mono">6</td><td class="mono">9</td><td class="mono">8</td><td class="mono">78</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">NOU</span></td></tr>'
++'<tr><td class="mono">STM-007</td><td>TechPro B2B Email</td><td>Email</td><td>IT Services</td><td class="mono" style="color:var(--green)">9</td><td class="mono">5</td><td class="mono">7</td><td class="mono">44</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">NOU</span></td></tr>'
++'<tr><td class="mono">STM-010</td><td>GreenVita Billboard</td><td>Billboard</td><td>Organic Food</td><td class="mono">5</td><td class="mono">8</td><td class="mono">9</td><td class="mono">77</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">NOU</span></td></tr>'
++'<tr><td class="mono">STM-015</td><td>FinPro Pitch Deck</td><td>PitchDeck</td><td>FinTech</td><td class="mono" style="color:var(--green)">8</td><td class="mono">9</td><td class="mono">8</td><td class="mono">80</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">NOU</span></td></tr>'
++'<tr><td class="mono">STM-020</td><td>AutoElite Video Ad</td><td>Video</td><td>Auto</td><td class="mono">7</td><td class="mono">7</td><td class="mono">9</td><td class="mono">70</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">NOU</span></td></tr>'
++'<tr><td class="mono">STM-025</td><td>LearnPro SMS Promo</td><td>SMS</td><td>Education</td><td class="mono">6</td><td class="mono">6</td><td class="mono">4</td><td class="mono">30</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">NOU</span></td></tr>'
++'<tr><td class="mono">STM-030</td><td>SoundWave Radio Spot</td><td>Radio</td><td>Music</td><td class="mono">5</td><td class="mono">8</td><td class="mono">7</td><td class="mono">61</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">NOU</span></td></tr>'
++'</table>'
++'<div class="ex-note">Afisati 10 din 30 stimuli. Distributie: LP(3), Social(3), Email(3), Ads(3), Video(3), Billboard(3), Print(3), SMS(3), PitchDeck(3), Radio(3). Anonimizati. Randomizare per respondent.</div>'
++'<div class="ex-stat-grid" style="margin-top:12px"><div class="ex-stat"><div class="ex-stat-val">30</div><div class="ex-stat-label">STIMULI TOTAL</div></div><div class="ex-stat"><div class="ex-stat-val">10</div><div class="ex-stat-label">CANALE</div></div><div class="ex-stat"><div class="ex-stat-val">3</div><div class="ex-stat-label">VARIANTE/CANAL</div></div><div class="ex-stat"><div class="ex-stat-val">5</div><div class="ex-stat-label">DIN PILOT SITE</div></div></div>'
++'</div></div>',
+
+'s3-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--amber)"></span> Esantion N=312 \u2014 Profil Demografic</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">312</div><div class="ex-stat-label">RESPONDENTI</div></div><div class="ex-stat"><div class="ex-stat-val">24</div><div class="ex-stat-label">ITEMI</div></div><div class="ex-stat"><div class="ex-stat-val">8-10</div><div class="ex-stat-label">MESAJE/RESPONDENT</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">13:1</div><div class="ex-stat-label">RATIO N:ITEMS</div></div></div>'
++'<table class="ex-table"><tr><th>Caracteristica</th><th>Distributie</th></tr>'
++'<tr><td>Varsta</td><td>22-45 ani (M=31.4, SD=6.2)</td></tr>'
++'<tr><td>Gen</td><td>Feminin 54%, Masculin 44%, Altul/Nespecificat 2%</td></tr>'
++'<tr><td>Experienta marketing</td><td>&lt;2 ani: 18%, 2-5 ani: 35%, 5-10 ani: 31%, &gt;10 ani: 16%</td></tr>'
++'<tr><td>Sursa recrutare</td><td>Studenti USM/UTM: 32%, Talmazan School: 17%, LinkedIn: 38%, Altele: 13%</td></tr>'
++'<tr><td>Nivel educatie</td><td>Licenta: 41%, Master: 45%, Doctorat: 14%</td></tr>'
++'</table>'
++'<div class="ex-note">Ratio 13:1 depaseste pragul recomandat 10:1 (Nunnally, 1978). Zero overlap cu panelul de experti din Studiul 1.</div>'
++'</div></div>',
+
+'s3-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--amber)"></span> EFA \u2014 Exploratory Factor Analysis</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.88</div><div class="ex-stat-label">KMO</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">p&lt;.001</div><div class="ex-stat-label">BARTLETT</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">68.4%</div><div class="ex-stat-label">VARIANTA EXPL.</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">3</div><div class="ex-stat-label">FACTORI EXTRASI</div></div></div>'
++'<div class="ex-section" style="margin-top:16px"><div class="ex-title"><span class="ex-dot" style="background:var(--green)"></span> Factor Loadings (rotatie Oblimin)</div>'
++'<table class="ex-table"><tr><th>Item</th><th>Factor 1 (R)</th><th>Factor 2 (I)</th><th>Factor 3 (F)</th><th>Communality</th></tr>'
++'<tr><td>LI-001 Audienta</td><td class="mono" style="color:var(--red)"><strong>.82</strong></td><td class="mono">.11</td><td class="mono">.08</td><td class="mono">.71</td></tr>'
++'<tr><td>LI-002 Timing</td><td class="mono" style="color:var(--red)"><strong>.79</strong></td><td class="mono">.09</td><td class="mono">.12</td><td class="mono">.67</td></tr>'
++'<tr><td>LI-003 Journey</td><td class="mono" style="color:var(--red)"><strong>.74</strong></td><td class="mono">.15</td><td class="mono">.06</td><td class="mono">.59</td></tr>'
++'<tr><td>LI-008 Hook</td><td class="mono">.12</td><td class="mono" style="color:var(--blue)"><strong>.85</strong></td><td class="mono">.10</td><td class="mono">.76</td></tr>'
++'<tr><td>LI-009 Propunere</td><td class="mono">.08</td><td class="mono" style="color:var(--blue)"><strong>.81</strong></td><td class="mono">.14</td><td class="mono">.70</td></tr>'
++'<tr><td>LI-010 Story</td><td class="mono">.10</td><td class="mono" style="color:var(--blue)"><strong>.77</strong></td><td class="mono">.09</td><td class="mono">.62</td></tr>'
++'<tr><td>LI-020 Layout</td><td class="mono">.07</td><td class="mono">.13</td><td class="mono" style="color:var(--green)"><strong>.84</strong></td><td class="mono">.74</td></tr>'
++'<tr><td>LI-021 Tipografie</td><td class="mono">.11</td><td class="mono">.08</td><td class="mono" style="color:var(--green)"><strong>.80</strong></td><td class="mono">.67</td></tr>'
++'<tr><td>LI-025 Imagini</td><td class="mono">.06</td><td class="mono">.15</td><td class="mono" style="color:var(--green)"><strong>.76</strong></td><td class="mono">.62</td></tr>'
++'</table></div>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> Reliability</div>'
++'<table class="ex-table"><tr><th>Factor</th><th>Itemi Retinuti</th><th>Cronbach \u03B1</th><th>Prag</th><th>Status</th></tr>'
++'<tr><td>R (Relevanta)</td><td class="mono">5</td><td class="mono" style="color:var(--green)">0.86</td><td class="mono">\u2265 0.80</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">EXCELENT</span></td></tr>'
++'<tr><td>I (Interes)</td><td class="mono">6</td><td class="mono" style="color:var(--green)">0.89</td><td class="mono">\u2265 0.80</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">EXCELENT</span></td></tr>'
++'<tr><td>F (Forma)</td><td class="mono">5</td><td class="mono" style="color:var(--green)">0.84</td><td class="mono">\u2265 0.80</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">EXCELENT</span></td></tr>'
++'</table></div>'
++'<div class="ex-note">Scala finala: 16 itemi (5R + 6I + 5F). Praguri Hair et al. (2019): loading \u2265 0.50, cross-loading &lt; 0.35, \u03B1 \u2265 0.80, KMO \u2265 0.80.</div>'
++'</div></div>',
+
+/* ─── S3B: STUDIU CONSUMATORI ─── */
+'s3b-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--orange)"></span> Design Studiu Consumatori</div>'
++'<div class="ex-card"><div class="ex-card-title">Protocol \u2014 5 Intrebari per Stimul</div><div class="ex-card-body">'
++'<strong>Q1 (Relevanta):</strong> "Cat de relevant este acest mesaj pentru tine personal?" (1-10)<br>'
++'<strong>Q2 (Interes):</strong> "Cat de interesant ti se pare continutul acestui mesaj?" (1-10)<br>'
++'<strong>Q3 (Forma):</strong> "Cat de atractiv vizual este designul/prezentarea?" (1-10)<br>'
++'<strong>Q4 (Intentie actiune):</strong> "Cat de probabil e sa dai click / interactionezi?" (1-10)<br>'
++'<strong>Q5 (Claritate):</strong> "Cat de clar este mesajul in ansamblu?" (1-10)'
++'</div></div>'
++'<div class="ex-grid-2">'
++'<div class="ex-card"><div class="ex-card-title">Randomizare</div><div class="ex-card-body"><strong>Metoda:</strong> Latin Square<br>Fiecare respondent vede <strong>6 stimuli</strong> din 30, randomizati.<br>Ordine aleatorie per respondent.</div></div>'
++'<div class="ex-card"><div class="ex-card-title">Instrument</div><div class="ex-card-body"><strong>Platforma:</strong> rifcmarketing.com/studiu<br>Wizard cu auto-save, resume din localStorage, mobile-first. Durata: ~8 min.</div></div>'
++'</div>'
++'</div></div>',
+
+'s3b-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--orange)"></span> Esantion Consumatori N=1.847</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">1.847</div><div class="ex-stat-label">RESPONDENTI</div></div><div class="ex-stat"><div class="ex-stat-val">6</div><div class="ex-stat-label">STIMULI/RESP.</div></div><div class="ex-stat"><div class="ex-stat-val">11.082</div><div class="ex-stat-label">EVALUARI TOTALE</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.94</div><div class="ex-stat-label">PUTERE STAT.</div></div></div>'
++'<table class="ex-table"><tr><th>Segment</th><th>N</th><th>%</th><th>R mediu</th><th>I mediu</th><th>F mediu</th></tr>'
++'<tr><td>18-24 ani</td><td class="mono">412</td><td class="mono">22%</td><td class="mono">5.8</td><td class="mono">7.1</td><td class="mono">6.9</td></tr>'
++'<tr><td>25-34 ani</td><td class="mono">623</td><td class="mono">34%</td><td class="mono">6.4</td><td class="mono">6.5</td><td class="mono">6.7</td></tr>'
++'<tr><td>35-44 ani</td><td class="mono">445</td><td class="mono">24%</td><td class="mono">6.1</td><td class="mono">5.9</td><td class="mono">6.3</td></tr>'
++'<tr><td>45+ ani</td><td class="mono">367</td><td class="mono">20%</td><td class="mono">5.5</td><td class="mono">5.2</td><td class="mono">5.8</td></tr>'
++'</table>'
++'<div class="ex-note">Surse: social media 42%, paneluri online 28%, comunitati 18%, studenti 12%. Putere statistica 0.94 &gt; 0.80 minim.</div>'
++'</div></div>',
+
+'s3b-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--orange)"></span> Segmentare \u2014 Cluster Analysis</div>'
++'<table class="ex-table"><tr><th>Cluster</th><th>Profil</th><th>N</th><th>R mediu</th><th>I mediu</th><th>F mediu</th><th>Comportament</th></tr>'
++'<tr><td style="color:var(--green)"><strong>1. Pragmatici</strong></td><td>25-40 ani, educatie superioara</td><td class="mono">534</td><td class="mono" style="color:var(--green)">7.8</td><td class="mono">5.2</td><td class="mono">5.9</td><td>Prioritizeaza relevanta, ignora designul</td></tr>'
++'<tr><td style="color:var(--blue)"><strong>2. Vizuali</strong></td><td>18-30 ani, digital natives</td><td class="mono">487</td><td class="mono">5.1</td><td class="mono">6.4</td><td class="mono" style="color:var(--green)">8.1</td><td>Atentia captata de forma, toleranti la irelevanta</td></tr>'
++'<tr><td style="color:var(--amber)"><strong>3. Analitici</strong></td><td>30-50 ani, B2B</td><td class="mono">412</td><td class="mono">6.9</td><td class="mono" style="color:var(--green)">7.6</td><td class="mono">5.4</td><td>Cauta continut substantial, forma secundara</td></tr>'
++'<tr><td style="color:var(--violet)"><strong>4. Sceptici</strong></td><td>35+ ani, experienta mare</td><td class="mono">414</td><td class="mono" style="color:var(--red)">4.2</td><td class="mono" style="color:var(--red)">4.1</td><td class="mono" style="color:var(--red)">4.5</td><td>Scoruri scazute pe toate dimensiunile, greu de convins</td></tr>'
++'</table>'
++'<div class="ex-stat-grid" style="margin-top:12px"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.52</div><div class="ex-stat-label">SILHOUETTE COEF.</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">p&lt;.001</div><div class="ex-stat-label">ANOVA R</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">p&lt;.001</div><div class="ex-stat-label">ANOVA I</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">p&lt;.001</div><div class="ex-stat-label">ANOVA F</div></div></div>'
++'<div class="ex-note">Silhouette 0.52 &gt; 0.40 minim. ANOVA semnificativa pe toate cele 3 dimensiuni. Implicatii: targeting diferentiat per segment.</div>'
++'</div></div>',
+
+/* ─── S4: CFA & MODEL COMPARISON ─── */
+'s4-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--green)"></span> Esantion Nou N=418</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">418</div><div class="ex-stat-label">RESPONDENTI</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0%</div><div class="ex-stat-label">OVERLAP CU S2</div></div><div class="ex-stat"><div class="ex-stat-val">16</div><div class="ex-stat-label">ITEMI</div></div><div class="ex-stat"><div class="ex-stat-val">30</div><div class="ex-stat-label">STIMULI</div></div></div>'
++'<table class="ex-table"><tr><th>Sursa</th><th>N</th><th>%</th></tr>'
++'<tr><td>Studenti noi USM/UTM (an II-III)</td><td class="mono">145</td><td class="mono">35%</td></tr>'
++'<tr><td>Comunitate marketeri LinkedIn</td><td class="mono">128</td><td class="mono">31%</td></tr>'
++'<tr><td>Conferinta Marketing Summit 2026</td><td class="mono">87</td><td class="mono">21%</td></tr>'
++'<tr><td>Colaborari universitati Romania</td><td class="mono">58</td><td class="mono">14%</td></tr>'
++'</table>'
++'<div class="ex-note">ZERO overlap cu Studiul 2 (N=312). Aceeasi stimuli, itemi rafinati post-EFA. Dataset exportat CSV.</div>'
++'</div></div>',
+
+'s4-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--green)"></span> CFA \u2014 Confirmatory Factor Analysis</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.967</div><div class="ex-stat-label">CFI (\u2265 0.95)</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.042</div><div class="ex-stat-label">RMSEA (\u2264 0.06)</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.038</div><div class="ex-stat-label">SRMR (\u2264 0.08)</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.94</div><div class="ex-stat-label">TLI (\u2265 0.95)</div></div></div>'
++'<div class="ex-section" style="margin-top:16px"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> Validitate Convergenta &amp; Discriminanta</div>'
++'<table class="ex-table"><tr><th>Construct</th><th>AVE</th><th>CR</th><th>HTMT R-I</th><th>HTMT R-F</th><th>HTMT I-F</th></tr>'
++'<tr><td><strong>R</strong></td><td class="mono" style="color:var(--green)">0.62</td><td class="mono" style="color:var(--green)">0.89</td><td class="mono" style="color:var(--green)">0.31</td><td class="mono" style="color:var(--green)">0.24</td><td class="mono">\u2014</td></tr>'
++'<tr><td><strong>I</strong></td><td class="mono" style="color:var(--green)">0.58</td><td class="mono" style="color:var(--green)">0.91</td><td class="mono">\u2014</td><td class="mono">\u2014</td><td class="mono" style="color:var(--green)">0.42</td></tr>'
++'<tr><td><strong>F</strong></td><td class="mono" style="color:var(--green)">0.56</td><td class="mono" style="color:var(--green)">0.86</td><td class="mono">\u2014</td><td class="mono">\u2014</td><td class="mono">\u2014</td></tr>'
++'</table></div>'
++'<div class="ex-note">Toate pragurile indeplinite: AVE \u2265 0.50, CR \u2265 0.70, HTMT &lt; 0.85. Anderson &amp; Gerbing (1988) two-step confirmat.</div>'
++'</div></div>',
+
+'s4-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--green)"></span> TESTUL CENTRAL: Additive vs Multiplicative</div>'
++'<table class="ex-table"><tr><th>Model</th><th>Formula</th><th>R\u00B2</th><th>Adj. R\u00B2</th><th>AIC</th><th>BIC</th><th>\u0394R\u00B2 vs A</th></tr>'
++'<tr><td>A (Aditiv)</td><td class="mono">C = \u03B20 + \u03B21R + \u03B22I + \u03B23F</td><td class="mono">0.61</td><td class="mono">0.60</td><td class="mono">1847</td><td class="mono">1863</td><td class="mono">\u2014</td></tr>'
++'<tr style="background:var(--green-dim2)"><td><strong>B (R IF C)</strong></td><td class="mono"><strong>C = \u03B20 + \u03B21R + \u03B22(I\u00D7F)</strong></td><td class="mono" style="color:var(--green)"><strong>0.78</strong></td><td class="mono"><strong>0.77</strong></td><td class="mono"><strong>1612</strong></td><td class="mono"><strong>1624</strong></td><td class="mono" style="color:var(--green)"><strong>+0.17***</strong></td></tr>'
++'<tr><td>C (Full)</td><td class="mono">C = \u03B20 + \u03B21R + \u03B22I + \u03B23F + \u03B24(I\u00D7F)</td><td class="mono">0.79</td><td class="mono">0.78</td><td class="mono">1608</td><td class="mono">1628</td><td class="mono">+0.18***</td></tr>'
++'</table>'
++'<div class="ex-highlight"><div class="ex-h-title">REZULTAT: ECUATIA R IF C VALIDATA</div><div class="ex-h-body">Model B (R IF C) explica semnificativ mai multa varianta decat Model A (Aditiv): \u0394R\u00B2 = 0.17, p &lt; 0.001. Model C (Full) nu aduce o imbunatatire substantiala fata de B (\u0394R\u00B2 = 0.01, p = 0.08), confirmand parsimonia modelului R IF C.<br><br><strong>Coeficienti Model B:</strong> \u03B21(R) = 0.34***, \u03B22(I\u00D7F) = 0.72*** \u2014 ambii semnificativi, I\u00D7F cu efect dominant.</div></div>'
++'</div></div>',
+
+'s4-3': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--green)"></span> Testul Portii Relevantei (Threshold)</div>'
++'<table class="ex-table"><tr><th>Threshold R</th><th>N sub prag</th><th>\u03B2(I\u00D7F) sub prag</th><th>p-value</th><th>\u03B2(I\u00D7F) peste prag</th><th>p-value</th></tr>'
++'<tr><td class="mono">R \u2264 2</td><td class="mono">47</td><td class="mono" style="color:var(--red)">0.08</td><td class="mono" style="color:var(--red)">ns (.42)</td><td class="mono" style="color:var(--green)">0.74***</td><td class="mono">&lt;.001</td></tr>'
++'<tr style="background:var(--amber-dim)"><td class="mono"><strong>R \u2264 3</strong></td><td class="mono"><strong>89</strong></td><td class="mono" style="color:var(--red)"><strong>0.12</strong></td><td class="mono" style="color:var(--red)"><strong>ns (.18)</strong></td><td class="mono" style="color:var(--green)"><strong>0.76***</strong></td><td class="mono"><strong>&lt;.001</strong></td></tr>'
++'<tr><td class="mono">R \u2264 4</td><td class="mono">142</td><td class="mono" style="color:var(--amber)">0.28*</td><td class="mono">.03</td><td class="mono" style="color:var(--green)">0.79***</td><td class="mono">&lt;.001</td></tr>'
++'<tr><td class="mono">R \u2264 5</td><td class="mono">198</td><td class="mono" style="color:var(--green)">0.51***</td><td class="mono">&lt;.001</td><td class="mono" style="color:var(--green)">0.81***</td><td class="mono">&lt;.001</td></tr>'
++'</table>'
++'<div class="ex-highlight"><div class="ex-h-title">CONFIRMAT: POARTA RELEVANTEI LA R=3</div><div class="ex-h-body">Davies test confirma breakpoint la R \u2248 3 (p = 0.004). Sub R=3, efectul I\u00D7F devine nesemnificativ (\u03B2 = 0.12, p = .18). Peste R=3, efectul I\u00D7F este puternic si semnificativ (\u03B2 = 0.76, p &lt; .001).<br><br>Ipoteza de pe site ("Daca R &lt; 3 \u2192 Esec Critic Automat") este validata empiric.</div></div>'
++'</div></div>',
+
+'s4-4': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--green)"></span> Robustness Checks</div>'
++'<table class="ex-table"><tr><th>Subgrup</th><th>N</th><th>\u03B2(I\u00D7F)</th><th>Semnificativ?</th><th>\u0394CFI</th></tr>'
++'<tr><td>Canal: Social Media</td><td class="mono">95</td><td class="mono" style="color:var(--green)">0.71***</td><td style="color:var(--green)">DA</td><td class="mono">.005</td></tr>'
++'<tr><td>Canal: Email</td><td class="mono">82</td><td class="mono" style="color:var(--green)">0.68***</td><td style="color:var(--green)">DA</td><td class="mono">.007</td></tr>'
++'<tr><td>Canal: Landing Page</td><td class="mono">78</td><td class="mono" style="color:var(--green)">0.74***</td><td style="color:var(--green)">DA</td><td class="mono">.004</td></tr>'
++'<tr><td>Canal: Video</td><td class="mono">71</td><td class="mono" style="color:var(--green)">0.69***</td><td style="color:var(--green)">DA</td><td class="mono">.008</td></tr>'
++'<tr><td>Industrie: B2B</td><td class="mono">167</td><td class="mono" style="color:var(--green)">0.73***</td><td style="color:var(--green)">DA</td><td class="mono">.003</td></tr>'
++'<tr><td>Industrie: B2C</td><td class="mono">251</td><td class="mono" style="color:var(--green)">0.76***</td><td style="color:var(--green)">DA</td><td class="mono">.002</td></tr>'
++'</table>'
++'<div class="ex-note">Coeficientul I\u00D7F semnificativ in 100% din subgrupuri. \u0394CFI &lt; 0.01 in toate cazurile \u2192 invarianta metrica confirmata (Cheung &amp; Rensvold, 2002).</div>'
++'</div></div>',
+
+/* ─── S5: VALIDARE PREDICTIVA ─── */
+'s5-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> KPI-uri Reale \u2014 42 Campanii</div>'
++'<table class="ex-table"><tr><th>ID</th><th>Campanie</th><th>Canal</th><th>C Score</th><th>CTR</th><th>Conv. Rate</th><th>CPL</th><th>ROAS</th></tr>'
++'<tr><td class="mono">C-001</td><td>FreshBite Summer</td><td>Social</td><td class="mono" style="color:var(--green)">82</td><td class="mono">4.2%</td><td class="mono">3.8%</td><td class="mono">\u20AC12</td><td class="mono">5.1x</td></tr>'
++'<tr><td class="mono">C-002</td><td>TechPro Q3 Lead Gen</td><td>Email</td><td class="mono" style="color:var(--green)">71</td><td class="mono">2.8%</td><td class="mono">2.1%</td><td class="mono">\u20AC28</td><td class="mono">3.2x</td></tr>'
++'<tr><td class="mono">C-003</td><td>CodeNest Rebrand</td><td>LP</td><td class="mono">55</td><td class="mono">1.5%</td><td class="mono">1.2%</td><td class="mono">\u20AC45</td><td class="mono">1.8x</td></tr>'
++'<tr><td class="mono">C-004</td><td>Maison Noir Noapte</td><td>Social</td><td class="mono" style="color:var(--red)">23</td><td class="mono">0.3%</td><td class="mono">0.1%</td><td class="mono">\u20AC180</td><td class="mono">0.3x</td></tr>'
++'<tr><td class="mono">C-005</td><td>GreenVita Organic</td><td>Billboard</td><td class="mono" style="color:var(--green)">77</td><td class="mono">\u2014</td><td class="mono">2.9%</td><td class="mono">\u20AC18</td><td class="mono">4.1x</td></tr>'
++'</table>'
++'<div class="ex-note">Afisati 5 din 42 campanii. Surse: clienti Talmazan School, CONTINUUM, campanii proprii. Consimtamant semnat per client.</div>'
++'<div class="ex-section" style="margin-top:16px"><div class="ex-title"><span class="ex-dot" style="background:var(--green)"></span> Corelatii C Score vs KPI</div>'
++'<table class="ex-table"><tr><th>KPI</th><th>Pearson r</th><th>p-value</th><th>Target</th><th>Status</th></tr>'
++'<tr><td>CTR</td><td class="mono" style="color:var(--green)">0.67***</td><td class="mono">&lt;.001</td><td class="mono">r &gt; 0.40</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">DEPASIT</span></td></tr>'
++'<tr><td>Conversion Rate</td><td class="mono" style="color:var(--green)">0.58***</td><td class="mono">&lt;.001</td><td class="mono">r &gt; 0.40</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">DEPASIT</span></td></tr>'
++'<tr><td>CPL (invers)</td><td class="mono" style="color:var(--green)">-0.52***</td><td class="mono">&lt;.001</td><td class="mono">r &lt; -0.30</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">DEPASIT</span></td></tr>'
++'<tr><td>ROAS</td><td class="mono" style="color:var(--green)">0.61***</td><td class="mono">&lt;.001</td><td class="mono">r &gt; 0.40</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">DEPASIT</span></td></tr>'
++'<tr><td>Bounce Rate (invers)</td><td class="mono" style="color:var(--green)">-0.44***</td><td class="mono">&lt;.001</td><td class="mono">r &lt; -0.30</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">DEPASIT</span></td></tr>'
++'</table></div>'
++'</div></div>',
+
+'s5-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> Known-Groups Validity</div>'
++'<table class="ex-table"><tr><th>Arhetip</th><th>R</th><th>I</th><th>F</th><th>C mediu</th><th>CTR mediu</th><th>Conv. Rate</th><th>Cohen d vs Ideal</th></tr>'
++'<tr><td style="color:var(--red)"><strong>Fantoma Invizibila</strong></td><td class="mono" style="color:var(--red)">1.8</td><td class="mono">8.2</td><td class="mono">8.5</td><td class="mono" style="color:var(--red)">14.2</td><td class="mono">0.2%</td><td class="mono">0.05%</td><td class="mono" style="color:var(--green)">2.84***</td></tr>'
++'<tr><td style="color:var(--amber)"><strong>Zgomotul Estetic</strong></td><td class="mono">7.1</td><td class="mono" style="color:var(--red)">2.3</td><td class="mono">8.9</td><td class="mono" style="color:var(--amber)">27.5</td><td class="mono">1.1%</td><td class="mono">0.3%</td><td class="mono" style="color:var(--green)">1.92***</td></tr>'
++'<tr><td style="color:var(--blue)"><strong>Diamantul Ingropat</strong></td><td class="mono">7.4</td><td class="mono">8.1</td><td class="mono" style="color:var(--red)">2.1</td><td class="mono" style="color:var(--amber)">24.4</td><td class="mono">0.8%</td><td class="mono">0.4%</td><td class="mono" style="color:var(--green)">2.15***</td></tr>'
++'<tr style="background:var(--green-dim2)"><td style="color:var(--green)"><strong>Ideal</strong></td><td class="mono" style="color:var(--green)">8.2</td><td class="mono" style="color:var(--green)">8.4</td><td class="mono" style="color:var(--green)">8.7</td><td class="mono" style="color:var(--green)">81.3</td><td class="mono">4.5%</td><td class="mono">3.2%</td><td class="mono">\u2014</td></tr>'
++'</table>'
++'<div class="ex-note">ANOVA: F(3, 38) = 24.7, p &lt; .001. Toate Cohen d &gt; 0.80 (efect mare). Arhetipurile de pe site confirmate empiric.</div>'
++'</div></div>',
+
+'s5-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> Validare Convergenta / Discriminanta</div>'
++'<table class="ex-table"><tr><th>Scala Externa</th><th>Coreleaza cu</th><th>Pearson r</th><th>Tip Validitate</th></tr>'
++'<tr><td>Ad Relevance Scale (Zaichkowsky)</td><td>R</td><td class="mono" style="color:var(--green)">0.68***</td><td>Convergenta \u2014 r &gt; 0.50</td></tr>'
++'<tr><td>Processing Fluency Scale</td><td>F</td><td class="mono" style="color:var(--green)">0.59***</td><td>Convergenta \u2014 r &gt; 0.50</td></tr>'
++'<tr><td>Attention Capture Index</td><td>I</td><td class="mono" style="color:var(--green)">0.63***</td><td>Convergenta \u2014 r &gt; 0.50</td></tr>'
++'<tr><td>Ad Relevance Scale</td><td>F</td><td class="mono">0.21*</td><td>Discriminanta \u2014 r &lt; 0.50</td></tr>'
++'<tr><td>Processing Fluency Scale</td><td>I</td><td class="mono">0.28**</td><td>Discriminanta \u2014 r &lt; 0.50</td></tr>'
++'</table>'
++'<div class="ex-note">Convergenta confirmata: fiecare construct coreleaza puternic cu scala sa corespondenta. Discriminanta confirmata: corelatii cross-construct sub 0.30. HTMT &lt; 0.85 intre R, I, F.</div>'
++'</div></div>',
+
+'s5-3': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> Inter-Rater Reliability</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val">3</div><div class="ex-stat-label">EVALUATORI</div></div><div class="ex-stat"><div class="ex-stat-val">28</div><div class="ex-stat-label">CAMPANII</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.84</div><div class="ex-stat-label">ICC (TWO-WAY)</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.81</div><div class="ex-stat-label">KRIPPENDORFF \u03B1</div></div></div>'
++'<table class="ex-table"><tr><th>Pereche</th><th>ICC R</th><th>ICC I</th><th>ICC F</th><th>ICC C</th></tr>'
++'<tr><td>Evaluator A - B</td><td class="mono" style="color:var(--green)">0.82</td><td class="mono" style="color:var(--green)">0.79</td><td class="mono" style="color:var(--green)">0.85</td><td class="mono" style="color:var(--green)">0.87</td></tr>'
++'<tr><td>Evaluator A - C</td><td class="mono" style="color:var(--green)">0.80</td><td class="mono" style="color:var(--green)">0.83</td><td class="mono" style="color:var(--green)">0.81</td><td class="mono" style="color:var(--green)">0.84</td></tr>'
++'<tr><td>Evaluator B - C</td><td class="mono" style="color:var(--green)">0.78</td><td class="mono" style="color:var(--green)">0.81</td><td class="mono" style="color:var(--green)">0.83</td><td class="mono" style="color:var(--green)">0.82</td></tr>'
++'</table>'
++'<div class="ex-note">ICC &gt; 0.80 = excelent. Training: 1 ora cu Scoring Rubric. Scorare independenta, orb fata de ceilalti evaluatori.</div>'
++'</div></div>',
+
+'s5-4': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--violet)"></span> Study 5: AI Audit vs Human Raters</div>'
++'<div class="ex-stat-grid"><div class="ex-stat"><div class="ex-stat-val">25</div><div class="ex-stat-label">MESAJE EVALUATE</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.76</div><div class="ex-stat-label">CORREL. AI-HUMAN</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--green)">0.82</div><div class="ex-stat-label">CORREL. AI C-SCORE</div></div><div class="ex-stat"><div class="ex-stat-val" style="color:var(--amber)">\u00B11.2</div><div class="ex-stat-label">ABATERE MEDIE</div></div></div>'
++'<table class="ex-table"><tr><th>Mesaj</th><th>R (AI)</th><th>R (Human)</th><th>I (AI)</th><th>I (Human)</th><th>F (AI)</th><th>F (Human)</th><th>C (AI)</th><th>C (Human)</th></tr>'
++'<tr><td>FreshBite Summer</td><td class="mono">7</td><td class="mono">7.2</td><td class="mono">8</td><td class="mono">8.4</td><td class="mono">8</td><td class="mono">7.8</td><td class="mono">71</td><td class="mono">72.7</td></tr>'
++'<tr><td>TechPro Q3</td><td class="mono">8</td><td class="mono">8.1</td><td class="mono">6</td><td class="mono">5.8</td><td class="mono">7</td><td class="mono">7.3</td><td class="mono">50</td><td class="mono">50.4</td></tr>'
++'<tr><td>Maison Noir</td><td class="mono">2</td><td class="mono">2.3</td><td class="mono">7</td><td class="mono">7.1</td><td class="mono">8</td><td class="mono">8.2</td><td class="mono">58</td><td class="mono">60.5</td></tr>'
++'</table>'
++'<div class="ex-highlight"><div class="ex-h-title">CONTRIBUTIE ORIGINALA</div><div class="ex-h-body">"Automated R IF C diagnostic via AI shows strong agreement with expert human raters (r = 0.76, p &lt; .001)." Aceasta este o contributie rara in literatura: validarea unui instrument de marketing diagnostics prin AI. r &gt; 0.70 = acord puternic.</div></div>'
++'</div></div>',
+
+/* ─── S6: SCRIERE & SUBMISIE ─── */
+'s6-0': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--cyan)"></span> Introduction + Literature Review</div>'
++'<div class="ex-card"><div class="ex-card-title">Introduction (~2.000 cuvinte)</div><div class="ex-card-body">'
++'<strong>Structura:</strong><br>'
++'1. Hook: Problema mesajelor de marketing neclare \u2014 costuri de miliarde<br>'
++'2. Context: Framework-urile existente (AIDA, RACE) construiesc dar nu diagnosticheaza<br>'
++'3. Gap: Niciun instrument cantitativ de diagnostic la nivel de mesaj individual<br>'
++'4. Propunere: R IF C ca prima scala de diagnostic al claritatii mesajelor<br>'
++'5. Contributii: (a) scala validata, (b) ecuatie multiplicativa, (c) efect de prag, (d) AI diagnostic<br>'
++'6. Structura paper-ului'
++'</div></div>'
++'<div class="ex-card"><div class="ex-card-title">Literature Review (~3.500 cuvinte, 4 sectiuni)</div><div class="ex-card-body">'
++'<strong>2.1</strong> Framework-uri de marketing communication \u2014 tabel comparativ 10-15 modele<br>'
++'<strong>2.2</strong> Scale development in marketing \u2014 paradigma Churchill (1979), SERVQUAL<br>'
++'<strong>2.3</strong> Procesarea mesajelor \u2014 ELM, cognitive load, attention economics<br>'
++'<strong>2.4</strong> Gap &amp; propunere \u2014 de la framework conceptual la instrument de diagnostic cantitativ<br><br>'
++'<strong>Referinte:</strong> 40-50 surse peer-reviewed'
++'</div></div>'
++'</div></div>',
+
+'s6-1': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--cyan)"></span> Framework + Methodology + Results</div>'
++'<div class="ex-grid-3">'
++'<div class="ex-card"><div class="ex-card-title">Framework<br><span style="font-size:10px;color:var(--text3)">~2.500 cuvinte</span></div><div class="ex-card-body">\u2022 Definitii formale R, I, F, C<br>\u2022 Ecuatia R + (I\u00D7F) = C formalizata<br>\u2022 Poarta Relevantei<br>\u2022 Domeniu, proprietati, justificari</div></div>'
++'<div class="ex-card"><div class="ex-card-title">Methodology<br><span style="font-size:10px;color:var(--text3)">~3.000 cuvinte</span></div><div class="ex-card-body">\u2022 Study 1: Scale Development + EFA (N=312)<br>\u2022 Study 2: CFA + Model Comparison (N=418)<br>\u2022 Study 3: Predictive Validation (42 campanii)<br>\u2022 Study 4: AI vs Human (optional)</div></div>'
++'<div class="ex-card"><div class="ex-card-title">Results<br><span style="font-size:10px;color:var(--text3)">~4.000 cuvinte</span></div><div class="ex-card-body">\u2022 EFA: 3 factori, \u03B1 &gt; 0.84<br>\u2022 CFA: CFI=0.967, RMSEA=0.042<br>\u2022 R IF C &gt; Aditiv: \u0394R\u00B2=0.17***<br>\u2022 Threshold: R=3 confirmat<br>\u2022 8-12 tabele/figuri</div></div>'
++'</div>'
++'</div></div>',
+
+'s6-2': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--cyan)"></span> Discussion + Conclusion</div>'
++'<div class="ex-card"><div class="ex-card-title">Discussion (~2.500 cuvinte)</div><div class="ex-card-body">'
++'<strong>Contributii teoretice:</strong><br>'
++'\u2022 Prima scala cantitativa de diagnostic al mesajelor de marketing<br>'
++'\u2022 Demonstrarea superioritatii modelului multiplicativ (I\u00D7F) fata de cel aditiv<br>'
++'\u2022 Identificarea efectului de prag al Relevantei (R=3)<br><br>'
++'<strong>Implicatii manageriale:</strong><br>'
++'\u2022 Instrumente aplicabile (scoring rubric, calculator, AI audit)<br>'
++'\u2022 Diagnosticarea pre-lansare a campaniilor<br>'
++'\u2022 ROI optimization prin focus pe R, I, F in ordine<br><br>'
++'<strong>Limitari:</strong><br>'
++'\u2022 Esantion predominant din Moldova/Romania<br>'
++'\u2022 Stimuli statici (fara A/B testing dinamic)<br>'
++'\u2022 Self-report measures'
++'</div></div>'
++'<div class="ex-card"><div class="ex-card-title">AI Declaration</div><div class="ex-card-body">'
++'<strong>Text model:</strong> "AI tools (Claude, ChatGPT) were used for literature search, draft editing, and R code optimization. All analyses were conducted and verified by the first author. The AI audit tool (rifcmarketing.com/audit) was independently developed and tested as Study 5."'
++'</div></div>'
++'</div></div>',
+
+'s6-3': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--cyan)"></span> Citarea Site-ului in Paper</div>'
++'<table class="ex-table"><tr><th>Referinta</th><th>Tip</th><th>Format APA 7th</th></tr>'
++'<tr><td>rifcmarketing.com</td><td><span class="tag" style="background:var(--pink-dim);color:var(--pink)">WEBSITE</span></td><td>Talmazan, D. (2025). <em>R IF C Marketing Framework.</em> https://rifcmarketing.com</td></tr>'
++'<tr><td>White Paper</td><td><span class="tag" style="background:var(--violet-dim);color:var(--violet)">GRAY LIT.</span></td><td>Talmazan, D. (2025). <em>R IF C: Codul Sursa al Claritatii in Marketing</em> [White paper]. Talmazan School.</td></tr>'
++'<tr><td>/audit</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">INSTRUMENT</span></td><td>Talmazan, D. (2025). <em>R IF C AI Audit Tool</em> [Software]. https://rifcmarketing.com/audit</td></tr>'
++'<tr><td>/calculator</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">INSTRUMENT</span></td><td>Talmazan, D. (2025). <em>R IF C Calculator</em> [Web application]. https://rifcmarketing.com/calculator</td></tr>'
++'</table>'
++'<div class="ex-quote">Site-ul demonstreaza ca framework-ul nu e doar teorie \u2014 e implementat si utilizat. Aceasta este o putere, nu o slabiciune. Formulare: "practitioner implementation of the R IF C framework".</div>'
++'</div></div>',
+
+'s6-4': '<div class="ex-model"><span class="ex-badge exemplu">MODEL COMPLETAT</span>'
++'<div class="ex-section"><div class="ex-title"><span class="ex-dot" style="background:var(--cyan)"></span> Submisie \u2014 Plan</div>'
++'<table class="ex-table"><tr><th>#</th><th>Jurnal</th><th>IF</th><th>Fit</th><th>Prioritate</th></tr>'
++'<tr style="background:var(--green-dim2)"><td class="mono">1</td><td><strong>Journal of Business Research</strong></td><td class="mono">10.5</td><td>Scale development + practitioner tools = fit perfect</td><td><span class="tag" style="background:var(--green-dim2);color:var(--green)">PRIMAR</span></td></tr>'
++'<tr><td class="mono">2</td><td>Journal of Advertising</td><td class="mono">5.8</td><td>Advertising effectiveness measurement</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">BACKUP 1</span></td></tr>'
++'<tr><td class="mono">3</td><td>European Journal of Marketing</td><td class="mono">3.7</td><td>European perspective, scale validation</td><td><span class="tag" style="background:var(--blue-dim);color:var(--blue)">BACKUP 2</span></td></tr>'
++'<tr><td class="mono">4</td><td>JAMS</td><td class="mono">15.8</td><td>Foarte competitiv, dar contributia e solida</td><td><span class="tag" style="background:var(--amber-dim);color:var(--amber)">ASPIRATIONAL</span></td></tr>'
++'<tr><td class="mono">5</td><td>Studia Universitatis Moldaviae</td><td class="mono">\u2014</td><td>Start regional, publicare rapida</td><td><span class="tag" style="background:var(--violet-dim);color:var(--violet)">REGIONAL</span></td></tr>'
++'</table>'
++'<div class="ex-card" style="margin-top:12px"><div class="ex-card-title">Paper Final</div><div class="ex-card-body">'
++'<strong>Lungime:</strong> ~13.500 cuvinte (fara referinte)<br>'
++'<strong>Referinte:</strong> 82 surse peer-reviewed<br>'
++'<strong>Tabele:</strong> 10<br>'
++'<strong>Figuri:</strong> 4 (scatter plot, scree plot, threshold graph, model comparison)<br>'
++'<strong>Format:</strong> APA 7th Edition<br>'
++'<strong>Cover letter:</strong> Personalizat per jurnal, evidentiind contributia unica (scala + ecuatie + AI diagnostic)'
++'</div></div>'
++'</div></div>'
+
+};
+
 function App() {
   var app = document.getElementById('app');
   var activeStage = 'overview';
@@ -670,7 +1284,7 @@ function App() {
     if(stage.siteMap) {
       html += '<div class="site-map"><div class="sm-title"><span class="globe">\\uD83C\\uDF10</span> CE VINE DE PE RIFCMARKETING.COM \\u2192 UNDE AJUNGE \\u00CEN PAPER</div><div class="sm-items">'+stage.siteMap.map(function(m){return '<div class="sm-item '+m.status+'"><span class="arrow">\\u2192</span><div><span class="from">'+m.from+'</span><br><span class="to">'+m.to+'</span></div></div>'}).join('')+'</div></div>';
     }
-    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;var tabKey=stage.id+'-tab-'+i;var activeTab=taskTabs[tabKey]||'exemplu';var hasDeliverables=(t.deliverables&&t.deliverables.length>0);var hasWorkspace=!!t.dataType;var shortTitle=t.title.length>30?t.title.substring(0,30)+'\\u2026':t.title;return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-tabs"><div class="task-tab '+(activeTab==='exemplu'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab '+(activeTab==='work'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> '+shortTitle+'</div></div><div class="task-tab-panel exemplu-panel '+(activeTab==='exemplu'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasDeliverables?(t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>'+shortTitle+'</strong>.</div></div>')+'</div><div class="task-tab-panel work-panel '+(activeTab==='work'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasWorkspace?renderDataWorkspace(stage.id, i, t):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDEE0</div><div class="ee-text">Aceast\\u0103 sarcin\\u0103 nu are instrumente de lucru.<br>Verific\\u0103 tab-ul <strong>Exemplu</strong> pentru detalii.</div></div>')+'</div></div></div>'}).join('')+'</div>';
+    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;var tabKey=stage.id+'-tab-'+i;var activeTab=taskTabs[tabKey]||'exemplu';var hasDeliverables=(t.deliverables&&t.deliverables.length>0);var hasWorkspace=!!t.dataType;var shortTitle=t.title.length>30?t.title.substring(0,30)+'\\u2026':t.title;var exKey=stage.id+'-'+i;var exContent=EXAMPLES[exKey];var exempluInner=exContent?exContent:('<div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasDeliverables?(t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>'+shortTitle+'</strong>.</div></div>'));return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-tabs"><div class="task-tab '+(activeTab==='exemplu'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab '+(activeTab==='work'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> '+shortTitle+'</div></div><div class="task-tab-panel exemplu-panel '+(activeTab==='exemplu'?'active':'')+'">'+exempluInner+'</div><div class="task-tab-panel work-panel '+(activeTab==='work'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasWorkspace?renderDataWorkspace(stage.id, i, t):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDEE0</div><div class="ee-text">Aceast\\u0103 sarcin\\u0103 nu are instrumente de lucru.<br>Verific\\u0103 tab-ul <strong>Exemplu</strong> pentru detalii.</div></div>')+'</div></div></div>'}).join('')+'</div>';
     return html;
   }
 
@@ -714,11 +1328,18 @@ function App() {
     html += '<div class="task-header" style="cursor:default;"><div class="task-checkbox ' + (isChecked ? 'checked' : '') + '" data-key="' + key + '">' + (isChecked ? '\\u2713' : '') + '</div><div class="task-step">' + stepNum + '</div><div class="title" style="font-size:17px;font-weight:600;' + (isChecked ? 'text-decoration:line-through;opacity:.5' : '') + '">' + t.title + '</div><div class="badges">' + (t.hasSite ? '<span class="site-tag">SITE</span>' : '') + '<span class="priority ' + t.priority + '">' + t.priority.toUpperCase() + '</span></div></div>';
     html += '<div class="task-body" style="display:block;">';
     html += '<div class="task-tabs"><div class="task-tab ' + (activeTab === 'exemplu' ? 'active' : '') + '" data-tabkey="' + tabKey + '" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab ' + (activeTab === 'work' ? 'active' : '') + '" data-tabkey="' + tabKey + '" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> ' + shortTitle + '</div></div>';
-    html += '<div class="task-tab-panel exemplu-panel ' + (activeTab === 'exemplu' ? 'active' : '') + '"><div class="task-detail" style="margin-bottom:12px;">' + t.detail + '</div>';
-    if (hasDeliverables) {
-      (t.deliverables || []).forEach(function(d) { html += '<div class="deliverable"><div class="dlabel ' + d.type + '">' + d.label + '</div><div class="dtext">' + d.text.replace(/\\n/g, '<br>') + '</div></div>'; });
+    var exKey = stage.id + '-' + taskIdx;
+    var exContent = EXAMPLES[exKey];
+    html += '<div class="task-tab-panel exemplu-panel ' + (activeTab === 'exemplu' ? 'active' : '') + '">';
+    if (exContent) {
+      html += exContent;
     } else {
-      html += '<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>' + shortTitle + '</strong>.</div></div>';
+      html += '<div class="task-detail" style="margin-bottom:12px;">' + t.detail + '</div>';
+      if (hasDeliverables) {
+        (t.deliverables || []).forEach(function(d) { html += '<div class="deliverable"><div class="dlabel ' + d.type + '">' + d.label + '</div><div class="dtext">' + d.text.replace(/\\n/g, '<br>') + '</div></div>'; });
+      } else {
+        html += '<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>' + shortTitle + '</strong>.</div></div>';
+      }
     }
     html += '</div>';
     html += '<div class="task-tab-panel work-panel ' + (activeTab === 'work' ? 'active' : '') + '"><div class="task-detail" style="margin-bottom:12px;">' + t.detail + '</div>';
