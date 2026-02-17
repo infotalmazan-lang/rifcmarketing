@@ -33,6 +33,7 @@ import {
   UserCheck,
   Bot,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu Admin — Structura Sondaj
@@ -418,27 +419,28 @@ export default function StudiuAdminPage() {
     setUploading((prev) => ({ ...prev, [fieldKey]: true }));
     setUploadProgress((prev) => ({ ...prev, [fieldKey]: 0 }));
     try {
-      // Step 1: Get signed upload URL from our API (uses service role)
+      // Step 1: Get signed upload URL + token from our API (uses service role)
       const signedRes = await fetch("/api/upload/signed-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: file.name, contentType: file.type }),
       });
       const signedData = await signedRes.json();
-      if (!signedData.signedUrl) {
+      if (!signedData.token || !signedData.path) {
         console.error("Failed to get signed URL:", signedData.error);
         return null;
       }
 
-      // Step 2: Upload file directly to Supabase Storage using signed URL
-      const uploadRes = await fetch(signedData.signedUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
+      // Step 2: Upload file using Supabase client uploadToSignedUrl
+      const supabase = createClient();
+      const { error: uploadError } = await supabase.storage
+        .from("survey-media")
+        .uploadToSignedUrl(signedData.path, signedData.token, file, {
+          contentType: file.type,
+        });
 
-      if (!uploadRes.ok) {
-        console.error("Upload failed:", uploadRes.status, await uploadRes.text());
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
         return null;
       }
 
