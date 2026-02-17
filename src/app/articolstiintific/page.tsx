@@ -225,6 +225,7 @@ body { background:var(--bg); color:var(--text); font-family:'Outfit',sans-serif;
 .dw-select:focus { border-color:var(--blue); outline:none; }
 .dw-textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; background:var(--surface); color:var(--text); font-family:'Outfit',sans-serif; font-size:13px; resize:vertical; min-height:80px; line-height:1.6; }
 .dw-textarea:focus { border-color:var(--blue); outline:none; box-shadow:0 0 0 2px var(--blue-dim); }
+.dw-free { min-height:300px; font-size:14px; line-height:1.7; }
 .dw-btn { padding:5px 12px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface2); color:var(--text); transition:all .15s; font-family:'Outfit',sans-serif; }
 .dw-btn:hover { background:var(--surface3); }
 .dw-btn.primary { background:var(--blue); border-color:var(--blue); color:#fff; }
@@ -1284,7 +1285,7 @@ function App() {
     if(stage.siteMap) {
       html += '<div class="site-map"><div class="sm-title"><span class="globe">\\uD83C\\uDF10</span> CE VINE DE PE RIFCMARKETING.COM \\u2192 UNDE AJUNGE \\u00CEN PAPER</div><div class="sm-items">'+stage.siteMap.map(function(m){return '<div class="sm-item '+m.status+'"><span class="arrow">\\u2192</span><div><span class="from">'+m.from+'</span><br><span class="to">'+m.to+'</span></div></div>'}).join('')+'</div></div>';
     }
-    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;var tabKey=stage.id+'-tab-'+i;var activeTab=taskTabs[tabKey]||'exemplu';var hasDeliverables=(t.deliverables&&t.deliverables.length>0);var hasWorkspace=!!t.dataType;var shortTitle=t.title.length>30?t.title.substring(0,30)+'\\u2026':t.title;var exKey=stage.id+'-'+i;var exContent=EXAMPLES[exKey];var exempluInner=exContent?exContent:('<div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasDeliverables?(t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>'+shortTitle+'</strong>.</div></div>'));return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-tabs"><div class="task-tab '+(activeTab==='exemplu'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab '+(activeTab==='work'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> '+shortTitle+'</div></div><div class="task-tab-panel exemplu-panel '+(activeTab==='exemplu'?'active':'')+'">'+exempluInner+'</div><div class="task-tab-panel work-panel '+(activeTab==='work'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasWorkspace?renderDataWorkspace(stage.id, i, t):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDEE0</div><div class="ee-text">Aceast\\u0103 sarcin\\u0103 nu are instrumente de lucru.<br>Verific\\u0103 tab-ul <strong>Exemplu</strong> pentru detalii.</div></div>')+'</div></div></div>'}).join('')+'</div>';
+    html += '<div class="task-group"><div class="task-group-title">Sarcini & Livrabile \\u2014 Pas cu Pas</div>'+stage.tasks.map(function(t,i){var key=stage.id+'-'+t.title;var isChecked=checkedTasks[key];var dwKey=stage.id+'-'+i;var stepNum=i+1;var tabKey=stage.id+'-tab-'+i;var activeTab=taskTabs[tabKey]||'exemplu';var hasDeliverables=(t.deliverables&&t.deliverables.length>0);var hasWorkspace=true;var shortTitle=t.title.length>30?t.title.substring(0,30)+'\\u2026':t.title;var exKey=stage.id+'-'+i;var exContent=EXAMPLES[exKey];var exempluInner=exContent?exContent:('<div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasDeliverables?(t.deliverables||[]).map(function(d){return '<div class="deliverable"><div class="dlabel '+d.type+'">'+d.label+'</div><div class="dtext">'+d.text.replace(/\\n/g,'<br>')+'</div></div>'}).join(''):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDCC2</div><div class="ee-text">Niciun exemplu disponibil \\u00EEnc\\u0103.<br>Adaug\\u0103 date \\u00EEn tab-ul <strong>'+shortTitle+'</strong>.</div></div>'));return '<div class="task '+(t.hasSite?'has-site':'')+'" data-task="'+i+'" data-taskkey="'+key+'"><div class="task-header"><div class="task-checkbox '+(isChecked?'checked':'')+'" data-key="'+key+'">'+(isChecked?'\\u2713':'')+'</div><div class="task-step">'+stepNum+'</div><div class="title" style="'+(isChecked?'text-decoration:line-through;opacity:.5':'')+'">'+t.title+'</div><div class="badges">'+(t.hasSite?'<span class="site-tag">SITE</span>':'')+'<span class="priority '+t.priority+'">'+t.priority.toUpperCase()+'</span></div><span class="arrow">\\u25BC</span></div><div class="task-body"><div class="task-tabs"><div class="task-tab '+(activeTab==='exemplu'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="exemplu"><span class="tab-icon">\\uD83D\\uDCCB</span> Exemplu</div><div class="task-tab '+(activeTab==='work'?'active':'')+'" data-tabkey="'+tabKey+'" data-tabval="work"><span class="tab-icon">\\uD83D\\uDEE0</span> '+shortTitle+'</div></div><div class="task-tab-panel exemplu-panel '+(activeTab==='exemplu'?'active':'')+'">'+exempluInner+'</div><div class="task-tab-panel work-panel '+(activeTab==='work'?'active':'')+'"><div class="task-detail" style="margin-bottom:12px;">'+t.detail+'</div>'+(hasWorkspace?renderDataWorkspace(stage.id, i, t):'<div class="exemplu-empty"><div class="ee-icon">\\uD83D\\uDEE0</div><div class="ee-text">Aceast\\u0103 sarcin\\u0103 nu are instrumente de lucru.<br>Verific\\u0103 tab-ul <strong>Exemplu</strong> pentru detalii.</div></div>')+'</div></div></div>'}).join('')+'</div>';
     return html;
   }
 
@@ -1298,7 +1299,7 @@ function App() {
     var tabKey = stage.id + '-tab-' + taskIdx;
     var activeTab = taskTabs[tabKey] || 'exemplu';
     var hasDeliverables = (t.deliverables && t.deliverables.length > 0);
-    var hasWorkspace = !!t.dataType;
+    var hasWorkspace = true;
     var shortTitle = t.title.length > 30 ? t.title.substring(0, 30) + '\\u2026' : t.title;
     var sp = getStageProgress(stage);
 
@@ -1353,28 +1354,13 @@ function App() {
     return html;
   }
 
-  /* ═══ DATA WORKSPACE DISPATCHER ═══ */
+  /* ═══ DATA WORKSPACE — FREE-FORM TEXTAREA ═══ */
   function renderDataWorkspace(stageId, taskIdx, task) {
-    var dwKey = stageId + '-' + taskIdx;
+    var freeKey = '_free_' + taskIdx;
     var data = DataStore.ensure(stageId, JSON.parse(JSON.stringify(DEFAULTS[stageId] || {})));
-    var count = getDataCount(data, task.dataKey, task.dataType);
-    var inner = '';
-    if (task.dataType === 'notes') inner = renderNotesWS(stageId, task.dataKey, data);
-    else if (task.dataType === 'definitions') inner = renderDefinitionsWS(stageId, data);
-    else if (task.dataType === 'references') inner = renderReferencesWS(stageId, task.dataKey, data);
-    else if (task.dataType === 'likertItems') inner = renderLikertWS(stageId, data);
-    else if (task.dataType === 'expertPanel') inner = renderExpertWS(stageId, data);
-    else if (task.dataType === 'cognitiveTests') inner = renderCognitiveWS(stageId, data);
-    else if (task.dataType === 'stimuli') inner = renderStimuliWS(stageId, data);
-    else if (task.dataType === 'campaigns') inner = renderCampaignsWS(stageId, data);
-    else if (task.dataType === 'interRater') inner = renderInterRaterWS(stageId, data);
-    else if (task.dataType === 'aiAudit') inner = renderAiAuditWS(stageId, data);
-    else if (task.dataType === 'surveyResults') inner = renderSurveyResultsWS(stageId, data);
-    else if (task.dataType === 'kvForm') inner = renderKvFormWS(stageId, task.dataKey, data);
-    else if (task.dataType === 'modelComparison') inner = renderModelCompWS(stageId, data);
-    else if (task.dataType === 'sectionProgress') inner = renderSectionProgressWS(stageId, data);
-    else if (task.dataType === 'submission') inner = renderSubmissionWS(stageId, data);
-    return '<div class="data-workspace" id="dw-'+dwKey+'"><div class="dw-toggle"><span class="dw-arrow">\\u25B6</span> DATE DE LUCRU'+(count>0?' <span class="dw-badge">'+count+' intr\\u0103ri</span>':'')+'</div><div class="dw-content" id="dwc-'+dwKey+'">'+inner+'</div></div>';
+    var val = data[freeKey] || '';
+    var wc = val.trim() ? val.trim().split(/\\s+/).length : 0;
+    return '<div class="dw-form-row"><label>Spa\\u021Biu de lucru</label><div><textarea class="dw-textarea dw-free" data-stage="'+stageId+'" data-key="'+freeKey+'" data-type="notes" rows="12" placeholder="Scrie liber aici \\u2014 note, date, analize, idei... F\\u0103r\\u0103 limit\\u0103ri.">'+val+'</textarea><div class="dw-word-count">'+wc+' cuvinte</div></div></div>';
   }
 
   function getDataCount(data, key, type) {

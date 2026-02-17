@@ -24,6 +24,8 @@ import {
   FileText,
   Link,
   Globe,
+  Upload,
+  Loader2,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
@@ -100,6 +102,24 @@ export default function StudiuAdminPage() {
   const [newStimData, setNewStimData] = useState<Partial<Stimulus>>({});
   const [saving, setSaving] = useState(false);
   const [activeMatIdx, setActiveMatIdx] = useState(0); // active material tab index
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+
+  // ── Upload helper ──────────────────────────────────────
+  const uploadFile = async (file: File, fieldKey: string): Promise<string | null> => {
+    setUploading((prev) => ({ ...prev, [fieldKey]: true }));
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const result = await res.json();
+      if (result.url) return result.url;
+      return null;
+    } catch {
+      return null;
+    } finally {
+      setUploading((prev) => ({ ...prev, [fieldKey]: false }));
+    }
+  };
 
   // ── Fetch data ─────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -511,14 +531,54 @@ export default function StudiuAdminPage() {
                             </div>
                             <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={newStimData.description || ""} onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })} /></div>
                             <div style={S.formRow2}>
-                              <div style={S.formField}><label style={S.formLabel}>URL Imagine</label><input style={S.formInput} value={newStimData.image_url || ""} onChange={(e) => setNewStimData({ ...newStimData, image_url: e.target.value })} placeholder="https://..." /></div>
-                              <div style={S.formField}><label style={S.formLabel}>URL Video</label><input style={S.formInput} value={newStimData.video_url || ""} onChange={(e) => setNewStimData({ ...newStimData, video_url: e.target.value })} placeholder="https://youtube.com/..." /></div>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>Imagine</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-image"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.image_url ? "Schimba imagine" : "Incarca imagine"}</span>
+                                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-image"); if (url) setNewStimData((prev) => ({ ...prev, image_url: url })); } }} />
+                                </label>
+                                {newStimData.image_url && (
+                                  <div style={S.filePreview}>
+                                    <img src={newStimData.image_url} alt="" style={{ maxHeight: 80, borderRadius: 6 }} />
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, image_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>Video</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-video"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.video_url ? "Schimba video" : "Incarca video"}</span>
+                                  <input type="file" accept="video/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-video"); if (url) setNewStimData((prev) => ({ ...prev, video_url: url })); } }} />
+                                </label>
+                                {newStimData.video_url && (
+                                  <div style={S.filePreview}>
+                                    <video src={newStimData.video_url} style={{ maxHeight: 80, borderRadius: 6 }} />
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, video_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div style={S.formRow2}>
-                              <div style={S.formField}><label style={S.formLabel}>URL PDF</label><input style={S.formInput} value={newStimData.pdf_url || ""} onChange={(e) => setNewStimData({ ...newStimData, pdf_url: e.target.value })} placeholder="https://..." /></div>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>PDF</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-pdf"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.pdf_url ? "Schimba PDF" : "Incarca PDF"}</span>
+                                  <input type="file" accept=".pdf" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-pdf"); if (url) setNewStimData((prev) => ({ ...prev, pdf_url: url })); } }} />
+                                </label>
+                                {newStimData.pdf_url && (
+                                  <div style={S.filePreview}>
+                                    <FileText size={20} style={{ color: "#DC2626" }} />
+                                    <span style={{ fontSize: 12, color: "#374151" }}>PDF incarcat</span>
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, pdf_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
                               <div style={S.formField}><label style={S.formLabel}>URL Site</label><input style={S.formInput} value={newStimData.site_url || ""} onChange={(e) => setNewStimData({ ...newStimData, site_url: e.target.value })} placeholder="https://..." /></div>
                             </div>
-                            <div style={S.formField}><label style={S.formLabel}>Text Content</label><textarea style={{ ...S.formInput, minHeight: 120, resize: "vertical" as const }} value={newStimData.text_content || ""} onChange={(e) => setNewStimData({ ...newStimData, text_content: e.target.value })} /></div>
+                            <div style={S.formField}><label style={S.formLabel}>Text Content</label><textarea style={{ ...S.formInput, minHeight: 120, resize: "vertical" as const }} value={newStimData.text_content || ""} onChange={(e) => setNewStimData({ ...newStimData, text_content: e.target.value })} placeholder="Daca nu adaugi imagine sau video, textul devine continutul principal." /></div>
                           </div>
                           <div style={{ ...S.stimEditActions, marginTop: 20 }}>
                             <button style={S.btnCancel} onClick={() => { setAddingToType(null); setNewStimData({}); setActiveMatIdx(0); }}>Anuleaza</button>
@@ -561,25 +621,90 @@ export default function StudiuAdminPage() {
                               </div>
                               <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={editStimData.description || ""} onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })} /></div>
                               <div style={S.formRow2}>
-                                <div style={S.formField}><label style={S.formLabel}>URL Imagine</label><input style={S.formInput} value={editStimData.image_url || ""} onChange={(e) => setEditStimData({ ...editStimData, image_url: e.target.value })} placeholder="https://..." /></div>
-                                <div style={S.formField}><label style={S.formLabel}>URL Video</label><input style={S.formInput} value={editStimData.video_url || ""} onChange={(e) => setEditStimData({ ...editStimData, video_url: e.target.value })} placeholder="https://youtube.com/..." /></div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Imagine</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-image"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.image_url ? "Schimba imagine" : "Incarca imagine"}</span>
+                                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-image"); if (url) setEditStimData((prev) => ({ ...prev, image_url: url })); } }} />
+                                  </label>
+                                  {editStimData.image_url && (
+                                    <div style={S.filePreview}>
+                                      <img src={editStimData.image_url} alt="" style={{ maxHeight: 80, borderRadius: 6 }} />
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, image_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Video</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-video"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.video_url ? "Schimba video" : "Incarca video"}</span>
+                                    <input type="file" accept="video/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-video"); if (url) setEditStimData((prev) => ({ ...prev, video_url: url })); } }} />
+                                  </label>
+                                  {editStimData.video_url && (
+                                    <div style={S.filePreview}>
+                                      <video src={editStimData.video_url} style={{ maxHeight: 80, borderRadius: 6 }} />
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, video_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div style={S.formRow2}>
-                                <div style={S.formField}><label style={S.formLabel}>URL PDF</label><input style={S.formInput} value={editStimData.pdf_url || ""} onChange={(e) => setEditStimData({ ...editStimData, pdf_url: e.target.value })} placeholder="https://..." /></div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>PDF</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-pdf"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.pdf_url ? "Schimba PDF" : "Incarca PDF"}</span>
+                                    <input type="file" accept=".pdf" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-pdf"); if (url) setEditStimData((prev) => ({ ...prev, pdf_url: url })); } }} />
+                                  </label>
+                                  {editStimData.pdf_url && (
+                                    <div style={S.filePreview}>
+                                      <FileText size={20} style={{ color: "#DC2626" }} />
+                                      <span style={{ fontSize: 12, color: "#374151" }}>PDF incarcat</span>
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, pdf_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
                                 <div style={S.formField}><label style={S.formLabel}>URL Site</label><input style={S.formInput} value={editStimData.site_url || ""} onChange={(e) => setEditStimData({ ...editStimData, site_url: e.target.value })} placeholder="https://..." /></div>
                               </div>
-                              <div style={S.formField}><label style={S.formLabel}>Text Content</label><textarea style={{ ...S.formInput, minHeight: 120, resize: "vertical" as const }} value={editStimData.text_content || ""} onChange={(e) => setEditStimData({ ...editStimData, text_content: e.target.value })} /></div>
+                              <div style={S.formField}><label style={S.formLabel}>Text Content</label><textarea style={{ ...S.formInput, minHeight: 120, resize: "vertical" as const }} value={editStimData.text_content || ""} onChange={(e) => setEditStimData({ ...editStimData, text_content: e.target.value })} placeholder="Daca nu adaugi imagine sau video, textul devine continutul principal." /></div>
                             </div>
                           ) : (
                             <div style={S.matPreview}>
                               {activeStim.description && <div style={S.previewSection}><label style={S.previewLabel}>DESCRIERE</label><p style={S.previewText}>{activeStim.description}</p></div>}
+                              {/* Image — show inline */}
+                              {activeStim.image_url && (
+                                <div style={S.previewSection}>
+                                  <label style={S.previewLabel}>IMAGINE</label>
+                                  <img src={activeStim.image_url} alt={activeStim.name} style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, display: "block" }} />
+                                </div>
+                              )}
+                              {/* Video — show player */}
+                              {activeStim.video_url && (
+                                <div style={S.previewSection}>
+                                  <label style={S.previewLabel}>VIDEO</label>
+                                  <video src={activeStim.video_url} controls style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, display: "block" }} />
+                                </div>
+                              )}
+                              {/* Text as primary content when no image/video */}
+                              {activeStim.text_content && (
+                                <div style={{
+                                  ...S.previewSection,
+                                  ...(!activeStim.image_url && !activeStim.video_url ? { background: "#fef3c7", borderColor: "#fcd34d", padding: "24px 28px" } : {}),
+                                }}>
+                                  <label style={S.previewLabel}>{!activeStim.image_url && !activeStim.video_url ? "CONTINUT PRINCIPAL" : "TEXT CONTENT"}</label>
+                                  <p style={{
+                                    ...S.previewText,
+                                    ...(!activeStim.image_url && !activeStim.video_url ? { fontSize: 16, lineHeight: 1.8, fontWeight: 500 } : {}),
+                                  }}>{activeStim.text_content}</p>
+                                </div>
+                              )}
+                              {/* PDF + Site links */}
                               <div style={S.previewGrid}>
-                                {activeStim.image_url && <div style={S.previewItem}><label style={S.previewLabel}>IMAGINE</label><a href={activeStim.image_url} target="_blank" rel="noreferrer" style={S.previewLink}>{activeStim.image_url}</a></div>}
-                                {activeStim.video_url && <div style={S.previewItem}><label style={S.previewLabel}>VIDEO</label><a href={activeStim.video_url} target="_blank" rel="noreferrer" style={S.previewLink}>{activeStim.video_url}</a></div>}
-                                {activeStim.pdf_url && <div style={S.previewItem}><label style={S.previewLabel}>PDF</label><a href={activeStim.pdf_url} target="_blank" rel="noreferrer" style={S.previewLink}>{activeStim.pdf_url}</a></div>}
-                                {activeStim.site_url && <div style={S.previewItem}><label style={S.previewLabel}>SITE</label><a href={activeStim.site_url} target="_blank" rel="noreferrer" style={S.previewLink}>{activeStim.site_url}</a></div>}
+                                {activeStim.pdf_url && <div style={S.previewItem}><label style={S.previewLabel}>PDF</label><a href={activeStim.pdf_url} target="_blank" rel="noreferrer" style={{ ...S.previewLink, display: "flex", alignItems: "center", gap: 6 }}><FileText size={16} /> Deschide PDF</a></div>}
+                                {activeStim.site_url && <div style={S.previewItem}><label style={S.previewLabel}>SITE</label><a href={activeStim.site_url} target="_blank" rel="noreferrer" style={{ ...S.previewLink, display: "flex", alignItems: "center", gap: 6 }}><Globe size={16} /> {activeStim.site_url}</a></div>}
                               </div>
-                              {activeStim.text_content && <div style={S.previewSection}><label style={S.previewLabel}>TEXT CONTENT</label><p style={S.previewText}>{activeStim.text_content}</p></div>}
                               {!activeStim.description && !activeStim.image_url && !activeStim.video_url && !activeStim.text_content && !activeStim.pdf_url && !activeStim.site_url && (
                                 <div style={{ textAlign: "center" as const, padding: "40px 20px", color: "#9CA3AF" }}>
                                   <p style={{ fontSize: 14, marginBottom: 12 }}>Materialul nu are continut inca.</p>
@@ -1452,5 +1577,45 @@ const S: Record<string, React.CSSProperties> = {
     color: "#2563EB",
     wordBreak: "break-all" as const,
     textDecoration: "none",
+  },
+  /* ═══ FILE UPLOAD ═══ */
+  fileLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 14px",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#374151",
+    background: "#f9fafb",
+    border: "1px dashed #d1d5db",
+    borderRadius: 8,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  filePreview: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    padding: 8,
+    background: "#f9fafb",
+    borderRadius: 8,
+    border: "1px solid #e5e7eb",
+    position: "relative" as const,
+  },
+  fileRemoveBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    border: "none",
+    background: "#fee2e2",
+    color: "#DC2626",
+    cursor: "pointer",
+    marginLeft: "auto",
+    flexShrink: 0,
   },
 };

@@ -77,3 +77,9 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(220, 38, 38, 0.5);
 }
+
+/* Spinner animation for upload loaders */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
