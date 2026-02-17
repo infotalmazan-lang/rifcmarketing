@@ -33,7 +33,7 @@ import {
   UserCheck,
   Bot,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import * as tus from "tus-js-client";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu Admin — Structura Sondaj
@@ -419,33 +419,60 @@ export default function StudiuAdminPage() {
     setUploading((prev) => ({ ...prev, [fieldKey]: true }));
     setUploadProgress((prev) => ({ ...prev, [fieldKey]: 0 }));
     try {
-      // Step 1: Get signed upload URL + token from our API (uses service role)
-      const signedRes = await fetch("/api/upload/signed-url", {
+      // Step 1: Get tus upload config from our API (uses service role)
+      const configRes = await fetch("/api/upload/signed-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: file.name, contentType: file.type }),
       });
-      const signedData = await signedRes.json();
-      if (!signedData.token || !signedData.path) {
-        console.error("Failed to get signed URL:", signedData.error);
+      const config = await configRes.json();
+      if (!config.tusEndpoint || !config.objectPath) {
+        console.error("Failed to get upload config:", config.error);
         return null;
       }
 
-      // Step 2: Upload file using Supabase client uploadToSignedUrl
-      const supabase = createClient();
-      const { error: uploadError } = await supabase.storage
-        .from("survey-media")
-        .uploadToSignedUrl(signedData.path, signedData.token, file, {
-          contentType: file.type,
+      // Step 2: Upload via tus resumable protocol (handles large files reliably)
+      return await new Promise<string | null>((resolve) => {
+        const upload = new tus.Upload(file, {
+          endpoint: config.tusEndpoint,
+          retryDelays: [0, 1000, 3000, 5000, 10000],
+          chunkSize: 6 * 1024 * 1024, // 6MB chunks
+          headers: {
+            authorization: `Bearer ${config.authToken}`,
+            "x-upsert": "true",
+          },
+          uploadDataDuringCreation: true,
+          removeFingerprintOnSuccess: true,
+          metadata: {
+            bucketName: config.bucketId,
+            objectName: config.objectPath,
+            contentType: config.contentType,
+            cacheControl: "3600",
+          },
+          onError: (error) => {
+            console.error("Tus upload error:", error);
+            setUploading((prev) => ({ ...prev, [fieldKey]: false }));
+            resolve(null);
+          },
+          onProgress: (bytesUploaded, bytesTotal) => {
+            const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+            setUploadProgress((prev) => ({ ...prev, [fieldKey]: pct }));
+          },
+          onSuccess: () => {
+            setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
+            setUploading((prev) => ({ ...prev, [fieldKey]: false }));
+            resolve(config.publicUrl);
+          },
         });
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        return null;
-      }
-
-      setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
-      return signedData.publicUrl;
+        // Check for previous uploads to resume
+        upload.findPreviousUploads().then((previousUploads) => {
+          if (previousUploads.length > 0) {
+            upload.resumeFromPreviousUpload(previousUploads[0]);
+          }
+          upload.start();
+        });
+      });
     } catch (err) {
       console.error("Upload failed:", err);
       return null;

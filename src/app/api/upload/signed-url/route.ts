@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRole } from "@/lib/supabase/server";
 
-// Returns a signed upload URL so browser can upload directly to Supabase Storage
-// This bypasses Vercel's ~4.5MB body size limit for serverless functions
+// Returns upload config for tus resumable upload to Supabase Storage
+// Browser uses tus-js-client to upload directly, bypassing Vercel limits
 export async function POST(req: NextRequest) {
   try {
     const { filename, contentType } = await req.json();
@@ -15,23 +15,12 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceRole();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
     const ext = filename.split(".").pop() || "bin";
     const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const path = `materials/${uniqueName}`;
-
-    // Create signed upload URL (valid for 10 minutes)
-    const { data, error } = await supabase.storage
-      .from("survey-media")
-      .createSignedUploadUrl(path);
-
-    if (error || !data) {
-      console.error("Signed URL error:", error);
-      return NextResponse.json(
-        { error: "Failed to create upload URL" },
-        { status: 500 }
-      );
-    }
 
     // Get public URL for after upload
     const { data: urlData } = supabase.storage
@@ -39,9 +28,14 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(path);
 
     return NextResponse.json({
-      signedUrl: data.signedUrl,
-      token: data.token,
-      path,
+      // tus endpoint for resumable uploads
+      tusEndpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
+      // Auth token (service role key to bypass RLS)
+      authToken: serviceRoleKey,
+      // Bucket and path
+      bucketId: "survey-media",
+      objectPath: path,
+      // Public URL after upload completes
       publicUrl: urlData.publicUrl,
       contentType: contentType || "application/octet-stream",
     });
