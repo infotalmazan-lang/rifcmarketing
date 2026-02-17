@@ -26,6 +26,10 @@ import {
   Globe,
   Upload,
   Loader2,
+  Copy,
+  QrCode,
+  Users,
+  ExternalLink,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
@@ -58,6 +62,17 @@ interface Stimulus {
   site_url: string | null;
   display_order: number;
   is_active: boolean;
+}
+
+interface Distribution {
+  id: string;
+  name: string;
+  description: string;
+  tag: string;
+  estimated_completions: number;
+  completions: number;
+  started: number;
+  created_at: string;
 }
 
 type TabKey = "sondaj" | "rezultate" | "distributie" | "preview";
@@ -104,6 +119,43 @@ export default function StudiuAdminPage() {
   const [activeMatIdx, setActiveMatIdx] = useState(0); // active material tab index
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
 
+  // Distribution state
+  const [distributions, setDistributions] = useState<Distribution[]>([]);
+  const [distLoading, setDistLoading] = useState(false);
+  const [showAddDist, setShowAddDist] = useState(false);
+  const [newDistName, setNewDistName] = useState("");
+  const [newDistDesc, setNewDistDesc] = useState("");
+  const [newDistTag, setNewDistTag] = useState("");
+  const [newDistEstimate, setNewDistEstimate] = useState("");
+  const [distSaving, setDistSaving] = useState(false);
+  const [distError, setDistError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showQr, setShowQr] = useState<string | null>(null);
+
+  // Results state
+  interface ResultsData {
+    totalRespondents: number;
+    completedRespondents: number;
+    completionRate: number;
+    totalResponses: number;
+    stimuliResults: {
+      id: string;
+      name: string;
+      type: string;
+      industry: string;
+      response_count: number;
+      avg_r: number;
+      avg_i: number;
+      avg_f: number;
+      avg_c: number;
+      sd_c: number;
+    }[];
+    aiEvaluations: unknown[];
+  }
+  const [results, setResults] = useState<ResultsData | null>(null);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsSegment, setResultsSegment] = useState<string>("general"); // "general" or distribution_id
+
   // ── Upload helper ──────────────────────────────────────
   const uploadFile = async (file: File, fieldKey: string): Promise<string | null> => {
     setUploading((prev) => ({ ...prev, [fieldKey]: true }));
@@ -144,6 +196,94 @@ export default function StudiuAdminPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // ── Distribution data ──────────────────────────────────
+  const fetchDistributions = useCallback(async () => {
+    setDistLoading(true);
+    try {
+      const res = await fetch("/api/survey/distributions");
+      const data = await res.json();
+      if (data.success) setDistributions(data.distributions);
+    } catch { /* ignore */ }
+    setDistLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "distributie" || activeTab === "rezultate") fetchDistributions();
+  }, [activeTab, fetchDistributions]);
+
+  // ── Results data ───────────────────────────────────────
+  const fetchResults = useCallback(async (segmentId: string) => {
+    setResultsLoading(true);
+    try {
+      const url = segmentId === "general"
+        ? "/api/survey/results"
+        : `/api/survey/results?distribution_id=${segmentId}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setResults(data);
+    } catch { /* ignore */ }
+    setResultsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "rezultate") fetchResults(resultsSegment);
+  }, [activeTab, resultsSegment, fetchResults]);
+
+  const baseUrl = typeof window !== "undefined"
+    ? window.location.origin
+    : "https://rifcmarketing.com";
+
+  const getDistLink = (tag: string) => `${baseUrl}/studiu/wizard?tag=${tag}`;
+
+  const addDistribution = async () => {
+    if (!newDistName.trim() || !newDistTag.trim()) {
+      setDistError("Numele si tag-ul sunt obligatorii.");
+      return;
+    }
+    setDistSaving(true);
+    setDistError(null);
+    try {
+      const res = await fetch("/api/survey/distributions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newDistName.trim(),
+          description: newDistDesc.trim(),
+          tag: newDistTag.trim(),
+          estimated_completions: parseInt(newDistEstimate) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewDistName("");
+        setNewDistDesc("");
+        setNewDistTag("");
+        setNewDistEstimate("");
+        setShowAddDist(false);
+        fetchDistributions();
+      } else {
+        setDistError(data.error || "Eroare la salvare.");
+      }
+    } catch {
+      setDistError("Eroare de conexiune.");
+    }
+    setDistSaving(false);
+  };
+
+  const deleteDistribution = async (id: string) => {
+    if (!confirm("Sigur stergi aceasta distributie? Datele respondentilor se pastreaza.")) return;
+    await fetch(`/api/survey/distributions?id=${id}`, { method: "DELETE" });
+    fetchDistributions();
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch { /* ignore */ }
+  };
 
   // ── Helpers ────────────────────────────────────────────
   const getStimuliForType = (type: string) =>
@@ -730,25 +870,432 @@ export default function StudiuAdminPage() {
         )}
 
         {activeTab === "rezultate" && (
-          <div style={S.placeholderTab}>
-            <BarChart3 size={48} style={{ color: "#d1d5db" }} />
-            <h2 style={{ fontSize: 20, color: "#374151", marginTop: 16 }}>Rezultate Sondaj</h2>
-            <p style={{ color: "#6B7280", fontSize: 14 }}>
-              Vizualizeaza rezultatele agregate ale sondajului — scoruri R, I, F, C pe fiecare material.
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>Rezultate Sondaj</h2>
+            <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
+              Scoruri agregate R, I, F, C pe fiecare material — formula C = R + (I &times; F).
             </p>
+
+            {/* Segment sub-tabs */}
+            <div style={{
+              display: "flex",
+              gap: 0,
+              borderBottom: "2px solid #e5e7eb",
+              marginBottom: 20,
+              overflowX: "auto" as const,
+            }}>
+              <button
+                style={{
+                  ...S.tab,
+                  fontSize: 12,
+                  padding: "10px 16px",
+                  ...(resultsSegment === "general" ? S.tabActive : {}),
+                }}
+                onClick={() => setResultsSegment("general")}
+              >
+                GENERAL
+              </button>
+              {distributions.map((d) => (
+                <button
+                  key={d.id}
+                  style={{
+                    ...S.tab,
+                    fontSize: 12,
+                    padding: "10px 16px",
+                    whiteSpace: "nowrap" as const,
+                    ...(resultsSegment === d.id ? S.tabActive : {}),
+                  }}
+                  onClick={() => setResultsSegment(d.id)}
+                >
+                  {d.name}
+                </button>
+              ))}
+            </div>
+
+            {resultsLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>
+                <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
+                <p style={{ marginTop: 8 }}>Se incarca rezultatele...</p>
+              </div>
+            ) : !results ? (
+              <div style={S.placeholderTab}>
+                <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                <p style={{ color: "#6B7280", fontSize: 14 }}>Nu s-au putut incarca rezultatele.</p>
+              </div>
+            ) : (
+              <>
+                {/* Stats cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                  {[
+                    { label: "RESPONDENTI", value: results.totalRespondents, color: "#374151" },
+                    { label: "COMPLETARI", value: results.completedRespondents, color: "#059669" },
+                    { label: "RATA", value: `${results.completionRate}%`, color: "#DC2626" },
+                    { label: "RASPUNSURI", value: results.totalResponses, color: "#2563EB" },
+                  ].map((stat) => (
+                    <div key={stat.label} style={S.configItem}>
+                      <span style={S.configLabel}>{stat.label}</span>
+                      <span style={{ fontSize: 24, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>
+                        {stat.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Results table */}
+                {results.stimuliResults.length === 0 ? (
+                  <div style={S.placeholderTab}>
+                    <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                    <p style={{ color: "#6B7280", fontSize: 14 }}>
+                      {resultsSegment === "general"
+                        ? "Niciun raspuns inca. Distribue sondajul pentru a colecta date."
+                        : "Niciun raspuns pentru acest segment."}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
+                      <thead>
+                        <tr style={{ background: "#f9fafb" }}>
+                          <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 200 }}>MATERIAL</th>
+                          <th style={thStyle}>TIP</th>
+                          <th style={thStyle}>N</th>
+                          <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                          <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                          <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                          <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
+                          <th style={thStyle}>SD</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {results.stimuliResults.map((s) => (
+                          <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>{s.name}</td>
+                            <td style={tdStyle}>
+                              <span style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                letterSpacing: 0.5,
+                                padding: "3px 8px",
+                                borderRadius: 4,
+                                background: "#f3f4f6",
+                                color: "#6B7280",
+                              }}>{s.type}</span>
+                            </td>
+                            <td style={tdStyle}>{s.response_count}</td>
+                            <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r}</td>
+                            <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i}</td>
+                            <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.avg_f}</td>
+                            <td style={{ ...tdStyle, color: "#111827", fontWeight: 800, fontSize: 15 }}>{s.avg_c}</td>
+                            <td style={{ ...tdStyle, color: "#9CA3AF" }}>{s.sd_c}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
         {activeTab === "distributie" && (
-          <div style={S.placeholderTab}>
-            <Share2 size={48} style={{ color: "#d1d5db" }} />
-            <h2 style={{ fontSize: 20, color: "#374151", marginTop: 16 }}>Distributie Sondaj</h2>
-            <p style={{ color: "#6B7280", fontSize: 14 }}>
-              Link-ul public al sondajului:{" "}
-              <a href="/studiu/wizard" style={{ color: "#DC2626", fontWeight: 600 }}>
-                rifcmarketing.com/studiu/wizard
-              </a>
-            </p>
+          <div>
+            {/* Header + Add button */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Distributie Sondaj</h2>
+                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  Creeaza link-uri unice pentru a distribui sondajul pe segmente de audienta.
+                </p>
+              </div>
+              <button
+                style={S.addCatBtn}
+                onClick={() => setShowAddDist(true)}
+              >
+                <Plus size={16} />
+                ADAUGA LINK
+              </button>
+            </div>
+
+            {/* Public link card */}
+            <div style={{ ...S.configCard, marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <Globe size={16} style={{ color: "#DC2626" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280" }}>LINK PUBLIC GENERAL</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                <code style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  background: "#f9fafb",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontFamily: "JetBrains Mono, monospace",
+                  color: "#DC2626",
+                  wordBreak: "break-all" as const,
+                }}>
+                  {baseUrl}/studiu/wizard
+                </code>
+                <button
+                  style={{ ...S.galleryEditBtn, gap: 6 }}
+                  onClick={() => copyToClipboard(`${baseUrl}/studiu/wizard`, "general")}
+                >
+                  {copiedId === "general" ? <Check size={14} style={{ color: "#059669" }} /> : <Copy size={14} />}
+                  {copiedId === "general" ? "Copiat!" : "Copiaza"}
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 8 }}>
+                Acest link duce la sondaj fara segment de distributie (rezultatele apar doar in GENERAL).
+              </p>
+            </div>
+
+            {/* Add distribution form */}
+            {showAddDist && (
+              <div style={{ ...S.configCard, borderColor: "#DC2626", borderWidth: 2, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Plus size={16} style={{ color: "#DC2626" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#DC2626" }}>LINK NOU DE DISTRIBUTIE</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={S.configLabel}>NUME SEGMENT *</label>
+                    <input
+                      value={newDistName}
+                      onChange={(e) => setNewDistName(e.target.value)}
+                      placeholder="ex: Grupa 2A 2026B"
+                      style={{ ...S.catEditInput, width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.configLabel}>TAG UNIC (URL) *</label>
+                    <input
+                      value={newDistTag}
+                      onChange={(e) => setNewDistTag(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                      placeholder="ex: grupa-2a-2026b"
+                      style={{ ...S.catEditInput, width: "100%", fontFamily: "JetBrains Mono, monospace" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.configLabel}>DESCRIERE</label>
+                    <input
+                      value={newDistDesc}
+                      onChange={(e) => setNewDistDesc(e.target.value)}
+                      placeholder="ex: Studenti anul 2, semestrul B"
+                      style={{ ...S.catEditInput, width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.configLabel}>ESTIMARE PERSOANE</label>
+                    <input
+                      type="number"
+                      value={newDistEstimate}
+                      onChange={(e) => setNewDistEstimate(e.target.value)}
+                      placeholder="ex: 100"
+                      style={{ ...S.catEditInput, width: "100%" }}
+                    />
+                  </div>
+                </div>
+                {newDistTag && (
+                  <div style={{ padding: "8px 12px", background: "#fef2f2", borderRadius: 6, marginBottom: 12 }}>
+                    <span style={{ fontSize: 12, color: "#6B7280" }}>Link generat: </span>
+                    <span style={{ fontSize: 12, fontFamily: "JetBrains Mono, monospace", color: "#DC2626" }}>
+                      {getDistLink(newDistTag.replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""))}
+                    </span>
+                  </div>
+                )}
+                {distError && (
+                  <p style={{ fontSize: 13, color: "#DC2626", marginBottom: 12 }}>{distError}</p>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    style={{ ...S.addCatBtn, opacity: distSaving ? 0.6 : 1 }}
+                    onClick={addDistribution}
+                    disabled={distSaving}
+                  >
+                    {distSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    {distSaving ? "Se salveaza..." : "Salveaza"}
+                  </button>
+                  <button
+                    style={{ ...S.galleryEditBtn }}
+                    onClick={() => { setShowAddDist(false); setDistError(null); }}
+                  >
+                    <X size={14} />
+                    Anuleaza
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Distribution list */}
+            {distLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>
+                <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
+                <p style={{ marginTop: 8 }}>Se incarca...</p>
+              </div>
+            ) : distributions.length === 0 ? (
+              <div style={S.placeholderTab}>
+                <Share2 size={48} style={{ color: "#d1d5db" }} />
+                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio distributie creata</h3>
+                <p style={{ color: "#6B7280", fontSize: 14 }}>
+                  Apasa &quot;Adauga Link&quot; pentru a crea primul segment de distributie.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+                {distributions.map((dist, idx) => {
+                  const link = getDistLink(dist.tag);
+                  const pct = dist.estimated_completions > 0
+                    ? Math.min(100, Math.round((dist.completions / dist.estimated_completions) * 100))
+                    : 0;
+                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
+
+                  return (
+                    <div key={dist.id} style={{ ...S.configCard, position: "relative" as const }}>
+                      {/* Number badge */}
+                      <div style={{
+                        position: "absolute" as const,
+                        top: -10,
+                        left: 16,
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: "#fff",
+                        background: "#DC2626",
+                        fontFamily: "JetBrains Mono, monospace",
+                      }}>
+                        {idx + 1}
+                      </div>
+
+                      {/* Header row */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 4 }}>
+                        <div>
+                          <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>{dist.name}</h3>
+                          {dist.description && (
+                            <p style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>{dist.description}</p>
+                          )}
+                        </div>
+                        <button
+                          style={{ ...S.iconBtnDanger }}
+                          title="Sterge distributia"
+                          onClick={() => deleteDistribution(dist.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      {/* Link row */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, flexWrap: "wrap" as const }}>
+                        <code style={{
+                          flex: 1,
+                          padding: "8px 12px",
+                          background: "#f9fafb",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontFamily: "JetBrains Mono, monospace",
+                          color: "#DC2626",
+                          wordBreak: "break-all" as const,
+                          minWidth: 0,
+                        }}>
+                          {link}
+                        </code>
+                        <button
+                          style={{ ...S.galleryEditBtn, gap: 6 }}
+                          onClick={() => copyToClipboard(link, dist.id)}
+                        >
+                          {copiedId === dist.id ? <Check size={14} style={{ color: "#059669" }} /> : <Copy size={14} />}
+                          {copiedId === dist.id ? "Copiat!" : "Copiaza"}
+                        </button>
+                        <button
+                          style={{ ...S.galleryEditBtn, gap: 6 }}
+                          onClick={() => setShowQr(showQr === dist.id ? null : dist.id)}
+                        >
+                          <QrCode size={14} />
+                          QR
+                        </button>
+                        <a
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ ...S.galleryEditBtn, gap: 6, textDecoration: "none" }}
+                        >
+                          <ExternalLink size={14} />
+                          Deschide
+                        </a>
+                      </div>
+
+                      {/* QR code (collapsible) */}
+                      {showQr === dist.id && (
+                        <div style={{
+                          marginTop: 12,
+                          padding: 16,
+                          background: "#fff",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 8,
+                          textAlign: "center" as const,
+                        }}>
+                          <img
+                            src={qrUrl}
+                            alt={`QR Code ${dist.name}`}
+                            width={200}
+                            height={200}
+                            style={{ margin: "0 auto", borderRadius: 4 }}
+                          />
+                          <p style={{ fontSize: 12, color: "#6B7280", marginTop: 8 }}>
+                            Scaneaza sau salveaza (click dreapta &rarr; Save Image)
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Stats row */}
+                      <div style={{ display: "flex", gap: 20, marginTop: 14, flexWrap: "wrap" as const }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <Users size={14} style={{ color: "#6B7280" }} />
+                          <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
+                            {dist.completions}
+                          </span>
+                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                            / {dist.estimated_completions} completari
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                            {dist.started} incepute
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", fontFamily: "JetBrains Mono, monospace" }}>
+                            TAG: {dist.tag}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      {dist.estimated_completions > 0 && (
+                        <div style={{ marginTop: 10 }}>
+                          <div style={S.counterBar}>
+                            <div style={{
+                              ...S.counterFill,
+                              width: `${pct}%`,
+                              background: pct >= 100 ? "#059669" : "#DC2626",
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4, display: "block" }}>
+                            {pct}% completat
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -765,6 +1312,24 @@ export default function StudiuAdminPage() {
     </div>
   );
 }
+
+// ── Table cell styles (results) ──────────────────────────
+const thStyle: React.CSSProperties = {
+  padding: "10px 14px",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 1.5,
+  color: "#6B7280",
+  textAlign: "center",
+  borderBottom: "2px solid #e5e7eb",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "12px 14px",
+  fontSize: 14,
+  color: "#374151",
+  textAlign: "center",
+};
 
 // ── Styles ─────────────────────────────────────────────────
 const S: Record<string, React.CSSProperties> = {

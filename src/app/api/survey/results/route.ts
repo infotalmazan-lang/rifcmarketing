@@ -1,27 +1,49 @@
 import { NextResponse } from "next/server";
 import { createServiceRole } from "@/lib/supabase/server";
 
-export const revalidate = 60; // Cache 1 minute
+export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = createServiceRole();
+    const { searchParams } = new URL(request.url);
+    const distributionId = searchParams.get("distribution_id");
 
-    // Total respondents
-    const { count: totalRespondents } = await supabase
+    // Build respondent filter
+    let respondentQuery = supabase
       .from("survey_respondents")
-      .select("*", { count: "exact", head: true });
+      .select("id", { count: "exact" });
+
+    if (distributionId) {
+      respondentQuery = respondentQuery.eq("distribution_id", distributionId);
+    }
+
+    const { data: filteredRespondents, count: totalRespondents } = await respondentQuery;
 
     // Completed respondents
-    const { count: completedRespondents } = await supabase
+    let completedQuery = supabase
       .from("survey_respondents")
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .not("completed_at", "is", null);
 
-    // Total responses
-    const { count: totalResponses } = await supabase
-      .from("survey_responses")
-      .select("*", { count: "exact", head: true });
+    if (distributionId) {
+      completedQuery = completedQuery.eq("distribution_id", distributionId);
+    }
+
+    const { count: completedRespondents } = await completedQuery;
+
+    // Get respondent IDs for filtering responses
+    const respondentIds = (filteredRespondents || []).map((r: { id: string }) => r.id);
+
+    // Total responses (filtered)
+    let totalResponses = 0;
+    if (respondentIds.length > 0) {
+      const { count } = await supabase
+        .from("survey_responses")
+        .select("*", { count: "exact", head: true })
+        .in("respondent_id", respondentIds);
+      totalResponses = count || 0;
+    }
 
     // Per-stimulus aggregated results
     const { data: stimuli } = await supabase
@@ -32,10 +54,16 @@ export async function GET() {
 
     const stimuliResults = [];
     for (const s of stimuli || []) {
-      const { data: responses } = await supabase
+      let respQuery = supabase
         .from("survey_responses")
         .select("r_score, i_score, f_score, c_computed")
         .eq("stimulus_id", s.id);
+
+      if (respondentIds.length > 0 && distributionId) {
+        respQuery = respQuery.in("respondent_id", respondentIds);
+      }
+
+      const { data: responses } = await respQuery;
 
       const n = responses?.length || 0;
       if (n === 0) {

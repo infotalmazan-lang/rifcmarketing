@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu de Percepție Consumator
@@ -56,10 +57,21 @@ function useIsMobile(breakpoint = 640): boolean {
   return isMobile;
 }
 
-// ── Main Component ─────────────────────────────────────────
+// ── Suspense wrapper (useSearchParams needs it) ──────────
 export default function StudiuPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#f8f9fa" }} />}>
+      <StudiuWizardInner />
+    </Suspense>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────
+function StudiuWizardInner() {
   const isMobile = useIsMobile();
   const m = isMobile;
+  const searchParams = useSearchParams();
+  const tag = searchParams.get("tag") || "";
 
   const [session, setSession] = useState<SessionData | null>(null);
   const [step, setStep] = useState(0); // 0=loading, 1-12=active steps
@@ -419,7 +431,11 @@ export default function StudiuPage() {
 
       // Start new session
       try {
-        const res = await fetch("/api/survey/start", { method: "POST" });
+        const res = await fetch("/api/survey/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(tag ? { tag } : {}),
+        });
         const data = await res.json();
         if (data.success) {
           const s: SessionData = {

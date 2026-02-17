@@ -34,6 +34,22 @@ export async function POST(request: Request) {
     const ua = request.headers.get("user-agent") || "";
     const deviceType = detectDevice(ua);
 
+    // Parse optional distribution tag from body
+    let distributionId: string | null = null;
+    try {
+      const body = await request.json();
+      if (body?.tag) {
+        const { data: dist } = await supabase
+          .from("survey_distributions")
+          .select("id")
+          .eq("tag", body.tag)
+          .single();
+        if (dist) distributionId = dist.id;
+      }
+    } catch {
+      // No body or invalid JSON — that's fine, tag is optional
+    }
+
     // Create respondent
     const { error: respError } = await supabase
       .from("survey_respondents")
@@ -43,6 +59,7 @@ export async function POST(request: Request) {
         ip_hash: ipHash,
         user_agent: ua.slice(0, 255),
         device_type: deviceType,
+        ...(distributionId ? { distribution_id: distributionId } : {}),
       });
 
     if (respError) {
