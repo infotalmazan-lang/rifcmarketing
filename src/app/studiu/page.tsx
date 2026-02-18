@@ -425,6 +425,7 @@ export default function StudiuAdminPage() {
   const [resultsCatFilter, setResultsCatFilter] = useState<string | null>(null);
   const [expandedStimulusId, setExpandedStimulusId] = useState<string | null>(null);
   const [tooltipCol, setTooltipCol] = useState<string | null>(null);
+  const [tooltipStat, setTooltipStat] = useState<string | null>(null);
 
   // Log panel state
   const [showLog, setShowLog] = useState(false);
@@ -1185,6 +1186,28 @@ export default function StudiuAdminPage() {
               </div>
             ) : (
               <>
+                {/* Stat card tooltip */}
+                {tooltipStat && (() => {
+                  const statTips: Record<string, { title: string; desc: string }> = {
+                    "RESPONDENȚI": { title: "Respondenti — Total persoane", desc: "Numarul total de persoane care au inceput sondajul (au deschis link-ul si au inceput sa raspunda). Include atat cei care au finalizat, cat si cei care au abandonat.\n\nAcest numar reflecta reach-ul sondajului — cati oameni au fost atinsi de distributie." },
+                    "COMPLETĂRI": { title: "Completari — Raspunsuri finalizate", desc: "Numarul de respondenti care au parcurs sondajul pana la capat si au trimis raspunsurile. Doar acestia sunt inclusi in calculul scorurilor R, I, F, C.\n\nDiferenta intre Respondenti si Completari indica rata de abandon." },
+                    "RATĂ": { title: "Rata de completare", desc: "Procentul de respondenti care au finalizat sondajul: (Completari / Respondenti) x 100.\n\nInterpretare: < 30% = rata slaba (sondaj prea lung sau distributie slaba). 30-60% = acceptabil. 60-80% = buna. > 80% = excelenta." },
+                    "RĂSPUNSURI": { title: "Raspunsuri — Total evaluari", desc: "Numarul total de evaluari individuale (un respondent poate evalua mai multe materiale). Daca sunt 10 materiale si 5 completari, pot fi pana la 50 de raspunsuri.\n\nAcest numar determina robustetea statistica a scorurilor per material." },
+                  };
+                  const t = statTips[tooltipStat];
+                  if (!t) return null;
+                  return (
+                    <div onClick={() => setTooltipStat(null)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.3)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "24px 28px", maxWidth: 440, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>{t.title}</h3>
+                          <button onClick={() => setTooltipStat(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", padding: 4 }}>&times;</button>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#4B5563", whiteSpace: "pre-line" }}>{t.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
                 {/* Stats cards */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
                   {[
@@ -1193,8 +1216,8 @@ export default function StudiuAdminPage() {
                     { label: "RATĂ", value: `${results.completionRate}%`, color: "#DC2626" },
                     { label: "RĂSPUNSURI", value: results.totalResponses, color: "#2563EB" },
                   ].map((stat) => (
-                    <div key={stat.label} style={S.configItem}>
-                      <span style={S.configLabel}>{stat.label}</span>
+                    <div key={stat.label} onClick={() => setTooltipStat(stat.label)} style={{ ...S.configItem, cursor: "pointer", transition: "all 0.15s" }}>
+                      <span style={{ ...S.configLabel, display: "flex", alignItems: "center", gap: 4 }}>{stat.label} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
                       <span style={{ fontSize: 24, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>{stat.value}</span>
                     </div>
                   ))}
@@ -1301,15 +1324,15 @@ export default function StudiuAdminPage() {
                             {/* Column tooltip */}
                             {tooltipCol && (() => {
                               const tips: Record<string, { title: string; desc: string }> = {
-                                N: { title: "N \u2014 Num\u0103r R\u0103spunsuri", desc: "C\u00e2te evalu\u0103ri (r\u0103spunsuri complete) au fost colectate pentru acest material. Fiecare respondent evalueaz\u0103 materialul pe scalele R, I, F." },
-                                R: { title: "R \u2014 Recunoa\u0219tere (Recognition)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de u\u0219or este materialul de recunoscut \u0219i identificat. Un R mare \u00eenseamn\u0103 c\u0103 brandul/mesajul este vizibil \u0219i memorabil." },
-                                I: { title: "I \u2014 Impact Emo\u021Bional (Emotional Impact)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 intensitatea reac\u021Biei emo\u021Bionale pe care o provoac\u0103 materialul. Un I mare \u00eenseamn\u0103 c\u0103 materialul genereaz\u0103 emo\u021Bii puternice (pozitive sau negative)." },
-                                F: { title: "F \u2014 Frecven\u021B\u0103 (Frequency/Familiarity)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de familiar \u0219i frecvent perceput este materialul. Un F mare \u00eenseamn\u0103 c\u0103 respondentul simte c\u0103 a mai v\u0103zut materialul de mai multe ori." },
-                                Cform: { title: "C\u2091\u2092\u2093\u2098 \u2014 Scor Comunicare (Formula)", desc: "Calculat dup\u0103 formula: C = R + I \u00d7 F. Combin\u0103 cele 3 dimensiuni \u00eentr-un scor unic. Valori mai mari = comunicare mai eficient\u0103. Maxim teoretic: 110 (R=10, I=10, F=10)." },
-                                Cperc: { title: "C\u209a\u2091\u2093\u2094 \u2014 Scor Comunicare Perceput\u0103", desc: "Media scorurilor de Comunicare percepute direct de respondent (nu calculate). Respondentul r\u0103spunde: \u201eC\u00e2t de eficient comunic\u0103 acest material?\u201d pe scala 1\u201310." },
-                                CTA: { title: "CTA \u2014 Call To Action", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de puternic este \u00eendemnul la ac\u021Biune. Un CTA mare \u00eenseamn\u0103 c\u0103 materialul \u00eel motiveaz\u0103 pe respondent s\u0103 fac\u0103 ceva (s\u0103 cumpere, s\u0103 viziteze, s\u0103 afle mai mult)." },
-                                SD: { title: "SD \u2014 Standard Deviation (Devia\u021Bie Standard)", desc: "M\u0103soar\u0103 c\u00e2t de dispersate sunt r\u0103spunsurile. SD mic = consens (to\u021Bi evalueaz\u0103 similar). SD mare = opinii \u00eemp\u0103r\u021Bite (unii dau note mari, al\u021Bii mici). Util pentru identificarea materialelor controversate." },
-                                Ts: { title: "T(s) \u2014 Timp Mediu (secunde)", desc: "Timpul mediu \u00een secunde pe care un respondent l-a petrecut evaluand acest material. Timpi mai mari pot indica o implicare mai mare sau o dificultate \u00een evaluare." },
+                                N: { title: "N — Numar Raspunsuri", desc: "Cate evaluari (raspunsuri complete) au fost colectate pentru acest material. Fiecare respondent evalueaza materialul pe scalele R, I, F.\n\nInterpretare: N < 30 = esantion mic (rezultate orientative). N 30-100 = esantion acceptabil. N > 100 = date statistice robuste." },
+                                R: { title: "R — Recunoastere (Recognition)", desc: "Scor mediu 1-10. Masoara cat de usor este materialul de recunoscut si identificat. Un R mare inseamna ca brandul/mesajul este vizibil si memorabil.\n\nInterpretare: 1-3 = slab recunoscut. 4-6 = moderat. 7-8 = bine recunoscut. 9-10 = excelent, brand puternic." },
+                                I: { title: "I — Impact Emotional (Emotional Impact)", desc: "Scor mediu 1-10. Masoara intensitatea reactiei emotionale pe care o provoaca materialul. Un I mare inseamna ca materialul genereaza emotii puternice (pozitive sau negative).\n\nInterpretare: 1-3 = impact slab, indiferenta. 4-6 = impact moderat. 7-8 = impact puternic. 9-10 = reactie emotionala intensa." },
+                                F: { title: "F — Frecventa (Frequency/Familiarity)", desc: "Scor mediu 1-10. Masoara cat de familiar si frecvent perceput este materialul. Un F mare inseamna ca respondentul simte ca a mai vazut materialul de mai multe ori.\n\nInterpretare: 1-3 = nou/necunoscut. 4-6 = partial familiar. 7-8 = frecvent intalnit. 9-10 = foarte familiar, omniprezent." },
+                                Cform: { title: "C(form) — Scor Comunicare (Formula)", desc: "Calculat dupa formula: C = R + I x F. Combina cele 3 dimensiuni intr-un scor unic. Valori mai mari = comunicare mai eficienta.\n\nInterval: minim 2 (R=1, I=1, F=1), maxim 110 (R=10, I=10, F=10).\n\nInterpretare: < 20 = comunicare slaba. 20-40 = sub medie. 40-60 = medie. 60-80 = buna. > 80 = excelenta." },
+                                Cperc: { title: "C(perc) — Scor Comunicare Perceputa", desc: "Media scorurilor de comunicare percepute direct de respondent (nu calculate). Respondentul raspunde: «Cat de eficient comunica acest material?» pe scala 1-10.\n\nInterpretare: Diferenta mare intre C(form) si C(perc) indica discrepanta intre impactul masurat si cel perceput constient. C(perc) > C(form)/11 = materialul pare mai bun decat metrici. C(perc) < C(form)/11 = impact subliminal puternic." },
+                                CTA: { title: "CTA — Call To Action", desc: "Scor mediu 1-10. Masoara cat de puternic este indemnul la actiune. Un CTA mare inseamna ca materialul il motiveaza pe respondent sa faca ceva (sa cumpere, sa viziteze, sa afle mai mult).\n\nInterpretare: 1-3 = fara impuls de actiune. 4-6 = motivare moderata. 7-8 = CTA puternic. 9-10 = impuls irezistibil de actiune." },
+                                SD: { title: "SD — Standard Deviation (Deviatie Standard)", desc: "Masoara cat de dispersate sunt raspunsurile pe scorul C(form). SD mic = consens (toti evalueaza similar). SD mare = opinii impartite.\n\nInterpretare: SD < 10 = consens puternic. SD 10-20 = variatie normala. SD 20-30 = opinii impartite. SD > 30 = material controversat, polarizant." },
+                                Ts: { title: "T(s) — Timp Mediu (secunde)", desc: "Timpul mediu in secunde pe care un respondent l-a petrecut evaluand acest material.\n\nInterpretare: < 5s = raspuns grabit (posibil neserios). 5-15s = evaluare rapida. 15-30s = analiza atenta. > 30s = implicare mare sau dificultate in evaluare." },
                               };
                               const t = tips[tooltipCol];
                               if (!t) return null;
@@ -1320,7 +1343,7 @@ export default function StudiuAdminPage() {
                                       <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>{t.title}</h3>
                                       <button onClick={() => setTooltipCol(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", padding: 4 }}>&times;</button>
                                     </div>
-                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#4B5563" }}>{t.desc}</p>
+                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#4B5563", whiteSpace: "pre-line" }}>{t.desc}</p>
                                   </div>
                                 </div>
                               );
@@ -1331,15 +1354,15 @@ export default function StudiuAdminPage() {
                                   <th style={{ ...thStyle, width: 36, padding: "8px 4px" }}></th>
                                   <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 180 }}>MATERIAL</th>
                                   <th style={thStyle}>CANAL</th>
-                                  <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => setTooltipCol("N")}>N</th>
-                                  <th style={{ ...thStyle, color: "#DC2626", cursor: "pointer" }} onClick={() => setTooltipCol("R")}>R</th>
-                                  <th style={{ ...thStyle, color: "#D97706", cursor: "pointer" }} onClick={() => setTooltipCol("I")}>I</th>
-                                  <th style={{ ...thStyle, color: "#7C3AED", cursor: "pointer" }} onClick={() => setTooltipCol("F")}>F</th>
-                                  <th style={{ ...thStyle, color: "#111827", fontWeight: 800, cursor: "pointer" }} onClick={() => setTooltipCol("Cform")}>C<sub style={{ fontSize: 9 }}>form</sub></th>
-                                  <th style={{ ...thStyle, color: "#059669", cursor: "pointer" }} onClick={() => setTooltipCol("Cperc")}>C<sub style={{ fontSize: 9 }}>perc</sub></th>
-                                  <th style={{ ...thStyle, color: "#2563EB", cursor: "pointer" }} onClick={() => setTooltipCol("CTA")}>CTA</th>
-                                  <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => setTooltipCol("SD")}>SD</th>
-                                  <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => setTooltipCol("Ts")}>T(s)</th>
+                                  <th style={{ ...thStyle, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("N")}>N</th>
+                                  <th style={{ ...thStyle, color: "#DC2626", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("R")}>R</th>
+                                  <th style={{ ...thStyle, color: "#D97706", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("I")}>I</th>
+                                  <th style={{ ...thStyle, color: "#7C3AED", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("F")}>F</th>
+                                  <th style={{ ...thStyle, color: "#111827", fontWeight: 800, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("Cform")}>C<sub style={{ fontSize: 9 }}>form</sub></th>
+                                  <th style={{ ...thStyle, color: "#059669", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("Cperc")}>C<sub style={{ fontSize: 9 }}>perc</sub></th>
+                                  <th style={{ ...thStyle, color: "#2563EB", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("CTA")}>CTA</th>
+                                  <th style={{ ...thStyle, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("SD")}>SD</th>
+                                  <th style={{ ...thStyle, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("Ts")}>T(s)</th>
                                 </tr>
                               </thead>
                               <tbody>
