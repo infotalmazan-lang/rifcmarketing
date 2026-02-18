@@ -465,7 +465,7 @@ var DEFAULTS = {
   s3: {
     stimuli: [
       {id:'STM-001',name:'Maison Noir Reclam\\u0103 FB',channel:'Social',industry:'Restaurant',targetAudience:'Tineri urbani 25-35',link:'',rScore:'2',iScore:'7',fScore:'8',isPilot:true},
-      {id:'STM-002',name:'CloudMetric Landing Page',channel:'LP',industry:'SaaS B2B',targetAudience:'Manageri IT',link:'',rScore:'7',iScore:'6',fScore:'7',isPilot:true},
+      {id:'STM-002',name:'CloudMetric Landing Page',channel:'Site',industry:'SaaS B2B',targetAudience:'Manageri IT',link:'',rScore:'7',iScore:'6',fScore:'7',isPilot:true},
       {id:'STM-003',name:'CodeNest Campanie Email',channel:'Email',industry:'EdTech',targetAudience:'Dezvoltatori juniori',link:'',rScore:'8',iScore:'7',fScore:'5',isPilot:true},
       {id:'STM-004',name:'VELA Fashion Instagram',channel:'Social',industry:'Fashion',targetAudience:'Femei 20-30',link:'',rScore:'6',iScore:'8',fScore:'9',isPilot:true},
       {id:'STM-005',name:'Mentor Biz Pitch Deck',channel:'Pitch',industry:'Consultan\\u021B\\u0103',targetAudience:'Antreprenori',link:'',rScore:'9',iScore:'8',fScore:'6',isPilot:true}
@@ -1776,7 +1776,7 @@ function App() {
     ],
     stimulus: [
       {key:'name',label:'Nume / Descriere',type:'text'},
-      {key:'channel',label:'Canal',type:'select',options:['LP','Social','Email','Ads','Pitch','Web']},
+      {key:'channel',label:'Canal',type:'select',options:['Site','Social','Email','Google','RadioTV','Influencer','Video','Billboard','SMS','Ambalaj']},
       {key:'industry',label:'Industrie',type:'text'},
       {key:'targetAudience',label:'Audien\u021B\u0103 \u021Bint\u0103',type:'text'},
       {key:'link',label:'Link / Captur\u0103 ecran URL',type:'text'},

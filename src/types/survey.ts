@@ -1,14 +1,14 @@
 export type StimulusType =
-  | "LP"
+  | "Site"
   | "Social"
   | "Email"
-  | "Ads"
+  | "Google"
   | "Video"
   | "Billboard"
-  | "Print"
+  | "Ambalaj"
   | "SMS"
-  | "PitchDeck"
-  | "Radio";
+  | "RadioTV"
+  | "Influencer";
 
 export interface SurveyStimulus {
   id: string;
