@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { createMetadata, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
 import { LanguageProvider } from "@/lib/i18n";
 import "./globals.css";
+
+const GA_MEASUREMENT_ID = "G-DSRWLHHWHY";
 
 export const metadata: Metadata = createMetadata();
 
@@ -32,6 +35,18 @@ export default function RootLayout({
             __html: JSON.stringify(webSiteJsonLd()),
           }}
         />
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
       </head>
       <body className="bg-surface-bg text-text-primary font-heading antialiased">
         <LanguageProvider>

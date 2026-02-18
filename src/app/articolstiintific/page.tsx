@@ -1133,6 +1133,62 @@ var EXAMPLES = {
 
 function App() {
   var app = document.getElementById('app');
+
+  /* ═══ ACCESS CODE PROTECTION ═══ */
+  var ACCESS_CODE = 'RIFC2026';
+  var ACCESS_KEY = 'rifc-articol-access';
+
+  function checkAccess() {
+    return localStorage.getItem(ACCESS_KEY) === 'granted';
+  }
+
+  function showAccessModal() {
+    var overlay = document.createElement('div');
+    overlay.id = 'access-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;';
+    overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:40px;max-width:400px;width:90%;text-align:center;box-shadow:0 24px 48px rgba(0,0,0,0.2);">'
+      + '<div style="font-size:28px;font-weight:800;margin-bottom:4px;letter-spacing:2px;">R <span style=\\"color:#DC2626\\">IF</span> C</div>'
+      + '<div style="color:#525252;margin-bottom:24px;font-size:14px;">Introdu codul de acces</div>'
+      + '<input id="access-input" type="password" placeholder="Cod de acces" style="width:100%;padding:14px 16px;border:2px solid #E5E5E5;border-radius:10px;font-size:16px;text-align:center;outline:none;box-sizing:border-box;font-family:Inter,system-ui,sans-serif;transition:border-color .2s;" onfocus="this.style.borderColor=\\'#DC2626\\'" onblur="this.style.borderColor=\\'#E5E5E5\\'" />'
+      + '<div id="access-error" style="color:#DC2626;font-size:13px;margin-top:8px;display:none;font-weight:500;">Cod incorect</div>'
+      + '<button id="access-btn" style="margin-top:16px;width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,#DC2626,#B91C1C);color:#fff;font-weight:700;border:none;cursor:pointer;font-size:14px;letter-spacing:.5px;font-family:Inter,system-ui,sans-serif;transition:transform .15s,box-shadow .15s;box-shadow:0 4px 12px rgba(220,38,38,0.25);" onmouseover="this.style.transform=\\'translateY(-1px)\\';this.style.boxShadow=\\'0 6px 16px rgba(220,38,38,0.35)\\'" onmouseout="this.style.transform=\\'none\\';this.style.boxShadow=\\'0 4px 12px rgba(220,38,38,0.25)\\'">ACCES</button>'
+      + '</div>';
+    document.body.appendChild(overlay);
+
+    document.getElementById('access-btn').addEventListener('click', validateCode);
+    document.getElementById('access-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') validateCode();
+    });
+    setTimeout(function() { document.getElementById('access-input').focus(); }, 100);
+  }
+
+  function validateCode() {
+    var input = document.getElementById('access-input');
+    if (input.value === ACCESS_CODE) {
+      localStorage.setItem(ACCESS_KEY, 'granted');
+      var overlay = document.getElementById('access-overlay');
+      if (overlay) overlay.remove();
+      init();
+    } else {
+      var err = document.getElementById('access-error');
+      err.style.display = 'block';
+      err.textContent = 'Cod incorect';
+      input.value = '';
+      input.focus();
+      input.style.borderColor = '#DC2626';
+      setTimeout(function() { input.style.borderColor = '#E5E5E5'; }, 1500);
+    }
+  }
+
+  if (checkAccess()) {
+    init();
+  } else {
+    showAccessModal();
+    return; // Stop execution until code is entered
+  }
+
+  function init() {
+
   var activeStage = 'overview';
   var activeTask = null; // index of focused task within stage, null = show all
   var checkedTasks = {};
@@ -1852,13 +1908,27 @@ function App() {
   /* ═══ BIND EVENTS ═══ */
   function bindEvents() {
     document.querySelectorAll('.nav-item').forEach(function(el) {
-      el.addEventListener('click', function() { activeStage = el.dataset.stage; activeTask = null; render(); window.scrollTo(0,0); });
+      el.addEventListener('click', function() {
+        activeStage = el.dataset.stage; activeTask = null;
+        /* Restore URL to /articolstiintific when navigating away from sondaj */
+        try { window.parent.history.pushState({stage: activeStage, task: null}, '', '/articolstiintific'); } catch(e) {}
+        render(); window.scrollTo(0,0);
+      });
     });
     document.querySelectorAll('.nav-sub-item').forEach(function(el) {
-      el.addEventListener('click', function(e) { e.stopPropagation(); activeStage = el.dataset.stage; activeTask = parseInt(el.dataset.taskidx, 10); render(); window.scrollTo(0,0); });
+      el.addEventListener('click', function(e) {
+        e.stopPropagation(); activeStage = el.dataset.stage; activeTask = parseInt(el.dataset.taskidx, 10);
+        try { window.parent.history.pushState({stage: activeStage, task: activeTask}, '', '/articolstiintific'); } catch(e2) {}
+        render(); window.scrollTo(0,0);
+      });
     });
     var sondajBtn = document.querySelector('[data-sondaj]');
-    if(sondajBtn) { sondajBtn.addEventListener('click', function() { activeStage = 'sondaj'; activeTask = null; render(); }); }
+    if(sondajBtn) { sondajBtn.addEventListener('click', function() {
+      activeStage = 'sondaj'; activeTask = null;
+      /* Change URL to /studiu when SONDAJ is active */
+      try { window.parent.history.pushState({stage: 'sondaj'}, '', '/studiu'); } catch(e) {}
+      render();
+    }); }
     /* Single task view navigation buttons */
     document.querySelectorAll('[data-singlenav]').forEach(function(el) {
       el.addEventListener('click', function() {
@@ -2083,6 +2153,19 @@ function App() {
   }
 
   render();
+
+  /* ═══ POPSTATE for browser back/forward ═══ */
+  try {
+    window.parent.addEventListener('popstate', function(e) {
+      if (e && e.state && e.state.stage) {
+        activeStage = e.state.stage;
+        activeTask = e.state.task !== undefined ? e.state.task : null;
+        render();
+      }
+    });
+  } catch(e) { /* cross-origin fallback — ignore */ }
+
+  } /* end init() */
 }
 
 App();

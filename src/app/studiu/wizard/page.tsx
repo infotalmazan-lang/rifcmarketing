@@ -35,6 +35,46 @@ interface SessionData {
   stimuli: Stimulus[];
 }
 
+// ── GA4 Analytics ──────────────────────────────────────────
+function trackEvent(eventName: string, params?: Record<string, string | number>) {
+  if (typeof window !== "undefined" && (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag) {
+    (window as unknown as { gtag: (...args: unknown[]) => void }).gtag("event", eventName, params);
+  }
+}
+
+const STEP_LABELS: Record<number, string> = {
+  0: "welcome",
+  1: "demographics_gender",
+  2: "demographics_age",
+  3: "demographics_country",
+  4: "demographics_location",
+  5: "demographics_income",
+  6: "demographics_education",
+  7: "behavioral_purchase_freq",
+  8: "behavioral_channels",
+  9: "behavioral_online_time",
+  10: "behavioral_device",
+  11: "psychographic_ad_receptivity",
+  12: "psychographic_visual_pref",
+  13: "psychographic_impulse",
+  14: "psychographic_irrelevance",
+  15: "psychographic_attention",
+};
+
+function getStepLabel(stepNum: number, profileSteps: number, stepsPerStim: number, thankYou: number): string {
+  if (stepNum >= thankYou) return "thank_you";
+  if (STEP_LABELS[stepNum]) return STEP_LABELS[stepNum];
+  // Stimulus steps
+  if (stepNum >= profileSteps) {
+    const stimOffset = stepNum - profileSteps;
+    const stimIdx = Math.floor(stimOffset / stepsPerStim);
+    const subStep = stimOffset % stepsPerStim;
+    const dims = ["r", "i", "f", "c", "cta"];
+    return `stimulus_${stimIdx + 1}_${dims[subStep] || "unknown"}`;
+  }
+  return `step_${stepNum}`;
+}
+
 // ── Helpers ────────────────────────────────────────────────
 function extractYoutubeId(url: string): string | null {
   const m =
@@ -267,6 +307,14 @@ function StudiuWizardInner() {
 
   // ── Advance with transition ────────────────────────────
   const advanceTo = useCallback((nextStep: number) => {
+    // ── GA4 tracking ──
+    const label = getStepLabel(nextStep, profileStepCount, stepsPerStimulus, thankYouStep);
+    trackEvent("wizard_step", { step_number: nextStep, step_label: label });
+    // Special milestone events
+    if (nextStep === 1) trackEvent("wizard_start");
+    if (nextStep === firstStimulusStep) trackEvent("profile_complete");
+    if (nextStep >= thankYouStep) trackEvent("survey_complete");
+
     setTransitioning(true);
     // Persist step to localStorage for resume
     setSession(prev => {
@@ -282,7 +330,7 @@ function StudiuWizardInner() {
       window.scrollTo(0, 0);
       setTimeout(() => setTransitioning(false), 50);
     }, 200);
-  }, []);
+  }, [profileStepCount, stepsPerStimulus, thankYouStep, firstStimulusStep]);
 
   // ── Save profile data to API (fire-and-forget for UX speed) ──
   const saveProfileToApi = useCallback(async (type: string, payload: Record<string, unknown>) => {
@@ -358,6 +406,20 @@ function StudiuWizardInner() {
 
     // On last sub-step (CTA, dimension === "cta"), fire-and-forget save to API
     if (dimension === "cta") {
+      // GA4: stimulus fully rated
+      const stimName = session.stimuli[groupIdx]?.name || stimId;
+      const stimType = session.stimuli[groupIdx]?.type || "unknown";
+      trackEvent("stimulus_rated", {
+        stimulus_index: groupIdx + 1,
+        stimulus_name: stimName,
+        stimulus_type: stimType,
+        r_score: updated.r,
+        i_score: updated.i,
+        f_score: updated.f,
+        c_score: updated.c,
+        cta_score: updated.cta,
+      });
+
       const isAttentionGroup = groupIdx === Math.floor(numStimuli / 2);
       const isLastStimulus = step === lastStimulusStep;
       fetch("/api/survey/step", {
@@ -1557,6 +1619,12 @@ function StudiuWizardInner() {
                       minHeight: 56,
                     }}
                     onClick={() => {
+                      trackEvent("category_interstitial", {
+                        category: catMeta.label,
+                        category_number: currentCategoryNum,
+                        total_categories: totalCategories,
+                        is_first: isFirst ? 1 : 0,
+                      });
                       setInterstitialDismissed(prev => new Set(prev).add(currentStimGroupIdx));
                     }}
                     onMouseDown={(e) => ((e.target as HTMLElement).style.transform = "scale(0.96)")}
