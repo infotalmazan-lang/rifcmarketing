@@ -157,6 +157,94 @@ export async function GET(request: Request) {
       psychographicAvg[key] = arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
     }
 
+    // ── Per-category breakdowns (demographics/behavioral/psychographic per stimulus type) ──
+    // Group stimuli by type
+    const stimuliByType: Record<string, string[]> = {};
+    for (const s of stimuli || []) {
+      if (!stimuliByType[s.type]) stimuliByType[s.type] = [];
+      stimuliByType[s.type].push(s.id);
+    }
+
+    // For each category type, find respondent IDs who evaluated stimuli of that type
+    const perCategoryBreakdowns: Record<string, {
+      demographics: Record<string, Record<string, number>>;
+      behavioral: Record<string, Record<string, number>>;
+      psychographicAvg: Record<string, number>;
+      respondentCount: number;
+    }> = {};
+
+    for (const [catType, stimulusIds] of Object.entries(stimuliByType)) {
+      // Find respondent_ids who have responses for stimuli of this type
+      const { data: catResponses } = await supabase
+        .from("survey_responses")
+        .select("respondent_id")
+        .in("stimulus_id", stimulusIds);
+
+      const catRespondentIds = Array.from(new Set((catResponses || []).map(r => r.respondent_id)));
+
+      // Filter to only respondents in our filtered set (if distribution filter active)
+      const relevantRespondentIds = distributionId
+        ? catRespondentIds.filter(id => respondentIds.includes(id))
+        : catRespondentIds;
+
+      // Get respondent data for these IDs
+      const catRespondents = respondents.filter(r => relevantRespondentIds.includes(r.id));
+
+      // Compute demographics for this category
+      const catDemo: Record<string, Record<string, number>> = {
+        gender: {}, ageRange: {}, country: {}, locationType: {}, incomeRange: {}, education: {},
+      };
+      const catBehav: Record<string, Record<string, number>> = {
+        purchaseFrequency: {}, preferredChannels: {}, dailyOnlineTime: {}, primaryDevice: {},
+      };
+      const catPsychArrays: Record<string, number[]> = {
+        adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
+      };
+
+      for (const r of catRespondents) {
+        const d = r.demographics as Record<string, string> | null;
+        const b = r.behavioral as Record<string, unknown> | null;
+        const p = r.psychographic as Record<string, number> | null;
+
+        if (d) {
+          for (const key of Object.keys(catDemo)) {
+            const val = d[key];
+            if (val) catDemo[key][val] = (catDemo[key][val] || 0) + 1;
+          }
+        }
+        if (b) {
+          for (const key of ["purchaseFrequency", "dailyOnlineTime", "primaryDevice"]) {
+            const val = b[key] as string;
+            if (val) catBehav[key][val] = (catBehav[key][val] || 0) + 1;
+          }
+          const channels = b.preferredChannels as string[];
+          if (Array.isArray(channels)) {
+            for (const ch of channels) {
+              catBehav.preferredChannels[ch] = (catBehav.preferredChannels[ch] || 0) + 1;
+            }
+          }
+        }
+        if (p) {
+          for (const key of Object.keys(catPsychArrays)) {
+            const val = p[key];
+            if (typeof val === "number") catPsychArrays[key].push(val);
+          }
+        }
+      }
+
+      const catPsychAvg: Record<string, number> = {};
+      for (const [key, arr] of Object.entries(catPsychArrays)) {
+        catPsychAvg[key] = arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
+      }
+
+      perCategoryBreakdowns[catType] = {
+        demographics: catDemo,
+        behavioral: catBehav,
+        psychographicAvg: catPsychAvg,
+        respondentCount: catRespondents.length,
+      };
+    }
+
     const total = totalRespondents || 0;
     const completed = completedRespondents || 0;
 
@@ -170,6 +258,7 @@ export async function GET(request: Request) {
       demographics,
       behavioral: behavioralData,
       psychographicAvg,
+      perCategoryBreakdowns,
     });
   } catch {
     return NextResponse.json(

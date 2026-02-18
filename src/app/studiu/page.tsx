@@ -393,6 +393,12 @@ export default function StudiuAdminPage() {
     avg_cta: number;
     avg_time: number;
   }
+  interface CategoryBreakdown {
+    demographics: Record<string, Record<string, number>>;
+    behavioral: Record<string, Record<string, number>>;
+    psychographicAvg: Record<string, number>;
+    respondentCount: number;
+  }
   interface ResultsData {
     totalRespondents: number;
     completedRespondents: number;
@@ -403,6 +409,7 @@ export default function StudiuAdminPage() {
     demographics: Record<string, Record<string, number>>;
     behavioral: Record<string, Record<string, number>>;
     psychographicAvg: Record<string, number>;
+    perCategoryBreakdowns?: Record<string, CategoryBreakdown>;
   }
   const [results, setResults] = useState<ResultsData | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -1601,6 +1608,89 @@ export default function StudiuAdminPage() {
                               </tbody>
                             </table>
                           </div>
+
+                          {/* ── Per-category PROFIL + PSIHOGRAFIC inline (when a category is selected) ── */}
+                          {resultsCatFilter && results.perCategoryBreakdowns?.[resultsCatFilter] && (() => {
+                            const catBreakdown = results.perCategoryBreakdowns[resultsCatFilter];
+                            const catMeta = categories.find(c => c.type === resultsCatFilter);
+                            const catLabel = catMeta?.label || resultsCatFilter;
+                            const catColor = catMeta?.color || "#6B7280";
+                            const hasDemo = Object.values(catBreakdown.demographics || {}).some(v => Object.keys(v).length > 0);
+                            const hasBehav = Object.values(catBreakdown.behavioral || {}).some(v => Object.keys(v).length > 0);
+                            const hasPsych = Object.values(catBreakdown.psychographicAvg || {}).some(v => v > 0);
+
+                            if (!hasDemo && !hasBehav && !hasPsych) return null;
+
+                            return (
+                              <div style={{ marginTop: 24 }}>
+                                {/* Section header */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: catColor, flexShrink: 0 }} />
+                                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>
+                                    Profil Respondenti — {catLabel}
+                                  </h3>
+                                  <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 500 }}>
+                                    ({catBreakdown.respondentCount} respondenti)
+                                  </span>
+                                </div>
+
+                                {/* Demographics + Behavioral grid */}
+                                {(hasDemo || hasBehav) && (
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                                    {/* Demographics */}
+                                    {hasDemo && (
+                                      <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
+                                        <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 14 }}>Demografice</h4>
+                                        {renderBreakdown("Gen", catBreakdown.demographics?.gender || {}, "#EC4899")}
+                                        {renderBreakdown("Varsta", catBreakdown.demographics?.ageRange || {}, "#D97706")}
+                                        {renderBreakdown("Tara", catBreakdown.demographics?.country || {}, "#059669")}
+                                        {renderBreakdown("Urban / Rural", catBreakdown.demographics?.locationType || {}, "#2563EB")}
+                                        {renderBreakdown("Venit", catBreakdown.demographics?.incomeRange || {}, "#7C3AED")}
+                                        {renderBreakdown("Educatie", catBreakdown.demographics?.education || {}, "#DC2626")}
+                                      </div>
+                                    )}
+                                    {/* Behavioral */}
+                                    {hasBehav && (
+                                      <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
+                                        <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 14 }}>Comportament</h4>
+                                        {renderBreakdown("Frecventa cumparare", catBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
+                                        {renderBreakdown("Canale preferate", catBreakdown.behavioral?.preferredChannels || {}, "#2563EB")}
+                                        {renderBreakdown("Timp online/zi", catBreakdown.behavioral?.dailyOnlineTime || {}, "#D97706")}
+                                        {renderBreakdown("Dispozitiv principal", catBreakdown.behavioral?.primaryDevice || {}, "#7C3AED")}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Psychographic */}
+                                {hasPsych && (
+                                  <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
+                                    <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Profil Psihografic — {catLabel}</h4>
+                                    <p style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 16 }}>Medii 1-10 pentru respondentii care au evaluat materiale {catLabel}.</p>
+                                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 14 }}>
+                                      {Object.entries(catBreakdown.psychographicAvg || {}).map(([key, avg]) => (
+                                        <div key={key}>
+                                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                                            <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>{psychLabels[key] || key}</span>
+                                            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{avg}</span>
+                                          </div>
+                                          <div style={{ height: 20, background: "#f3f4f6", borderRadius: 5, overflow: "hidden", position: "relative" as const }}>
+                                            <div style={{
+                                              height: "100%", width: `${(avg / 10) * 100}%`, borderRadius: 5, transition: "width 0.3s",
+                                              background: catColor,
+                                            }} />
+                                            {[1,2,3,4,5,6,7,8,9].map(i => (
+                                              <div key={i} style={{ position: "absolute" as const, left: `${(i/10)*100}%`, top: 0, bottom: 0, width: 1, background: "rgba(0,0,0,0.06)" }} />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </>
                       );
                     })()}
