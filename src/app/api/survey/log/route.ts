@@ -39,7 +39,19 @@ export async function GET() {
         return tb - ta;
       });
 
-    return NextResponse.json({ ok: true, logs, total: logs.length });
+    // Debug: include raw query info
+    return NextResponse.json({
+      ok: true,
+      logs,
+      total: logs.length,
+      _debug: {
+        respondentsCount: (respondents || []).length,
+        responsesCount: (responses || []).length,
+        hasError: !!error,
+        errorMsg: error?.message || null,
+        sampleKeys: respondents?.[0] ? Object.keys(respondents[0]) : [],
+      },
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
