@@ -10,8 +10,8 @@ export async function GET() {
 
     const { data: respondents, error } = await supabase
       .from("survey_respondents")
-      .select("id, session_id, step_completed, device_type, variant_group, locale, distribution_id, demographics, behavioral, psychographic, completed_at, created_at")
-      .order("created_at", { ascending: false });
+      .select("id, session_id, step_completed, device_type, variant_group, locale, distribution_id, demographics, behavioral, psychographic, completed_at, started_at")
+      .order("started_at", { ascending: false });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
