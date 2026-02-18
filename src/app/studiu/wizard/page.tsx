@@ -178,6 +178,7 @@ function StudiuWizardInner() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Profile data
   const [demographics, setDemographics] = useState({
@@ -947,10 +948,10 @@ function StudiuWizardInner() {
               textAlign: "center" as const,
             }}>
               <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 10, textTransform: "uppercase" as const }}>
-                A MARKETING PROTOCOL BY
+                UN PROTOCOL DE MARKETING DE
               </p>
               <h3 style={{ fontSize: m ? 16 : 18, fontWeight: 700, color: textDark, marginBottom: 4, lineHeight: 1.3 }}>
-                The Emotional Mathematics of Marketing
+                Matematica Emotionala a Marketingului
               </h3>
               <p style={{ fontSize: m ? 14 : 15, fontWeight: 600, color: accentRed, marginBottom: 16 }}>
                 Dumitru Talmazan
@@ -975,9 +976,54 @@ function StudiuWizardInner() {
               </a>
             </div>
 
-            <p style={{ fontSize: 12, color: textMuted }}>
-              Trimite sondajul si altora: <strong>rifcmarketing.com/studiu/wizard</strong>
-            </p>
+            {/* Copy survey link button — preserves distribution tag */}
+            <div style={{ width: "100%", textAlign: "center" as const }}>
+              <p style={{ fontSize: 13, color: textMuted, marginBottom: 12 }}>
+                Trimite sondajul si altora:
+              </p>
+              <button
+                onClick={() => {
+                  const base = typeof window !== "undefined"
+                    ? `${window.location.origin}/studiu/wizard`
+                    : "https://rifcmarketing.com/studiu/wizard";
+                  const url = tag ? `${base}?tag=${encodeURIComponent(tag)}` : base;
+                  navigator.clipboard.writeText(url).then(() => {
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 2500);
+                  });
+                }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 10,
+                  padding: "14px 28px", borderRadius: 12,
+                  background: linkCopied ? "#059669" : accentRed,
+                  color: "#fff", fontSize: m ? 15 : 16, fontWeight: 700,
+                  cursor: "pointer", border: "none", letterSpacing: 0.3,
+                  transition: "background 0.3s ease",
+                }}
+              >
+                {linkCopied ? (
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Copiat!
+                  </>
+                ) : (
+                  <>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    Copiaza linkul sondajului
+                  </>
+                )}
+              </button>
+              {tag && (
+                <p style={{ fontSize: 11, color: textMuted, marginTop: 8, opacity: 0.7 }}>
+                  Linkul include segmentul tau de distributie
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
