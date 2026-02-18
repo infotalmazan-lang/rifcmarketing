@@ -413,11 +413,14 @@ export default function StudiuAdminPage() {
   const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
   const [aiSaving, setAiSaving] = useState(false);
 
-  // ── Upload helper (signed URL → direct to Supabase Storage, supports large files up to 500MB) ──
+  // ── Upload helper (tus resumable → direct to Supabase Storage, supports large files up to 500MB) ──
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+
   const uploadFile = async (file: File, fieldKey: string): Promise<string | null> => {
     setUploading((prev) => ({ ...prev, [fieldKey]: true }));
     setUploadProgress((prev) => ({ ...prev, [fieldKey]: 0 }));
+    setUploadStatus(`Se pregateste: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB, ${file.type})...`);
     try {
       // Step 1: Get tus upload config from our API (uses service role)
       const configRes = await fetch("/api/upload/signed-url", {
@@ -427,9 +430,12 @@ export default function StudiuAdminPage() {
       });
       const config = await configRes.json();
       if (!config.tusEndpoint || !config.objectPath) {
-        console.error("Failed to get upload config:", config.error);
+        const errMsg = `Eroare configurare: ${config.error || "raspuns invalid de la server"}`;
+        console.error(errMsg, config);
+        setUploadStatus(errMsg);
         return null;
       }
+      setUploadStatus(`Se incarca ${file.name}...`);
 
       // Step 2: Upload via tus resumable protocol (handles large files reliably)
       return await new Promise<string | null>((resolve) => {
@@ -449,18 +455,22 @@ export default function StudiuAdminPage() {
             contentType: config.contentType,
             cacheControl: "3600",
           },
-          onError: (error) => {
-            console.error("Tus upload error:", error);
+          onError: (err) => {
+            const errMsg = `Upload EROARE: ${err.message || err}`;
+            console.error("Tus upload error:", err);
+            setUploadStatus(errMsg);
             setUploading((prev) => ({ ...prev, [fieldKey]: false }));
             resolve(null);
           },
           onProgress: (bytesUploaded, bytesTotal) => {
             const pct = Math.round((bytesUploaded / bytesTotal) * 100);
             setUploadProgress((prev) => ({ ...prev, [fieldKey]: pct }));
+            setUploadStatus(`Se incarca: ${pct}% (${(bytesUploaded / 1024 / 1024).toFixed(1)} / ${(bytesTotal / 1024 / 1024).toFixed(1)} MB)`);
           },
           onSuccess: () => {
             setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
             setUploading((prev) => ({ ...prev, [fieldKey]: false }));
+            setUploadStatus(`Upload complet: ${file.name}`);
             resolve(config.publicUrl);
           },
         });
@@ -468,13 +478,16 @@ export default function StudiuAdminPage() {
         // Check for previous uploads to resume
         upload.findPreviousUploads().then((previousUploads) => {
           if (previousUploads.length > 0) {
+            setUploadStatus("Se reia uploadul anterior...");
             upload.resumeFromPreviousUpload(previousUploads[0]);
           }
           upload.start();
         });
       });
     } catch (err) {
+      const errMsg = `Upload EROARE: ${err instanceof Error ? err.message : String(err)}`;
       console.error("Upload failed:", err);
+      setUploadStatus(errMsg);
       return null;
     } finally {
       setUploading((prev) => ({ ...prev, [fieldKey]: false }));
@@ -1064,6 +1077,11 @@ export default function StudiuAdminPage() {
                               <div />
                             </div>
                             <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={newStimData.description || ""} onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })} /></div>
+                            {uploadStatus && (
+                              <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: uploadStatus.includes("EROARE") ? "#fef2f2" : uploadStatus.includes("complet") ? "#f0fdf4" : "#eff6ff", color: uploadStatus.includes("EROARE") ? "#dc2626" : uploadStatus.includes("complet") ? "#16a34a" : "#2563eb", border: `1px solid ${uploadStatus.includes("EROARE") ? "#fecaca" : uploadStatus.includes("complet") ? "#bbf7d0" : "#bfdbfe"}`, marginBottom: 8, fontFamily: "monospace" }}>
+                                {uploadStatus}
+                              </div>
+                            )}
                             <div style={S.formRow2}>
                               <div style={S.formField}>
                                 <label style={S.formLabel}>Imagine</label>
@@ -1161,6 +1179,11 @@ export default function StudiuAdminPage() {
                                 <div />
                               </div>
                               <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={editStimData.description || ""} onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })} /></div>
+                              {uploadStatus && (
+                                <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: uploadStatus.includes("EROARE") ? "#fef2f2" : uploadStatus.includes("complet") ? "#f0fdf4" : "#eff6ff", color: uploadStatus.includes("EROARE") ? "#dc2626" : uploadStatus.includes("complet") ? "#16a34a" : "#2563eb", border: `1px solid ${uploadStatus.includes("EROARE") ? "#fecaca" : uploadStatus.includes("complet") ? "#bbf7d0" : "#bfdbfe"}`, marginBottom: 8, fontFamily: "monospace" }}>
+                                  {uploadStatus}
+                                </div>
+                              )}
                               <div style={S.formRow2}>
                                 <div style={S.formField}>
                                   <label style={S.formLabel}>Imagine</label>
