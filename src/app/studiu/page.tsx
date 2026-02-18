@@ -400,6 +400,7 @@ export default function StudiuAdminPage() {
     respondentCount: number;
     completedCount: number;
     completionRate: number;
+    localeCounts?: Record<string, number>;
   }
   interface CategoryBreakdown extends BreakdownData {
     responseCount: number;
@@ -414,6 +415,7 @@ export default function StudiuAdminPage() {
     demographics: Record<string, Record<string, number>>;
     behavioral: Record<string, Record<string, number>>;
     psychographicAvg: Record<string, number>;
+    localeCounts?: Record<string, number>;
     perCategoryBreakdowns?: Record<string, CategoryBreakdown>;
     perStimulusBreakdowns?: Record<string, BreakdownData>;
   }
@@ -1415,6 +1417,23 @@ export default function StudiuAdminPage() {
             );
           };
 
+          // Locale pills renderer
+          const localeColors: Record<string, string> = { RO: "#2563EB", RU: "#DC2626", EN: "#059669" };
+          const renderLocalePills = (counts?: Record<string, number>) => {
+            if (!counts || Object.keys(counts).length === 0) return null;
+            const total = Object.values(counts).reduce((a, v) => a + v, 0);
+            return (
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" as const }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase" as const }}>LIMBA:</span>
+                {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([lang, n]) => (
+                  <span key={lang} style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: `${localeColors[lang] || "#6B7280"}14`, color: localeColors[lang] || "#6B7280", border: `1px solid ${localeColors[lang] || "#6B7280"}30` }}>
+                    {lang} {n} ({Math.round((n / total) * 100)}%)
+                  </span>
+                ))}
+              </div>
+            );
+          };
+
           // Psychographic labels map
           const psychLabels: Record<string, string> = {
             adReceptivity: "Receptivitate la reclame",
@@ -1465,6 +1484,11 @@ export default function StudiuAdminPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* Language breakdown */}
+                {results.localeCounts && Object.keys(results.localeCounts).length > 0 && (
+                  <div style={{ marginBottom: 16 }}>{renderLocalePills(results.localeCounts)}</div>
+                )}
 
                 {/* Content sub-tabs: SCORURI | PROFIL | PSIHOGRAFIC */}
                 <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
@@ -1647,6 +1671,10 @@ export default function StudiuAdminPage() {
                                                   </div>
                                                 ))}
                                               </div>
+                                              {/* Language breakdown */}
+                                              {stimBreakdown.localeCounts && Object.keys(stimBreakdown.localeCounts).length > 0 && (
+                                                <div style={{ marginBottom: 12 }}>{renderLocalePills(stimBreakdown.localeCounts)}</div>
+                                              )}
                                               {/* Demographics + Behavioral */}
                                               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                                                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
@@ -1733,6 +1761,11 @@ export default function StudiuAdminPage() {
                                     </div>
                                   ))}
                                 </div>
+
+                                {/* Language breakdown */}
+                                {catBreakdown.localeCounts && Object.keys(catBreakdown.localeCounts).length > 0 && (
+                                  <div style={{ marginBottom: 16 }}>{renderLocalePills(catBreakdown.localeCounts)}</div>
+                                )}
 
                                 {/* Demographics + Behavioral grid */}
                                 {(hasDemo || hasBehav) && (

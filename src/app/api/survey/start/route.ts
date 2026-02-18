@@ -45,10 +45,12 @@ export async function POST(request: Request) {
     const ua = request.headers.get("user-agent") || "";
     const deviceType = detectDevice(ua);
 
-    // Parse optional distribution tag from body
+    // Parse optional distribution tag + locale from body
     let distributionId: string | null = null;
+    let locale: string = "ro";
     try {
       const body = await request.json();
+      if (body?.locale) locale = String(body.locale).slice(0, 5);
       if (body?.tag) {
         const { data: dist } = await supabase
           .from("survey_distributions")
@@ -75,6 +77,7 @@ export async function POST(request: Request) {
         user_agent: ua.slice(0, 255),
         device_type: deviceType,
         variant_group: variantGroup,
+        locale,
         ...(distributionId ? { distribution_id: distributionId } : {}),
       });
 

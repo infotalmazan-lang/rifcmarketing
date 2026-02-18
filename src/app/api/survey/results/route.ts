@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     // Build respondent query — fetch demographics/behavioral/psychographic for breakdowns
     let respondentQuery = supabase
       .from("survey_respondents")
-      .select("id, demographics, behavioral, psychographic, device_type, variant_group, completed_at", { count: "exact" });
+      .select("id, demographics, behavioral, psychographic, device_type, variant_group, completed_at, locale", { count: "exact" });
 
     if (distributionId) {
       respondentQuery = respondentQuery.eq("distribution_id", distributionId);
@@ -120,10 +120,13 @@ export async function GET(request: Request) {
       adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
     };
 
+    const globalLocaleCounts: Record<string, number> = {};
     for (const r of respondents) {
       const d = r.demographics as Record<string, string> | null;
       const b = r.behavioral as Record<string, unknown> | null;
       const p = r.psychographic as Record<string, number> | null;
+      const loc = ((r as any).locale as string) || "ro";
+      globalLocaleCounts[loc.toUpperCase()] = (globalLocaleCounts[loc.toUpperCase()] || 0) + 1;
 
       if (d) {
         for (const key of Object.keys(demographics)) {
@@ -168,11 +171,14 @@ export async function GET(request: Request) {
       const psychArrs: Record<string, number[]> = {
         adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
       };
+      const localeCounts: Record<string, number> = {};
 
       for (const r of resps) {
         const d = r.demographics as Record<string, string> | null;
         const b = r.behavioral as Record<string, unknown> | null;
         const p = r.psychographic as Record<string, number> | null;
+        const loc = ((r as any).locale as string) || "ro";
+        localeCounts[loc.toUpperCase()] = (localeCounts[loc.toUpperCase()] || 0) + 1;
 
         if (d) {
           for (const key of Object.keys(demo)) {
@@ -211,6 +217,7 @@ export async function GET(request: Request) {
         demographics: demo,
         behavioral: behav,
         psychographicAvg: psychAvg,
+        localeCounts,
         respondentCount: resps.length,
         completedCount,
         completionRate: resps.length > 0 ? Math.round((completedCount / resps.length) * 100) : 0,
@@ -294,6 +301,7 @@ export async function GET(request: Request) {
       demographics,
       behavioral: behavioralData,
       psychographicAvg,
+      localeCounts: globalLocaleCounts,
       perCategoryBreakdowns,
       perStimulusBreakdowns,
     });

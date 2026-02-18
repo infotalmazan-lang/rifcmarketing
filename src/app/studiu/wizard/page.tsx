@@ -262,7 +262,7 @@ function StudiuWizardInner() {
         const res = await fetch("/api/survey/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(tag ? { tag } : {}),
+          body: JSON.stringify({ ...(tag ? { tag } : {}), locale }),
         });
         const data = await res.json();
         if (data.success) {

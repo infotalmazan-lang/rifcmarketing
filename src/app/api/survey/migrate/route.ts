@@ -53,6 +53,30 @@ END $$;`,
       });
     }
 
+    if (migration === "015" || migration === 15) {
+      // Migration 015: Add locale column to survey_respondents
+      const { error: testErr } = await supabase
+        .from("survey_respondents")
+        .select("locale")
+        .limit(1);
+
+      if (testErr) {
+        return NextResponse.json({
+          migrated: false,
+          error: "Column locale doesn't exist yet.",
+          action: "Run the following SQL in Supabase Dashboard > SQL Editor:",
+          sql: `-- Migration 015: Add locale column
+ALTER TABLE public.survey_respondents
+  ADD COLUMN IF NOT EXISTS locale text DEFAULT 'ro';`,
+        });
+      }
+
+      return NextResponse.json({
+        migrated: true,
+        message: "Migration 015 already applied. Column locale exists.",
+      });
+    }
+
     // Default: check status
     const checks: Record<string, boolean> = {};
 
