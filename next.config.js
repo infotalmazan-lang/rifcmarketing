@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// v2.1 - GA4 analytics, access code, URL state
 const nextConfig = {
   experimental: {
     serverActions: {
