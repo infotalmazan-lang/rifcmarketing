@@ -965,8 +965,8 @@ export default function StudiuAdminPage() {
       {/* ═══ LOG PANEL ═══ */}
       {showLog && (() => {
         const filtered = logData.filter((l) => {
-          if (logDateFrom) { const d = new Date(l.started_at); if (d < new Date(logDateFrom)) return false; }
-          if (logDateTo) { const d = new Date(l.started_at); if (d > new Date(logDateTo + "T23:59:59")) return false; }
+          if (logDateFrom) { const d = new Date(l.started_at || l.created_at); if (d < new Date(logDateFrom)) return false; }
+          if (logDateTo) { const d = new Date(l.started_at || l.created_at); if (d > new Date(logDateTo + "T23:59:59")) return false; }
           return true;
         });
         const allFilteredIds = filtered.map((l: any) => l.id);
@@ -1028,7 +1028,7 @@ export default function StudiuAdminPage() {
                   </thead>
                   <tbody>
                     {filtered.map((log: any, idx: number) => {
-                      const created = new Date(log.started_at);
+                      const created = new Date(log.started_at || log.created_at);
                       const completed = log.completed_at ? new Date(log.completed_at) : null;
                       const isComplete = !!completed;
                       const duration = completed ? Math.round((completed.getTime() - created.getTime()) / 1000) : null;

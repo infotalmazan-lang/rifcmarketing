@@ -8,10 +8,26 @@ export async function GET() {
   try {
     const supabase = createServiceRole();
 
+    // Use select("*") to avoid column name mismatches between migrations and actual DB schema
     const { data: respondents, error } = await supabase
       .from("survey_respondents")
-      .select("id, session_id, step_completed, device_type, variant_group, locale, distribution_id, demographics, behavioral, psychographic, completed_at, started_at")
+      .select("*")
       .order("started_at", { ascending: false });
+
+    // Fallback: if started_at column doesn't exist, try created_at
+    let finalRespondents = respondents;
+    if (error && error.message?.includes("started_at")) {
+      const { data: r2, error: e2 } = await supabase
+        .from("survey_respondents")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (e2) {
+        return NextResponse.json({ error: e2.message }, { status: 500 });
+      }
+      finalRespondents = r2;
+    } else if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -27,7 +43,7 @@ export async function GET() {
       responseCounts[r.respondent_id] = (responseCounts[r.respondent_id] || 0) + 1;
     });
 
-    const logs = (respondents || []).map((r) => ({
+    const logs = (finalRespondents || []).map((r) => ({
       ...r,
       responseCount: responseCounts[r.id] || 0,
     }));
