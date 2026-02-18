@@ -956,7 +956,7 @@ function StudiuWizardInner() {
                 Dumitru Talmazan
               </p>
               <a
-                href="https://t.me/talmazan_rifc"
+                href="https://t.me/rifcmarketing"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
