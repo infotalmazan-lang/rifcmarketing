@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-// v2.1 - GA4 analytics, access code, URL state
+// v2.2 - locale tracking, cron keep-alive, telegram link update
 const nextConfig = {
   experimental: {
     serverActions: {
