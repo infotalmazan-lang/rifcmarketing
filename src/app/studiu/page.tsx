@@ -965,8 +965,8 @@ export default function StudiuAdminPage() {
       {/* ═══ LOG PANEL ═══ */}
       {showLog && (() => {
         const filtered = logData.filter((l) => {
-          if (logDateFrom) { const d = new Date(l.started_at || l.created_at); if (d < new Date(logDateFrom)) return false; }
-          if (logDateTo) { const d = new Date(l.started_at || l.created_at); if (d > new Date(logDateTo + "T23:59:59")) return false; }
+          if (logDateFrom) { const d = new Date(l.completed_at || 0); if (d < new Date(logDateFrom)) return false; }
+          if (logDateTo) { const d = new Date(l.completed_at || 0); if (d > new Date(logDateTo + "T23:59:59")) return false; }
           return true;
         });
         const allFilteredIds = filtered.map((l: any) => l.id);
@@ -1028,10 +1028,9 @@ export default function StudiuAdminPage() {
                   </thead>
                   <tbody>
                     {filtered.map((log: any, idx: number) => {
-                      const created = new Date(log.started_at || log.created_at);
-                      const completed = log.completed_at ? new Date(log.completed_at) : null;
-                      const isComplete = !!completed;
-                      const duration = completed ? Math.round((completed.getTime() - created.getTime()) / 1000) : null;
+                      const completedDate = log.completed_at ? new Date(log.completed_at) : null;
+                      const isComplete = !!completedDate;
+                      const created = completedDate || new Date();
                       const demoGender = log.demographics?.gender || "—";
                       const demoAge = log.demographics?.age_range || "—";
                       const demoCountry = log.demographics?.country || "—";
@@ -1050,7 +1049,7 @@ export default function StudiuAdminPage() {
                           </td>
                           <td style={{ ...tdStyle, textAlign: "center" }}>
                             <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: isComplete ? "#d1fae5" : "#fef3c7", color: isComplete ? "#065f46" : "#92400e" }}>
-                              {isComplete ? "COMPLET" : `Pas ${log.step_completed}/5`}
+                              {isComplete ? "COMPLET" : "ÎN CURS"}
                             </span>
                           </td>
                           <td style={{ ...tdStyle, textAlign: "center", fontWeight: 600 }}>{log.responseCount}</td>
@@ -1065,7 +1064,7 @@ export default function StudiuAdminPage() {
                             <span>{demoGender} · {demoAge} · {demoCountry}</span>
                           </td>
                           <td style={{ ...tdStyle, textAlign: "center", fontSize: 11 }}>
-                            {duration !== null ? (duration >= 60 ? `${Math.floor(duration / 60)}m ${duration % 60}s` : `${duration}s`) : "—"}
+                            {"—"}
                           </td>
                           <td style={{ padding: "8px 6px", textAlign: "center" }}>
                             <button onClick={() => { if (confirm("Ștergi această înregistrare?")) deleteLogEntries([log.id]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: 14, padding: 4 }} title="Șterge">

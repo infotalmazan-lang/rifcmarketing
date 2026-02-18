@@ -8,10 +8,10 @@ export async function GET() {
   try {
     const supabase = createServiceRole();
 
-    // Fetch all respondents without ordering (column name may vary between envs)
+    // Use ONLY columns proven to exist (same as results API)
     const { data: respondents, error: respError } = await supabase
       .from("survey_respondents")
-      .select("*");
+      .select("id, demographics, behavioral, psychographic, device_type, variant_group, completed_at, locale, distribution_id");
 
     if (respError) {
       return NextResponse.json({ error: respError.message, hint: "respondents query failed" }, { status: 500 });
@@ -27,29 +27,19 @@ export async function GET() {
       responseCounts[r.respondent_id] = (responseCounts[r.respondent_id] || 0) + 1;
     });
 
-    // Build logs with response count, sort by any available timestamp (newest first)
+    // Build logs with response count, sort by completed_at (newest first)
     const logs = (respondents || [])
       .map((r) => ({
         ...r,
         responseCount: responseCounts[r.id] || 0,
       }))
       .sort((a, b) => {
-        const ta = new Date(a.started_at || a.created_at || 0).getTime();
-        const tb = new Date(b.started_at || b.created_at || 0).getTime();
+        const ta = new Date(a.completed_at || 0).getTime();
+        const tb = new Date(b.completed_at || 0).getTime();
         return tb - ta;
       });
 
-    // Debug: include raw query info
-    return NextResponse.json({
-      ok: true,
-      logs,
-      total: logs.length,
-      _debug: {
-        respondentsCount: (respondents || []).length,
-        responsesCount: (responses || []).length,
-        sampleKeys: respondents?.[0] ? Object.keys(respondents[0]) : [],
-      },
-    });
+    return NextResponse.json({ ok: true, logs, total: logs.length });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
