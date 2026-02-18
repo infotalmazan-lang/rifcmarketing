@@ -393,11 +393,16 @@ export default function StudiuAdminPage() {
     avg_cta: number;
     avg_time: number;
   }
-  interface CategoryBreakdown {
+  interface BreakdownData {
     demographics: Record<string, Record<string, number>>;
     behavioral: Record<string, Record<string, number>>;
     psychographicAvg: Record<string, number>;
     respondentCount: number;
+    completedCount: number;
+    completionRate: number;
+  }
+  interface CategoryBreakdown extends BreakdownData {
+    responseCount: number;
   }
   interface ResultsData {
     totalRespondents: number;
@@ -410,12 +415,14 @@ export default function StudiuAdminPage() {
     behavioral: Record<string, Record<string, number>>;
     psychographicAvg: Record<string, number>;
     perCategoryBreakdowns?: Record<string, CategoryBreakdown>;
+    perStimulusBreakdowns?: Record<string, BreakdownData>;
   }
   const [results, setResults] = useState<ResultsData | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsSegment, setResultsSegment] = useState<string>("general");
   const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic">("scoruri");
   const [resultsCatFilter, setResultsCatFilter] = useState<string | null>(null);
+  const [expandedStimulusId, setExpandedStimulusId] = useState<string | null>(null);
 
   // Expert panel state
   const [expertEvals, setExpertEvals] = useState<ExpertEvaluation[]>([]);
@@ -1550,11 +1557,12 @@ export default function StudiuAdminPage() {
                             })}
                           </div>
 
-                          {/* Results table — filtered, with TOTAL first row */}
+                          {/* Results table — filtered, with TOTAL first row + expandable per-stimulus details */}
                           <div style={{ ...S.configCard, padding: 0, overflow: "auto" }}>
                             <table style={{ width: "100%", borderCollapse: "collapse" as const, minWidth: 900 }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
+                                  <th style={{ ...thStyle, width: 36, padding: "8px 4px" }}></th>
                                   <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 180 }}>MATERIAL</th>
                                   <th style={thStyle}>TIP</th>
                                   <th style={thStyle}>N</th>
@@ -1572,6 +1580,7 @@ export default function StudiuAdminPage() {
                                 {/* TOTAL row */}
                                 {totalRow && (
                                   <tr style={{ borderBottom: "2px solid #e5e7eb", background: "#f9fafb" }}>
+                                    <td style={{ ...tdStyle, padding: "8px 4px" }}></td>
                                     <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", fontSize: 13 }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.label || resultsCatFilter) : "TOTAL"}</td>
                                     <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#111827", color: "#fff" }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.short_code || resultsCatFilter) : "ALL"}</span></td>
                                     <td style={{ ...tdStyle, fontWeight: 700 }}>{totalN}</td>
@@ -1585,26 +1594,105 @@ export default function StudiuAdminPage() {
                                     <td style={{ ...tdStyle, color: "#6B7280", fontWeight: 700, fontSize: 11 }}>{totalRow.avg_time ? `${totalRow.avg_time}s` : "—"}</td>
                                   </tr>
                                 )}
-                                {filteredStimuli.map((s) => (
-                                  <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                                    <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>
-                                      {s.name}
-                                      {s.variant_label && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: "#dbeafe", color: "#2563EB" }}>{s.variant_label}</span>}
-                                    </td>
-                                    <td style={tdStyle}>
-                                      {(() => { const cc = categories.find(c => c.type === s.type); return <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: cc?.color ? `${cc.color}18` : "#f3f4f6", color: cc?.color || "#6B7280" }}>{cc?.short_code || s.type}</span>; })()}
-                                    </td>
-                                    <td style={tdStyle}>{s.response_count}</td>
-                                    <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r || "—"}</td>
-                                    <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i || "—"}</td>
-                                    <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.avg_f || "—"}</td>
-                                    <td style={{ ...tdStyle, color: "#111827", fontWeight: 800, fontSize: 15 }}>{s.avg_c || "—"}</td>
-                                    <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{s.avg_c_score || "—"}</td>
-                                    <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 600 }}>{s.avg_cta || "—"}</td>
-                                    <td style={{ ...tdStyle, color: "#9CA3AF" }}>{s.sd_c || "—"}</td>
-                                    <td style={{ ...tdStyle, color: "#9CA3AF", fontSize: 11 }}>{s.avg_time ? `${s.avg_time}s` : "—"}</td>
-                                  </tr>
-                                ))}
+                                {filteredStimuli.map((s) => {
+                                  const isExpanded = expandedStimulusId === s.id;
+                                  const stimBreakdown = results.perStimulusBreakdowns?.[s.id];
+                                  const cc = categories.find(c => c.type === s.type);
+                                  return (
+                                    <React.Fragment key={s.id}>
+                                      <tr style={{ borderBottom: isExpanded ? "none" : "1px solid #f3f4f6", cursor: "pointer" }} onClick={() => setExpandedStimulusId(isExpanded ? null : s.id)}>
+                                        <td style={{ ...tdStyle, padding: "8px 4px", textAlign: "center" as const }}>
+                                          <div style={{
+                                            width: 26, height: 26, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
+                                            border: `1.5px solid ${isExpanded ? (cc?.color || "#6B7280") : "#d1d5db"}`,
+                                            background: isExpanded ? `${cc?.color || "#6B7280"}14` : "#fff",
+                                            color: isExpanded ? (cc?.color || "#6B7280") : "#9CA3AF",
+                                            fontSize: 16, fontWeight: 700, lineHeight: 1, transition: "all 0.15s",
+                                          }}>
+                                            {isExpanded ? "−" : "+"}
+                                          </div>
+                                        </td>
+                                        <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>
+                                          {s.name}
+                                          {s.variant_label && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: "#dbeafe", color: "#2563EB" }}>{s.variant_label}</span>}
+                                        </td>
+                                        <td style={tdStyle}>
+                                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: cc?.color ? `${cc.color}18` : "#f3f4f6", color: cc?.color || "#6B7280" }}>{cc?.short_code || s.type}</span>
+                                        </td>
+                                        <td style={tdStyle}>{s.response_count}</td>
+                                        <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.avg_f || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#111827", fontWeight: 800, fontSize: 15 }}>{s.avg_c || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{s.avg_c_score || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 600 }}>{s.avg_cta || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#9CA3AF" }}>{s.sd_c || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#9CA3AF", fontSize: 11 }}>{s.avg_time ? `${s.avg_time}s` : "—"}</td>
+                                      </tr>
+                                      {/* Expanded stimulus detail row */}
+                                      {isExpanded && stimBreakdown && (
+                                        <tr>
+                                          <td colSpan={12} style={{ padding: 0, borderBottom: "2px solid #e5e7eb" }}>
+                                            <div style={{ padding: "16px 20px", background: "#fafbfc", borderTop: "1px solid #f3f4f6" }}>
+                                              {/* Stats cards row */}
+                                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+                                                {[
+                                                  { label: "RESPONDENTI", value: stimBreakdown.respondentCount, color: "#374151" },
+                                                  { label: "COMPLETARI", value: stimBreakdown.completedCount, color: "#059669" },
+                                                  { label: "RATA", value: `${stimBreakdown.completionRate}%`, color: "#DC2626" },
+                                                ].map((stat) => (
+                                                  <div key={stat.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", textTransform: "uppercase" as const }}>{stat.label}</span>
+                                                    <span style={{ fontSize: 20, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>{stat.value}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                              {/* Demographics + Behavioral */}
+                                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
+                                                  <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Demografice</h4>
+                                                  {renderBreakdown("Gen", stimBreakdown.demographics?.gender || {}, "#EC4899")}
+                                                  {renderBreakdown("Varsta", stimBreakdown.demographics?.ageRange || {}, "#D97706")}
+                                                  {renderBreakdown("Tara", stimBreakdown.demographics?.country || {}, "#059669")}
+                                                  {renderBreakdown("Urban / Rural", stimBreakdown.demographics?.locationType || {}, "#2563EB")}
+                                                  {renderBreakdown("Venit", stimBreakdown.demographics?.incomeRange || {}, "#7C3AED")}
+                                                  {renderBreakdown("Educatie", stimBreakdown.demographics?.education || {}, "#DC2626")}
+                                                </div>
+                                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
+                                                  <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Comportament</h4>
+                                                  {renderBreakdown("Frecventa cumparare", stimBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
+                                                  {renderBreakdown("Canale preferate", stimBreakdown.behavioral?.preferredChannels || {}, "#2563EB")}
+                                                  {renderBreakdown("Timp online/zi", stimBreakdown.behavioral?.dailyOnlineTime || {}, "#D97706")}
+                                                  {renderBreakdown("Dispozitiv principal", stimBreakdown.behavioral?.primaryDevice || {}, "#7C3AED")}
+                                                </div>
+                                              </div>
+                                              {/* Psychographic */}
+                                              <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
+                                                <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Profil Psihografic</h4>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 20px" }}>
+                                                  {Object.entries(stimBreakdown.psychographicAvg || {}).map(([key, avg]) => (
+                                                    <div key={key}>
+                                                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 600, color: "#374151" }}>{psychLabels[key] || key}</span>
+                                                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{avg}</span>
+                                                      </div>
+                                                      <div style={{ height: 16, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", position: "relative" as const }}>
+                                                        <div style={{ height: "100%", width: `${(avg / 10) * 100}%`, borderRadius: 4, transition: "width 0.3s", background: cc?.color || "#6B7280" }} />
+                                                        {[1,2,3,4,5,6,7,8,9].map(i => (
+                                                          <div key={i} style={{ position: "absolute" as const, left: `${(i/10)*100}%`, top: 0, bottom: 0, width: 1, background: "rgba(0,0,0,0.05)" }} />
+                                                        ))}
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </React.Fragment>
+                                  );
+                                })}
                               </tbody>
                             </table>
                           </div>
@@ -1629,9 +1717,21 @@ export default function StudiuAdminPage() {
                                   <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>
                                     Profil Respondenti — {catLabel}
                                   </h3>
-                                  <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 500 }}>
-                                    ({catBreakdown.respondentCount} respondenti)
-                                  </span>
+                                </div>
+
+                                {/* Stats cards row */}
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+                                  {[
+                                    { label: "RESPONDENTI", value: catBreakdown.respondentCount, color: "#374151" },
+                                    { label: "COMPLETARI", value: catBreakdown.completedCount, color: "#059669" },
+                                    { label: "RATA", value: `${catBreakdown.completionRate}%`, color: "#DC2626" },
+                                    { label: "RASPUNSURI", value: catBreakdown.responseCount, color: "#2563EB" },
+                                  ].map((stat) => (
+                                    <div key={stat.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", textTransform: "uppercase" as const }}>{stat.label}</span>
+                                      <span style={{ fontSize: 20, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>{stat.value}</span>
+                                    </div>
+                                  ))}
                                 </div>
 
                                 {/* Demographics + Behavioral grid */}

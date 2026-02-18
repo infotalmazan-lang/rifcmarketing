@@ -157,7 +157,104 @@ export async function GET(request: Request) {
       psychographicAvg[key] = arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
     }
 
-    // ── Per-category breakdowns (demographics/behavioral/psychographic per stimulus type) ──
+    // ── Helper: compute breakdowns from a list of respondent records ──
+    const computeBreakdowns = (resps: typeof respondents) => {
+      const demo: Record<string, Record<string, number>> = {
+        gender: {}, ageRange: {}, country: {}, locationType: {}, incomeRange: {}, education: {},
+      };
+      const behav: Record<string, Record<string, number>> = {
+        purchaseFrequency: {}, preferredChannels: {}, dailyOnlineTime: {}, primaryDevice: {},
+      };
+      const psychArrs: Record<string, number[]> = {
+        adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
+      };
+
+      for (const r of resps) {
+        const d = r.demographics as Record<string, string> | null;
+        const b = r.behavioral as Record<string, unknown> | null;
+        const p = r.psychographic as Record<string, number> | null;
+
+        if (d) {
+          for (const key of Object.keys(demo)) {
+            const val = d[key];
+            if (val) demo[key][val] = (demo[key][val] || 0) + 1;
+          }
+        }
+        if (b) {
+          for (const key of ["purchaseFrequency", "dailyOnlineTime", "primaryDevice"]) {
+            const val = b[key] as string;
+            if (val) behav[key][val] = (behav[key][val] || 0) + 1;
+          }
+          const channels = b.preferredChannels as string[];
+          if (Array.isArray(channels)) {
+            for (const ch of channels) {
+              behav.preferredChannels[ch] = (behav.preferredChannels[ch] || 0) + 1;
+            }
+          }
+        }
+        if (p) {
+          for (const key of Object.keys(psychArrs)) {
+            const val = p[key];
+            if (typeof val === "number") psychArrs[key].push(val);
+          }
+        }
+      }
+
+      const psychAvg: Record<string, number> = {};
+      for (const [key, arr] of Object.entries(psychArrs)) {
+        psychAvg[key] = arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
+      }
+
+      const completedCount = resps.filter(r => r.completed_at != null).length;
+
+      return {
+        demographics: demo,
+        behavioral: behav,
+        psychographicAvg: psychAvg,
+        respondentCount: resps.length,
+        completedCount,
+        completionRate: resps.length > 0 ? Math.round((completedCount / resps.length) * 100) : 0,
+      };
+    }
+
+    // ── Fetch ALL responses with respondent_id + stimulus_id for breakdowns ──
+    const { data: allResponses } = await supabase
+      .from("survey_responses")
+      .select("respondent_id, stimulus_id");
+
+    // Build map: stimulus_id → Set of respondent_ids
+    const stimulusRespondentMap: Record<string, Set<string>> = {};
+    for (const resp of allResponses || []) {
+      if (!stimulusRespondentMap[resp.stimulus_id]) stimulusRespondentMap[resp.stimulus_id] = new Set();
+      stimulusRespondentMap[resp.stimulus_id].add(resp.respondent_id);
+    }
+
+    // Build respondent lookup map for fast access
+    const respondentMap = new Map(respondents.map(r => [r.id, r]));
+
+    // Helper: get respondent records for a set of respondent IDs
+    const getRespondentsForIds = (rIds: Set<string>) => {
+      const filtered: typeof respondents = [];
+      rIds.forEach(id => {
+        if (distributionId && !respondentIds.includes(id)) return;
+        const r = respondentMap.get(id);
+        if (r) filtered.push(r);
+      });
+      return filtered;
+    }
+
+    // ── Per-stimulus breakdowns ──
+    const perStimulusBreakdowns: Record<string, ReturnType<typeof computeBreakdowns>> = {};
+    for (const s of stimuli || []) {
+      const rIds = stimulusRespondentMap[s.id];
+      if (!rIds || rIds.size === 0) continue;
+      const stimRespondents = getRespondentsForIds(rIds);
+      if (stimRespondents.length > 0) {
+        perStimulusBreakdowns[s.id] = computeBreakdowns(stimRespondents);
+      }
+    }
+
+    // ── Per-category breakdowns ──
     // Group stimuli by type
     const stimuliByType: Record<string, string[]> = {};
     for (const s of stimuli || []) {
@@ -165,83 +262,22 @@ export async function GET(request: Request) {
       stimuliByType[s.type].push(s.id);
     }
 
-    // For each category type, find respondent IDs who evaluated stimuli of that type
-    const perCategoryBreakdowns: Record<string, {
-      demographics: Record<string, Record<string, number>>;
-      behavioral: Record<string, Record<string, number>>;
-      psychographicAvg: Record<string, number>;
-      respondentCount: number;
-    }> = {};
-
+    const perCategoryBreakdowns: Record<string, ReturnType<typeof computeBreakdowns> & { responseCount: number }> = {};
     for (const [catType, stimulusIds] of Object.entries(stimuliByType)) {
-      // Find respondent_ids who have responses for stimuli of this type
-      const { data: catResponses } = await supabase
-        .from("survey_responses")
-        .select("respondent_id")
-        .in("stimulus_id", stimulusIds);
-
-      const catRespondentIds = Array.from(new Set((catResponses || []).map(r => r.respondent_id)));
-
-      // Filter to only respondents in our filtered set (if distribution filter active)
-      const relevantRespondentIds = distributionId
-        ? catRespondentIds.filter(id => respondentIds.includes(id))
-        : catRespondentIds;
-
-      // Get respondent data for these IDs
-      const catRespondents = respondents.filter(r => relevantRespondentIds.includes(r.id));
-
-      // Compute demographics for this category
-      const catDemo: Record<string, Record<string, number>> = {
-        gender: {}, ageRange: {}, country: {}, locationType: {}, incomeRange: {}, education: {},
-      };
-      const catBehav: Record<string, Record<string, number>> = {
-        purchaseFrequency: {}, preferredChannels: {}, dailyOnlineTime: {}, primaryDevice: {},
-      };
-      const catPsychArrays: Record<string, number[]> = {
-        adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
-      };
-
-      for (const r of catRespondents) {
-        const d = r.demographics as Record<string, string> | null;
-        const b = r.behavioral as Record<string, unknown> | null;
-        const p = r.psychographic as Record<string, number> | null;
-
-        if (d) {
-          for (const key of Object.keys(catDemo)) {
-            const val = d[key];
-            if (val) catDemo[key][val] = (catDemo[key][val] || 0) + 1;
-          }
-        }
-        if (b) {
-          for (const key of ["purchaseFrequency", "dailyOnlineTime", "primaryDevice"]) {
-            const val = b[key] as string;
-            if (val) catBehav[key][val] = (catBehav[key][val] || 0) + 1;
-          }
-          const channels = b.preferredChannels as string[];
-          if (Array.isArray(channels)) {
-            for (const ch of channels) {
-              catBehav.preferredChannels[ch] = (catBehav.preferredChannels[ch] || 0) + 1;
-            }
-          }
-        }
-        if (p) {
-          for (const key of Object.keys(catPsychArrays)) {
-            const val = p[key];
-            if (typeof val === "number") catPsychArrays[key].push(val);
-          }
+      // Merge respondent sets from all stimuli in this category
+      const mergedIds = new Set<string>();
+      let catResponseCount = 0;
+      for (const sid of stimulusIds) {
+        const rIds = stimulusRespondentMap[sid];
+        if (rIds) {
+          rIds.forEach(id => mergedIds.add(id));
+          catResponseCount += rIds.size;
         }
       }
-
-      const catPsychAvg: Record<string, number> = {};
-      for (const [key, arr] of Object.entries(catPsychArrays)) {
-        catPsychAvg[key] = arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
-      }
-
+      const catRespondents = getRespondentsForIds(mergedIds);
       perCategoryBreakdowns[catType] = {
-        demographics: catDemo,
-        behavioral: catBehav,
-        psychographicAvg: catPsychAvg,
-        respondentCount: catRespondents.length,
+        ...computeBreakdowns(catRespondents),
+        responseCount: catResponseCount,
       };
     }
 
@@ -259,6 +295,7 @@ export async function GET(request: Request) {
       behavioral: behavioralData,
       psychographicAvg,
       perCategoryBreakdowns,
+      perStimulusBreakdowns,
     });
   } catch {
     return NextResponse.json(
