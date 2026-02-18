@@ -1106,4 +1106,153 @@ export interface Dictionary {
     removeFile: string;
     channels: { value: string; label: string }[];
   };
+  wizard: {
+    // Loading
+    loading: string;
+    // Error messages
+    errorStart: string;
+    errorConnection: string;
+    errorSave: string;
+    errorConnectionShort: string;
+    // Welcome screen
+    welcomeTitle: string;
+    welcomeIntro: string;
+    welcomeDuration: string;
+    welcomeDurationBold: string;
+    welcomeAnonymous: string;
+    welcomeAnonymousBold: string;
+    welcomePrivacy: string;
+    welcomePrivacyBold: string;
+    welcomeStart: string;
+    welcomeMaterials: string;
+    welcomeLang: string;
+    // Common step UI
+    questionLabel: string; // "INTREBAREA {N}"
+    selectOne: string;
+    selectMultiple: string;
+    back: string;
+    next: string;
+    // Step: Gender
+    genderTitle: string;
+    genderFemale: string;
+    genderMale: string;
+    genderOther: string;
+    genderPreferNot: string;
+    // Step: Age
+    ageTitle: string;
+    // Step: Country
+    countryTitle: string;
+    countryMoldova: string;
+    countryRomania: string;
+    countryOtherSelected: string; // "Alta tara: {name}"
+    countryOtherPlaceholder: string;
+    countrySearchPlaceholder: string;
+    countryNotFound: string;
+    countries: string[];
+    // Step: Urban/Rural
+    urbanTitle: string;
+    urbanCity: string;
+    urbanRural: string;
+    // Step: Income
+    incomeTitle: string;
+    incomeLow: string;
+    incomeMid: string;
+    incomeHigh: string;
+    incomeTop: string;
+    // Step: Education
+    educationTitle: string;
+    educationHighSchool: string;
+    educationBachelor: string;
+    educationMaster: string;
+    educationPhd: string;
+    educationOther: string;
+    // Step: Purchase frequency
+    purchaseTitle: string;
+    purchaseDaily: string;
+    purchaseWeekly: string;
+    purchaseMonthly: string;
+    purchaseRarely: string;
+    // Step: Channels (multi-select)
+    channelsTitle: string;
+    // Step: Online time
+    onlineTimeTitle: string;
+    onlineTimeLow: string;
+    onlineTimeMid: string;
+    onlineTimeHigh: string;
+    onlineTimeVeryHigh: string;
+    // Step: Device
+    deviceTitle: string;
+    deviceMobile: string;
+    deviceDesktop: string;
+    deviceTablet: string;
+    // Psychographic questions
+    psychTitle: string;
+    psychQuestionOf: string; // "Intrebarea {N} din 5"
+    psychStatements: string[];
+    psychLow: string;
+    psychHigh: string;
+    // Category interstitial
+    categoryDone: string; // "Categoria {label} finalizata!"
+    categoryThanks: string;
+    categoryNum: string; // "CATEGORIE {N} DIN {M}"
+    categoryFirst: string;
+    categoryNext: string;
+    categoryMaterialSingular: string;
+    categoryMaterialPlural: string;
+    categoryInstruction: string;
+    categoryStart: string;
+    categoryContinue: string;
+    categorySummary: string; // "{N} categorii · {M} materiale in total"
+    // Category labels
+    catSiteLanding: string;
+    catSocialMedia: string;
+    catVideoAds: string;
+    catEmailMarketing: string;
+    catBillboard: string;
+    catSMS: string;
+    catPackaging: string;
+    catGoogleAds: string;
+    catRadioTV: string;
+    catInfluencer: string;
+    // RIFC+CTA evaluation
+    materialNum: string; // "MATERIAL {N} DIN {M}"
+    rQuestion: string;
+    rLow: string;
+    rHigh: string;
+    iQuestion: string;
+    iLow: string;
+    iHigh: string;
+    fQuestion: string;
+    fLow: string;
+    fHigh: string;
+    cQuestion: string;
+    cLow: string;
+    cHigh: string;
+    ctaQuestion: string;
+    ctaLow: string;
+    ctaHigh: string;
+    // Media buttons
+    viewLarger: string;
+    openPdf: string;
+    visitSite: string;
+    closeOverlay: string;
+    // Attention check
+    attentionTitle: string;
+    attentionInstruction: string; // "Alege cifra {N}"
+    // Thank you page
+    thankYouTitle: string;
+    thankYouEvaluated: string; // "Ai evaluat {N} materiale"
+    thankYouSuccess: string;
+    thankYouContribution: string;
+    thankYouProtocol: string;
+    thankYouBookTitle: string;
+    thankYouAuthor: string;
+    thankYouTelegram: string;
+    thankYouShareText: string;
+    thankYouCopyLink: string;
+    thankYouCopied: string;
+    thankYouTagNote: string;
+    // Footer
+    footerStudy: string;
+  };
 }
