@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRole } from "@/lib/supabase/server";
 
-// Creates a signed upload URL using service role (bypasses RLS)
-// Browser uploads directly to Supabase via XHR PUT with progress tracking
+// Returns upload config for both small files (signed URL PUT) and large files (tus resumable)
 export async function POST(req: NextRequest) {
   try {
     const { filename, contentType } = await req.json();
@@ -15,12 +14,14 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceRole();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
     const ext = filename.split(".").pop() || "bin";
     const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const path = `materials/${uniqueName}`;
 
-    // Create signed upload URL using service role (valid for 10 minutes)
+    // Create signed upload URL for small files (< 50MB)
     const { data, error } = await supabase.storage
       .from("survey-media")
       .createSignedUploadUrl(path);
@@ -39,11 +40,17 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(path);
 
     return NextResponse.json({
+      // For small files: signed URL PUT
       signedUrl: data.signedUrl,
       token: data.token,
       path,
       publicUrl: urlData.publicUrl,
       contentType: contentType || "application/octet-stream",
+      // For large files: tus resumable upload
+      tusEndpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
+      anonKey,
+      bucketId: "survey-media",
+      objectPath: path,
     });
   } catch (err) {
     console.error("Upload config error:", err);
