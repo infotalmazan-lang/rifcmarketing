@@ -16,13 +16,13 @@ export async function POST(request: Request) {
     const { error: e1 } = await supabase
       .from("survey_responses")
       .delete()
-      .gte("id", 0);
+      .neq("id", "00000000-0000-0000-0000-000000000000");
 
     // 2. Delete all survey respondents
     const { error: e2 } = await supabase
       .from("survey_respondents")
       .delete()
-      .gte("id", 0);
+      .neq("id", "00000000-0000-0000-0000-000000000000");
 
     const errors = [e1, e2].filter(Boolean);
     if (errors.length > 0) {
