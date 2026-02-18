@@ -13,18 +13,16 @@ export async function POST(request: Request) {
     const supabase = createServiceRole();
 
     // 1. Delete all survey responses
-    const { error: e1, count: c1 } = await supabase
+    const { error: e1 } = await supabase
       .from("survey_responses")
       .delete()
-      .gte("id", 0)
-      .select("id", { count: "exact", head: true });
+      .gte("id", 0);
 
     // 2. Delete all survey respondents
-    const { error: e2, count: c2 } = await supabase
+    const { error: e2 } = await supabase
       .from("survey_respondents")
       .delete()
-      .gte("id", 0)
-      .select("id", { count: "exact", head: true });
+      .gte("id", 0);
 
     const errors = [e1, e2].filter(Boolean);
     if (errors.length > 0) {
