@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServiceRole();
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    // Use anon key for tus upload — it's a valid JWT (service role key is not a JWT)
+    // RLS policy on storage.objects allows INSERT for bucket_id = 'survey-media'
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
     const ext = filename.split(".").pop() || "bin";
     const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
@@ -30,8 +32,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       // tus endpoint for resumable uploads
       tusEndpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
-      // Auth token (service role key to bypass RLS)
-      authToken: serviceRoleKey,
+      // Auth token (anon key = valid JWT, RLS allows insert on survey-media)
+      authToken: anonKey,
       // Bucket and path
       bucketId: "survey-media",
       objectPath: path,
