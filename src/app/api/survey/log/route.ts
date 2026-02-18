@@ -8,29 +8,13 @@ export async function GET() {
   try {
     const supabase = createServiceRole();
 
-    // Use select("*") to avoid column name mismatches between migrations and actual DB schema
+    // Fetch all respondents without ordering (column name may vary between envs)
     const { data: respondents, error } = await supabase
       .from("survey_respondents")
-      .select("*")
-      .order("started_at", { ascending: false });
-
-    // Fallback: if started_at column doesn't exist, try created_at
-    let finalRespondents = respondents;
-    if (error && error.message?.includes("started_at")) {
-      const { data: r2, error: e2 } = await supabase
-        .from("survey_respondents")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (e2) {
-        return NextResponse.json({ error: e2.message }, { status: 500 });
-      }
-      finalRespondents = r2;
-    } else if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+      .select("*");
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message, hint: "respondents query failed" }, { status: 500 });
     }
 
     // Get response counts per respondent
@@ -43,10 +27,17 @@ export async function GET() {
       responseCounts[r.respondent_id] = (responseCounts[r.respondent_id] || 0) + 1;
     });
 
-    const logs = (finalRespondents || []).map((r) => ({
-      ...r,
-      responseCount: responseCounts[r.id] || 0,
-    }));
+    // Build logs with response count, sort by any available timestamp (newest first)
+    const logs = (respondents || [])
+      .map((r) => ({
+        ...r,
+        responseCount: responseCounts[r.id] || 0,
+      }))
+      .sort((a, b) => {
+        const ta = new Date(a.started_at || a.created_at || 0).getTime();
+        const tb = new Date(b.started_at || b.created_at || 0).getTime();
+        return tb - ta;
+      });
 
     return NextResponse.json({ ok: true, logs, total: logs.length });
   } catch (err: any) {
