@@ -21,6 +21,7 @@ import {
   FileText,
   Link,
   Globe,
+  Music,
   Upload,
   Loader2,
   Copy,
@@ -57,6 +58,7 @@ interface Stimulus {
   description: string | null;
   image_url: string | null;
   video_url: string | null;
+  audio_url: string | null;
   text_content: string | null;
   pdf_url: string | null;
   site_url: string | null;
@@ -249,6 +251,7 @@ const emptyStimulus = (type: string, order: number): Partial<Stimulus> => ({
   description: "",
   image_url: "",
   video_url: "",
+  audio_url: "",
   text_content: "",
   pdf_url: "",
   site_url: "",
@@ -868,6 +871,7 @@ export default function StudiuAdminPage() {
     const icons: { icon: typeof Image; label: string }[] = [];
     if (stim.image_url) icons.push({ icon: Image, label: "Imagine" });
     if (stim.video_url) icons.push({ icon: Video, label: "Video" });
+    if (stim.audio_url) icons.push({ icon: Music, label: "Audio" });
     if (stim.text_content) icons.push({ icon: FileText, label: "Text" });
     if (stim.pdf_url) icons.push({ icon: FileText, label: "PDF" });
     if (stim.site_url) icons.push({ icon: Link, label: "Site" });
@@ -1142,6 +1146,21 @@ export default function StudiuAdminPage() {
                                   </div>
                                 )}
                               </div>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>Audio (MP3)</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-audio"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.audio_url ? "Schimba audio" : "Incarca audio"}</span>
+                                  <input type="file" accept="audio/*,.mp3,.wav,.ogg" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-audio"); if (url) setNewStimData((prev) => ({ ...prev, audio_url: url })); } }} />
+                                </label>
+                                {newStimData.audio_url && (
+                                  <div style={S.filePreview}>
+                                    <Music size={20} style={{ color: "#7C3AED" }} />
+                                    <audio src={newStimData.audio_url} controls style={{ height: 32, flex: 1 }} />
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, audio_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <div style={S.formRow2}>
                               <div style={S.formField}>
@@ -1244,6 +1263,21 @@ export default function StudiuAdminPage() {
                                     </div>
                                   )}
                                 </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Audio (MP3)</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-audio"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.audio_url ? "Schimba audio" : "Incarca audio"}</span>
+                                    <input type="file" accept="audio/*,.mp3,.wav,.ogg" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-audio"); if (url) setEditStimData((prev) => ({ ...prev, audio_url: url })); } }} />
+                                  </label>
+                                  {editStimData.audio_url && (
+                                    <div style={S.filePreview}>
+                                      <Music size={20} style={{ color: "#7C3AED" }} />
+                                      <audio src={editStimData.audio_url} controls style={{ height: 32, flex: 1 }} />
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, audio_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div style={S.formRow2}>
                                 <div style={S.formField}>
@@ -1282,6 +1316,13 @@ export default function StudiuAdminPage() {
                                   <video src={activeStim.video_url} controls style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, display: "block" }} />
                                 </div>
                               )}
+                              {/* Audio — show player */}
+                              {activeStim.audio_url && (
+                                <div style={S.previewSection}>
+                                  <label style={S.previewLabel}>AUDIO</label>
+                                  <audio src={activeStim.audio_url} controls style={{ width: "100%", borderRadius: 8 }} />
+                                </div>
+                              )}
                               {/* Text as primary content when no image/video */}
                               {activeStim.text_content && (
                                 <div style={{
@@ -1300,7 +1341,7 @@ export default function StudiuAdminPage() {
                                 {activeStim.pdf_url && <div style={S.previewItem}><label style={S.previewLabel}>PDF</label><a href={activeStim.pdf_url} target="_blank" rel="noreferrer" style={{ ...S.previewLink, display: "flex", alignItems: "center", gap: 6 }}><FileText size={16} /> Deschide PDF</a></div>}
                                 {activeStim.site_url && <div style={S.previewItem}><label style={S.previewLabel}>SITE</label><a href={activeStim.site_url} target="_blank" rel="noreferrer" style={{ ...S.previewLink, display: "flex", alignItems: "center", gap: 6 }}><Globe size={16} /> {activeStim.site_url}</a></div>}
                               </div>
-                              {!activeStim.description && !activeStim.image_url && !activeStim.video_url && !activeStim.text_content && !activeStim.pdf_url && !activeStim.site_url && (
+                              {!activeStim.description && !activeStim.image_url && !activeStim.video_url && !activeStim.audio_url && !activeStim.text_content && !activeStim.pdf_url && !activeStim.site_url && (
                                 <div style={{ textAlign: "center" as const, padding: "40px 20px", color: "#9CA3AF" }}>
                                   <p style={{ fontSize: 14, marginBottom: 12 }}>Materialul nu are continut inca.</p>
                                   <button style={S.wsActionBtn} onClick={() => startEditStimulus(activeStim)}><Pencil size={14} /><span>Adauga continut</span></button>
