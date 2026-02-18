@@ -168,7 +168,19 @@ export default function StudiuPage() {
 function StudiuWizardInner() {
   const isMobile = useIsMobile();
   const m = isMobile;
-  const { locale, setLocale } = useTranslation();
+  const { locale, setLocale, t } = useTranslation();
+  const w = t.wizard;
+
+  // Helper: translate category type to localized label
+  const catLabel = (type: string): string => {
+    const map: Record<string, string> = {
+      Site: w.catSiteLanding, Social: w.catSocialMedia, Video: w.catVideoAds,
+      Email: w.catEmailMarketing, Billboard: w.catBillboard, SMS: w.catSMS,
+      Ambalaj: w.catPackaging, Google: w.catGoogleAds, RadioTV: w.catRadioTV,
+      Influencer: w.catInfluencer,
+    };
+    return map[type] || CATEGORY_META[type]?.label || type;
+  };
   const searchParams = useSearchParams();
   const tag = searchParams.get("tag") || "";
   const forceReset = searchParams.get("reset") === "1";
@@ -277,10 +289,10 @@ function StudiuWizardInner() {
           setSession(s);
           setStep(0);
         } else {
-          setError("Nu s-a putut porni sondajul. Reincarca pagina.");
+          setError(w.errorStart);
         }
       } catch {
-        setError("Eroare de conexiune. Verifica internetul si reincarca.");
+        setError(w.errorConnection);
       }
     };
     init();
@@ -498,12 +510,12 @@ function StudiuWizardInner() {
         });
         const result = await res.json();
         if (!result.success) {
-          setError("Eroare la salvare. Incearca din nou.");
+          setError(w.errorSave);
           setSaving(false);
           return;
         }
       } catch {
-        setError("Eroare de conexiune.");
+        setError(w.errorConnectionShort);
         setSaving(false);
         return;
       }
@@ -898,7 +910,7 @@ function StudiuWizardInner() {
                   animation: "spin 0.8s linear infinite",
                   margin: "0 auto 16px",
                 }} />
-                <p style={{ color: textMuted, fontSize: 14 }}>Se incarca sondajul...</p>
+                <p style={{ color: textMuted, fontSize: 14 }}>{w.loading}</p>
               </div>
             )}
           </div>
@@ -925,19 +937,18 @@ function StudiuWizardInner() {
               &#10003;
             </div>
             <h2 style={{ fontSize: m ? 22 : 26, fontWeight: 700, marginBottom: 8, color: textDark }}>
-              Multumim!
+              {w.thankYouTitle}
             </h2>
             <p style={{ color: textMuted, marginBottom: 24, fontSize: m ? 14 : 15, lineHeight: 1.6 }}>
-              Ai evaluat {session.stimuli.length} materiale de marketing.
-              Raspunsurile tale au fost inregistrate cu succes.
+              {locale === "ro" ? `Ai evaluat ${session.stimuli.length} ` : locale === "ru" ? `Вы оценили ${session.stimuli.length} ` : `You evaluated ${session.stimuli.length} `}{w.thankYouEvaluated}
+              {" "}{w.thankYouSuccess}
             </p>
             <div style={{
               background: "#f0fdf4", border: "1px solid #bbf7d0",
               borderRadius: 10, padding: 16, marginBottom: 24,
             }}>
               <p style={{ fontSize: 13, color: "#166534", lineHeight: 1.5 }}>
-                Raspunsurile tale contribuie la un studiu stiintific despre
-                perceptia materialelor de marketing. Datele sunt complet anonime.
+                {w.thankYouContribution}
               </p>
             </div>
 
@@ -948,13 +959,13 @@ function StudiuWizardInner() {
               textAlign: "center" as const,
             }}>
               <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 10, textTransform: "uppercase" as const }}>
-                UN PROTOCOL DE MARKETING DE
+                {w.thankYouProtocol}
               </p>
               <h3 style={{ fontSize: m ? 16 : 18, fontWeight: 700, color: textDark, marginBottom: 4, lineHeight: 1.3 }}>
-                Matematica Emotionala a Marketingului
+                {w.thankYouBookTitle}
               </h3>
               <p style={{ fontSize: m ? 14 : 15, fontWeight: 600, color: accentRed, marginBottom: 16 }}>
-                Dumitru Talmazan
+                {w.thankYouAuthor}
               </p>
               <a
                 href="https://t.me/talmazan_rifc"
@@ -972,14 +983,14 @@ function StudiuWizardInner() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.492-1.302.48-.428-.013-1.252-.242-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
                 </svg>
-                Urmareste pe Telegram
+                {w.thankYouTelegram}
               </a>
             </div>
 
             {/* Copy survey link button — preserves distribution tag */}
             <div style={{ width: "100%", textAlign: "center" as const }}>
               <p style={{ fontSize: 13, color: textMuted, marginBottom: 12 }}>
-                Trimite sondajul si altora:
+                {w.thankYouShareText}
               </p>
               <button
                 onClick={() => {
@@ -1006,7 +1017,7 @@ function StudiuWizardInner() {
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    Copiat!
+                    {w.thankYouCopied}
                   </>
                 ) : (
                   <>
@@ -1014,13 +1025,13 @@ function StudiuWizardInner() {
                       <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                     </svg>
-                    Copiaza linkul sondajului
+                    {w.thankYouCopyLink}
                   </>
                 )}
               </button>
               {tag && (
                 <p style={{ fontSize: 11, color: textMuted, marginTop: 8, opacity: 0.7 }}>
-                  Linkul include segmentul tau de distributie
+                  {w.thankYouTagNote}
                 </p>
               )}
             </div>
@@ -1098,13 +1109,13 @@ function StudiuWizardInner() {
                 </div>
 
                 <h1 style={{ fontSize: m ? 24 : 30, fontWeight: 800, color: textDark, marginBottom: 8, lineHeight: 1.2 }}>
-                  Studiu de Perceptie
+                  {w.welcomeTitle}
                 </h1>
                 <p style={{ fontSize: m ? 14 : 16, color: textMuted, lineHeight: 1.6, marginBottom: 8, maxWidth: 320 }}>
-                  Salut! Te invitam sa participi la un studiu stiintific despre cum percepi materialele de marketing.
+                  {w.welcomeIntro}
                 </p>
                 <p style={{ fontSize: m ? 13 : 14, color: textMuted, lineHeight: 1.6, marginBottom: 20, maxWidth: 320 }}>
-                  Dureaza aproximativ <strong style={{ color: textDark }}>5-8 minute</strong>. Toate raspunsurile sunt <strong style={{ color: textDark }}>complet anonime</strong>.
+                  {w.welcomeDuration}<strong style={{ color: textDark }}>{w.welcomeDurationBold}</strong>{w.welcomeAnonymous}<strong style={{ color: textDark }}>{w.welcomeAnonymousBold}</strong>.
                 </p>
 
                 {/* Privacy notice */}
@@ -1118,7 +1129,7 @@ function StudiuWizardInner() {
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
                   </svg>
                   <p style={{ fontSize: m ? 12 : 13, color: "#15803d", lineHeight: 1.5, margin: 0 }}>
-                    <strong>Nu colectam date personale.</strong> Nu cerem email, telefon sau alte informatii de identificare. Totul este complet anonim.
+                    <strong>{w.welcomePrivacy}</strong>{w.welcomePrivacyBold}
                   </p>
                 </div>
 
@@ -1128,16 +1139,16 @@ function StudiuWizardInner() {
                   onMouseDown={(e) => ((e.target as HTMLElement).style.transform = "scale(0.97)")}
                   onMouseUp={(e) => ((e.target as HTMLElement).style.transform = "scale(1)")}
                 >
-                  Incepe sondajul
+                  {w.welcomeStart}
                 </button>
 
                 <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.7 }}>
-                  {numStimuli} materiale de evaluat
+                  {numStimuli} {w.welcomeMaterials}
                 </p>
 
                 {/* Language switcher — small, bottom */}
                 <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11, color: textMuted, opacity: 0.6 }}>Limba:</span>
+                  <span style={{ fontSize: 11, color: textMuted, opacity: 0.6 }}>{w.welcomeLang}</span>
                   {(["ro", "en", "ru"] as Locale[]).map((loc) => (
                     <button
                       key={loc}
@@ -1169,14 +1180,14 @@ function StudiuWizardInner() {
           {step === 1 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Care este genul tau?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.genderTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
-              <OptionCard label="Femeie" value="feminin" icon="&#9792;" selected={demographics.gender === "feminin"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
-              <OptionCard label="Barbat" value="masculin" icon="&#9794;" selected={demographics.gender === "masculin"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
-              <OptionCard label="Altul" value="altul" selected={demographics.gender === "altul"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
-              <OptionCard label="Prefer sa nu spun" value="prefer_nu_spun" selected={demographics.gender === "prefer_nu_spun"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
+              <OptionCard label={w.genderFemale} value="feminin" icon="&#9792;" selected={demographics.gender === "feminin"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
+              <OptionCard label={w.genderMale} value="masculin" icon="&#9794;" selected={demographics.gender === "masculin"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
+              <OptionCard label={w.genderOther} value="altul" selected={demographics.gender === "altul"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
+              <OptionCard label={w.genderPreferNot} value="prefer_nu_spun" selected={demographics.gender === "prefer_nu_spun"} onSelect={(v) => autoAdvanceProfile("gender", v, 1)} />
 
               <div style={S.nav}>
                 <div />
@@ -1189,9 +1200,9 @@ function StudiuWizardInner() {
           {step === 2 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Care este varsta ta?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.ageTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
               {[
                 { label: "18-24 ani", value: "18-24" },
@@ -1205,7 +1216,7 @@ function StudiuWizardInner() {
               ))}
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1215,12 +1226,12 @@ function StudiuWizardInner() {
           {step === 3 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>In ce tara locuiesti?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.countryTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
-              <OptionCard label="Moldova" value="Moldova" selected={demographics.country === "Moldova"} onSelect={(v) => autoAdvanceProfile("country", v, 3)} />
-              <OptionCard label="Romania" value="Romania" selected={demographics.country === "Romania"} onSelect={(v) => autoAdvanceProfile("country", v, 3)} />
+              <OptionCard label={w.countryMoldova} value="Moldova" selected={demographics.country === "Moldova"} onSelect={(v) => autoAdvanceProfile("country", v, 3)} />
+              <OptionCard label={w.countryRomania} value="Romania" selected={demographics.country === "Romania"} onSelect={(v) => autoAdvanceProfile("country", v, 3)} />
 
               {/* Altele — with autocomplete */}
               <div style={{ position: "relative", marginBottom: 8 }}>
@@ -1247,8 +1258,8 @@ function StudiuWizardInner() {
                     </div>
                     <span>
                       {demographics.country && demographics.country !== "Moldova" && demographics.country !== "Romania"
-                        ? `Alta tara: ${demographics.country}`
-                        : "Alta tara..."}
+                        ? `${w.countryOtherSelected} ${demographics.country}`
+                        : w.countryOtherPlaceholder}
                     </span>
                   </div>
 
@@ -1262,7 +1273,7 @@ function StudiuWizardInner() {
                           fontSize: 14,
                           padding: "10px 12px",
                         }}
-                        placeholder="Scrie numele tarii..."
+                        placeholder={w.countrySearchPlaceholder}
                         value={countrySearch}
                         autoFocus
                         onChange={(e) => {
@@ -1280,7 +1291,7 @@ function StudiuWizardInner() {
                           borderRadius: "0 0 10px 10px",
                           background: "#fff",
                         }}>
-                          {COUNTRIES.filter(c =>
+                          {w.countries.filter(c =>
                             c.toLowerCase().includes(countrySearch.toLowerCase())
                           ).slice(0, 8).map(c => (
                             <div
@@ -1306,11 +1317,11 @@ function StudiuWizardInner() {
                               {c}
                             </div>
                           ))}
-                          {COUNTRIES.filter(c =>
+                          {w.countries.filter(c =>
                             c.toLowerCase().includes(countrySearch.toLowerCase())
                           ).length === 0 && (
                             <div style={{ padding: "10px 14px", fontSize: 13, color: textMuted }}>
-                              Nicio tara gasita
+                              {w.countryNotFound}
                             </div>
                           )}
                         </div>
@@ -1321,7 +1332,7 @@ function StudiuWizardInner() {
               </div>
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1331,15 +1342,15 @@ function StudiuWizardInner() {
           {step === 4 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Unde locuiesti?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.urbanTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
-              <OptionCard label="Urban (oras)" value="urban" selected={demographics.locationType === "urban"} onSelect={(v) => autoAdvanceProfile("locationType", v, 4)} />
-              <OptionCard label="Rural (sat, comuna)" value="rural" selected={demographics.locationType === "rural"} onSelect={(v) => autoAdvanceProfile("locationType", v, 4)} />
+              <OptionCard label={w.urbanCity} value="urban" selected={demographics.locationType === "urban"} onSelect={(v) => autoAdvanceProfile("locationType", v, 4)} />
+              <OptionCard label={w.urbanRural} value="rural" selected={demographics.locationType === "rural"} onSelect={(v) => autoAdvanceProfile("locationType", v, 4)} />
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1349,21 +1360,21 @@ function StudiuWizardInner() {
           {step === 5 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Care este venitul tau lunar net?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.incomeTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
               {[
-                { label: "Sub 500 EUR", value: "sub_500" },
-                { label: "500 - 1.000 EUR", value: "500_1000" },
-                { label: "1.000 - 2.000 EUR", value: "1000_2000" },
-                { label: "Peste 2.000 EUR", value: "peste_2000" },
+                { label: w.incomeLow, value: "sub_500" },
+                { label: w.incomeMid, value: "500_1000" },
+                { label: w.incomeHigh, value: "1000_2000" },
+                { label: w.incomeTop, value: "peste_2000" },
               ].map(opt => (
                 <OptionCard key={opt.value} {...opt} selected={demographics.incomeRange === opt.value} onSelect={(v) => autoAdvanceProfile("incomeRange", v, 5)} />
               ))}
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1373,22 +1384,22 @@ function StudiuWizardInner() {
           {step === 6 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Ce nivel de educatie ai?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.educationTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
               {[
-                { label: "Liceu", value: "liceu" },
-                { label: "Universitate (Licenta)", value: "universitate" },
-                { label: "Master", value: "master" },
-                { label: "Doctorat", value: "doctorat" },
-                { label: "Altul", value: "altul" },
+                { label: w.educationHighSchool, value: "liceu" },
+                { label: w.educationBachelor, value: "universitate" },
+                { label: w.educationMaster, value: "master" },
+                { label: w.educationPhd, value: "doctorat" },
+                { label: w.educationOther, value: "altul" },
               ].map(opt => (
                 <OptionCard key={opt.value} {...opt} selected={demographics.education === opt.value} onSelect={(v) => autoAdvanceProfile("education", v, 6)} />
               ))}
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1398,21 +1409,21 @@ function StudiuWizardInner() {
           {step === 7 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Cat de des cumperi online?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.purchaseTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
               {[
-                { label: "Zilnic", value: "zilnic" },
-                { label: "Saptamanal", value: "saptamanal" },
-                { label: "Lunar", value: "lunar" },
-                { label: "Rar (cateva ori pe an)", value: "rar" },
+                { label: w.purchaseDaily, value: "zilnic" },
+                { label: w.purchaseWeekly, value: "saptamanal" },
+                { label: w.purchaseMonthly, value: "lunar" },
+                { label: w.purchaseRarely, value: "rar" },
               ].map(opt => (
                 <OptionCard key={opt.value} {...opt} selected={behavioral.purchaseFrequency === opt.value} onSelect={(v) => autoAdvanceProfile("purchaseFrequency", v, 7)} />
               ))}
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1422,9 +1433,9 @@ function StudiuWizardInner() {
           {step === 8 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Ce canale media preferi?</h2>
-              <div style={S.selectHint}>SELECTEAZA MAI MULTE</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.channelsTitle}</h2>
+              <div style={S.selectHint}>{w.selectMultiple}</div>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
                 {[
@@ -1449,13 +1460,13 @@ function StudiuWizardInner() {
               </div>
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <button
                   style={{ ...S.btnNext, opacity: behavioral.preferredChannels.length === 0 ? 0.5 : 1 }}
                   onClick={() => advanceTo(step + 1)}
                   disabled={behavioral.preferredChannels.length === 0}
                 >
-                  Urmatorul <span style={{ fontSize: 18 }}>&rarr;</span>
+                  {w.next} <span style={{ fontSize: 18 }}>&rarr;</span>
                 </button>
               </div>
             </>
@@ -1465,21 +1476,21 @@ function StudiuWizardInner() {
           {step === 9 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Cat timp petreci online zilnic?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.onlineTimeTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
               {[
-                { label: "Sub 1 ora", value: "sub_1h" },
-                { label: "1-3 ore", value: "1_3h" },
-                { label: "3-5 ore", value: "3_5h" },
-                { label: "Peste 5 ore", value: "peste_5h" },
+                { label: w.onlineTimeLow, value: "sub_1h" },
+                { label: w.onlineTimeMid, value: "1_3h" },
+                { label: w.onlineTimeHigh, value: "3_5h" },
+                { label: w.onlineTimeVeryHigh, value: "peste_5h" },
               ].map(opt => (
                 <OptionCard key={opt.value} {...opt} selected={behavioral.dailyOnlineTime === opt.value} onSelect={(v) => autoAdvanceProfile("dailyOnlineTime", v, 9)} />
               ))}
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1489,14 +1500,14 @@ function StudiuWizardInner() {
           {step === 10 && (
             <>
               {renderDashes()}
-              <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-              <h2 style={S.questionTitle}>Ce dispozitiv folosesti cel mai des?</h2>
-              <div style={S.selectHint}>SELECTEAZA UNA</div>
+              <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+              <h2 style={S.questionTitle}>{w.deviceTitle}</h2>
+              <div style={S.selectHint}>{w.selectOne}</div>
 
               {[
-                { label: "Telefon mobil", value: "telefon" },
-                { label: "Laptop / PC", value: "laptop_pc" },
-                { label: "Tableta", value: "tableta" },
+                { label: w.deviceMobile, value: "telefon" },
+                { label: w.deviceDesktop, value: "laptop_pc" },
+                { label: w.deviceTablet, value: "tableta" },
               ].map(opt => (
                 <OptionCard key={opt.value} {...opt} selected={behavioral.primaryDevice === opt.value} onSelect={(v) => {
                   autoAdvanceProfile("primaryDevice", v, 10);
@@ -1504,7 +1515,7 @@ function StudiuWizardInner() {
               ))}
 
               <div style={S.nav}>
-                <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                 <div />
               </div>
             </>
@@ -1512,22 +1523,22 @@ function StudiuWizardInner() {
 
           {/* ═══ Steps 11-15: Psychographic (5 separate Likert pages, auto-advance) ═══ */}
           {step >= 11 && step <= 15 && (() => {
-            const psychQuestions = [
-              { key: "adReceptivity" as const, text: "Acord atentie reclamelor relevante pentru mine", num: 1 },
-              { key: "visualPreference" as const, text: "Prefer reclamele cu design vizual atractiv", num: 2 },
-              { key: "impulseBuying" as const, text: "Uneori cumpar impulsiv dupa ce vad o reclama", num: 3 },
-              { key: "irrelevanceAnnoyance" as const, text: "Ma irita reclamele irelevante", num: 4 },
-              { key: "attentionCapture" as const, text: "Ma opresc din scrollat la reclame interesante", num: 5 },
+            const psychKeys = [
+              "adReceptivity" as const,
+              "visualPreference" as const,
+              "impulseBuying" as const,
+              "irrelevanceAnnoyance" as const,
+              "attentionCapture" as const,
             ];
             const qIdx = step - 11;
-            const q = psychQuestions[qIdx];
+            const qKey = psychKeys[qIdx];
             return (
               <>
                 {renderDashes()}
-                <div style={S.questionNum}>INTREBAREA {String(profileQuestionNum).padStart(2, "0")}</div>
-                <h2 style={{ ...S.questionTitle, fontSize: m ? 20 : 24, marginBottom: 8 }}>Cat de mult esti de acord?</h2>
+                <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
+                <h2 style={{ ...S.questionTitle, fontSize: m ? 20 : 24, marginBottom: 8 }}>{w.psychTitle}</h2>
                 <p style={{ fontSize: m ? 11 : 12, color: textMuted, marginBottom: 6 }}>
-                  Intrebarea {q.num} din 5
+                  {w.questionLabel} {qIdx + 1} {w.psychQuestionOf} 5
                 </p>
                 <div style={{
                   fontSize: m ? 16 : 18, fontWeight: 600, color: textDark, lineHeight: 1.5,
@@ -1535,11 +1546,11 @@ function StudiuWizardInner() {
                   background: "#faf8f5", border: "1px solid #e5e1d9", borderRadius: 10,
                   textAlign: "center" as const,
                 }}>
-                  {q.text}
+                  {w.psychStatements[qIdx]}
                 </div>
                 <div style={{ fontSize: m ? 11 : 12, color: textMuted, marginBottom: 10, display: "flex", justifyContent: "space-between", padding: "0 4px" }}>
-                  <span>1 = Total dezacord</span>
-                  <span>7 = Total acord</span>
+                  <span>{w.psychLow}</span>
+                  <span>{w.psychHigh}</span>
                 </div>
                 <div style={{ display: "flex", gap: m ? 6 : 8, justifyContent: "center", flexWrap: "wrap" as const }}>
                   {[1, 2, 3, 4, 5, 6, 7].map((v) => (
@@ -1548,16 +1559,16 @@ function StudiuWizardInner() {
                       style={{
                         ...S.likertBtn,
                         width: m ? 40 : 48, height: m ? 40 : 48, fontSize: m ? 16 : 18,
-                        ...(psychographic[q.key] === v ? S.likertBtnActive : {}),
+                        ...(psychographic[qKey] === v ? S.likertBtnActive : {}),
                       }}
-                      onClick={() => autoAdvanceProfile(q.key, String(v), step)}
+                      onClick={() => autoAdvanceProfile(qKey, String(v), step)}
                     >
                       {v}
                     </button>
                   ))}
                 </div>
                 <div style={S.nav}>
-                  <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                  <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                   <div />
                 </div>
               </>
@@ -1585,11 +1596,11 @@ function StudiuWizardInner() {
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
                         <span style={{ fontSize: m ? 13 : 14, color: "#166534", fontWeight: 700 }}>
-                          Categoria &quot;{prevCatMeta.label}&quot; finalizata!
+                          {catLabel(prevCategoryType!)} {w.categoryDone}
                         </span>
                       </div>
                       <p style={{ fontSize: 12, color: "#166534", opacity: 0.7 }}>
-                        Multumim pentru raspunsuri.
+                        {w.categoryThanks}
                       </p>
                     </div>
                   )}
@@ -1599,7 +1610,7 @@ function StudiuWizardInner() {
                     fontSize: 10, fontWeight: 700, letterSpacing: 2, color: textMuted,
                     marginBottom: 16, textTransform: "uppercase" as const,
                   }}>
-                    CATEGORIE {currentCategoryNum} DIN {totalCategories}
+                    {w.categoryNum} {currentCategoryNum} / {totalCategories}
                   </div>
 
                   {/* Category icon */}
@@ -1616,10 +1627,10 @@ function StudiuWizardInner() {
 
                   {/* Category label */}
                   <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 6, textTransform: "uppercase" as const }}>
-                    {isFirst ? "PRIMA CATEGORIE" : "URMATOAREA CATEGORIE"}
+                    {isFirst ? w.categoryFirst : w.categoryNext}
                   </div>
                   <h2 style={{ fontSize: m ? 22 : 26, fontWeight: 800, color: textDark, marginBottom: 10, lineHeight: 1.2 }}>
-                    {catMeta.label}
+                    {catLabel(currentStim.type)}
                   </h2>
 
                   {/* Material count in this category */}
@@ -1632,7 +1643,7 @@ function StudiuWizardInner() {
                       {categoryStimCount}
                     </span>
                     <span style={{ fontSize: m ? 12 : 13, color: catMeta.color, opacity: 0.8 }}>
-                      {categoryStimCount === 1 ? "material de evaluat" : "materiale de evaluat"}
+                      {categoryStimCount === 1 ? w.categoryMaterialSingular : w.categoryMaterialPlural}
                     </span>
                   </div>
 
@@ -1643,7 +1654,7 @@ function StudiuWizardInner() {
                     maxWidth: 320,
                   }}>
                     <p style={{ fontSize: m ? 13 : 14, color: "#854d0e", lineHeight: 1.5, fontWeight: 500 }}>
-                      Analizeaza fiecare material, apoi raspunde la 5 intrebari scurte.
+                      {w.categoryInstruction}
                     </p>
                   </div>
 
@@ -1676,12 +1687,12 @@ function StudiuWizardInner() {
                     onMouseDown={(e) => ((e.target as HTMLElement).style.transform = "scale(0.96)")}
                     onMouseUp={(e) => ((e.target as HTMLElement).style.transform = "scale(1)")}
                   >
-                    {isFirst ? "INCEPE" : "CONTINUA"}
+                    {isFirst ? w.categoryStart : w.categoryContinue}
                   </button>
 
                   {isFirst && (
                     <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.6 }}>
-                      {totalCategories} categorii &middot; {session.stimuli.length} materiale in total
+                      {totalCategories} {w.categorySummary} &middot; {session.stimuli.length} {w.categoryMaterialPlural}
                     </p>
                   )}
                 </div>
@@ -1694,37 +1705,37 @@ function StudiuWizardInner() {
             const dimensions: { key: "r" | "i" | "f" | "c" | "cta"; question: string; anchorLow: string; anchorHigh: string; color: string; shortLabel: string }[] = [
               {
                 key: "r", shortLabel: "R",
-                question: "Cat de relevant este acest mesaj pentru tine personal \u2014 pentru nevoile, interesele sau situatia ta de acum?",
-                anchorLow: "Nu are nicio legatura cu mine",
-                anchorHigh: "Exact ce aveam nevoie sa vad acum",
+                question: w.rQuestion,
+                anchorLow: w.rLow,
+                anchorHigh: w.rHigh,
                 color: "#DC2626",
               },
               {
                 key: "i", shortLabel: "I",
-                question: "Cat de interesant este ceea ce spune acest mesaj \u2014 informatia, oferta sau ideea din spatele lui?",
-                anchorLow: "Nu ma atrage deloc, nimic nou sau util",
-                anchorHigh: "Vreau imediat sa aflu mai multe",
+                question: w.iQuestion,
+                anchorLow: w.iLow,
+                anchorHigh: w.iHigh,
                 color: "#D97706",
               },
               {
                 key: "f", shortLabel: "F",
-                question: "Cat de bine este prezentat acest mesaj \u2014 vizual, structura, claritatea textului, calitatea executiei?",
-                anchorLow: "Confuz, urat sau greu de parcurs",
-                anchorHigh: "Impecabil, atractiv si usor de inteles",
+                question: w.fQuestion,
+                anchorLow: w.fLow,
+                anchorHigh: w.fHigh,
                 color: "#7C3AED",
               },
               {
                 key: "c", shortLabel: "C",
-                question: "Cat de clar ai inteles ce ti se ofera si ce ar trebui sa faci in continuare?",
-                anchorLow: "Nu am inteles nimic din acest mesaj",
-                anchorHigh: "Am inteles perfect: ce e, pentru cine e si ce pas urmeaza",
+                question: w.cQuestion,
+                anchorLow: w.cLow,
+                anchorHigh: w.cHigh,
                 color: "#059669",
               },
               {
                 key: "cta", shortLabel: "CTA",
-                question: "Cat de probabil este sa actionezi pe baza acestui mesaj \u2014 click, achizitie, inscriere, contactare?",
-                anchorLow: "Nu as actiona sub nicio forma",
-                anchorHigh: "As actiona imediat, fara ezitare",
+                question: w.ctaQuestion,
+                anchorLow: w.ctaLow,
+                anchorHigh: w.ctaHigh,
                 color: "#2563EB",
               },
             ];
@@ -1736,7 +1747,7 @@ function StudiuWizardInner() {
               <>
                 {renderDashes()}
                 <div style={S.questionNum}>
-                  MATERIAL {currentStimGroupIdx + 1} DIN {session.stimuli.length}
+                  {w.materialNum} {currentStimGroupIdx + 1} / {session.stimuli.length}
                 </div>
 
                 {/* Stimulus display */}
@@ -1773,7 +1784,7 @@ function StudiuWizardInner() {
                           <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
                           <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
                         </svg>
-                        Vezi imaginea mai mare
+                        {w.viewLarger}
                       </button>
                     </>
                   )}
@@ -1811,14 +1822,14 @@ function StudiuWizardInner() {
                   {currentStim.pdf_url && (
                     <a href={currentStim.pdf_url} target="_blank" rel="noopener noreferrer"
                       style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: accentRed, border: `1px solid ${accentRed}`, borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
-                      Deschide PDF-ul &rarr;
+                      {w.openPdf} &rarr;
                     </a>
                   )}
 
                   {currentStim.site_url && (
                     <a href={currentStim.site_url} target="_blank" rel="noopener noreferrer"
                       style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "#2563EB", border: "1px solid #2563EB", borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
-                      Viziteaza site-ul &rarr;
+                      {w.visitSite} &rarr;
                     </a>
                   )}
 
@@ -1906,10 +1917,10 @@ function StudiuWizardInner() {
                 {showAttention && (
                   <div style={{ marginTop: 16, padding: m ? 14 : 18, background: "#fefce8", border: "1px solid #fde047", borderRadius: 10 }}>
                     <div style={{ fontSize: m ? 13 : 14, fontWeight: 700, color: "#854d0e", marginBottom: 8 }}>
-                      Verifica ca nu esti robot
+                      {w.attentionTitle}
                     </div>
                     <p style={{ fontSize: m ? 12 : 13, color: textDark, marginBottom: 10, lineHeight: 1.5 }}>
-                      Alege cifra <strong style={{ fontSize: m ? 18 : 22, color: "#b45309" }}>{attentionTarget.current}</strong> din cele de mai jos.
+                      {w.attentionInstruction} <strong style={{ fontSize: m ? 18 : 22, color: "#b45309" }}>{attentionTarget.current}</strong>
                     </p>
                     <div style={{ display: "flex", gap: m ? 4 : 6, justifyContent: "center" }}>
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
@@ -1926,7 +1937,7 @@ function StudiuWizardInner() {
                 )}
 
                 <div style={S.nav}>
-                  <button style={S.btnBack} onClick={goBack}>Inapoi</button>
+                  <button style={S.btnBack} onClick={goBack}>{w.back}</button>
                   <div />
                 </div>
               </>
@@ -1968,7 +1979,7 @@ function StudiuWizardInner() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-            Inchide
+            {w.closeOverlay}
           </button>
         </div>
       )}
@@ -1976,7 +1987,7 @@ function StudiuWizardInner() {
       {/* Footer */}
       {step > 0 && step < thankYouStep && (
         <div style={S.footer}>
-          <span>Studiu de Perceptie &middot; </span>
+          <span>{w.footerStudy} &middot; </span>
           <a href="https://rifcmarketing.com" style={{ color: accentRed }}>rifcmarketing.com</a>
         </div>
       )}
