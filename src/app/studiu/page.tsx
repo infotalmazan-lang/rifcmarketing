@@ -1418,17 +1418,17 @@ export default function StudiuAdminPage() {
           // Psychographic labels map
           const psychLabels: Record<string, string> = {
             adReceptivity: "Receptivitate la reclame",
-            visualPreference: "Preferinta vizuala",
-            impulseBuying: "Cumparare impulsiva",
+            visualPreference: "Preferință vizuală",
+            impulseBuying: "Cumpărare impulsivă",
             irrelevanceAnnoyance: "Iritare reclame irelevante",
-            attentionCapture: "Captare atentie",
+            attentionCapture: "Captare atenție",
           };
 
           return (
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>Rezultate Sondaj</h2>
             <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
-              Scoruri agregate R, I, F, C, CTA pe fiecare material + profil demografic respondenti.
+              Scoruri agregate R, I, F, C, CTA pe fiecare material + profil demografic respondenți.
             </p>
 
             {/* Segment sub-tabs (distributions) */}
@@ -1454,10 +1454,10 @@ export default function StudiuAdminPage() {
                 {/* Stats cards */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
                   {[
-                    { label: "RESPONDENTI", value: results.totalRespondents, color: "#374151" },
-                    { label: "COMPLETARI", value: results.completedRespondents, color: "#059669" },
-                    { label: "RATA", value: `${results.completionRate}%`, color: "#DC2626" },
-                    { label: "RASPUNSURI", value: results.totalResponses, color: "#2563EB" },
+                    { label: "RESPONDENȚI", value: results.totalRespondents, color: "#374151" },
+                    { label: "COMPLETĂRI", value: results.completedRespondents, color: "#059669" },
+                    { label: "RATĂ", value: `${results.completionRate}%`, color: "#DC2626" },
+                    { label: "RĂSPUNSURI", value: results.totalResponses, color: "#2563EB" },
                   ].map((stat) => (
                     <div key={stat.label} style={S.configItem}>
                       <span style={S.configLabel}>{stat.label}</span>
@@ -1470,7 +1470,7 @@ export default function StudiuAdminPage() {
                 <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
                   {([
                     { key: "scoruri" as const, label: "Scoruri R·I·F·C·CTA" },
-                    { key: "profil" as const, label: "Profil Respondenti" },
+                    { key: "profil" as const, label: "Profil Respondenți" },
                     { key: "psihografic" as const, label: "Psihografic" },
                   ]).map((t) => (
                     <button key={t.key} onClick={() => setResultsSubTab(t.key)} style={{
@@ -1537,7 +1537,7 @@ export default function StudiuAdminPage() {
                               border: !resultsCatFilter ? "2px solid #111827" : "1px solid #e5e7eb",
                               background: !resultsCatFilter ? "#111827" : "#fff",
                               color: !resultsCatFilter ? "#fff" : "#374151",
-                            }}>Toate ({results.stimuliResults.length})</button>
+                            }}>Toate Canalele</button>
                             {[...categories].sort((a, b) => a.display_order - b.display_order).map(cat => {
                               const isActive = resultsCatFilter === cat.type;
                               const stimCount = results.stimuliResults.filter(s => s.type === cat.type).length;
@@ -1564,7 +1564,7 @@ export default function StudiuAdminPage() {
                                 <tr style={{ background: "#f9fafb" }}>
                                   <th style={{ ...thStyle, width: 36, padding: "8px 4px" }}></th>
                                   <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 180 }}>MATERIAL</th>
-                                  <th style={thStyle}>TIP</th>
+                                  <th style={thStyle}>CANAL</th>
                                   <th style={thStyle}>N</th>
                                   <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
                                   <th style={{ ...thStyle, color: "#D97706" }}>I</th>
@@ -1637,9 +1637,9 @@ export default function StudiuAdminPage() {
                                               {/* Stats cards row */}
                                               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
                                                 {[
-                                                  { label: "RESPONDENTI", value: stimBreakdown.respondentCount, color: "#374151" },
-                                                  { label: "COMPLETARI", value: stimBreakdown.completedCount, color: "#059669" },
-                                                  { label: "RATA", value: `${stimBreakdown.completionRate}%`, color: "#DC2626" },
+                                                  { label: "RESPONDENȚI", value: stimBreakdown.respondentCount, color: "#374151" },
+                                                  { label: "COMPLETĂRI", value: stimBreakdown.completedCount, color: "#059669" },
+                                                  { label: "RATĂ", value: `${stimBreakdown.completionRate}%`, color: "#DC2626" },
                                                 ].map((stat) => (
                                                   <div key={stat.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                     <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", textTransform: "uppercase" as const }}>{stat.label}</span>
@@ -1652,15 +1652,15 @@ export default function StudiuAdminPage() {
                                                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
                                                   <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Demografice</h4>
                                                   {renderBreakdown("Gen", stimBreakdown.demographics?.gender || {}, "#EC4899")}
-                                                  {renderBreakdown("Varsta", stimBreakdown.demographics?.ageRange || {}, "#D97706")}
-                                                  {renderBreakdown("Tara", stimBreakdown.demographics?.country || {}, "#059669")}
+                                                  {renderBreakdown("Vârstă", stimBreakdown.demographics?.ageRange || {}, "#D97706")}
+                                                  {renderBreakdown("Țară", stimBreakdown.demographics?.country || {}, "#059669")}
                                                   {renderBreakdown("Urban / Rural", stimBreakdown.demographics?.locationType || {}, "#2563EB")}
                                                   {renderBreakdown("Venit", stimBreakdown.demographics?.incomeRange || {}, "#7C3AED")}
-                                                  {renderBreakdown("Educatie", stimBreakdown.demographics?.education || {}, "#DC2626")}
+                                                  {renderBreakdown("Educație", stimBreakdown.demographics?.education || {}, "#DC2626")}
                                                 </div>
                                                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
                                                   <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Comportament</h4>
-                                                  {renderBreakdown("Frecventa cumparare", stimBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
+                                                  {renderBreakdown("Frecvență cumpărare", stimBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
                                                   {renderBreakdown("Canale preferate", stimBreakdown.behavioral?.preferredChannels || {}, "#2563EB")}
                                                   {renderBreakdown("Timp online/zi", stimBreakdown.behavioral?.dailyOnlineTime || {}, "#D97706")}
                                                   {renderBreakdown("Dispozitiv principal", stimBreakdown.behavioral?.primaryDevice || {}, "#7C3AED")}
@@ -1715,17 +1715,17 @@ export default function StudiuAdminPage() {
                                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
                                   <span style={{ width: 10, height: 10, borderRadius: "50%", background: catColor, flexShrink: 0 }} />
                                   <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>
-                                    Profil Respondenti — {catLabel}
+                                    Profil Respondenți — {catLabel}
                                   </h3>
                                 </div>
 
                                 {/* Stats cards row */}
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
                                   {[
-                                    { label: "RESPONDENTI", value: catBreakdown.respondentCount, color: "#374151" },
-                                    { label: "COMPLETARI", value: catBreakdown.completedCount, color: "#059669" },
-                                    { label: "RATA", value: `${catBreakdown.completionRate}%`, color: "#DC2626" },
-                                    { label: "RASPUNSURI", value: catBreakdown.responseCount, color: "#2563EB" },
+                                    { label: "RESPONDENȚI", value: catBreakdown.respondentCount, color: "#374151" },
+                                    { label: "COMPLETĂRI", value: catBreakdown.completedCount, color: "#059669" },
+                                    { label: "RATĂ", value: `${catBreakdown.completionRate}%`, color: "#DC2626" },
+                                    { label: "RĂSPUNSURI", value: catBreakdown.responseCount, color: "#2563EB" },
                                   ].map((stat) => (
                                     <div key={stat.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                       <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", textTransform: "uppercase" as const }}>{stat.label}</span>
@@ -1742,18 +1742,18 @@ export default function StudiuAdminPage() {
                                       <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
                                         <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 14 }}>Demografice</h4>
                                         {renderBreakdown("Gen", catBreakdown.demographics?.gender || {}, "#EC4899")}
-                                        {renderBreakdown("Varsta", catBreakdown.demographics?.ageRange || {}, "#D97706")}
-                                        {renderBreakdown("Tara", catBreakdown.demographics?.country || {}, "#059669")}
+                                        {renderBreakdown("Vârstă", catBreakdown.demographics?.ageRange || {}, "#D97706")}
+                                        {renderBreakdown("Țară", catBreakdown.demographics?.country || {}, "#059669")}
                                         {renderBreakdown("Urban / Rural", catBreakdown.demographics?.locationType || {}, "#2563EB")}
                                         {renderBreakdown("Venit", catBreakdown.demographics?.incomeRange || {}, "#7C3AED")}
-                                        {renderBreakdown("Educatie", catBreakdown.demographics?.education || {}, "#DC2626")}
+                                        {renderBreakdown("Educație", catBreakdown.demographics?.education || {}, "#DC2626")}
                                       </div>
                                     )}
                                     {/* Behavioral */}
                                     {hasBehav && (
                                       <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
                                         <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 14 }}>Comportament</h4>
-                                        {renderBreakdown("Frecventa cumparare", catBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
+                                        {renderBreakdown("Frecvență cumpărare", catBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
                                         {renderBreakdown("Canale preferate", catBreakdown.behavioral?.preferredChannels || {}, "#2563EB")}
                                         {renderBreakdown("Timp online/zi", catBreakdown.behavioral?.dailyOnlineTime || {}, "#D97706")}
                                         {renderBreakdown("Dispozitiv principal", catBreakdown.behavioral?.primaryDevice || {}, "#7C3AED")}
@@ -1766,7 +1766,7 @@ export default function StudiuAdminPage() {
                                 {hasPsych && (
                                   <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
                                     <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Profil Psihografic — {catLabel}</h4>
-                                    <p style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 16 }}>Medii 1-10 pentru respondentii care au evaluat materiale {catLabel}.</p>
+                                    <p style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 16 }}>Medii 1-10 pentru respondenții care au evaluat materiale {catLabel}.</p>
                                     <div style={{ display: "flex", flexDirection: "column" as const, gap: 14 }}>
                                       {Object.entries(catBreakdown.psychographicAvg || {}).map(([key, avg]) => (
                                         <div key={key}>
@@ -1804,16 +1804,16 @@ export default function StudiuAdminPage() {
                     <div style={S.configCard}>
                       <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 16 }}>Demografice</h3>
                       {renderBreakdown("Gen", results.demographics?.gender || {}, "#EC4899")}
-                      {renderBreakdown("Varsta", results.demographics?.ageRange || {}, "#D97706")}
-                      {renderBreakdown("Tara", results.demographics?.country || {}, "#059669")}
+                      {renderBreakdown("Vârstă", results.demographics?.ageRange || {}, "#D97706")}
+                      {renderBreakdown("Țară", results.demographics?.country || {}, "#059669")}
                       {renderBreakdown("Urban / Rural", results.demographics?.locationType || {}, "#2563EB")}
                       {renderBreakdown("Venit", results.demographics?.incomeRange || {}, "#7C3AED")}
-                      {renderBreakdown("Educatie", results.demographics?.education || {}, "#DC2626")}
+                      {renderBreakdown("Educație", results.demographics?.education || {}, "#DC2626")}
                     </div>
                     {/* Behavioral column */}
                     <div style={S.configCard}>
                       <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 16 }}>Comportament</h3>
-                      {renderBreakdown("Frecventa cumparare", results.behavioral?.purchaseFrequency || {}, "#059669")}
+                      {renderBreakdown("Frecvență cumpărare", results.behavioral?.purchaseFrequency || {}, "#059669")}
                       {renderBreakdown("Canale preferate", results.behavioral?.preferredChannels || {}, "#2563EB")}
                       {renderBreakdown("Timp online/zi", results.behavioral?.dailyOnlineTime || {}, "#D97706")}
                       {renderBreakdown("Dispozitiv principal", results.behavioral?.primaryDevice || {}, "#7C3AED")}
@@ -1825,7 +1825,7 @@ export default function StudiuAdminPage() {
                 {resultsSubTab === "psihografic" && (
                   <div style={S.configCard}>
                     <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Profil Psihografic (medii 1-10)</h3>
-                    <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>Intrebarile 11-15: cat de mult sunt de acord respondentii cu afirmatiile.</p>
+                    <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>Întrebările 11-15: cât de mult sunt de acord respondenții cu afirmațiile.</p>
                     <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
                       {Object.entries(results.psychographicAvg || {}).map(([key, avg]) => (
                         <div key={key}>
