@@ -1925,8 +1925,8 @@ function App() {
     var sondajBtn = document.querySelector('[data-sondaj]');
     if(sondajBtn) { sondajBtn.addEventListener('click', function() {
       activeStage = 'sondaj'; activeTask = null;
-      /* Change URL to /studiu when SONDAJ is active */
-      try { window.parent.history.pushState({stage: 'sondaj'}, '', '/studiu'); } catch(e) {}
+      /* Keep URL as /articolstiintific — do NOT navigate to /studiu */
+      try { window.parent.history.pushState({stage: 'sondaj'}, '', '/articolstiintific'); } catch(e) {}
       render();
     }); }
     /* Single task view navigation buttons */
