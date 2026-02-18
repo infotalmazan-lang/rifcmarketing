@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceRole } from "@/lib/supabase/server";
 
-// Returns upload config for tus resumable upload to Supabase Storage
-// Browser uses tus-js-client to upload directly, bypassing Vercel limits
+// Creates a signed upload URL using service role (bypasses RLS)
+// Browser uploads directly to Supabase via XHR PUT with progress tracking
 export async function POST(req: NextRequest) {
   try {
     const { filename, contentType } = await req.json();
@@ -15,14 +15,23 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createServiceRole();
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    // Use anon key for tus upload — it's a valid JWT (service role key is not a JWT)
-    // RLS policy on storage.objects allows INSERT for bucket_id = 'survey-media'
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
     const ext = filename.split(".").pop() || "bin";
     const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const path = `materials/${uniqueName}`;
+
+    // Create signed upload URL using service role (valid for 10 minutes)
+    const { data, error } = await supabase.storage
+      .from("survey-media")
+      .createSignedUploadUrl(path);
+
+    if (error || !data) {
+      console.error("Signed URL error:", error);
+      return NextResponse.json(
+        { error: `Failed to create upload URL: ${error?.message || "unknown"}` },
+        { status: 500 }
+      );
+    }
 
     // Get public URL for after upload
     const { data: urlData } = supabase.storage
@@ -30,18 +39,14 @@ export async function POST(req: NextRequest) {
       .getPublicUrl(path);
 
     return NextResponse.json({
-      // tus endpoint for resumable uploads
-      tusEndpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
-      // Auth token (anon key = valid JWT, RLS allows insert on survey-media)
-      authToken: anonKey,
-      // Bucket and path
-      bucketId: "survey-media",
-      objectPath: path,
-      // Public URL after upload completes
+      signedUrl: data.signedUrl,
+      token: data.token,
+      path,
       publicUrl: urlData.publicUrl,
       contentType: contentType || "application/octet-stream",
     });
-  } catch {
+  } catch (err) {
+    console.error("Upload config error:", err);
     return NextResponse.json(
       { error: "Internal error" },
       { status: 500 }

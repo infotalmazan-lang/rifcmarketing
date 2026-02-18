@@ -33,7 +33,7 @@ import {
   UserCheck,
   Bot,
 } from "lucide-react";
-import * as tus from "tus-js-client";
+// Upload uses XHR PUT to Supabase signed URL (no extra deps needed)
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu Admin — Structura Sondaj
@@ -413,7 +413,7 @@ export default function StudiuAdminPage() {
   const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
   const [aiSaving, setAiSaving] = useState(false);
 
-  // ── Upload helper (tus resumable → direct to Supabase Storage, supports large files up to 500MB) ──
+  // ── Upload helper (signed URL + XHR PUT with progress) ──
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [uploadStatus, setUploadStatus] = useState<string>("");
 
@@ -422,14 +422,14 @@ export default function StudiuAdminPage() {
     setUploadProgress((prev) => ({ ...prev, [fieldKey]: 0 }));
     setUploadStatus(`Se pregateste: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)} MB, ${file.type})...`);
     try {
-      // Step 1: Get tus upload config from our API (uses service role)
+      // Step 1: Get signed upload URL from our API (service role creates it)
       const configRes = await fetch("/api/upload/signed-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: file.name, contentType: file.type }),
       });
       const config = await configRes.json();
-      if (!config.tusEndpoint || !config.objectPath) {
+      if (!config.signedUrl || !config.path) {
         const errMsg = `Eroare configurare: ${config.error || "raspuns invalid de la server"}`;
         console.error(errMsg, config);
         setUploadStatus(errMsg);
@@ -437,52 +437,49 @@ export default function StudiuAdminPage() {
       }
       setUploadStatus(`Se incarca ${file.name}...`);
 
-      // Step 2: Upload via tus resumable protocol (handles large files reliably)
+      // Step 2: Upload via XHR PUT to signed URL (supports progress events)
       return await new Promise<string | null>((resolve) => {
-        const upload = new tus.Upload(file, {
-          endpoint: config.tusEndpoint,
-          retryDelays: [0, 1000, 3000, 5000, 10000],
-          chunkSize: 6 * 1024 * 1024, // 6MB chunks
-          headers: {
-            authorization: `Bearer ${config.authToken}`,
-            "x-upsert": "true",
-          },
-          uploadDataDuringCreation: true,
-          removeFingerprintOnSuccess: true,
-          metadata: {
-            bucketName: config.bucketId,
-            objectName: config.objectPath,
-            contentType: config.contentType,
-            cacheControl: "3600",
-          },
-          onError: (err) => {
-            const errMsg = `Upload EROARE: ${err.message || err}`;
-            console.error("Tus upload error:", err);
-            setUploadStatus(errMsg);
-            setUploading((prev) => ({ ...prev, [fieldKey]: false }));
-            resolve(null);
-          },
-          onProgress: (bytesUploaded, bytesTotal) => {
-            const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener("progress", (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
             setUploadProgress((prev) => ({ ...prev, [fieldKey]: pct }));
-            setUploadStatus(`Se incarca: ${pct}% (${(bytesUploaded / 1024 / 1024).toFixed(1)} / ${(bytesTotal / 1024 / 1024).toFixed(1)} MB)`);
-          },
-          onSuccess: () => {
-            setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
-            setUploading((prev) => ({ ...prev, [fieldKey]: false }));
-            setUploadStatus(`Upload complet: ${file.name}`);
-            resolve(config.publicUrl);
-          },
+            setUploadStatus(`Se incarca: ${pct}% (${(e.loaded / 1024 / 1024).toFixed(1)} / ${(e.total / 1024 / 1024).toFixed(1)} MB)`);
+          }
         });
 
-        // Check for previous uploads to resume
-        upload.findPreviousUploads().then((previousUploads) => {
-          if (previousUploads.length > 0) {
-            setUploadStatus("Se reia uploadul anterior...");
-            upload.resumeFromPreviousUpload(previousUploads[0]);
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
+            setUploadStatus(`Upload complet: ${file.name}`);
+            resolve(config.publicUrl);
+          } else {
+            const errMsg = `Upload EROARE (${xhr.status}): ${xhr.responseText}`;
+            console.error(errMsg);
+            setUploadStatus(errMsg);
+            resolve(null);
           }
-          upload.start();
         });
+
+        xhr.addEventListener("error", () => {
+          const errMsg = "Upload EROARE: conexiune esuata";
+          console.error(errMsg);
+          setUploadStatus(errMsg);
+          resolve(null);
+        });
+
+        xhr.addEventListener("timeout", () => {
+          const errMsg = "Upload EROARE: timeout depasit";
+          console.error(errMsg);
+          setUploadStatus(errMsg);
+          resolve(null);
+        });
+
+        xhr.open("PUT", config.signedUrl);
+        xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+        xhr.timeout = 600000; // 10 minute timeout
+        xhr.send(file);
       });
     } catch (err) {
       const errMsg = `Upload EROARE: ${err instanceof Error ? err.message : String(err)}`;
