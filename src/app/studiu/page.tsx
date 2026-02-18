@@ -1500,61 +1500,50 @@ export default function StudiuAdminPage() {
                         ? results.stimuliResults.filter(s => s.type === resultsCatFilter)
                         : results.stimuliResults;
 
+                      // Compute TOTAL row from filtered data
+                      const withData = filteredStimuli.filter(s => s.response_count > 0);
+                      const totalN = withData.reduce((a, s) => a + s.response_count, 0);
+                      const totalRow = withData.length > 0 ? {
+                        avg_r: Math.round((withData.reduce((a, s) => a + s.avg_r, 0) / withData.length) * 100) / 100,
+                        avg_i: Math.round((withData.reduce((a, s) => a + s.avg_i, 0) / withData.length) * 100) / 100,
+                        avg_f: Math.round((withData.reduce((a, s) => a + s.avg_f, 0) / withData.length) * 100) / 100,
+                        avg_c: Math.round((withData.reduce((a, s) => a + s.avg_c, 0) / withData.length) * 100) / 100,
+                        avg_c_score: Math.round((withData.reduce((a, s) => a + s.avg_c_score, 0) / withData.length) * 100) / 100,
+                        avg_cta: Math.round((withData.reduce((a, s) => a + s.avg_cta, 0) / withData.length) * 100) / 100,
+                        sd_c: Math.round((withData.reduce((a, s) => a + s.sd_c, 0) / withData.length) * 100) / 100,
+                        avg_time: Math.round(withData.reduce((a, s) => a + s.avg_time, 0) / withData.length),
+                      } : null;
+
                       return (
                         <>
-                          {/* Category cards — TOP, clickable filter */}
-                          {typeAvgs.length > 0 && (
-                            <div style={{ marginBottom: 16 }}>
-                              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8, marginBottom: 8 }}>
-                                {/* "Toate" reset button */}
-                                <button onClick={() => setResultsCatFilter(null)} style={{
-                                  padding: "8px 14px", borderRadius: 8, cursor: "pointer", transition: "all 0.15s",
-                                  border: !resultsCatFilter ? "2px solid #111827" : "1px solid #e5e7eb",
-                                  background: !resultsCatFilter ? "#111827" : "#fff",
-                                  color: !resultsCatFilter ? "#fff" : "#6B7280",
-                                  fontSize: 11, fontWeight: 700,
-                                }}>TOATE ({results.stimuliResults.length})</button>
+                          {/* Category filter pills — compact, one row */}
+                          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16 }}>
+                            <button onClick={() => setResultsCatFilter(null)} style={{
+                              padding: "6px 14px", borderRadius: 20, cursor: "pointer", transition: "all 0.15s", fontSize: 12, fontWeight: 600,
+                              border: !resultsCatFilter ? "2px solid #111827" : "1px solid #e5e7eb",
+                              background: !resultsCatFilter ? "#111827" : "#fff",
+                              color: !resultsCatFilter ? "#fff" : "#374151",
+                            }}>Toate ({results.stimuliResults.length})</button>
+                            {typeAvgs.map(t => {
+                              const cat = categories.find(c => c.type === t.type);
+                              const isActive = resultsCatFilter === t.type;
+                              const catColor = cat?.color || "#6B7280";
+                              return (
+                                <button key={t.type} onClick={() => setResultsCatFilter(isActive ? null : t.type)} style={{
+                                  padding: "6px 12px", borderRadius: 20, cursor: "pointer", transition: "all 0.15s", fontSize: 12, fontWeight: 600,
+                                  display: "flex", alignItems: "center", gap: 5,
+                                  border: isActive ? `2px solid ${catColor}` : "1px solid #e5e7eb",
+                                  background: isActive ? `${catColor}14` : "#fff",
+                                  color: isActive ? catColor : "#374151",
+                                }}>
+                                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: catColor, flexShrink: 0 }} />
+                                  {cat?.label || t.type}
+                                </button>
+                              );
+                            })}
+                          </div>
 
-                                {typeAvgs.map(t => {
-                                  const cat = categories.find(c => c.type === t.type);
-                                  const isActive = resultsCatFilter === t.type;
-                                  const catColor = cat?.color || "#6B7280";
-                                  return (
-                                    <button key={t.type} onClick={() => setResultsCatFilter(isActive ? null : t.type)} style={{
-                                      padding: "8px 12px", borderRadius: 8, cursor: "pointer", transition: "all 0.15s",
-                                      border: isActive ? `2px solid ${catColor}` : "1px solid #e5e7eb",
-                                      background: isActive ? `${catColor}12` : "#fafafa",
-                                      display: "flex", alignItems: "center", gap: 8, minWidth: 180,
-                                    }}>
-                                      <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "flex-start" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                          <span style={{ width: 7, height: 7, borderRadius: "50%", background: catColor, flexShrink: 0 }} />
-                                          <span style={{ fontSize: 11, fontWeight: 700, color: isActive ? catColor : "#374151" }}>{cat?.label || t.type}</span>
-                                          <span style={{ fontSize: 9, color: "#9CA3AF" }}>N={t.count}</span>
-                                        </div>
-                                        <div style={{ display: "flex", gap: 6, marginTop: 3 }}>
-                                          {[
-                                            { l: "R", v: t.avg_r, c: "#DC2626" },
-                                            { l: "I", v: t.avg_i, c: "#D97706" },
-                                            { l: "F", v: t.avg_f, c: "#7C3AED" },
-                                            { l: "C", v: t.avg_c, c: "#111827" },
-                                            { l: "CTA", v: t.avg_cta, c: "#2563EB" },
-                                          ].map(d => (
-                                            <span key={d.l} style={{ fontSize: 10, fontFamily: "JetBrains Mono, monospace" }}>
-                                              <span style={{ color: "#9CA3AF", fontSize: 8 }}>{d.l}</span>
-                                              <span style={{ color: d.c, fontWeight: 700, marginLeft: 1 }}>{d.v}</span>
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Results table — filtered */}
+                          {/* Results table — filtered, with TOTAL first row */}
                           <div style={{ ...S.configCard, padding: 0, overflow: "auto" }}>
                             <table style={{ width: "100%", borderCollapse: "collapse" as const, minWidth: 900 }}>
                               <thead>
@@ -1573,6 +1562,22 @@ export default function StudiuAdminPage() {
                                 </tr>
                               </thead>
                               <tbody>
+                                {/* TOTAL row */}
+                                {totalRow && (
+                                  <tr style={{ borderBottom: "2px solid #e5e7eb", background: "#f9fafb" }}>
+                                    <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", fontSize: 13 }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.label || resultsCatFilter) : "TOTAL"}</td>
+                                    <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#111827", color: "#fff" }}>{resultsCatFilter || "ALL"}</span></td>
+                                    <td style={{ ...tdStyle, fontWeight: 700 }}>{totalN}</td>
+                                    <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 800 }}>{totalRow.avg_r}</td>
+                                    <td style={{ ...tdStyle, color: "#D97706", fontWeight: 800 }}>{totalRow.avg_i}</td>
+                                    <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 800 }}>{totalRow.avg_f}</td>
+                                    <td style={{ ...tdStyle, color: "#111827", fontWeight: 900, fontSize: 16 }}>{totalRow.avg_c}</td>
+                                    <td style={{ ...tdStyle, color: "#059669", fontWeight: 800 }}>{totalRow.avg_c_score}</td>
+                                    <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 800 }}>{totalRow.avg_cta}</td>
+                                    <td style={{ ...tdStyle, color: "#6B7280", fontWeight: 700 }}>{totalRow.sd_c}</td>
+                                    <td style={{ ...tdStyle, color: "#6B7280", fontWeight: 700, fontSize: 11 }}>{totalRow.avg_time ? `${totalRow.avg_time}s` : "—"}</td>
+                                  </tr>
+                                )}
                                 {filteredStimuli.map((s) => (
                                   <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                                     <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>
