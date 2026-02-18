@@ -424,6 +424,7 @@ export default function StudiuAdminPage() {
   const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic">("scoruri");
   const [resultsCatFilter, setResultsCatFilter] = useState<string | null>(null);
   const [expandedStimulusId, setExpandedStimulusId] = useState<string | null>(null);
+  const [tooltipCol, setTooltipCol] = useState<string | null>(null);
 
   // Expert panel state
   const [expertEvals, setExpertEvals] = useState<ExpertEvaluation[]>([]);
@@ -1137,21 +1138,48 @@ export default function StudiuAdminPage() {
 
                           {/* Results table — filtered, with TOTAL first row + expandable per-stimulus details */}
                           <div style={{ ...S.configCard, padding: 0, overflow: "auto" }}>
+                            {/* Column tooltip */}
+                            {tooltipCol && (() => {
+                              const tips: Record<string, { title: string; desc: string }> = {
+                                N: { title: "N \u2014 Num\u0103r R\u0103spunsuri", desc: "C\u00e2te evalu\u0103ri (r\u0103spunsuri complete) au fost colectate pentru acest material. Fiecare respondent evalueaz\u0103 materialul pe scalele R, I, F." },
+                                R: { title: "R \u2014 Recunoa\u0219tere (Recognition)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de u\u0219or este materialul de recunoscut \u0219i identificat. Un R mare \u00eenseamn\u0103 c\u0103 brandul/mesajul este vizibil \u0219i memorabil." },
+                                I: { title: "I \u2014 Impact Emo\u021Bional (Emotional Impact)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 intensitatea reac\u021Biei emo\u021Bionale pe care o provoac\u0103 materialul. Un I mare \u00eenseamn\u0103 c\u0103 materialul genereaz\u0103 emo\u021Bii puternice (pozitive sau negative)." },
+                                F: { title: "F \u2014 Frecven\u021B\u0103 (Frequency/Familiarity)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de familiar \u0219i frecvent perceput este materialul. Un F mare \u00eenseamn\u0103 c\u0103 respondentul simte c\u0103 a mai v\u0103zut materialul de mai multe ori." },
+                                Cform: { title: "C\u2091\u2092\u2093\u2098 \u2014 Scor Comunicare (Formula)", desc: "Calculat dup\u0103 formula: C = R + I \u00d7 F. Combin\u0103 cele 3 dimensiuni \u00eentr-un scor unic. Valori mai mari = comunicare mai eficient\u0103. Maxim teoretic: 110 (R=10, I=10, F=10)." },
+                                Cperc: { title: "C\u209a\u2091\u2093\u2094 \u2014 Scor Comunicare Perceput\u0103", desc: "Media scorurilor de Comunicare percepute direct de respondent (nu calculate). Respondentul r\u0103spunde: \u201eC\u00e2t de eficient comunic\u0103 acest material?\u201d pe scala 1\u201310." },
+                                CTA: { title: "CTA \u2014 Call To Action", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de puternic este \u00eendemnul la ac\u021Biune. Un CTA mare \u00eenseamn\u0103 c\u0103 materialul \u00eel motiveaz\u0103 pe respondent s\u0103 fac\u0103 ceva (s\u0103 cumpere, s\u0103 viziteze, s\u0103 afle mai mult)." },
+                                SD: { title: "SD \u2014 Standard Deviation (Devia\u021Bie Standard)", desc: "M\u0103soar\u0103 c\u00e2t de dispersate sunt r\u0103spunsurile. SD mic = consens (to\u021Bi evalueaz\u0103 similar). SD mare = opinii \u00eemp\u0103r\u021Bite (unii dau note mari, al\u021Bii mici). Util pentru identificarea materialelor controversate." },
+                                Ts: { title: "T(s) \u2014 Timp Mediu (secunde)", desc: "Timpul mediu \u00een secunde pe care un respondent l-a petrecut evaluand acest material. Timpi mai mari pot indica o implicare mai mare sau o dificultate \u00een evaluare." },
+                              };
+                              const t = tips[tooltipCol];
+                              if (!t) return null;
+                              return (
+                                <div onClick={() => setTooltipCol(null)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.3)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+                                  <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "24px 28px", maxWidth: 440, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>{t.title}</h3>
+                                      <button onClick={() => setTooltipCol(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", padding: 4 }}>&times;</button>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#4B5563" }}>{t.desc}</p>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                             <table style={{ width: "100%", borderCollapse: "collapse" as const, minWidth: 900 }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
                                   <th style={{ ...thStyle, width: 36, padding: "8px 4px" }}></th>
                                   <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 180 }}>MATERIAL</th>
                                   <th style={thStyle}>CANAL</th>
-                                  <th style={thStyle}>N</th>
-                                  <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
-                                  <th style={{ ...thStyle, color: "#D97706" }}>I</th>
-                                  <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
-                                  <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C<sub style={{ fontSize: 9 }}>form</sub></th>
-                                  <th style={{ ...thStyle, color: "#059669" }}>C<sub style={{ fontSize: 9 }}>perc</sub></th>
-                                  <th style={{ ...thStyle, color: "#2563EB" }}>CTA</th>
-                                  <th style={thStyle}>SD</th>
-                                  <th style={thStyle}>T(s)</th>
+                                  <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => setTooltipCol("N")}>N</th>
+                                  <th style={{ ...thStyle, color: "#DC2626", cursor: "pointer" }} onClick={() => setTooltipCol("R")}>R</th>
+                                  <th style={{ ...thStyle, color: "#D97706", cursor: "pointer" }} onClick={() => setTooltipCol("I")}>I</th>
+                                  <th style={{ ...thStyle, color: "#7C3AED", cursor: "pointer" }} onClick={() => setTooltipCol("F")}>F</th>
+                                  <th style={{ ...thStyle, color: "#111827", fontWeight: 800, cursor: "pointer" }} onClick={() => setTooltipCol("Cform")}>C<sub style={{ fontSize: 9 }}>form</sub></th>
+                                  <th style={{ ...thStyle, color: "#059669", cursor: "pointer" }} onClick={() => setTooltipCol("Cperc")}>C<sub style={{ fontSize: 9 }}>perc</sub></th>
+                                  <th style={{ ...thStyle, color: "#2563EB", cursor: "pointer" }} onClick={() => setTooltipCol("CTA")}>CTA</th>
+                                  <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => setTooltipCol("SD")}>SD</th>
+                                  <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => setTooltipCol("Ts")}>T(s)</th>
                                 </tr>
                               </thead>
                               <tbody>
