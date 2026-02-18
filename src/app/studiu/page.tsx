@@ -426,6 +426,40 @@ export default function StudiuAdminPage() {
   const [expandedStimulusId, setExpandedStimulusId] = useState<string | null>(null);
   const [tooltipCol, setTooltipCol] = useState<string | null>(null);
 
+  // Log panel state
+  const [showLog, setShowLog] = useState(false);
+  const [logData, setLogData] = useState<any[]>([]);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logDateFrom, setLogDateFrom] = useState("");
+  const [logDateTo, setLogDateTo] = useState("");
+  const [logSelected, setLogSelected] = useState<Set<string>>(new Set());
+
+  const fetchLog = useCallback(async () => {
+    setLogLoading(true);
+    try {
+      const res = await fetch("/api/survey/log");
+      const json = await res.json();
+      if (json.ok) setLogData(json.logs);
+    } catch { /* ignore */ }
+    setLogLoading(false);
+  }, []);
+
+  const deleteLogEntries = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch("/api/survey/log", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setLogData((prev) => prev.filter((l) => !ids.includes(l.id)));
+        setLogSelected((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
+      }
+    } catch { /* ignore */ }
+  };
+
   // Expert panel state
   const [expertEvals, setExpertEvals] = useState<ExpertEvaluation[]>([]);
   const [expertLoading, setExpertLoading] = useState(false);
@@ -917,11 +951,137 @@ export default function StudiuAdminPage() {
         </div>
         <div style={S.headerBadge}>SONDAJ</div>
         <div style={{ flex: 1 }} />
+        <button style={{ ...S.langBtn, background: "#111827", color: "#fff", marginRight: 8 }} onClick={() => { setShowLog(true); fetchLog(); }}>
+          <ClipboardList size={14} />
+          <span>LOG</span>
+        </button>
         <button style={S.langBtn} onClick={() => {}}>
           <Globe size={14} />
           <span>RO</span>
         </button>
       </div>
+
+      {/* ═══ LOG PANEL ═══ */}
+      {showLog && (() => {
+        const filtered = logData.filter((l) => {
+          if (logDateFrom) { const d = new Date(l.created_at); if (d < new Date(logDateFrom)) return false; }
+          if (logDateTo) { const d = new Date(l.created_at); if (d > new Date(logDateTo + "T23:59:59")) return false; }
+          return true;
+        });
+        const allFilteredIds = filtered.map((l: any) => l.id);
+        const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => logSelected.has(id));
+        return (
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 10000, display: "flex", justifyContent: "center", padding: "30px 20px", overflowY: "auto" }}>
+            <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 1100, padding: "28px 32px", maxHeight: "calc(100vh - 60px)", overflowY: "auto" }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#111827" }}>Log Completări Sondaj</h2>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B7280" }}>{logData.length} înregistrări totale · {filtered.length} afișate</p>
+                </div>
+                <button onClick={() => setShowLog(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: "#9CA3AF", padding: 4 }}>&times;</button>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>DE LA:</label>
+                <input type="date" value={logDateFrom} onChange={(e) => setLogDateFrom(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>PÂNĂ LA:</label>
+                <input type="date" value={logDateTo} onChange={(e) => setLogDateTo(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+                {(logDateFrom || logDateTo) && (
+                  <button onClick={() => { setLogDateFrom(""); setLogDateTo(""); }} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", fontSize: 12, cursor: "pointer", color: "#6B7280" }}>Resetează</button>
+                )}
+                <div style={{ flex: 1 }} />
+                {logSelected.size > 0 && (
+                  <button onClick={() => { if (confirm(`Ștergi ${logSelected.size} înregistrări selectate?`)) deleteLogEntries(Array.from(logSelected)); }} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    Șterge selectate ({logSelected.size})
+                  </button>
+                )}
+              </div>
+
+              {logLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Se încarcă...</div>
+              ) : filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nicio înregistrare</div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                      <th style={{ padding: "8px 6px", width: 36 }}>
+                        <input type="checkbox" checked={allSelected} onChange={() => {
+                          if (allSelected) setLogSelected(new Set());
+                          else setLogSelected(new Set(allFilteredIds));
+                        }} />
+                      </th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>#</th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>DATA</th>
+                      <th style={thStyle}>STATUS</th>
+                      <th style={thStyle}>RĂSPUNSURI</th>
+                      <th style={thStyle}>DISPOZITIV</th>
+                      <th style={thStyle}>LIMBĂ</th>
+                      <th style={thStyle}>GRUP</th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>DEMOGRAFIE</th>
+                      <th style={thStyle}>TIMP</th>
+                      <th style={{ padding: "8px 6px", width: 50 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((log: any, idx: number) => {
+                      const created = new Date(log.created_at);
+                      const completed = log.completed_at ? new Date(log.completed_at) : null;
+                      const isComplete = !!completed;
+                      const duration = completed ? Math.round((completed.getTime() - created.getTime()) / 1000) : null;
+                      const demoGender = log.demographics?.gender || "—";
+                      const demoAge = log.demographics?.age_range || "—";
+                      const demoCountry = log.demographics?.country || "—";
+                      const isChecked = logSelected.has(log.id);
+                      return (
+                        <tr key={log.id} style={{ borderBottom: "1px solid #f3f4f6", background: isChecked ? "#fef3c7" : "transparent" }}>
+                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
+                            <input type="checkbox" checked={isChecked} onChange={() => {
+                              setLogSelected((prev) => { const n = new Set(prev); if (n.has(log.id)) n.delete(log.id); else n.add(log.id); return n; });
+                            }} />
+                          </td>
+                          <td style={{ ...tdStyle, fontWeight: 600, color: "#6B7280", fontSize: 11 }}>{filtered.length - idx}</td>
+                          <td style={{ ...tdStyle, fontSize: 12 }}>
+                            <div style={{ fontWeight: 600 }}>{created.toLocaleDateString("ro-RO")}</div>
+                            <div style={{ color: "#9CA3AF", fontSize: 11 }}>{created.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}</div>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: isComplete ? "#d1fae5" : "#fef3c7", color: isComplete ? "#065f46" : "#92400e" }}>
+                              {isComplete ? "COMPLET" : `Pas ${log.step_completed}/5`}
+                            </span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center", fontWeight: 600 }}>{log.responseCount}</td>
+                          <td style={{ ...tdStyle, textAlign: "center" }}>
+                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 3, background: "#f3f4f6", color: "#374151" }}>{log.device_type || "—"}</span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: log.locale === "RO" ? "#dbeafe" : log.locale === "RU" ? "#fee2e2" : "#d1fae5", color: log.locale === "RO" ? "#1e40af" : log.locale === "RU" ? "#991b1b" : "#065f46" }}>{log.locale || "—"}</span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center", fontSize: 11, fontWeight: 600 }}>{log.variant_group || "—"}</td>
+                          <td style={{ ...tdStyle, fontSize: 11 }}>
+                            <span>{demoGender} · {demoAge} · {demoCountry}</span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center", fontSize: 11 }}>
+                            {duration !== null ? (duration >= 60 ? `${Math.floor(duration / 60)}m ${duration % 60}s` : `${duration}s`) : "—"}
+                          </td>
+                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
+                            <button onClick={() => { if (confirm("Ștergi această înregistrare?")) deleteLogEntries([log.id]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: 14, padding: 4 }} title="Șterge">
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
 
       {/* Tabs */}
       <div style={S.tabsBar}>
