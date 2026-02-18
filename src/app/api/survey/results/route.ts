@@ -20,17 +20,8 @@ export async function GET(request: Request) {
 
     const { data: filteredRespondents, count: totalRespondents } = await respondentQuery;
 
-    // Completed respondents
-    let completedQuery = supabase
-      .from("survey_respondents")
-      .select("id", { count: "exact", head: true })
-      .not("completed_at", "is", null);
-
-    if (distributionId) {
-      completedQuery = completedQuery.eq("distribution_id", distributionId);
-    }
-
-    const { count: completedRespondents } = await completedQuery;
+    // Completed respondents — computed from the same dataset to ensure consistency
+    const completedRespondents = (filteredRespondents || []).filter(r => r.completed_at != null).length;
 
     // Get respondent IDs for filtering responses
     const respondentIds = (filteredRespondents || []).map((r: { id: string }) => r.id);
