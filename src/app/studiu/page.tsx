@@ -376,28 +376,38 @@ export default function StudiuAdminPage() {
   const [showQr, setShowQr] = useState<string | null>(null);
 
   // Results state
+  interface StimulusResult {
+    id: string;
+    name: string;
+    type: string;
+    industry: string;
+    variant_label: string | null;
+    execution_quality: string | null;
+    response_count: number;
+    avg_r: number;
+    avg_i: number;
+    avg_f: number;
+    avg_c: number;
+    sd_c: number;
+    avg_c_score: number;
+    avg_cta: number;
+    avg_time: number;
+  }
   interface ResultsData {
     totalRespondents: number;
     completedRespondents: number;
     completionRate: number;
     totalResponses: number;
-    stimuliResults: {
-      id: string;
-      name: string;
-      type: string;
-      industry: string;
-      response_count: number;
-      avg_r: number;
-      avg_i: number;
-      avg_f: number;
-      avg_c: number;
-      sd_c: number;
-    }[];
+    stimuliResults: StimulusResult[];
     aiEvaluations: unknown[];
+    demographics: Record<string, Record<string, number>>;
+    behavioral: Record<string, Record<string, number>>;
+    psychographicAvg: Record<string, number>;
   }
   const [results, setResults] = useState<ResultsData | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
-  const [resultsSegment, setResultsSegment] = useState<string>("general"); // "general" or distribution_id
+  const [resultsSegment, setResultsSegment] = useState<string>("general");
+  const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic">("scoruri");
 
   // Expert panel state
   const [expertEvals, setExpertEvals] = useState<ExpertEvaluation[]>([]);
@@ -1365,46 +1375,52 @@ export default function StudiuAdminPage() {
           </>
         )}
 
-        {activeTab === "rezultate" && (
+        {activeTab === "rezultate" && (() => {
+          // Helper: render a horizontal bar breakdown
+          const renderBreakdown = (label: string, data: Record<string, number>, color: string) => {
+            const total = Object.values(data).reduce((a, v) => a + v, 0);
+            if (total === 0) return null;
+            const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
+            return (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const }}>{label}</div>
+                {sorted.map(([key, count]) => {
+                  const pct = Math.round((count / total) * 100);
+                  return (
+                    <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: "#374151", minWidth: 100, textAlign: "right" as const }}>{key}</span>
+                      <div style={{ flex: 1, height: 18, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", position: "relative" as const }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4, transition: "width 0.3s" }} />
+                      </div>
+                      <span style={{ fontSize: 11, color: "#6B7280", minWidth: 50, fontFamily: "JetBrains Mono, monospace" }}>{count} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          };
+
+          // Psychographic labels map
+          const psychLabels: Record<string, string> = {
+            adReceptivity: "Receptivitate la reclame",
+            visualPreference: "Preferinta vizuala",
+            impulseBuying: "Cumparare impulsiva",
+            irrelevanceAnnoyance: "Iritare reclame irelevante",
+            attentionCapture: "Captare atentie",
+          };
+
+          return (
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>Rezultate Sondaj</h2>
             <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
-              Scoruri agregate R, I, F, C pe fiecare material — formula R + I &times; F = C.
+              Scoruri agregate R, I, F, C, CTA pe fiecare material + profil demografic respondenti.
             </p>
 
-            {/* Segment sub-tabs */}
-            <div style={{
-              display: "flex",
-              gap: 0,
-              borderBottom: "2px solid #e5e7eb",
-              marginBottom: 20,
-              overflowX: "auto" as const,
-            }}>
-              <button
-                style={{
-                  ...S.tab,
-                  fontSize: 12,
-                  padding: "10px 16px",
-                  ...(resultsSegment === "general" ? S.tabActive : {}),
-                }}
-                onClick={() => setResultsSegment("general")}
-              >
-                GENERAL
-              </button>
+            {/* Segment sub-tabs (distributions) */}
+            <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7eb", marginBottom: 16, overflowX: "auto" as const }}>
+              <button style={{ ...S.tab, fontSize: 12, padding: "10px 16px", ...(resultsSegment === "general" ? S.tabActive : {}) }} onClick={() => setResultsSegment("general")}>GENERAL</button>
               {distributions.map((d) => (
-                <button
-                  key={d.id}
-                  style={{
-                    ...S.tab,
-                    fontSize: 12,
-                    padding: "10px 16px",
-                    whiteSpace: "nowrap" as const,
-                    ...(resultsSegment === d.id ? S.tabActive : {}),
-                  }}
-                  onClick={() => setResultsSegment(d.id)}
-                >
-                  {d.name}
-                </button>
+                <button key={d.id} style={{ ...S.tab, fontSize: 12, padding: "10px 16px", whiteSpace: "nowrap" as const, ...(resultsSegment === d.id ? S.tabActive : {}) }} onClick={() => setResultsSegment(d.id)}>{d.name}</button>
               ))}
             </div>
 
@@ -1430,69 +1446,192 @@ export default function StudiuAdminPage() {
                   ].map((stat) => (
                     <div key={stat.label} style={S.configItem}>
                       <span style={S.configLabel}>{stat.label}</span>
-                      <span style={{ fontSize: 24, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>
-                        {stat.value}
-                      </span>
+                      <span style={{ fontSize: 24, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>{stat.value}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Results table */}
-                {results.stimuliResults.length === 0 ? (
-                  <div style={S.placeholderTab}>
-                    <BarChart3 size={48} style={{ color: "#d1d5db" }} />
-                    <p style={{ color: "#6B7280", fontSize: 14 }}>
-                      {resultsSegment === "general"
-                        ? "Niciun raspuns inca. Distribue sondajul pentru a colecta date."
-                        : "Niciun raspuns pentru acest segment."}
-                    </p>
+                {/* Content sub-tabs: SCORURI | PROFIL | PSIHOGRAFIC */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                  {([
+                    { key: "scoruri" as const, label: "Scoruri R·I·F·C·CTA" },
+                    { key: "profil" as const, label: "Profil Respondenti" },
+                    { key: "psihografic" as const, label: "Psihografic" },
+                  ]).map((t) => (
+                    <button key={t.key} onClick={() => setResultsSubTab(t.key)} style={{
+                      padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6, border: "1px solid #e5e7eb", cursor: "pointer",
+                      background: resultsSubTab === t.key ? "#111827" : "#fff",
+                      color: resultsSubTab === t.key ? "#fff" : "#6B7280",
+                    }}>{t.label}</button>
+                  ))}
+                </div>
+
+                {/* ── SUB-TAB: SCORURI ── */}
+                {resultsSubTab === "scoruri" && (
+                  <>
+                    {results.stimuliResults.length === 0 ? (
+                      <div style={S.placeholderTab}>
+                        <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                        <p style={{ color: "#6B7280", fontSize: 14 }}>{resultsSegment === "general" ? "Niciun raspuns inca. Distribue sondajul pentru a colecta date." : "Niciun raspuns pentru acest segment."}</p>
+                      </div>
+                    ) : (
+                      <div style={{ ...S.configCard, padding: 0, overflow: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" as const, minWidth: 900 }}>
+                          <thead>
+                            <tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 180 }}>MATERIAL</th>
+                              <th style={thStyle}>TIP</th>
+                              <th style={thStyle}>N</th>
+                              <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                              <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                              <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                              <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C<sub style={{ fontSize: 9 }}>form</sub></th>
+                              <th style={{ ...thStyle, color: "#059669" }}>C<sub style={{ fontSize: 9 }}>perc</sub></th>
+                              <th style={{ ...thStyle, color: "#2563EB" }}>CTA</th>
+                              <th style={thStyle}>SD</th>
+                              <th style={thStyle}>T(s)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {results.stimuliResults.map((s) => (
+                              <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>
+                                  {s.name}
+                                  {s.variant_label && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: "#dbeafe", color: "#2563EB" }}>{s.variant_label}</span>}
+                                </td>
+                                <td style={tdStyle}>
+                                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: categories.find(c => c.type === s.type)?.color ? `${categories.find(c => c.type === s.type)!.color}18` : "#f3f4f6", color: categories.find(c => c.type === s.type)?.color || "#6B7280" }}>{s.type}</span>
+                                </td>
+                                <td style={tdStyle}>{s.response_count}</td>
+                                <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r || "—"}</td>
+                                <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i || "—"}</td>
+                                <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.avg_f || "—"}</td>
+                                <td style={{ ...tdStyle, color: "#111827", fontWeight: 800, fontSize: 15 }}>{s.avg_c || "—"}</td>
+                                <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{s.avg_c_score || "—"}</td>
+                                <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 600 }}>{s.avg_cta || "—"}</td>
+                                <td style={{ ...tdStyle, color: "#9CA3AF" }}>{s.sd_c || "—"}</td>
+                                <td style={{ ...tdStyle, color: "#9CA3AF", fontSize: 11 }}>{s.avg_time ? `${s.avg_time}s` : "—"}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    {/* Per-category averages */}
+                    {results.stimuliResults.length > 0 && (() => {
+                      const byType: Record<string, StimulusResult[]> = {};
+                      results.stimuliResults.filter(s => s.response_count > 0).forEach(s => {
+                        if (!byType[s.type]) byType[s.type] = [];
+                        byType[s.type].push(s);
+                      });
+                      const typeAvgs = Object.entries(byType).map(([type, items]) => {
+                        const n = items.length;
+                        return {
+                          type,
+                          count: items.reduce((a, s) => a + s.response_count, 0),
+                          avg_r: Math.round((items.reduce((a, s) => a + s.avg_r, 0) / n) * 100) / 100,
+                          avg_i: Math.round((items.reduce((a, s) => a + s.avg_i, 0) / n) * 100) / 100,
+                          avg_f: Math.round((items.reduce((a, s) => a + s.avg_f, 0) / n) * 100) / 100,
+                          avg_c: Math.round((items.reduce((a, s) => a + s.avg_c, 0) / n) * 100) / 100,
+                          avg_cta: Math.round((items.reduce((a, s) => a + s.avg_cta, 0) / n) * 100) / 100,
+                        };
+                      }).sort((a, b) => b.avg_c - a.avg_c);
+
+                      if (typeAvgs.length === 0) return null;
+                      return (
+                        <div style={{ ...S.configCard, marginTop: 20 }}>
+                          <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 12 }}>Medii pe Categorie</h3>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                            {typeAvgs.map(t => {
+                              const cat = categories.find(c => c.type === t.type);
+                              return (
+                                <div key={t.type} style={{ padding: 12, borderRadius: 8, border: "1px solid #e5e7eb", background: "#fafafa" }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: cat?.color || "#6B7280" }} />
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>{cat?.label || t.type}</span>
+                                    <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: "auto" }}>N={t.count}</span>
+                                  </div>
+                                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, textAlign: "center" as const }}>
+                                    {[
+                                      { l: "R", v: t.avg_r, c: "#DC2626" },
+                                      { l: "I", v: t.avg_i, c: "#D97706" },
+                                      { l: "F", v: t.avg_f, c: "#7C3AED" },
+                                      { l: "C", v: t.avg_c, c: "#111827" },
+                                      { l: "CTA", v: t.avg_cta, c: "#2563EB" },
+                                    ].map(d => (
+                                      <div key={d.l}>
+                                        <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF" }}>{d.l}</div>
+                                        <div style={{ fontSize: 14, fontWeight: 700, color: d.c, fontFamily: "JetBrains Mono, monospace" }}>{d.v}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+
+                {/* ── SUB-TAB: PROFIL RESPONDENTI ── */}
+                {resultsSubTab === "profil" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    {/* Demographics column */}
+                    <div style={S.configCard}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 16 }}>Demografice</h3>
+                      {renderBreakdown("Gen", results.demographics?.gender || {}, "#EC4899")}
+                      {renderBreakdown("Varsta", results.demographics?.ageRange || {}, "#D97706")}
+                      {renderBreakdown("Tara", results.demographics?.country || {}, "#059669")}
+                      {renderBreakdown("Urban / Rural", results.demographics?.locationType || {}, "#2563EB")}
+                      {renderBreakdown("Venit", results.demographics?.incomeRange || {}, "#7C3AED")}
+                      {renderBreakdown("Educatie", results.demographics?.education || {}, "#DC2626")}
+                    </div>
+                    {/* Behavioral column */}
+                    <div style={S.configCard}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 16 }}>Comportament</h3>
+                      {renderBreakdown("Frecventa cumparare", results.behavioral?.purchaseFrequency || {}, "#059669")}
+                      {renderBreakdown("Canale preferate", results.behavioral?.preferredChannels || {}, "#2563EB")}
+                      {renderBreakdown("Timp online/zi", results.behavioral?.dailyOnlineTime || {}, "#D97706")}
+                      {renderBreakdown("Dispozitiv principal", results.behavioral?.primaryDevice || {}, "#7C3AED")}
+                    </div>
                   </div>
-                ) : (
-                  <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
-                      <thead>
-                        <tr style={{ background: "#f9fafb" }}>
-                          <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 200 }}>MATERIAL</th>
-                          <th style={thStyle}>TIP</th>
-                          <th style={thStyle}>N</th>
-                          <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
-                          <th style={{ ...thStyle, color: "#D97706" }}>I</th>
-                          <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
-                          <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
-                          <th style={thStyle}>SD</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {results.stimuliResults.map((s) => (
-                          <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>{s.name}</td>
-                            <td style={tdStyle}>
-                              <span style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                letterSpacing: 0.5,
-                                padding: "3px 8px",
-                                borderRadius: 4,
-                                background: "#f3f4f6",
-                                color: "#6B7280",
-                              }}>{s.type}</span>
-                            </td>
-                            <td style={tdStyle}>{s.response_count}</td>
-                            <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r}</td>
-                            <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i}</td>
-                            <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.avg_f}</td>
-                            <td style={{ ...tdStyle, color: "#111827", fontWeight: 800, fontSize: 15 }}>{s.avg_c}</td>
-                            <td style={{ ...tdStyle, color: "#9CA3AF" }}>{s.sd_c}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                )}
+
+                {/* ── SUB-TAB: PSIHOGRAFIC ── */}
+                {resultsSubTab === "psihografic" && (
+                  <div style={S.configCard}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Profil Psihografic (medii 1-10)</h3>
+                    <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>Intrebarile 11-15: cat de mult sunt de acord respondentii cu afirmatiile.</p>
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+                      {Object.entries(results.psychographicAvg || {}).map(([key, avg]) => (
+                        <div key={key}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{psychLabels[key] || key}</span>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{avg}</span>
+                          </div>
+                          <div style={{ height: 24, background: "#f3f4f6", borderRadius: 6, overflow: "hidden", position: "relative" as const }}>
+                            <div style={{
+                              height: "100%", width: `${(avg / 10) * 100}%`, borderRadius: 6, transition: "width 0.3s",
+                              background: avg >= 7 ? "#059669" : avg >= 4 ? "#D97706" : "#DC2626",
+                            }} />
+                            {/* Scale markers */}
+                            {[1,2,3,4,5,6,7,8,9].map(i => (
+                              <div key={i} style={{ position: "absolute" as const, left: `${(i/10)*100}%`, top: 0, bottom: 0, width: 1, background: "rgba(0,0,0,0.08)" }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {activeTab === "distributie" && (
           <div>

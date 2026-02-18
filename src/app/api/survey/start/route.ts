@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     // Fetch active stimuli
     const { data: stimuli, error: stimError } = await supabase
       .from("survey_stimuli")
-      .select("id, name, type, industry, description, image_url, video_url, text_content, pdf_url, site_url, display_order")
+      .select("id, name, type, industry, description, image_url, video_url, audio_url, text_content, pdf_url, site_url, display_order")
       .eq("is_active", true)
       .order("display_order");
 

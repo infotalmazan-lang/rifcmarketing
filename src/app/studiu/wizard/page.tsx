@@ -22,6 +22,7 @@ interface Stimulus {
   description: string | null;
   image_url: string | null;
   video_url: string | null;
+  audio_url: string | null;
   text_content: string | null;
   pdf_url: string | null;
   site_url: string | null;
@@ -1676,11 +1677,17 @@ function StudiuWizardInner() {
                       style={{ width: "100%", maxHeight: m ? 180 : 300, borderRadius: 8, border: "1px solid #e5e1d9", background: "#000" }} />
                   )}
 
+                  {currentStim.audio_url && (
+                    <div style={{ marginTop: 10, padding: m ? 10 : 14, background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 8 }}>
+                      <audio src={currentStim.audio_url} controls preload="metadata" style={{ width: "100%", borderRadius: 6 }} />
+                    </div>
+                  )}
+
                   {currentStim.text_content && (
                     <div style={{
                       fontSize: 14, lineHeight: 1.7, color: textDark,
-                      background: !currentStim.image_url && !currentStim.video_url ? "#fef3c7" : "#fff",
-                      border: `1px solid ${!currentStim.image_url && !currentStim.video_url ? "#fcd34d" : "#e5e1d9"}`,
+                      background: !currentStim.image_url && !currentStim.video_url && !currentStim.audio_url ? "#fef3c7" : "#fff",
+                      border: `1px solid ${!currentStim.image_url && !currentStim.video_url && !currentStim.audio_url ? "#fcd34d" : "#e5e1d9"}`,
                       borderRadius: 8, padding: m ? 12 : 16, whiteSpace: "pre-wrap" as const, marginTop: 10,
                     }}>
                       {currentStim.text_content}

@@ -9,10 +9,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const distributionId = searchParams.get("distribution_id");
 
-    // Build respondent filter
+    // Build respondent query — fetch demographics/behavioral/psychographic for breakdowns
     let respondentQuery = supabase
       .from("survey_respondents")
-      .select("id", { count: "exact" });
+      .select("id, demographics, behavioral, psychographic, device_type, variant_group, completed_at", { count: "exact" });
 
     if (distributionId) {
       respondentQuery = respondentQuery.eq("distribution_id", distributionId);
@@ -45,10 +45,10 @@ export async function GET(request: Request) {
       totalResponses = count || 0;
     }
 
-    // Per-stimulus aggregated results
+    // Per-stimulus aggregated results — ALL active stimuli
     const { data: stimuli } = await supabase
       .from("survey_stimuli")
-      .select("id, name, type, industry")
+      .select("id, name, type, industry, variant_label, execution_quality")
       .eq("is_active", true)
       .order("display_order");
 
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     for (const s of stimuli || []) {
       let respQuery = supabase
         .from("survey_responses")
-        .select("r_score, i_score, f_score, c_computed")
+        .select("r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds")
         .eq("stimulus_id", s.id);
 
       if (respondentIds.length > 0 && distributionId) {
@@ -70,11 +70,8 @@ export async function GET(request: Request) {
         stimuliResults.push({
           ...s,
           response_count: 0,
-          avg_r: 0,
-          avg_i: 0,
-          avg_f: 0,
-          avg_c: 0,
-          sd_c: 0,
+          avg_r: 0, avg_i: 0, avg_f: 0, avg_c: 0, sd_c: 0,
+          avg_c_score: 0, avg_cta: 0, avg_time: 0,
         });
         continue;
       }
@@ -84,9 +81,12 @@ export async function GET(request: Request) {
       const sumF = responses!.reduce((a, r) => a + r.f_score, 0);
       const sumC = responses!.reduce((a, r) => a + r.c_computed, 0);
       const avgC = sumC / n;
-      const variance =
-        responses!.reduce((a, r) => a + Math.pow(r.c_computed - avgC, 2), 0) /
-        n;
+      const variance = responses!.reduce((a, r) => a + Math.pow(r.c_computed - avgC, 2), 0) / n;
+
+      // c_score and cta_score may be null for older responses
+      const cScores = responses!.filter(r => r.c_score != null);
+      const ctaScores = responses!.filter(r => r.cta_score != null);
+      const timeScores = responses!.filter(r => r.time_spent_seconds != null);
 
       stimuliResults.push({
         ...s,
@@ -96,6 +96,9 @@ export async function GET(request: Request) {
         avg_f: Math.round((sumF / n) * 100) / 100,
         avg_c: Math.round(avgC * 100) / 100,
         sd_c: Math.round(Math.sqrt(variance) * 100) / 100,
+        avg_c_score: cScores.length > 0 ? Math.round((cScores.reduce((a, r) => a + r.c_score, 0) / cScores.length) * 100) / 100 : 0,
+        avg_cta: ctaScores.length > 0 ? Math.round((ctaScores.reduce((a, r) => a + r.cta_score, 0) / ctaScores.length) * 100) / 100 : 0,
+        avg_time: timeScores.length > 0 ? Math.round(timeScores.reduce((a, r) => a + r.time_spent_seconds, 0) / timeScores.length) : 0,
       });
     }
 
@@ -104,6 +107,55 @@ export async function GET(request: Request) {
       .from("survey_ai_evaluations")
       .select("*")
       .order("evaluated_at", { ascending: false });
+
+    // Demographic breakdowns from respondents
+    const respondents = filteredRespondents || [];
+    const demographics: Record<string, Record<string, number>> = {
+      gender: {}, ageRange: {}, country: {}, locationType: {}, incomeRange: {}, education: {},
+    };
+    const behavioralData: Record<string, Record<string, number>> = {
+      purchaseFrequency: {}, preferredChannels: {}, dailyOnlineTime: {}, primaryDevice: {},
+    };
+    const psychArrays: Record<string, number[]> = {
+      adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
+    };
+
+    for (const r of respondents) {
+      const d = r.demographics as Record<string, string> | null;
+      const b = r.behavioral as Record<string, unknown> | null;
+      const p = r.psychographic as Record<string, number> | null;
+
+      if (d) {
+        for (const key of Object.keys(demographics)) {
+          const val = d[key];
+          if (val) demographics[key][val] = (demographics[key][val] || 0) + 1;
+        }
+      }
+      if (b) {
+        for (const key of ["purchaseFrequency", "dailyOnlineTime", "primaryDevice"]) {
+          const val = b[key] as string;
+          if (val) behavioralData[key][val] = (behavioralData[key][val] || 0) + 1;
+        }
+        const channels = b.preferredChannels as string[];
+        if (Array.isArray(channels)) {
+          for (const ch of channels) {
+            behavioralData.preferredChannels[ch] = (behavioralData.preferredChannels[ch] || 0) + 1;
+          }
+        }
+      }
+      if (p) {
+        for (const key of Object.keys(psychArrays)) {
+          const val = p[key];
+          if (typeof val === "number") psychArrays[key].push(val);
+        }
+      }
+    }
+
+    // Psychographic averages
+    const psychographicAvg: Record<string, number> = {};
+    for (const [key, arr] of Object.entries(psychArrays)) {
+      psychographicAvg[key] = arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
+    }
 
     const total = totalRespondents || 0;
     const completed = completedRespondents || 0;
@@ -115,6 +167,9 @@ export async function GET(request: Request) {
       totalResponses: totalResponses || 0,
       stimuliResults,
       aiEvaluations: aiEvaluations || [],
+      demographics,
+      behavioral: behavioralData,
+      psychographicAvg,
     });
   } catch {
     return NextResponse.json(
