@@ -9,12 +9,12 @@ export async function GET() {
     const supabase = createServiceRole();
 
     // Fetch all respondents without ordering (column name may vary between envs)
-    const { data: respondents, error } = await supabase
+    const { data: respondents, error: respError } = await supabase
       .from("survey_respondents")
       .select("*");
 
-    if (error) {
-      return NextResponse.json({ error: error.message, hint: "respondents query failed" }, { status: 500 });
+    if (respError) {
+      return NextResponse.json({ error: respError.message, hint: "respondents query failed" }, { status: 500 });
     }
 
     // Get response counts per respondent
@@ -47,8 +47,6 @@ export async function GET() {
       _debug: {
         respondentsCount: (respondents || []).length,
         responsesCount: (responses || []).length,
-        hasError: !!error,
-        errorMsg: error?.message || null,
         sampleKeys: respondents?.[0] ? Object.keys(respondents[0]) : [],
       },
     });
