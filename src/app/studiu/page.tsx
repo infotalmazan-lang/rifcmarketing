@@ -1516,7 +1516,7 @@ export default function StudiuAdminPage() {
 
                       return (
                         <>
-                          {/* Category filter pills — compact, one row */}
+                          {/* Category filter pills — from categories table, ordered by display_order */}
                           <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16 }}>
                             <button onClick={() => setResultsCatFilter(null)} style={{
                               padding: "6px 14px", borderRadius: 20, cursor: "pointer", transition: "all 0.15s", fontSize: 12, fontWeight: 600,
@@ -1524,20 +1524,20 @@ export default function StudiuAdminPage() {
                               background: !resultsCatFilter ? "#111827" : "#fff",
                               color: !resultsCatFilter ? "#fff" : "#374151",
                             }}>Toate ({results.stimuliResults.length})</button>
-                            {typeAvgs.map(t => {
-                              const cat = categories.find(c => c.type === t.type);
-                              const isActive = resultsCatFilter === t.type;
-                              const catColor = cat?.color || "#6B7280";
+                            {[...categories].sort((a, b) => a.display_order - b.display_order).map(cat => {
+                              const isActive = resultsCatFilter === cat.type;
+                              const stimCount = results.stimuliResults.filter(s => s.type === cat.type).length;
                               return (
-                                <button key={t.type} onClick={() => setResultsCatFilter(isActive ? null : t.type)} style={{
+                                <button key={cat.type} onClick={() => setResultsCatFilter(isActive ? null : cat.type)} style={{
                                   padding: "6px 12px", borderRadius: 20, cursor: "pointer", transition: "all 0.15s", fontSize: 12, fontWeight: 600,
                                   display: "flex", alignItems: "center", gap: 5,
-                                  border: isActive ? `2px solid ${catColor}` : "1px solid #e5e7eb",
-                                  background: isActive ? `${catColor}14` : "#fff",
-                                  color: isActive ? catColor : "#374151",
+                                  border: isActive ? `2px solid ${cat.color}` : "1px solid #e5e7eb",
+                                  background: isActive ? `${cat.color}14` : "#fff",
+                                  color: isActive ? cat.color : "#374151",
+                                  opacity: stimCount > 0 ? 1 : 0.5,
                                 }}>
-                                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: catColor, flexShrink: 0 }} />
-                                  {cat?.label || t.type}
+                                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
+                                  {cat.short_code}
                                 </button>
                               );
                             })}
@@ -1566,7 +1566,7 @@ export default function StudiuAdminPage() {
                                 {totalRow && (
                                   <tr style={{ borderBottom: "2px solid #e5e7eb", background: "#f9fafb" }}>
                                     <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", fontSize: 13 }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.label || resultsCatFilter) : "TOTAL"}</td>
-                                    <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#111827", color: "#fff" }}>{resultsCatFilter || "ALL"}</span></td>
+                                    <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#111827", color: "#fff" }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.short_code || resultsCatFilter) : "ALL"}</span></td>
                                     <td style={{ ...tdStyle, fontWeight: 700 }}>{totalN}</td>
                                     <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 800 }}>{totalRow.avg_r}</td>
                                     <td style={{ ...tdStyle, color: "#D97706", fontWeight: 800 }}>{totalRow.avg_i}</td>
@@ -1585,7 +1585,7 @@ export default function StudiuAdminPage() {
                                       {s.variant_label && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: "#dbeafe", color: "#2563EB" }}>{s.variant_label}</span>}
                                     </td>
                                     <td style={tdStyle}>
-                                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: categories.find(c => c.type === s.type)?.color ? `${categories.find(c => c.type === s.type)!.color}18` : "#f3f4f6", color: categories.find(c => c.type === s.type)?.color || "#6B7280" }}>{s.type}</span>
+                                      {(() => { const cc = categories.find(c => c.type === s.type); return <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: cc?.color ? `${cc.color}18` : "#f3f4f6", color: cc?.color || "#6B7280" }}>{cc?.short_code || s.type}</span>; })()}
                                     </td>
                                     <td style={tdStyle}>{s.response_count}</td>
                                     <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r || "—"}</td>
