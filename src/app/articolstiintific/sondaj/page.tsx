@@ -610,7 +610,23 @@ export default function StudiuAdminPage() {
   const [archiveSelected, setArchiveSelected] = useState<Set<string>>(new Set());
 
   // ── Dismissed duplicate suspects (user confirmed as coincidence) ──
-  const [dismissedDupIds, setDismissedDupIds] = useState<Set<string>>(new Set());
+  // Persisted in localStorage so dismissals survive page refresh
+  const [dismissedDupIds, setDismissedDupIds] = useState<Set<string>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("rifc_dismissed_dups");
+        if (saved) return new Set(JSON.parse(saved));
+      } catch { /* ignore */ }
+    }
+    return new Set();
+  });
+  useEffect(() => {
+    if (dismissedDupIds.size > 0) {
+      localStorage.setItem("rifc_dismissed_dups", JSON.stringify(Array.from(dismissedDupIds)));
+    } else {
+      localStorage.removeItem("rifc_dismissed_dups");
+    }
+  }, [dismissedDupIds]);
 
   // ── Flag/unflag respondents ────────────────────────────────
   const toggleFlag = async (ids: string[], flagged: boolean, reason?: string) => {
