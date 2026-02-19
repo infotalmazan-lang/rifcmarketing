@@ -49,15 +49,25 @@ export async function GET(request: Request) {
     const respondentIds = respondents.map((r: { id: string }) => r.id);
 
     // Total responses (filtered by respondent IDs)
+    // Use pagination to ensure ALL responses are fetched (PostgREST defaults to 1000 max)
     let totalResponses = 0;
     let allFilteredResponses: any[] = [];
     if (respondentIds.length > 0) {
-      // Fetch all responses for these respondents in one query
-      const { data: respData } = await supabase
-        .from("survey_responses")
-        .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
-        .in("respondent_id", respondentIds);
-      allFilteredResponses = respData || [];
+      // Fetch responses in batches to avoid PostgREST row limits
+      const PAGE_SIZE = 1000;
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: respData } = await supabase
+          .from("survey_responses")
+          .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
+          .in("respondent_id", respondentIds)
+          .range(offset, offset + PAGE_SIZE - 1);
+        const batch = respData || [];
+        allFilteredResponses = allFilteredResponses.concat(batch);
+        hasMore = batch.length === PAGE_SIZE;
+        offset += PAGE_SIZE;
+      }
       totalResponses = allFilteredResponses.length;
     }
 
@@ -364,13 +374,15 @@ export async function GET(request: Request) {
       _debug: {
         respondentQueryError: respondentError?.message || null,
         respondentCount: respondents.length,
+        completedRespondentCount: completedRespondents,
         responseCount: allFilteredResponses.length,
         activeStimuli: activeStimIds.length,
         uniqueStimIdsInResponses: uniqueStimIdsInResponses.length,
         orphanStimulusIds: orphanStimIds,
         hasOrphans: orphanStimIds.length > 0,
-        sampleResponse: allFilteredResponses[0] || null,
-        sampleRespondent: respondents[0] ? { id: respondents[0].id, completed_at: respondents[0].completed_at, started_at: (respondents[0] as any).started_at } : null,
+        respondentIds: respondentIds,
+        respondentDetails: respondents.map(r => ({ id: r.id, completed_at: r.completed_at, started_at: r.started_at, distribution_id: r.distribution_id })),
+        responsesPerRespondent: respondentIds.map(id => ({ id, count: allFilteredResponses.filter(r => r.respondent_id === id).length })),
       },
     });
   } catch (err: any) {
