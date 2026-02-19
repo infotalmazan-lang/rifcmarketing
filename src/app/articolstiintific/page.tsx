@@ -242,6 +242,10 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .blk-select:focus { border-color: var(--green); }
 
   /* Number */
+  .blk-num-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .blk-num-title { width: 100%; padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text); background: var(--surface); outline: none; transition: border-color 0.15s; }
+  .blk-num-title:focus { border-color: var(--green); }
+  .blk-num-title::placeholder { color: var(--text3); }
   .blk-num-row { display: flex; gap: 8px; align-items: center; }
   .blk-num-input { width: 120px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text); background: var(--surface); outline: none; text-align: center; }
   .blk-num-input:focus { border-color: var(--green); }
@@ -530,7 +534,7 @@ const ROADMAP_SCRIPT = `
       val = makeTriVal(type);
     } else if (type === "table") val = { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] };
     else if (type === "dropdown") val = { category: "", value: "" };
-    else if (type === "number") val = 0;
+    else if (type === "number") val = { label: "", value: 0 };
     else if (type === "file") val = null;
     else val = "";
     var newBlock = { id: genId(), type: type, value: val };
@@ -795,7 +799,9 @@ const ROADMAP_SCRIPT = `
       for (var t = 0; t < BLOCK_TYPES.length; t++) { if (BLOCK_TYPES[t].key === block.type) { typeDef = BLOCK_TYPES[t]; break; } }
       if (!typeDef) return;
       html += '<div class="blk" data-blk-id="' + block.id + '">';
-      html += '<div class="blk-header">' + ICONS[typeDef.icon] + '<span class="blk-type-label">' + typeDef.label + '</span>';
+      var headerLabel = typeDef.label;
+      if (block.type === "number" && block.value && block.value.label) headerLabel += ' — ' + escHtml(block.value.label);
+      html += '<div class="blk-header">' + ICONS[typeDef.icon] + '<span class="blk-type-label">' + headerLabel + '</span>';
       if (idx > 0) html += '<button class="blk-action" data-action="up" data-blk="' + block.id + '" title="Mută sus">' + ICONS.arrowUp + '</button>';
       if (idx < blocks.length - 1) html += '<button class="blk-action" data-action="down" data-blk="' + block.id + '" title="Mută jos">' + ICONS.arrowDown + '</button>';
       html += '<button class="blk-action danger" data-action="delete" data-blk="' + block.id + '" title="Șterge">' + ICONS.trash + '</button>';
@@ -948,7 +954,10 @@ const ROADMAP_SCRIPT = `
         return h;
 
       case "number":
-        return '<div class="blk-num-row"><input class="blk-num-input" type="number" data-blk-val="' + block.id + '" value="' + (val || 0) + '" step="any" /><span class="blk-num-label">valoare numerică</span></div>';
+        // Migrate old plain number to object format
+        if (typeof val === "number" || typeof val === "string") { val = { label: "", value: parseFloat(val) || 0 }; block.value = val; saveBlocks(); }
+        if (!val || typeof val !== "object" || val.ro !== undefined) val = { label: "", value: 0 };
+        return '<div class="blk-num-wrap"><input class="blk-num-title" type="text" data-num-label="' + block.id + '" value="' + escAttr(val.label || '') + '" placeholder="Titlu / Etichetă (ex: Total itemi)" /><div class="blk-num-row"><input class="blk-num-input" type="number" data-num-val="' + block.id + '" value="' + (val.value || 0) + '" step="any" /><span class="blk-num-label">' + (val.label ? escHtml(val.label) : 'valoare numerică') + '</span></div></div>';
 
       case "date":
         return '<input class="blk-date" type="date" data-blk-val="' + block.id + '" value="' + escAttr(val || '') + '" />';
@@ -1078,16 +1087,54 @@ const ROADMAP_SCRIPT = `
       });
     });
 
-    // Non-trilingual inputs (number, date) — auto-save
+    // Non-trilingual inputs (date) — auto-save
     document.querySelectorAll("[data-blk-val]").forEach(function(input) {
       var debounce = null;
       input.addEventListener("input", function() {
         clearTimeout(debounce);
         debounce = setTimeout(function() {
           var bid = input.getAttribute("data-blk-val");
-          var v = input.value;
-          if (input.type === "number") v = parseFloat(v) || 0;
-          updateBlockValue(key, bid, v);
+          updateBlockValue(key, bid, input.value);
+        }, 300);
+      });
+    });
+
+    // Number — label + value
+    document.querySelectorAll("[data-num-label]").forEach(function(input) {
+      var debounce = null;
+      input.addEventListener("input", function() {
+        clearTimeout(debounce);
+        debounce = setTimeout(function() {
+          var bid = input.getAttribute("data-num-label");
+          var blocks = getTaskBlocks(key);
+          for (var i = 0; i < blocks.length; i++) {
+            if (blocks[i].id === bid) {
+              if (typeof blocks[i].value !== "object" || !blocks[i].value) blocks[i].value = { label: "", value: 0 };
+              blocks[i].value.label = input.value;
+              saveBlocks();
+              // Update the hint label in realtime
+              var wrap = input.closest(".blk-num-wrap");
+              if (wrap) { var lbl = wrap.querySelector(".blk-num-label"); if (lbl) lbl.textContent = input.value || "valoare numerică"; }
+              break;
+            }
+          }
+        }, 300);
+      });
+    });
+    document.querySelectorAll("[data-num-val]").forEach(function(input) {
+      var debounce = null;
+      input.addEventListener("input", function() {
+        clearTimeout(debounce);
+        debounce = setTimeout(function() {
+          var bid = input.getAttribute("data-num-val");
+          var blocks = getTaskBlocks(key);
+          for (var i = 0; i < blocks.length; i++) {
+            if (blocks[i].id === bid) {
+              if (typeof blocks[i].value !== "object" || !blocks[i].value) blocks[i].value = { label: "", value: 0 };
+              blocks[i].value.value = parseFloat(input.value) || 0;
+              saveBlocks(); break;
+            }
+          }
         }, 300);
       });
     });
