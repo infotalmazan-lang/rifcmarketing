@@ -26,6 +26,11 @@ export async function GET(request: Request) {
 
     const { data: filteredRespondents, error: respondentError } = await respondentQuery;
 
+    // DEBUG: also fetch ALL respondents without filter to compare
+    const { data: rawAllRespondents } = await supabase
+      .from("survey_respondents")
+      .select("id, completed_at, is_archived, distribution_id");
+
     const allRespondents = filteredRespondents || [];
     const allRespondentIds = allRespondents.map((r: { id: string }) => r.id);
 
@@ -385,6 +390,15 @@ export async function GET(request: Request) {
         activeStimuli: activeStimIds.length,
         uniqueStimIdsInResponses: uniqueStimIdsInResponses.length,
         hasOrphans: orphanStimIds.length > 0,
+        // DEBUG: compare filtered vs raw
+        filteredQueryCount: (filteredRespondents || []).length,
+        rawAllCount: (rawAllRespondents || []).length,
+        rawAll: (rawAllRespondents || []).map((r: any) => ({
+          id: r.id?.substring(0, 8),
+          completed_at: r.completed_at ? "yes" : "no",
+          is_archived: r.is_archived,
+          dist: r.distribution_id ? "has" : "none",
+        })),
       },
     });
   } catch (err: any) {
