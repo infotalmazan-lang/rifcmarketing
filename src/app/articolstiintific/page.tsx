@@ -257,6 +257,18 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .blk-picker-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: none; border-radius: 6px; background: transparent; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500; color: var(--text2); transition: background 0.1s; text-align: left; }
   .blk-picker-item:hover { background: var(--surface2); }
   .blk-picker-item svg { width: 16px; height: 16px; color: var(--text3); flex-shrink: 0; }
+
+  /* Code block */
+  .blk-code-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .blk-code-lang { padding: 5px 10px; border: 1px solid var(--border); border-radius: 5px; font-family: 'Inter', sans-serif; font-size: 11px; color: var(--text2); background: var(--surface); outline: none; cursor: pointer; }
+  .blk-code-lang:focus { border-color: var(--green); }
+  .blk-code-copy { display: flex; align-items: center; gap: 4px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; color: var(--text3); cursor: pointer; transition: all 0.15s; margin-left: auto; }
+  .blk-code-copy:hover { border-color: var(--green); color: var(--green); }
+  .blk-code-copy.copied { border-color: var(--green); color: var(--green); }
+  .blk-code-copy svg { width: 12px; height: 12px; }
+  .blk-code-area { width: 100%; min-height: 120px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.7; color: #1e293b; background: #f8fafc; outline: none; resize: vertical; tab-size: 2; white-space: pre; overflow-x: auto; }
+  .blk-code-area:focus { border-color: var(--green); background: #f1f5f9; }
+  .blk-code-area::placeholder { color: var(--text3); font-style: italic; }
 </style>
 </head>
 <body>
@@ -360,7 +372,10 @@ const ROADMAP_SCRIPT = `
     externalLink: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
     file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>',
     x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
-    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'
+    globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+    code: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
   };
 
   var BLOCK_TYPES = [
@@ -371,7 +386,8 @@ const ROADMAP_SCRIPT = `
     { key: "table", label: "Tabel Editabil", icon: "table" },
     { key: "dropdown", label: "Dropdown Select", icon: "dropdown" },
     { key: "number", label: "Număr / Rating", icon: "number" },
-    { key: "date", label: "Data", icon: "calendar" }
+    { key: "date", label: "Data", icon: "calendar" },
+    { key: "code", label: "Cod", icon: "code" }
   ];
 
   var DROPDOWN_OPTIONS = {
@@ -483,6 +499,7 @@ const ROADMAP_SCRIPT = `
     else if (type === "dropdown") val = { category: "", value: "" };
     else if (type === "number") val = 0;
     else if (type === "file") val = null;
+    else if (type === "code") val = { lang: "json", code: "" };
     else val = "";
     allBlocks[key].push({ id: genId(), type: type, value: val });
     saveBlocks();
@@ -765,6 +782,18 @@ const ROADMAP_SCRIPT = `
       case "date":
         return '<input class="blk-date" type="date" data-blk-val="' + block.id + '" value="' + escAttr(val || '') + '" />';
 
+      case "code":
+        if (!val || typeof val !== "object") val = { lang: "json", code: "" };
+        var langs = ["json","html","css","javascript","python","sql","bash","typescript","yaml","xml","markdown","csv","plaintext"];
+        var h = '<div class="blk-code-header">';
+        h += '<select class="blk-code-lang" data-code-lang="' + block.id + '">';
+        langs.forEach(function(l) { h += '<option value="' + l + '"' + (val.lang === l ? ' selected' : '') + '>' + l.toUpperCase() + '</option>'; });
+        h += '</select>';
+        h += '<button class="blk-code-copy" data-code-copy="' + block.id + '">' + ICONS.copy + '<span>Copiază</span></button>';
+        h += '</div>';
+        h += '<textarea class="blk-code-area" data-code-val="' + block.id + '" placeholder="// Introduceți cod aici..." spellcheck="false">' + escHtml(val.code || '') + '</textarea>';
+        return h;
+
       default: return '<em style="color:var(--text3);font-size:12px;">Tip necunoscut</em>';
     }
   }
@@ -978,6 +1007,87 @@ const ROADMAP_SCRIPT = `
           if (blocks[i].id === bid) {
             blocks[i].value.value = sel.value;
             saveBlocks();
+            break;
+          }
+        }
+      });
+    });
+
+    // Code — language change
+    document.querySelectorAll("[data-code-lang]").forEach(function(sel) {
+      sel.addEventListener("change", function() {
+        var bid = sel.getAttribute("data-code-lang");
+        var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) {
+          if (blocks[i].id === bid) {
+            blocks[i].value.lang = sel.value;
+            saveBlocks();
+            break;
+          }
+        }
+      });
+    });
+
+    // Code — code input (auto-save with debounce)
+    document.querySelectorAll("[data-code-val]").forEach(function(textarea) {
+      var debounce = null;
+      textarea.addEventListener("input", function() {
+        clearTimeout(debounce);
+        debounce = setTimeout(function() {
+          var bid = textarea.getAttribute("data-code-val");
+          var blocks = getTaskBlocks(key);
+          for (var i = 0; i < blocks.length; i++) {
+            if (blocks[i].id === bid) {
+              blocks[i].value.code = textarea.value;
+              saveBlocks();
+              break;
+            }
+          }
+        }, 300);
+      });
+      // Tab key inserts 2 spaces instead of changing focus
+      textarea.addEventListener("keydown", function(e) {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          var start = textarea.selectionStart;
+          var end = textarea.selectionEnd;
+          textarea.value = textarea.value.substring(0, start) + "  " + textarea.value.substring(end);
+          textarea.selectionStart = textarea.selectionEnd = start + 2;
+          textarea.dispatchEvent(new Event("input"));
+        }
+      });
+    });
+
+    // Code — copy button
+    document.querySelectorAll("[data-code-copy]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var bid = btn.getAttribute("data-code-copy");
+        var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) {
+          if (blocks[i].id === bid && blocks[i].value && blocks[i].value.code) {
+            try {
+              navigator.clipboard.writeText(blocks[i].value.code).then(function() {
+                var span = btn.querySelector("span");
+                btn.classList.add("copied");
+                if (span) span.textContent = "Copiat!";
+                setTimeout(function() {
+                  btn.classList.remove("copied");
+                  if (span) span.textContent = "Copiază";
+                }, 2000);
+              });
+            } catch(e) {
+              // Fallback for older browsers
+              var ta = document.createElement("textarea");
+              ta.value = blocks[i].value.code;
+              ta.style.position = "fixed"; ta.style.left = "-9999px";
+              document.body.appendChild(ta); ta.select();
+              try { document.execCommand("copy"); } catch(ex) {}
+              document.body.removeChild(ta);
+              var span = btn.querySelector("span");
+              btn.classList.add("copied");
+              if (span) span.textContent = "Copiat!";
+              setTimeout(function() { btn.classList.remove("copied"); if (span) span.textContent = "Copiază"; }, 2000);
+            }
             break;
           }
         }
