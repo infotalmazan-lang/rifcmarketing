@@ -274,6 +274,17 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .blk-code-area { width: 100%; min-height: 120px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.7; color: #1e293b; background: #f8fafc; outline: none; resize: vertical; tab-size: 2; white-space: pre; overflow-x: auto; }
   .blk-code-area:focus { border-color: var(--green); background: #f1f5f9; }
   .blk-code-area::placeholder { color: var(--text3); font-style: italic; }
+
+  /* Language tabs */
+  .blk-lang-tabs { display: flex; gap: 2px; margin-bottom: 10px; background: var(--surface2); border-radius: 6px; padding: 2px; }
+  .blk-lang-tab { flex: 1; padding: 5px 8px; border: none; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; cursor: pointer; transition: all 0.15s; background: transparent; color: var(--text3); text-align: center; }
+  .blk-lang-tab:hover { color: var(--text2); }
+  .blk-lang-tab.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .blk-lang-tab.ro.active { color: var(--blue); }
+  .blk-lang-tab.en.active { color: var(--green); }
+  .blk-lang-tab.ru.active { color: var(--red); }
+  .blk-lang-panel { display: none; }
+  .blk-lang-panel.active { display: block; }
 </style>
 </head>
 <body>
@@ -358,6 +369,11 @@ const ROADMAP_SCRIPT = `
   var checkedTasks = {};
   var allBlocks = {};
   var pickerOpen = false;
+  var blockLangTab = {}; // tracks active lang tab per block: { blockId: "ro"|"en"|"ru" }
+  var LANGS = ["ro", "en", "ru"];
+  var LANG_LABELS = { ro: "RO", en: "EN", ru: "RU" };
+  // Block types that support trilingual content
+  var TRILINGUAL_TYPES = ["text-short", "text-long", "link", "code"];
 
   /* ═══ SVG ICONS ═══ */
   var ICONS = {
@@ -497,16 +513,29 @@ const ROADMAP_SCRIPT = `
 
   // ═══ BLOCKS CRUD ═══
   function getTaskBlocks(key) { return allBlocks[key] || []; }
+  function isTrilingual(type) { return TRILINGUAL_TYPES.indexOf(type) !== -1; }
+
+  function makeTriVal(type) {
+    if (type === "text-short") return { ro: "", en: "", ru: "" };
+    if (type === "text-long") return { ro: "", en: "", ru: "" };
+    if (type === "link") return { ro: "", en: "", ru: "" };
+    if (type === "code") return { ro: { lang: "json", code: "" }, en: { lang: "json", code: "" }, ru: { lang: "json", code: "" } };
+    return "";
+  }
+
   function addBlock(key, type) {
     if (!allBlocks[key]) allBlocks[key] = [];
     var val = null;
-    if (type === "table") val = { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] };
+    if (isTrilingual(type)) {
+      val = makeTriVal(type);
+    } else if (type === "table") val = { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] };
     else if (type === "dropdown") val = { category: "", value: "" };
     else if (type === "number") val = 0;
     else if (type === "file") val = null;
-    else if (type === "code") val = { lang: "json", code: "" };
     else val = "";
-    allBlocks[key].push({ id: genId(), type: type, value: val });
+    var newBlock = { id: genId(), type: type, value: val };
+    allBlocks[key].push(newBlock);
+    blockLangTab[newBlock.id] = "ro";
     saveBlocks();
   }
   function updateBlockValue(key, blockId, value) {
@@ -532,74 +561,76 @@ const ROADMAP_SCRIPT = `
 
   // ═══ SEED PRE-POPULATED BLOCKS ═══
   function seedBlocksIfNeeded() {
-    var SEED_KEY = "rifc-blocks-seeded-v2";
+    var SEED_KEY = "rifc-blocks-seeded-v3";
     try { if (localStorage.getItem(SEED_KEY)) return; } catch(e) { return; }
+
+    // Clear old seeds on version bump
+    allBlocks = {};
 
     // --- s2-0: Transformare sub-factori → Itemi Likert ---
     var k0 = "s2-0";
-    if (!allBlocks[k0] || allBlocks[k0].length === 0) {
-      allBlocks[k0] = [
-        { id: genId(), type: "text-short", value: "RIFC Scoring Rubric — 35 Itemi Likert (Scala 1-5)" },
-        { id: genId(), type: "link", value: "https://osf.io" },
-        { id: genId(), type: "text-long", value: "DIMENSIUNEA R — RELEVANȚĂ (7 itemi, max 35)\\nR1. Mesajul se adresează unei nevoi reale a publicului-țintă.\\nR2. Conținutul este relevant pentru contextul actual al pieței.\\nR3. Problema identificată în mesaj rezonează cu audiența.\\nR4. Mesajul oferă o soluție pertinentă la o problemă reală.\\nR5. Publicul-țintă se poate identifica cu situația descrisă.\\nR6. Informația prezentată este utilă pentru decizia de cumpărare.\\nR7. Mesajul răspunde la întrebări pe care publicul și le pune efectiv.\\n\\nDIMENSIUNEA I — IMPACT (10 itemi, max 50)\\nI1. Mesajul captează atenția în primele 3 secunde.\\nI2. Elementele vizuale susțin și amplifică mesajul verbal.\\nI3. Există un element de surpriză sau diferențiere clară.\\nI4. Tonul emoțional este adecvat și consistent.\\nI5. Mesajul creează o conexiune emoțională cu audiența.\\nI6. Call-to-action-ul este clar, vizibil și motivant.\\nI7. Mesajul se diferențiază clar de comunicarea competitorilor.\\nI8. Intensitatea emoțională este suficientă fără a fi excesivă.\\nI9. Structura narativă menține interesul de la început la final.\\nI10. Mesajul generează dorința de a afla mai mult sau de a acționa.\\n\\nDIMENSIUNEA F — FRECVENȚĂ (11 itemi, max 55)\\nF1. Mesajul este adaptat specificului canalului de distribuție.\\nF2. Frecvența de expunere este suficientă pentru memorare.\\nF3. Există variații ale mesajului pentru diferite puncte de contact.\\nF4. Momentul difuzării este ales strategic.\\nF5. Mesajul este optimizat pentru formatul platformei.\\nF6. Există continuitate narativă între expuneri succesive.\\nF7. Frecvența nu generează oboseală publicitară.\\nF8. Mesajul funcționează atât la prima vizionare cât și la vizionări repetate.\\nF9. Distribuția acoperă punctele de contact relevante.\\nF10. Planificarea media maximizează reach-ul în cadrul bugetului.\\nF11. Secvențialitatea mesajelor urmează o logică de funnel.\\n\\nDIMENSIUNEA C — CONVERSIE (7 itemi, max 35)\\nC1. Mesajul conduce natural spre acțiunea dorită.\\nC2. Beneficiile sunt prezentate clar și convingător.\\nC3. Există dovezi sociale sau de credibilitate.\\nC4. Oferta este percepută ca valoroasă raportat la preț.\\nC5. Procesul de conversie este simplu și fără fricțiuni.\\nC6. Mesajul creează un sentiment de urgență legitimă.\\nC7. Există mecanisme de follow-up post-expunere." }
-      ];
-    }
+    allBlocks[k0] = [
+      { id: genId(), type: "text-short", value: { ro: "RIFC Scoring Rubric — 35 Itemi Likert (Scala 1-5)", en: "RIFC Scoring Rubric — 35 Likert Items (Scale 1-5)", ru: "RIFC Scoring Rubric — 35 шкал Лайкерта (Шкала 1-5)" } },
+      { id: genId(), type: "link", value: { ro: "https://osf.io", en: "https://osf.io", ru: "https://osf.io" } },
+      { id: genId(), type: "text-long", value: {
+        ro: "DIMENSIUNEA R — RELEVANȚĂ (7 itemi, max 35)\\nR1. Mesajul se adresează unei nevoi reale a publicului-țintă.\\nR2. Conținutul este relevant pentru contextul actual al pieței.\\nR3. Problema identificată în mesaj rezonează cu audiența.\\nR4. Mesajul oferă o soluție pertinentă la o problemă reală.\\nR5. Publicul-țintă se poate identifica cu situația descrisă.\\nR6. Informația prezentată este utilă pentru decizia de cumpărare.\\nR7. Mesajul răspunde la întrebări pe care publicul și le pune efectiv.\\n\\nDIMENSIUNEA I — IMPACT (10 itemi, max 50)\\nI1. Mesajul captează atenția în primele 3 secunde.\\nI2. Elementele vizuale susțin și amplifică mesajul verbal.\\nI3. Există un element de surpriză sau diferențiere clară.\\nI4. Tonul emoțional este adecvat și consistent.\\nI5. Mesajul creează o conexiune emoțională cu audiența.\\nI6. Call-to-action-ul este clar, vizibil și motivant.\\nI7. Mesajul se diferențiază clar de comunicarea competitorilor.\\nI8. Intensitatea emoțională este suficientă fără a fi excesivă.\\nI9. Structura narativă menține interesul de la început la final.\\nI10. Mesajul generează dorința de a afla mai mult sau de a acționa.\\n\\nDIMENSIUNEA F — FRECVENȚĂ (11 itemi, max 55)\\nF1. Mesajul este adaptat specificului canalului de distribuție.\\nF2. Frecvența de expunere este suficientă pentru memorare.\\nF3. Există variații ale mesajului pentru diferite puncte de contact.\\nF4. Momentul difuzării este ales strategic.\\nF5. Mesajul este optimizat pentru formatul platformei.\\nF6. Există continuitate narativă între expuneri succesive.\\nF7. Frecvența nu generează oboseală publicitară.\\nF8. Mesajul funcționează atât la prima vizionare cât și la vizionări repetate.\\nF9. Distribuția acoperă punctele de contact relevante.\\nF10. Planificarea media maximizează reach-ul în cadrul bugetului.\\nF11. Secvențialitatea mesajelor urmează o logică de funnel.\\n\\nDIMENSIUNEA C — CONVERSIE (7 itemi, max 35)\\nC1. Mesajul conduce natural spre acțiunea dorită.\\nC2. Beneficiile sunt prezentate clar și convingător.\\nC3. Există dovezi sociale sau de credibilitate.\\nC4. Oferta este percepută ca valoroasă raportat la preț.\\nC5. Procesul de conversie este simplu și fără fricțiuni.\\nC6. Mesajul creează un sentiment de urgență legitimă.\\nC7. Există mecanisme de follow-up post-expunere.",
+        en: "DIMENSION R — RELEVANCE (7 items, max 35)\\nR1. The message addresses a real need of the target audience.\\nR2. The content is relevant to the current market context.\\nR3. The problem identified in the message resonates with the audience.\\nR4. The message offers a pertinent solution to a real problem.\\nR5. The target audience can identify with the described situation.\\nR6. The information presented is useful for the purchasing decision.\\nR7. The message answers questions the audience actually asks.\\n\\nDIMENSION I — IMPACT (10 items, max 50)\\nI1. The message captures attention within the first 3 seconds.\\nI2. Visual elements support and amplify the verbal message.\\nI3. There is an element of surprise or clear differentiation.\\nI4. The emotional tone is appropriate and consistent.\\nI5. The message creates an emotional connection with the audience.\\nI6. The call-to-action is clear, visible, and motivating.\\nI7. The message clearly differentiates from competitor communication.\\nI8. Emotional intensity is sufficient without being excessive.\\nI9. The narrative structure maintains interest from start to finish.\\nI10. The message generates desire to learn more or take action.\\n\\nDIMENSION F — FREQUENCY (11 items, max 55)\\nF1. The message is adapted to the specifics of the distribution channel.\\nF2. Exposure frequency is sufficient for memorization.\\nF3. There are message variations for different touchpoints.\\nF4. The timing of broadcast is strategically chosen.\\nF5. The message is optimized for the platform format.\\nF6. There is narrative continuity between successive exposures.\\nF7. Frequency does not generate advertising fatigue.\\nF8. The message works both on first viewing and on repeated viewings.\\nF9. Distribution covers relevant touchpoints.\\nF10. Media planning maximizes reach within the budget.\\nF11. Message sequencing follows a funnel logic.\\n\\nDIMENSION C — CONVERSION (7 items, max 35)\\nC1. The message naturally leads to the desired action.\\nC2. Benefits are presented clearly and convincingly.\\nC3. There is social proof or credibility evidence.\\nC4. The offer is perceived as valuable relative to price.\\nC5. The conversion process is simple and frictionless.\\nC6. The message creates a sense of legitimate urgency.\\nC7. There are post-exposure follow-up mechanisms.",
+        ru: "ИЗМЕРЕНИЕ R — РЕЛЕВАНТНОСТЬ (7 пунктов, макс. 35)\\nR1. Сообщение обращается к реальной потребности целевой аудитории.\\nR2. Содержание релевантно текущему контексту рынка.\\nR3. Проблема, обозначенная в сообщении, резонирует с аудиторией.\\nR4. Сообщение предлагает уместное решение реальной проблемы.\\nR5. Целевая аудитория может идентифицировать себя с описанной ситуацией.\\nR6. Представленная информация полезна для принятия решения о покупке.\\nR7. Сообщение отвечает на вопросы, которые аудитория реально задаёт.\\n\\nИЗМЕРЕНИЕ I — ВОЗДЕЙСТВИЕ (10 пунктов, макс. 50)\\nI1. Сообщение привлекает внимание в первые 3 секунды.\\nI2. Визуальные элементы поддерживают и усиливают вербальное сообщение.\\nI3. Есть элемент неожиданности или чёткой дифференциации.\\nI4. Эмоциональный тон адекватный и последовательный.\\nI5. Сообщение создаёт эмоциональную связь с аудиторией.\\nI6. Призыв к действию чёткий, заметный и мотивирующий.\\nI7. Сообщение чётко отличается от коммуникации конкурентов.\\nI8. Эмоциональная интенсивность достаточна, но не чрезмерна.\\nI9. Нарративная структура поддерживает интерес от начала до конца.\\nI10. Сообщение вызывает желание узнать больше или действовать.\\n\\nИЗМЕРЕНИЕ F — ЧАСТОТА (11 пунктов, макс. 55)\\nF1. Сообщение адаптировано к специфике канала распространения.\\nF2. Частота показов достаточна для запоминания.\\nF3. Есть вариации сообщения для разных точек контакта.\\nF4. Момент трансляции выбран стратегически.\\nF5. Сообщение оптимизировано для формата платформы.\\nF6. Есть нарративная преемственность между последовательными показами.\\nF7. Частота не вызывает рекламной усталости.\\nF8. Сообщение работает как при первом, так и при повторных просмотрах.\\nF9. Дистрибуция охватывает релевантные точки контакта.\\nF10. Медиапланирование максимизирует охват в рамках бюджета.\\nF11. Последовательность сообщений следует логике воронки.\\n\\nИЗМЕРЕНИЕ C — КОНВЕРСИЯ (7 пунктов, макс. 35)\\nC1. Сообщение естественно ведёт к желаемому действию.\\nC2. Преимущества представлены чётко и убедительно.\\nC3. Есть социальные доказательства или свидетельства достоверности.\\nC4. Предложение воспринимается как ценное относительно цены.\\nC5. Процесс конверсии простой и без трений.\\nC6. Сообщение создаёт чувство законной срочности.\\nC7. Есть механизмы пост-экспозиционного follow-up."
+      }}
+    ];
 
     // --- s2-2: Construire Scoring Rubric standardizat ---
     var k2 = "s2-2";
-    if (!allBlocks[k2] || allBlocks[k2].length === 0) {
-      allBlocks[k2] = [
-        { id: genId(), type: "text-short", value: "Scoring Rubric R IF C — Ancore 1/3/5 pe toate cele 35 de scale" },
-        { id: genId(), type: "link", value: "https://osf.io" },
-        { id: genId(), type: "code", value: { lang: "json", code: JSON.stringify({
-          scale: "1-5 Likert",
-          anchors: { 1: "Total dezacord / Deloc", 3: "Neutru / Moderat", 5: "Total acord / Complet" },
-          dimensions: {
-            R: { name: "Relevanță", items: 7, maxScore: 35, gate: "If mean(R) < 3.0 message fails" },
-            I: { name: "Impact", items: 10, maxScore: 50 },
-            F: { name: "Frecvență", items: 11, maxScore: 55 },
-            C: { name: "Conversie", items: 7, maxScore: 35 }
-          },
-          formula: "C_predicted = R_gate × (I_mean × F_mean)",
-          scoring: {
-            R_gate: "If R_mean >= 3 then 1, else 0 (binary gate)",
-            composite: "I_mean × F_mean (multiplicative interaction)",
-            C_observed: "Mean of C1-C7 items"
-          }
-        }, null, 2) } },
-        { id: genId(), type: "table", value: {
-          cols: ["Dimensiune", "Itemi", "Scor Max", "Formula"],
-          rows: [
-            ["R — Relevanță", "7 (R1-R7)", "35", "Poartă: media < 3 = eșec"],
-            ["I — Impact", "10 (I1-I10)", "50", "I_mean = sum/10"],
-            ["F — Frecvență", "11 (F1-F11)", "55", "F_mean = sum/11"],
-            ["C — Conversie", "7 (C1-C7)", "35", "C_observed = sum/7"],
-            ["TOTAL", "35 itemi", "175", "C_pred = R_gate × (I×F)"]
-          ]
-        }}
-      ];
-    }
+    var rubricJson = JSON.stringify({
+      scale: "1-5 Likert",
+      anchors: { 1: "Total dezacord / Deloc", 3: "Neutru / Moderat", 5: "Total acord / Complet" },
+      dimensions: {
+        R: { name: "Relevanță", items: 7, maxScore: 35, gate: "If mean(R) < 3.0 message fails" },
+        I: { name: "Impact", items: 10, maxScore: 50 },
+        F: { name: "Frecvență", items: 11, maxScore: 55 },
+        C: { name: "Conversie", items: 7, maxScore: 35 }
+      },
+      formula: "C_predicted = R_gate * (I_mean * F_mean)",
+      scoring: { R_gate: "If R_mean >= 3 then 1, else 0", composite: "I_mean * F_mean", C_observed: "Mean of C1-C7" }
+    }, null, 2);
+    allBlocks[k2] = [
+      { id: genId(), type: "text-short", value: { ro: "Scoring Rubric R IF C — Ancore 1/3/5", en: "RIFC Scoring Rubric — Anchors 1/3/5", ru: "Scoring Rubric R IF C — Якоря 1/3/5" } },
+      { id: genId(), type: "link", value: { ro: "https://osf.io", en: "https://osf.io", ru: "https://osf.io" } },
+      { id: genId(), type: "code", value: { ro: { lang: "json", code: rubricJson }, en: { lang: "json", code: rubricJson }, ru: { lang: "json", code: rubricJson } } },
+      { id: genId(), type: "table", value: {
+        cols: ["Dimensiune", "Itemi", "Scor Max", "Formula"],
+        rows: [
+          ["R — Relevanță", "7 (R1-R7)", "35", "Poartă: media < 3 = eșec"],
+          ["I — Impact", "10 (I1-I10)", "50", "I_mean = sum/10"],
+          ["F — Frecvență", "11 (F1-F11)", "55", "F_mean = sum/11"],
+          ["C — Conversie", "7 (C1-C7)", "35", "C_observed = sum/7"],
+          ["TOTAL", "35 itemi", "175", "C_pred = R_gate × (I×F)"]
+        ]
+      }}
+    ];
 
     // --- s2-7: Traducere & Validare trilingvă (RO / EN / RU) ---
     var k7 = "s2-7";
-    if (!allBlocks[k7] || allBlocks[k7].length === 0) {
-      allBlocks[k7] = [
-        { id: genId(), type: "text-short", value: "Traducere & Validare Trilingvă — RO / EN / RU" },
-        { id: genId(), type: "dropdown", value: { category: "Status", value: "Finalizat" } },
-        { id: genId(), type: "link", value: "https://osf.io" },
-        { id: genId(), type: "text-long", value: "Documentul RIFC Scoring Rubric conține traducerea completă a tuturor celor 35 de itemi Likert în cele trei limbi:\\n\\n• ROMÂNĂ (RO) — limba principală, itemii originali\\n• ENGLEZĂ (EN) — traducere academică pentru publicare internațională\\n• RUSĂ (RU) — traducere pentru piața din Republica Moldova\\n\\nFiecare item include ancorele de scoring (1/3/5) traduse în toate cele 3 limbi.\\nMetoda de traducere: back-translation cu verificare de către vorbitori nativi.\\n\\nExemple ancore trilingve:\\n• 1 = Total dezacord / Strongly disagree / Полностью не согласен\\n• 3 = Neutru / Neutral / Нейтрально\\n• 5 = Total acord / Strongly agree / Полностью согласен" },
-        { id: genId(), type: "table", value: {
-          cols: ["Dimensiune", "Itemi", "RO", "EN", "RU"],
-          rows: [
-            ["R — Relevanță", "7", "Finalizat", "Finalizat", "Finalizat"],
-            ["I — Impact", "10", "Finalizat", "Finalizat", "Finalizat"],
-            ["F — Frecvență", "11", "Finalizat", "Finalizat", "Finalizat"],
-            ["C — Conversie", "7", "Finalizat", "Finalizat", "Finalizat"],
-            ["TOTAL", "35", "35/35", "35/35", "35/35"]
-          ]
-        }}
-      ];
-    }
+    allBlocks[k7] = [
+      { id: genId(), type: "text-short", value: { ro: "Traducere & Validare Trilingvă", en: "Translation & Trilingual Validation", ru: "Перевод и трёхъязычная валидация" } },
+      { id: genId(), type: "dropdown", value: { category: "Status", value: "Finalizat" } },
+      { id: genId(), type: "link", value: { ro: "https://osf.io", en: "https://osf.io", ru: "https://osf.io" } },
+      { id: genId(), type: "text-long", value: {
+        ro: "Documentul RIFC Scoring Rubric conține traducerea completă a tuturor celor 35 de itemi Likert în cele trei limbi.\\n\\n• ROMÂNĂ (RO) — limba principală, itemii originali\\n• ENGLEZĂ (EN) — traducere academică pentru publicare internațională\\n• RUSĂ (RU) — traducere pentru piața din Republica Moldova\\n\\nMetoda: back-translation cu verificare de către vorbitori nativi.\\n\\nAncore: 1 = Total dezacord · 3 = Neutru · 5 = Total acord",
+        en: "The RIFC Scoring Rubric document contains the complete translation of all 35 Likert items in three languages.\\n\\n• ROMANIAN (RO) — primary language, original items\\n• ENGLISH (EN) — academic translation for international publication\\n• RUSSIAN (RU) — translation for the Republic of Moldova market\\n\\nMethod: back-translation with native speaker verification.\\n\\nAnchors: 1 = Strongly disagree · 3 = Neutral · 5 = Strongly agree",
+        ru: "Документ RIFC Scoring Rubric содержит полный перевод всех 35 шкал Лайкерта на три языка.\\n\\n• РУМЫНСКИЙ (RO) — основной язык, оригинальные пункты\\n• АНГЛИЙСКИЙ (EN) — академический перевод для международной публикации\\n• РУССКИЙ (RU) — перевод для рынка Республики Молдова\\n\\nМетод: обратный перевод с проверкой носителями языка.\\n\\nЯкоря: 1 = Полностью не согласен · 3 = Нейтрально · 5 = Полностью согласен"
+      }},
+      { id: genId(), type: "table", value: {
+        cols: ["Dimensiune", "Itemi", "RO", "EN", "RU"],
+        rows: [
+          ["R — Relevanță", "7", "Finalizat", "Finalizat", "Finalizat"],
+          ["I — Impact", "10", "Finalizat", "Finalizat", "Finalizat"],
+          ["F — Frecvență", "11", "Finalizat", "Finalizat", "Finalizat"],
+          ["C — Conversie", "7", "Finalizat", "Finalizat", "Finalizat"],
+          ["TOTAL", "35", "35/35", "35/35", "35/35"]
+        ]
+      }}
+    ];
 
     saveBlocks();
     try { localStorage.setItem(SEED_KEY, "1"); } catch(e) {}
@@ -787,21 +818,78 @@ const ROADMAP_SCRIPT = `
     bindBlockEvents(key);
   }
 
+  // Migrate old non-trilingual block values to trilingual format
+  function migrateBlock(block) {
+    if (!isTrilingual(block.type)) return;
+    var val = block.value;
+    if (block.type === "code") {
+      if (val && val.lang && typeof val.code === "string") {
+        block.value = { ro: { lang: val.lang, code: val.code }, en: { lang: val.lang, code: "" }, ru: { lang: val.lang, code: "" } };
+        saveBlocks();
+      }
+    } else {
+      if (typeof val === "string") {
+        block.value = { ro: val, en: "", ru: "" };
+        saveBlocks();
+      }
+    }
+  }
+
+  function getLangVal(block, lang) {
+    if (!block.value || typeof block.value !== "object") return block.type === "code" ? { lang: "json", code: "" } : "";
+    return block.value[lang] || (block.type === "code" ? { lang: "json", code: "" } : "");
+  }
+
+  function renderLangTabs(blockId) {
+    var activeLang = blockLangTab[blockId] || "ro";
+    var h = '<div class="blk-lang-tabs" data-lang-tabs="' + blockId + '">';
+    LANGS.forEach(function(lang) {
+      h += '<button class="blk-lang-tab ' + lang + (activeLang === lang ? ' active' : '') + '" data-lang-switch="' + blockId + '" data-lang="' + lang + '">' + LANG_LABELS[lang] + '</button>';
+    });
+    h += '</div>';
+    return h;
+  }
+
   function renderBlockBody(block) {
     var val = block.value;
+    // Migrate old data format to trilingual
+    if (isTrilingual(block.type)) migrateBlock(block);
+    val = block.value;
+    var activeLang = blockLangTab[block.id] || "ro";
+
     switch (block.type) {
       case "text-short":
-        return '<input class="blk-input" type="text" data-blk-val="' + block.id + '" value="' + escAttr(val || '') + '" placeholder="Introduceți text..." />';
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || "";
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<input class="blk-input" type="text" data-blk-lang-val="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(lv) + '" placeholder="' + LANG_LABELS[lang] + ' — Introduceți text..." />';
+          h += '</div>';
+        });
+        return h;
 
       case "text-long":
-        return '<textarea class="blk-textarea" data-blk-val="' + block.id + '" placeholder="Introduceți text detaliat...">' + escHtml(val || '') + '</textarea>';
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || "";
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<textarea class="blk-textarea" data-blk-lang-val="' + block.id + '" data-lang="' + lang + '" placeholder="' + LANG_LABELS[lang] + ' — Introduceți text detaliat...">' + escHtml(lv) + '</textarea>';
+          h += '</div>';
+        });
+        return h;
 
       case "link":
-        var domain = "";
-        try { if (val && val.indexOf("://") !== -1) domain = val.split("://")[1].split("/")[0]; } catch(e) {}
-        var h = '<div class="blk-link-row"><input class="blk-input" type="url" data-blk-val="' + block.id + '" value="' + escAttr(val || '') + '" placeholder="https://..." />';
-        h += '<button class="blk-link-open" data-link-open="' + block.id + '" title="Deschide link">' + ICONS.externalLink + '</button></div>';
-        if (domain) h += '<div class="blk-link-preview">' + ICONS.globe + '<span>' + escHtml(domain) + '</span></div>';
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || "";
+          var domain = "";
+          try { if (lv && lv.indexOf("://") !== -1) domain = lv.split("://")[1].split("/")[0]; } catch(e) {}
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<div class="blk-link-row"><input class="blk-input" type="url" data-blk-lang-val="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(lv) + '" placeholder="' + LANG_LABELS[lang] + ' — https://..." />';
+          h += '<button class="blk-link-open" data-link-open="' + block.id + '" data-link-lang="' + lang + '" title="Deschide link">' + ICONS.externalLink + '</button></div>';
+          if (domain) h += '<div class="blk-link-preview">' + ICONS.globe + '<span>' + escHtml(domain) + '</span></div>';
+          h += '</div>';
+        });
         return h;
 
       case "file":
@@ -841,7 +929,7 @@ const ROADMAP_SCRIPT = `
         return h;
 
       case "dropdown":
-        if (!val || typeof val !== "object") val = { category: "", value: "" };
+        if (!val || typeof val !== "object" || val.ro !== undefined) val = val && val.category ? val : { category: "", value: "" };
         var h = '<div class="blk-select-row">';
         h += '<select class="blk-select" data-dd-cat="' + block.id + '">';
         h += '<option value="">— Categorie —</option>';
@@ -866,15 +954,21 @@ const ROADMAP_SCRIPT = `
         return '<input class="blk-date" type="date" data-blk-val="' + block.id + '" value="' + escAttr(val || '') + '" />';
 
       case "code":
-        if (!val || typeof val !== "object") val = { lang: "json", code: "" };
-        var langs = ["json","html","css","javascript","python","sql","bash","typescript","yaml","xml","markdown","csv","plaintext"];
-        var h = '<div class="blk-code-header">';
-        h += '<select class="blk-code-lang" data-code-lang="' + block.id + '">';
-        langs.forEach(function(l) { h += '<option value="' + l + '"' + (val.lang === l ? ' selected' : '') + '>' + l.toUpperCase() + '</option>'; });
-        h += '</select>';
-        h += '<button class="blk-code-copy" data-code-copy="' + block.id + '">' + ICONS.copy + '<span>Copiază</span></button>';
-        h += '</div>';
-        h += '<textarea class="blk-code-area" data-code-val="' + block.id + '" placeholder="// Introduceți cod aici..." spellcheck="false">' + escHtml(val.code || '') + '</textarea>';
+        var codeLangs = ["json","html","css","javascript","python","sql","bash","typescript","yaml","xml","markdown","csv","plaintext"];
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || { lang: "json", code: "" };
+          if (typeof lv !== "object") lv = { lang: "json", code: "" };
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<div class="blk-code-header">';
+          h += '<select class="blk-code-lang" data-code-lang="' + block.id + '" data-lang="' + lang + '">';
+          codeLangs.forEach(function(l) { h += '<option value="' + l + '"' + (lv.lang === l ? ' selected' : '') + '>' + l.toUpperCase() + '</option>'; });
+          h += '</select>';
+          h += '<button class="blk-code-copy" data-code-copy="' + block.id + '" data-copy-lang="' + lang + '">' + ICONS.copy + '<span>Copiază</span></button>';
+          h += '</div>';
+          h += '<textarea class="blk-code-area" data-code-val="' + block.id + '" data-lang="' + lang + '" placeholder="' + LANG_LABELS[lang] + ' // Introduceți cod aici..." spellcheck="false">' + escHtml(lv.code || '') + '</textarea>';
+          h += '</div>';
+        });
         return h;
 
       default: return '<em style="color:var(--text3);font-size:12px;">Tip necunoscut</em>';
@@ -901,8 +995,7 @@ const ROADMAP_SCRIPT = `
     document.querySelectorAll("[data-add-type]").forEach(function(btn) {
       btn.addEventListener("click", function(e) {
         e.stopPropagation();
-        var type = btn.getAttribute("data-add-type");
-        addBlock(key, type);
+        addBlock(key, btn.getAttribute("data-add-type"));
         pickerOpen = false;
         renderBlocks(key);
       });
@@ -920,7 +1013,72 @@ const ROADMAP_SCRIPT = `
       });
     });
 
-    // Text-short, text-long, number, date, link — auto-save on input
+    // ═══ LANG TABS — switch between RO/EN/RU ═══
+    document.querySelectorAll("[data-lang-switch]").forEach(function(tab) {
+      tab.addEventListener("click", function(e) {
+        e.stopPropagation();
+        var bid = tab.getAttribute("data-lang-switch");
+        var lang = tab.getAttribute("data-lang");
+        blockLangTab[bid] = lang;
+        // Toggle tab active state (DOM only, no re-render)
+        var tabGroup = tab.parentElement;
+        tabGroup.querySelectorAll(".blk-lang-tab").forEach(function(t) { t.classList.remove("active"); });
+        tab.classList.add("active");
+        // Toggle panel visibility
+        var blkEl = tab.closest(".blk");
+        if (blkEl) {
+          blkEl.querySelectorAll('[data-lang-panel="' + bid + '"]').forEach(function(panel) {
+            panel.classList.toggle("active", panel.getAttribute("data-panel-lang") === lang);
+          });
+        }
+      });
+    });
+
+    // ═══ TRILINGUAL text/link inputs — auto-save per lang ═══
+    document.querySelectorAll("[data-blk-lang-val]").forEach(function(input) {
+      var debounce = null;
+      input.addEventListener("input", function() {
+        clearTimeout(debounce);
+        debounce = setTimeout(function() {
+          var bid = input.getAttribute("data-blk-lang-val");
+          var lang = input.getAttribute("data-lang");
+          var blocks = getTaskBlocks(key);
+          for (var i = 0; i < blocks.length; i++) {
+            if (blocks[i].id === bid) {
+              if (!blocks[i].value || typeof blocks[i].value !== "object") blocks[i].value = { ro: "", en: "", ru: "" };
+              blocks[i].value[lang] = input.value;
+              saveBlocks();
+              break;
+            }
+          }
+        }, 300);
+      });
+    });
+
+    // Link — update preview on blur (trilingual)
+    document.querySelectorAll('input[type="url"][data-blk-lang-val]').forEach(function(input) {
+      input.addEventListener("blur", function() { renderBlocks(key); });
+    });
+
+    // Link — open button (trilingual)
+    document.querySelectorAll("[data-link-open]").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        var bid = btn.getAttribute("data-link-open");
+        var lang = btn.getAttribute("data-link-lang") || (blockLangTab[bid] || "ro");
+        var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) {
+          if (blocks[i].id === bid && blocks[i].value) {
+            var url = (typeof blocks[i].value === "object" && blocks[i].value[lang]) ? blocks[i].value[lang] : blocks[i].value;
+            if (typeof url !== "string") url = "";
+            if (url && url.indexOf("://") === -1) url = "https://" + url;
+            if (url) try { window.open(url, "_blank"); } catch(e) {}
+            break;
+          }
+        }
+      });
+    });
+
+    // Non-trilingual inputs (number, date) — auto-save
     document.querySelectorAll("[data-blk-val]").forEach(function(input) {
       var debounce = null;
       input.addEventListener("input", function() {
@@ -932,27 +1090,6 @@ const ROADMAP_SCRIPT = `
           updateBlockValue(key, bid, v);
         }, 300);
       });
-    });
-
-    // Link — open button
-    document.querySelectorAll("[data-link-open]").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-link-open");
-        var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid && blocks[i].value) {
-            var url = blocks[i].value;
-            if (url && url.indexOf("://") === -1) url = "https://" + url;
-            try { window.open(url, "_blank"); } catch(e) {}
-            break;
-          }
-        }
-      });
-    });
-
-    // Link — update preview on blur
-    document.querySelectorAll('input[type="url"][data-blk-val]').forEach(function(input) {
-      input.addEventListener("blur", function() { renderBlocks(key); });
     });
 
     // File — dropzone
@@ -968,11 +1105,7 @@ const ROADMAP_SCRIPT = `
 
     // File — remove
     document.querySelectorAll("[data-file-remove]").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-file-remove");
-        updateBlockValue(key, bid, null);
-        renderBlocks(key);
-      });
+      btn.addEventListener("click", function() { updateBlockValue(key, btn.getAttribute("data-file-remove"), null); renderBlocks(key); });
     });
 
     // Table — cell edits
@@ -982,158 +1115,98 @@ const ROADMAP_SCRIPT = `
         var ri = parseInt(input.getAttribute("data-row"), 10);
         var ci = parseInt(input.getAttribute("data-col"), 10);
         var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid) {
-            blocks[i].value.rows[ri][ci] = input.value;
-            saveBlocks();
-            break;
-          }
-        }
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value.rows[ri][ci] = input.value; saveBlocks(); break; } }
       });
     });
     // Table — col header edits
     document.querySelectorAll("[data-tbl-col]").forEach(function(input) {
       input.addEventListener("input", function() {
-        var bid = input.getAttribute("data-tbl-col");
-        var ci = parseInt(input.getAttribute("data-col-idx"), 10);
+        var bid = input.getAttribute("data-tbl-col"); var ci = parseInt(input.getAttribute("data-col-idx"), 10);
         var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid) {
-            blocks[i].value.cols[ci] = input.value;
-            saveBlocks();
-            break;
-          }
-        }
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value.cols[ci] = input.value; saveBlocks(); break; } }
       });
     });
     // Table — add row
     document.querySelectorAll("[data-tbl-add-row]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-add-row");
-        var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid) {
-            var nCols = blocks[i].value.cols.length;
-            var newRow = []; for (var c = 0; c < nCols; c++) newRow.push("");
-            blocks[i].value.rows.push(newRow);
-            saveBlocks(); renderBlocks(key);
-            break;
-          }
-        }
+        var bid = btn.getAttribute("data-tbl-add-row"); var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { var nCols = blocks[i].value.cols.length; var nr = []; for (var c = 0; c < nCols; c++) nr.push(""); blocks[i].value.rows.push(nr); saveBlocks(); renderBlocks(key); break; } }
       });
     });
     // Table — add col
     document.querySelectorAll("[data-tbl-add-col]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-add-col");
-        var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid) {
-            blocks[i].value.cols.push("Coloana " + (blocks[i].value.cols.length + 1));
-            blocks[i].value.rows.forEach(function(r) { r.push(""); });
-            saveBlocks(); renderBlocks(key);
-            break;
-          }
-        }
+        var bid = btn.getAttribute("data-tbl-add-col"); var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value.cols.push("Coloana " + (blocks[i].value.cols.length + 1)); blocks[i].value.rows.forEach(function(r) { r.push(""); }); saveBlocks(); renderBlocks(key); break; } }
       });
     });
     // Table — delete last row
     document.querySelectorAll("[data-tbl-del-row]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-del-row");
-        var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid && blocks[i].value.rows.length > 1) {
-            blocks[i].value.rows.pop();
-            saveBlocks(); renderBlocks(key);
-            break;
-          }
-        }
+        var bid = btn.getAttribute("data-tbl-del-row"); var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value.rows.length > 1) { blocks[i].value.rows.pop(); saveBlocks(); renderBlocks(key); break; } }
       });
     });
     // Table — delete last col
     document.querySelectorAll("[data-tbl-del-col]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-del-col");
-        var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid && blocks[i].value.cols.length > 1) {
-            blocks[i].value.cols.pop();
-            blocks[i].value.rows.forEach(function(r) { r.pop(); });
-            saveBlocks(); renderBlocks(key);
-            break;
-          }
-        }
+        var bid = btn.getAttribute("data-tbl-del-col"); var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value.cols.length > 1) { blocks[i].value.cols.pop(); blocks[i].value.rows.forEach(function(r) { r.pop(); }); saveBlocks(); renderBlocks(key); break; } }
       });
     });
 
     // Dropdown — category change
     document.querySelectorAll("[data-dd-cat]").forEach(function(sel) {
       sel.addEventListener("change", function() {
-        var bid = sel.getAttribute("data-dd-cat");
-        var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid) {
-            blocks[i].value = { category: sel.value, value: "" };
-            saveBlocks(); renderBlocks(key);
-            break;
-          }
-        }
+        var bid = sel.getAttribute("data-dd-cat"); var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value = { category: sel.value, value: "" }; saveBlocks(); renderBlocks(key); break; } }
       });
     });
     // Dropdown — value change
     document.querySelectorAll("[data-dd-val]").forEach(function(sel) {
       sel.addEventListener("change", function() {
-        var bid = sel.getAttribute("data-dd-val");
-        var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid) {
-            blocks[i].value.value = sel.value;
-            saveBlocks();
-            break;
-          }
-        }
+        var bid = sel.getAttribute("data-dd-val"); var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value.value = sel.value; saveBlocks(); break; } }
       });
     });
 
-    // Code — language change
+    // Code — language change (trilingual)
     document.querySelectorAll("[data-code-lang]").forEach(function(sel) {
       sel.addEventListener("change", function() {
         var bid = sel.getAttribute("data-code-lang");
+        var lang = sel.getAttribute("data-lang") || "ro";
         var blocks = getTaskBlocks(key);
         for (var i = 0; i < blocks.length; i++) {
           if (blocks[i].id === bid) {
-            blocks[i].value.lang = sel.value;
-            saveBlocks();
-            break;
+            if (blocks[i].value && blocks[i].value[lang]) blocks[i].value[lang].lang = sel.value;
+            saveBlocks(); break;
           }
         }
       });
     });
 
-    // Code — code input (auto-save with debounce)
+    // Code — code input (trilingual, auto-save with debounce)
     document.querySelectorAll("[data-code-val]").forEach(function(textarea) {
       var debounce = null;
       textarea.addEventListener("input", function() {
         clearTimeout(debounce);
         debounce = setTimeout(function() {
           var bid = textarea.getAttribute("data-code-val");
+          var lang = textarea.getAttribute("data-lang") || "ro";
           var blocks = getTaskBlocks(key);
           for (var i = 0; i < blocks.length; i++) {
             if (blocks[i].id === bid) {
-              blocks[i].value.code = textarea.value;
-              saveBlocks();
-              break;
+              if (blocks[i].value && blocks[i].value[lang]) blocks[i].value[lang].code = textarea.value;
+              saveBlocks(); break;
             }
           }
         }, 300);
       });
-      // Tab key inserts 2 spaces instead of changing focus
+      // Tab key inserts 2 spaces
       textarea.addEventListener("keydown", function(e) {
         if (e.key === "Tab") {
           e.preventDefault();
-          var start = textarea.selectionStart;
-          var end = textarea.selectionEnd;
+          var start = textarea.selectionStart; var end = textarea.selectionEnd;
           textarea.value = textarea.value.substring(0, start) + "  " + textarea.value.substring(end);
           textarea.selectionStart = textarea.selectionEnd = start + 2;
           textarea.dispatchEvent(new Event("input"));
@@ -1141,36 +1214,18 @@ const ROADMAP_SCRIPT = `
       });
     });
 
-    // Code — copy button
+    // Code — copy button (trilingual)
     document.querySelectorAll("[data-code-copy]").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var bid = btn.getAttribute("data-code-copy");
+        var lang = btn.getAttribute("data-copy-lang") || "ro";
         var blocks = getTaskBlocks(key);
         for (var i = 0; i < blocks.length; i++) {
-          if (blocks[i].id === bid && blocks[i].value && blocks[i].value.code) {
-            try {
-              navigator.clipboard.writeText(blocks[i].value.code).then(function() {
-                var span = btn.querySelector("span");
-                btn.classList.add("copied");
-                if (span) span.textContent = "Copiat!";
-                setTimeout(function() {
-                  btn.classList.remove("copied");
-                  if (span) span.textContent = "Copiază";
-                }, 2000);
-              });
-            } catch(e) {
-              // Fallback for older browsers
-              var ta = document.createElement("textarea");
-              ta.value = blocks[i].value.code;
-              ta.style.position = "fixed"; ta.style.left = "-9999px";
-              document.body.appendChild(ta); ta.select();
-              try { document.execCommand("copy"); } catch(ex) {}
-              document.body.removeChild(ta);
-              var span = btn.querySelector("span");
-              btn.classList.add("copied");
-              if (span) span.textContent = "Copiat!";
-              setTimeout(function() { btn.classList.remove("copied"); if (span) span.textContent = "Copiază"; }, 2000);
-            }
+          if (blocks[i].id === bid && blocks[i].value && blocks[i].value[lang] && blocks[i].value[lang].code) {
+            var code = blocks[i].value[lang].code;
+            function showCopied() { var span = btn.querySelector("span"); btn.classList.add("copied"); if (span) span.textContent = "Copiat!"; setTimeout(function() { btn.classList.remove("copied"); if (span) span.textContent = "Copiază"; }, 2000); }
+            try { navigator.clipboard.writeText(code).then(showCopied); }
+            catch(e) { var ta = document.createElement("textarea"); ta.value = code; ta.style.position = "fixed"; ta.style.left = "-9999px"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch(ex) {} document.body.removeChild(ta); showCopied(); }
             break;
           }
         }
