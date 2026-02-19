@@ -14,9 +14,10 @@ const EXCLUDED_PATHS = [
 
 // Check if current path should be excluded
 function isExcluded(pathname: string): boolean {
-  // Wizard is ALLOWED (not excluded)
+  // These sub-paths are ALLOWED (public-facing, need tracking)
   if (pathname === "/articolstiintific/sondaj/wizard") return false;
-  // Everything under /articolstiintific is excluded
+  if (pathname.startsWith("/articolstiintific/osf")) return false;
+  // Everything else under /articolstiintific is excluded (admin areas)
   return EXCLUDED_PATHS.some(p => pathname.startsWith(p));
 }
 

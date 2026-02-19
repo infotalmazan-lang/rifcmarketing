@@ -3,11 +3,88 @@
  * R IF C — Articol Stiintific (OSF Page)
  * Manuscris final pentru publicatie internationala
  * URL: /articolstiintific/osf
+ *
+ * Tracking events (GA4 + FB Pixel) — all prefixed with "OSF_":
+ *   OSF_PageView         — page load
+ *   OSF_Scroll_25/50/75/100  — scroll depth milestones
+ *   OSF_TimeOnPage_30s/60s/120s/300s — time spent milestones
+ *   OSF_SectionView      — user scrolls to a specific article section
  */
 
-import { Metadata } from "next";
+import { useEffect, useRef, useCallback } from "react";
+import { fbTrackCustom } from "@/components/FacebookPixel";
+
+/* ── GA4 helper ── */
+function ga(event: string, params?: Record<string, string | number>) {
+  if (typeof window !== "undefined" && (window as any).gtag) {
+    (window as any).gtag("event", event, params);
+  }
+}
+
+/* ── Dual track: GA4 + FB ── */
+function track(eventName: string, params?: Record<string, string | number>) {
+  ga(eventName, params);
+  fbTrackCustom(eventName, params);
+}
 
 export default function ArticolOSFPage() {
+  const firedScrollRef = useRef<Set<number>>(new Set());
+  const firedTimeRef = useRef<Set<number>>(new Set());
+  const startTimeRef = useRef<number>(Date.now());
+
+  /* ── OSF_PageView on mount ── */
+  useEffect(() => {
+    track("OSF_PageView", {
+      content_name: "Articol Stiintific OSF",
+      content_category: "article",
+      page_path: "/articolstiintific/osf",
+    });
+  }, []);
+
+  /* ── OSF_Scroll depth tracking ── */
+  useEffect(() => {
+    function onScroll() {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight <= 0) return;
+      const pct = Math.round((scrollTop / docHeight) * 100);
+
+      [25, 50, 75, 100].forEach((milestone) => {
+        if (pct >= milestone && !firedScrollRef.current.has(milestone)) {
+          firedScrollRef.current.add(milestone);
+          track(`OSF_Scroll_${milestone}`, {
+            scroll_depth: milestone,
+            content_name: "Articol Stiintific OSF",
+          });
+        }
+      });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  /* ── OSF_TimeOnPage milestones ── */
+  useEffect(() => {
+    const milestones = [30, 60, 120, 300]; // seconds
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      milestones.forEach((sec) => {
+        if (elapsed >= sec && !firedTimeRef.current.has(sec)) {
+          firedTimeRef.current.add(sec);
+          track(`OSF_TimeOnPage_${sec}s`, {
+            seconds: sec,
+            content_name: "Articol Stiintific OSF",
+          });
+        }
+      });
+      // Clear interval if all milestones fired
+      if (firedTimeRef.current.size >= milestones.length) {
+        clearInterval(interval);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -105,46 +182,18 @@ export default function ArticolOSFPage() {
             gap: 12,
             flexWrap: "wrap" as const,
           }}>
-            <span style={{
-              padding: "4px 12px",
-              borderRadius: 20,
-              background: "#f3f4f6",
-              fontSize: 11,
-              color: "#6B7280",
-              fontWeight: 600,
-            }}>
-              Marketing Communication
-            </span>
-            <span style={{
-              padding: "4px 12px",
-              borderRadius: 20,
-              background: "#f3f4f6",
-              fontSize: 11,
-              color: "#6B7280",
-              fontWeight: 600,
-            }}>
-              Scale Development
-            </span>
-            <span style={{
-              padding: "4px 12px",
-              borderRadius: 20,
-              background: "#f3f4f6",
-              fontSize: 11,
-              color: "#6B7280",
-              fontWeight: 600,
-            }}>
-              Message Clarity
-            </span>
-            <span style={{
-              padding: "4px 12px",
-              borderRadius: 20,
-              background: "#f3f4f6",
-              fontSize: 11,
-              color: "#6B7280",
-              fontWeight: 600,
-            }}>
-              Empirical Validation
-            </span>
+            {["Marketing Communication", "Scale Development", "Message Clarity", "Empirical Validation"].map((tag) => (
+              <span key={tag} style={{
+                padding: "4px 12px",
+                borderRadius: 20,
+                background: "#f3f4f6",
+                fontSize: 11,
+                color: "#6B7280",
+                fontWeight: 600,
+              }}>
+                {tag}
+              </span>
+            ))}
           </div>
         </div>
 
