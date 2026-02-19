@@ -26,41 +26,35 @@ export async function GET(request: Request) {
 
     const { data: filteredRespondents, error: respondentError } = await respondentQuery;
 
-    // DEBUG: also fetch ALL respondents without filter to compare
-    const { data: rawAllRespondents } = await supabase
-      .from("survey_respondents")
-      .select("id, completed_at, is_archived, distribution_id");
+    // Use all non-archived respondents directly (LOG counts them all)
+    const respondents = filteredRespondents || [];
+    const totalRespondents = respondents.length;
+    const respondentIds = respondents.map((r: { id: string }) => r.id);
 
-    const allRespondents = filteredRespondents || [];
-    const allRespondentIds = allRespondents.map((r: { id: string }) => r.id);
-
-    // Fetch ALL responses first — then filter respondents to only those with responses
-    // This ensures Results matches LOG (both show only respondents who interacted with survey)
+    // Fetch responses — use individual queries per respondent batch to avoid .in() issues
     let allFilteredResponses: any[] = [];
-    if (allRespondentIds.length > 0) {
-      const PAGE_SIZE = 1000;
-      let offset = 0;
-      let hasMore = true;
-      while (hasMore) {
-        const { data: respData } = await supabase
-          .from("survey_responses")
-          .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
-          .in("respondent_id", allRespondentIds)
-          .range(offset, offset + PAGE_SIZE - 1);
-        const batch = respData || [];
-        allFilteredResponses = allFilteredResponses.concat(batch);
-        hasMore = batch.length === PAGE_SIZE;
-        offset += PAGE_SIZE;
+    if (respondentIds.length > 0) {
+      // Fetch responses in batches of respondent IDs (PostgREST .in() can miss rows with many UUIDs)
+      const BATCH_SIZE = 10; // small batches of respondent IDs
+      for (let i = 0; i < respondentIds.length; i += BATCH_SIZE) {
+        const batchIds = respondentIds.slice(i, i + BATCH_SIZE);
+        const PAGE_SIZE = 1000;
+        let offset = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const { data: respData } = await supabase
+            .from("survey_responses")
+            .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
+            .in("respondent_id", batchIds)
+            .range(offset, offset + PAGE_SIZE - 1);
+          const batch = respData || [];
+          allFilteredResponses = allFilteredResponses.concat(batch);
+          hasMore = batch.length === PAGE_SIZE;
+          offset += PAGE_SIZE;
+        }
       }
     }
     const totalResponses = allFilteredResponses.length;
-
-    // Build set of respondent IDs that actually have responses (syncs with LOG view)
-    const respondentIdsWithResponses = new Set(allFilteredResponses.map(r => r.respondent_id));
-
-    // Only count respondents who have at least 1 response (matches LOG display)
-    const respondents = allRespondents.filter(r => respondentIdsWithResponses.has(r.id));
-    const totalRespondents = respondents.length;
 
     // Completed respondents — those with completed_at set
     const completedRespondents = respondents.filter(r => r.completed_at != null).length;
@@ -78,9 +72,6 @@ export async function GET(request: Request) {
       .map(r => Math.round((new Date(r.completed_at as string).getTime() - new Date(r.started_at as string).getTime()) / 1000))
       .filter(s => s > 0 && s < 7200); // ignore outliers > 2h
     const avgSessionTime = durations.length > 0 ? Math.round(durations.reduce((a, v) => a + v, 0) / durations.length) : 0;
-
-    // Respondent IDs (only those with responses)
-    const respondentIds = respondents.map((r: { id: string }) => r.id);
 
     // Build map: stimulus_id → responses[] (from filtered respondents only)
     const responsesByStimulus: Record<string, typeof allFilteredResponses> = {};
@@ -390,14 +381,10 @@ export async function GET(request: Request) {
         activeStimuli: activeStimIds.length,
         uniqueStimIdsInResponses: uniqueStimIdsInResponses.length,
         hasOrphans: orphanStimIds.length > 0,
-        // DEBUG: compare filtered vs raw
-        filteredQueryCount: (filteredRespondents || []).length,
-        rawAllCount: (rawAllRespondents || []).length,
-        rawAll: (rawAllRespondents || []).map((r: any) => ({
+        // Per-respondent response counts for verification
+        perRespondent: respondents.map((r: any) => ({
           id: r.id?.substring(0, 8),
-          completed_at: r.completed_at ? "yes" : "no",
-          is_archived: r.is_archived,
-          dist: r.distribution_id ? "has" : "none",
+          responses: allFilteredResponses.filter((resp: any) => resp.respondent_id === r.id).length,
         })),
       },
     });
