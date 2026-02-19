@@ -525,6 +525,84 @@ const ROADMAP_SCRIPT = `
     saveBlocks();
   }
 
+  // ═══ SEED PRE-POPULATED BLOCKS ═══
+  function seedBlocksIfNeeded() {
+    var SEED_KEY = "rifc-blocks-seeded-v2";
+    try { if (localStorage.getItem(SEED_KEY)) return; } catch(e) { return; }
+
+    // --- s2-0: Transformare sub-factori → Itemi Likert ---
+    var k0 = "s2-0";
+    if (!allBlocks[k0] || allBlocks[k0].length === 0) {
+      allBlocks[k0] = [
+        { id: genId(), type: "text-short", value: "RIFC Scoring Rubric — 35 Itemi Likert (Scala 1-5)" },
+        { id: genId(), type: "link", value: "https://osf.io" },
+        { id: genId(), type: "text-long", value: "DIMENSIUNEA R — RELEVANȚĂ (7 itemi, max 35)\\nR1. Mesajul se adresează unei nevoi reale a publicului-țintă.\\nR2. Conținutul este relevant pentru contextul actual al pieței.\\nR3. Problema identificată în mesaj rezonează cu audiența.\\nR4. Mesajul oferă o soluție pertinentă la o problemă reală.\\nR5. Publicul-țintă se poate identifica cu situația descrisă.\\nR6. Informația prezentată este utilă pentru decizia de cumpărare.\\nR7. Mesajul răspunde la întrebări pe care publicul și le pune efectiv.\\n\\nDIMENSIUNEA I — IMPACT (10 itemi, max 50)\\nI1. Mesajul captează atenția în primele 3 secunde.\\nI2. Elementele vizuale susțin și amplifică mesajul verbal.\\nI3. Există un element de surpriză sau diferențiere clară.\\nI4. Tonul emoțional este adecvat și consistent.\\nI5. Mesajul creează o conexiune emoțională cu audiența.\\nI6. Call-to-action-ul este clar, vizibil și motivant.\\nI7. Mesajul se diferențiază clar de comunicarea competitorilor.\\nI8. Intensitatea emoțională este suficientă fără a fi excesivă.\\nI9. Structura narativă menține interesul de la început la final.\\nI10. Mesajul generează dorința de a afla mai mult sau de a acționa.\\n\\nDIMENSIUNEA F — FRECVENȚĂ (11 itemi, max 55)\\nF1. Mesajul este adaptat specificului canalului de distribuție.\\nF2. Frecvența de expunere este suficientă pentru memorare.\\nF3. Există variații ale mesajului pentru diferite puncte de contact.\\nF4. Momentul difuzării este ales strategic.\\nF5. Mesajul este optimizat pentru formatul platformei.\\nF6. Există continuitate narativă între expuneri succesive.\\nF7. Frecvența nu generează oboseală publicitară.\\nF8. Mesajul funcționează atât la prima vizionare cât și la vizionări repetate.\\nF9. Distribuția acoperă punctele de contact relevante.\\nF10. Planificarea media maximizează reach-ul în cadrul bugetului.\\nF11. Secvențialitatea mesajelor urmează o logică de funnel.\\n\\nDIMENSIUNEA C — CONVERSIE (7 itemi, max 35)\\nC1. Mesajul conduce natural spre acțiunea dorită.\\nC2. Beneficiile sunt prezentate clar și convingător.\\nC3. Există dovezi sociale sau de credibilitate.\\nC4. Oferta este percepută ca valoroasă raportat la preț.\\nC5. Procesul de conversie este simplu și fără fricțiuni.\\nC6. Mesajul creează un sentiment de urgență legitimă.\\nC7. Există mecanisme de follow-up post-expunere." }
+      ];
+    }
+
+    // --- s2-2: Construire Scoring Rubric standardizat ---
+    var k2 = "s2-2";
+    if (!allBlocks[k2] || allBlocks[k2].length === 0) {
+      allBlocks[k2] = [
+        { id: genId(), type: "text-short", value: "Scoring Rubric R IF C — Ancore 1/3/5 pe toate cele 35 de scale" },
+        { id: genId(), type: "link", value: "https://osf.io" },
+        { id: genId(), type: "code", value: { lang: "json", code: JSON.stringify({
+          scale: "1-5 Likert",
+          anchors: { 1: "Total dezacord / Deloc", 3: "Neutru / Moderat", 5: "Total acord / Complet" },
+          dimensions: {
+            R: { name: "Relevanță", items: 7, maxScore: 35, gate: "If mean(R) < 3.0 message fails" },
+            I: { name: "Impact", items: 10, maxScore: 50 },
+            F: { name: "Frecvență", items: 11, maxScore: 55 },
+            C: { name: "Conversie", items: 7, maxScore: 35 }
+          },
+          formula: "C_predicted = R_gate × (I_mean × F_mean)",
+          scoring: {
+            R_gate: "If R_mean >= 3 then 1, else 0 (binary gate)",
+            composite: "I_mean × F_mean (multiplicative interaction)",
+            C_observed: "Mean of C1-C7 items"
+          }
+        }, null, 2) } },
+        { id: genId(), type: "table", value: {
+          cols: ["Dimensiune", "Itemi", "Scor Max", "Formula"],
+          rows: [
+            ["R — Relevanță", "7 (R1-R7)", "35", "Poartă: media < 3 = eșec"],
+            ["I — Impact", "10 (I1-I10)", "50", "I_mean = sum/10"],
+            ["F — Frecvență", "11 (F1-F11)", "55", "F_mean = sum/11"],
+            ["C — Conversie", "7 (C1-C7)", "35", "C_observed = sum/7"],
+            ["TOTAL", "35 itemi", "175", "C_pred = R_gate × (I×F)"]
+          ]
+        }}
+      ];
+    }
+
+    // --- s2-7: Traducere & Validare trilingvă (RO / EN / RU) ---
+    var k7 = "s2-7";
+    if (!allBlocks[k7] || allBlocks[k7].length === 0) {
+      allBlocks[k7] = [
+        { id: genId(), type: "text-short", value: "Traducere & Validare Trilingvă — RO / EN / RU" },
+        { id: genId(), type: "dropdown", value: { category: "Status", value: "Finalizat" } },
+        { id: genId(), type: "link", value: "https://osf.io" },
+        { id: genId(), type: "text-long", value: "Documentul RIFC Scoring Rubric conține traducerea completă a tuturor celor 35 de itemi Likert în cele trei limbi:\\n\\n• ROMÂNĂ (RO) — limba principală, itemii originali\\n• ENGLEZĂ (EN) — traducere academică pentru publicare internațională\\n• RUSĂ (RU) — traducere pentru piața din Republica Moldova\\n\\nFiecare item include ancorele de scoring (1/3/5) traduse în toate cele 3 limbi.\\nMetoda de traducere: back-translation cu verificare de către vorbitori nativi.\\n\\nExemple ancore trilingve:\\n• 1 = Total dezacord / Strongly disagree / Полностью не согласен\\n• 3 = Neutru / Neutral / Нейтрально\\n• 5 = Total acord / Strongly agree / Полностью согласен" },
+        { id: genId(), type: "table", value: {
+          cols: ["Dimensiune", "Itemi", "RO", "EN", "RU"],
+          rows: [
+            ["R — Relevanță", "7", "Finalizat", "Finalizat", "Finalizat"],
+            ["I — Impact", "10", "Finalizat", "Finalizat", "Finalizat"],
+            ["F — Frecvență", "11", "Finalizat", "Finalizat", "Finalizat"],
+            ["C — Conversie", "7", "Finalizat", "Finalizat", "Finalizat"],
+            ["TOTAL", "35", "35/35", "35/35", "35/35"]
+          ]
+        }}
+      ];
+    }
+
+    saveBlocks();
+    try { localStorage.setItem(SEED_KEY, "1"); } catch(e) {}
+  }
+
+  // Run seed on load
+  seedBlocksIfNeeded();
+
   // ═══ RENDER SIDEBAR NAV ═══
   function renderNav() {
     var nav = document.getElementById("stages-nav");
