@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { createMetadata, organizationJsonLd, webSiteJsonLd } from "@/lib/seo";
 import { LanguageProvider } from "@/lib/i18n";
+import FacebookPixel from "@/components/FacebookPixel";
 import "./globals.css";
 
 const GA_MEASUREMENT_ID = "G-DSRWLHHWHY";
@@ -50,6 +51,7 @@ export default function RootLayout({
       </head>
       <body className="bg-surface-bg text-text-primary font-heading antialiased">
         <LanguageProvider>
+          <FacebookPixel />
           <div className="grain" />
           {children}
         </LanguageProvider>

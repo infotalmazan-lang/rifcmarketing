@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
+import { fbTrack, fbTrackCustom } from "@/components/FacebookPixel";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu de Perceptie Consumator
@@ -395,6 +396,29 @@ function StudiuWizardInner() {
     if (nextStep === 1) trackEvent("wizard_start");
     if (nextStep === firstStimulusStep) trackEvent("profile_complete");
     if (nextStep >= thankYouStep) trackEvent("survey_complete");
+
+    // ── Facebook Pixel + CAPI tracking ──
+    if (nextStep === 1) {
+      // Survey started — user clicked "Incepe" from welcome
+      fbTrackCustom("SurveyStart", { content_name: "RIFC Survey", content_category: "survey" });
+    }
+    if (nextStep === firstStimulusStep) {
+      // Profile section completed — all demographic/behavioral/psychographic done
+      fbTrackCustom("ProfileComplete", { content_name: "RIFC Profile", step: nextStep });
+    }
+    // Track every 5th stimulus (not every sub-step, to avoid spam)
+    if (nextStep >= firstStimulusStep && nextStep <= lastStimulusStep) {
+      const stimIdx = Math.floor((nextStep - firstStimulusStep) / stepsPerStimulus);
+      const subStep = (nextStep - firstStimulusStep) % stepsPerStimulus;
+      if (subStep === 0) {
+        // First sub-step of each new stimulus = user moved to next cartonas
+        fbTrackCustom("StimulusView", { content_name: `Stimulus ${stimIdx + 1}`, step: nextStep, stimulus_index: stimIdx });
+      }
+    }
+    if (nextStep >= thankYouStep) {
+      // Survey completed! — this is the main conversion event
+      fbTrack("CompleteRegistration", { content_name: "RIFC Survey Complete", status: "completed", value: 1, currency: "EUR" });
+    }
 
     setTransitioning(true);
     // Persist step to localStorage for resume
