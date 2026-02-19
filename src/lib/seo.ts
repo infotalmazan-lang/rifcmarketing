@@ -31,9 +31,9 @@ export function createMetadata(overrides: Partial<Metadata> & { path?: string } 
       locale: "ro_RO",
       images: [
         {
-          url: `${SITE_URL}/images/og-default.png`,
-          width: 1200,
-          height: 630,
+          url: `${SITE_URL}/images/rifc-logo-black.png`,
+          width: 1024,
+          height: 1024,
           alt: "R IF C Marketing Protocol",
         },
       ],
@@ -43,7 +43,7 @@ export function createMetadata(overrides: Partial<Metadata> & { path?: string } 
       card: "summary_large_image",
       title: title as string,
       description,
-      images: [`${SITE_URL}/images/og-default.png`],
+      images: [`${SITE_URL}/images/rifc-logo-black.png`],
       ...(rest.twitter || {}),
     },
     robots: {
@@ -116,7 +116,7 @@ export function articleJsonLd(article: {
       "@type": "Organization",
       name: "CONTINUUM GRUP",
     },
-    image: article.image || `${SITE_URL}/images/og-default.png`,
+    image: article.image || `${SITE_URL}/images/rifc-logo-black.png`,
   };
 }
 
