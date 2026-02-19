@@ -10,30 +10,62 @@ export async function GET(request: Request) {
     const distributionId = searchParams.get("distribution_id");
 
     // Build respondent query — fetch demographics/behavioral/psychographic for breakdowns
+    // Always exclude archived respondents (is_archived = false OR null for pre-migration rows)
     let respondentQuery = supabase
       .from("survey_respondents")
-      .select("id, demographics, behavioral, psychographic, device_type, variant_group, completed_at, locale", { count: "exact" });
+      .select("id, demographics, behavioral, psychographic, device_type, variant_group, completed_at, locale, started_at, distribution_id")
+      .or("is_archived.eq.false,is_archived.is.null");
 
-    if (distributionId) {
+    if (distributionId === "__none__") {
+      // Filter for respondents with NO distribution (clean link / general)
+      respondentQuery = respondentQuery.is("distribution_id", null);
+    } else if (distributionId) {
       respondentQuery = respondentQuery.eq("distribution_id", distributionId);
     }
 
-    const { data: filteredRespondents, count: totalRespondents } = await respondentQuery;
+    const { data: filteredRespondents, error: respondentError } = await respondentQuery;
 
-    // Completed respondents — computed from the same dataset to ensure consistency
-    const completedRespondents = (filteredRespondents || []).filter(r => r.completed_at != null).length;
+    const respondents = filteredRespondents || [];
+    const totalRespondents = respondents.length;
+
+    // Completed respondents — those with completed_at set
+    const completedRespondents = respondents.filter(r => r.completed_at != null).length;
+
+    // Today / this month / avg session time
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const monthStr = now.toISOString().slice(0, 7);
+    const completedToday = respondents.filter(r => r.completed_at && (r.completed_at as string).slice(0, 10) === todayStr).length;
+    const completedMonth = respondents.filter(r => r.completed_at && (r.completed_at as string).slice(0, 7) === monthStr).length;
+
+    // Avg session duration (completed_at - started_at)
+    const durations = respondents
+      .filter(r => r.completed_at && r.started_at)
+      .map(r => Math.round((new Date(r.completed_at as string).getTime() - new Date(r.started_at as string).getTime()) / 1000))
+      .filter(s => s > 0 && s < 7200); // ignore outliers > 2h
+    const avgSessionTime = durations.length > 0 ? Math.round(durations.reduce((a, v) => a + v, 0) / durations.length) : 0;
 
     // Get respondent IDs for filtering responses
-    const respondentIds = (filteredRespondents || []).map((r: { id: string }) => r.id);
+    const respondentIds = respondents.map((r: { id: string }) => r.id);
 
-    // Total responses (filtered)
+    // Total responses (filtered by respondent IDs)
     let totalResponses = 0;
+    let allFilteredResponses: any[] = [];
     if (respondentIds.length > 0) {
-      const { count } = await supabase
+      // Fetch all responses for these respondents in one query
+      const { data: respData } = await supabase
         .from("survey_responses")
-        .select("*", { count: "exact", head: true })
+        .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
         .in("respondent_id", respondentIds);
-      totalResponses = count || 0;
+      allFilteredResponses = respData || [];
+      totalResponses = allFilteredResponses.length;
+    }
+
+    // Build map: stimulus_id → responses[] (from filtered respondents only)
+    const responsesByStimulus: Record<string, typeof allFilteredResponses> = {};
+    for (const resp of allFilteredResponses) {
+      if (!responsesByStimulus[resp.stimulus_id]) responsesByStimulus[resp.stimulus_id] = [];
+      responsesByStimulus[resp.stimulus_id].push(resp);
     }
 
     // Per-stimulus aggregated results — ALL active stimuli
@@ -45,39 +77,37 @@ export async function GET(request: Request) {
 
     const stimuliResults = [];
     for (const s of stimuli || []) {
-      let respQuery = supabase
-        .from("survey_responses")
-        .select("r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds")
-        .eq("stimulus_id", s.id);
+      const responses = responsesByStimulus[s.id] || [];
+      const n = responses.length;
 
-      if (respondentIds.length > 0 && distributionId) {
-        respQuery = respQuery.in("respondent_id", respondentIds);
-      }
-
-      const { data: responses } = await respQuery;
-
-      const n = responses?.length || 0;
       if (n === 0) {
         stimuliResults.push({
           ...s,
           response_count: 0,
           avg_r: 0, avg_i: 0, avg_f: 0, avg_c: 0, sd_c: 0,
           avg_c_score: 0, avg_cta: 0, avg_time: 0,
+          brand_yes: 0, brand_no: 0, brand_rate: 0,
         });
         continue;
       }
 
-      const sumR = responses!.reduce((a, r) => a + r.r_score, 0);
-      const sumI = responses!.reduce((a, r) => a + r.i_score, 0);
-      const sumF = responses!.reduce((a, r) => a + r.f_score, 0);
-      const sumC = responses!.reduce((a, r) => a + r.c_computed, 0);
+      const sumR = responses.reduce((a: number, r: any) => a + (r.r_score || 0), 0);
+      const sumI = responses.reduce((a: number, r: any) => a + (r.i_score || 0), 0);
+      const sumF = responses.reduce((a: number, r: any) => a + (r.f_score || 0), 0);
+      const sumC = responses.reduce((a: number, r: any) => a + (r.c_computed || 0), 0);
       const avgC = sumC / n;
-      const variance = responses!.reduce((a, r) => a + Math.pow(r.c_computed - avgC, 2), 0) / n;
+      const variance = responses.reduce((a: number, r: any) => a + Math.pow((r.c_computed || 0) - avgC, 2), 0) / n;
 
       // c_score and cta_score may be null for older responses
-      const cScores = responses!.filter(r => r.c_score != null);
-      const ctaScores = responses!.filter(r => r.cta_score != null);
-      const timeScores = responses!.filter(r => r.time_spent_seconds != null);
+      const cScores = responses.filter((r: any) => r.c_score != null);
+      const ctaScores = responses.filter((r: any) => r.cta_score != null);
+      const timeScores = responses.filter((r: any) => r.time_spent_seconds != null);
+
+      // Brand familiarity (awareness) calculation
+      const brandResponses = responses.filter((r: any) => r.brand_familiar != null);
+      const brandYes = brandResponses.filter((r: any) => r.brand_familiar === true).length;
+      const brandNo = brandResponses.filter((r: any) => r.brand_familiar === false).length;
+      const brandRate = brandResponses.length > 0 ? Math.round((brandYes / brandResponses.length) * 100) : 0;
 
       stimuliResults.push({
         ...s,
@@ -87,9 +117,12 @@ export async function GET(request: Request) {
         avg_f: Math.round((sumF / n) * 100) / 100,
         avg_c: Math.round(avgC * 100) / 100,
         sd_c: Math.round(Math.sqrt(variance) * 100) / 100,
-        avg_c_score: cScores.length > 0 ? Math.round((cScores.reduce((a, r) => a + r.c_score, 0) / cScores.length) * 100) / 100 : 0,
-        avg_cta: ctaScores.length > 0 ? Math.round((ctaScores.reduce((a, r) => a + r.cta_score, 0) / ctaScores.length) * 100) / 100 : 0,
-        avg_time: timeScores.length > 0 ? Math.round(timeScores.reduce((a, r) => a + r.time_spent_seconds, 0) / timeScores.length) : 0,
+        avg_c_score: cScores.length > 0 ? Math.round((cScores.reduce((a: number, r: any) => a + r.c_score, 0) / cScores.length) * 100) / 100 : 0,
+        avg_cta: ctaScores.length > 0 ? Math.round((ctaScores.reduce((a: number, r: any) => a + r.cta_score, 0) / ctaScores.length) * 100) / 100 : 0,
+        avg_time: timeScores.length > 0 ? Math.round(timeScores.reduce((a: number, r: any) => a + r.time_spent_seconds, 0) / timeScores.length) : 0,
+        brand_yes: brandYes,
+        brand_no: brandNo,
+        brand_rate: brandRate,
       });
     }
 
@@ -100,7 +133,6 @@ export async function GET(request: Request) {
       .order("evaluated_at", { ascending: false });
 
     // Demographic breakdowns from respondents
-    const respondents = filteredRespondents || [];
     const demographics: Record<string, Record<string, number>> = {
       gender: {}, ageRange: {}, country: {}, locationType: {}, incomeRange: {}, education: {},
     };
@@ -108,7 +140,7 @@ export async function GET(request: Request) {
       purchaseFrequency: {}, preferredChannels: {}, dailyOnlineTime: {}, primaryDevice: {},
     };
     const psychArrays: Record<string, number[]> = {
-      adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
+      adReceptivity: [], visualPreference: [], marketingExpertise: [], irrelevanceAnnoyance: [], attentionCapture: [], irrelevanceTolerance: [],
     };
 
     const globalLocaleCounts: Record<string, number> = {};
@@ -160,7 +192,7 @@ export async function GET(request: Request) {
         purchaseFrequency: {}, preferredChannels: {}, dailyOnlineTime: {}, primaryDevice: {},
       };
       const psychArrs: Record<string, number[]> = {
-        adReceptivity: [], visualPreference: [], impulseBuying: [], irrelevanceAnnoyance: [], attentionCapture: [],
+        adReceptivity: [], visualPreference: [], marketingExpertise: [], irrelevanceAnnoyance: [], attentionCapture: [], irrelevanceTolerance: [],
       };
       const localeCounts: Record<string, number> = {};
 
@@ -215,14 +247,9 @@ export async function GET(request: Request) {
       };
     }
 
-    // ── Fetch ALL responses with respondent_id + stimulus_id for breakdowns ──
-    const { data: allResponses } = await supabase
-      .from("survey_responses")
-      .select("respondent_id, stimulus_id");
-
-    // Build map: stimulus_id → Set of respondent_ids
+    // Build map: stimulus_id → Set of respondent_ids (from filtered responses)
     const stimulusRespondentMap: Record<string, Set<string>> = {};
-    for (const resp of allResponses || []) {
+    for (const resp of allFilteredResponses) {
       if (!stimulusRespondentMap[resp.stimulus_id]) stimulusRespondentMap[resp.stimulus_id] = new Set();
       stimulusRespondentMap[resp.stimulus_id].add(resp.respondent_id);
     }
@@ -234,7 +261,6 @@ export async function GET(request: Request) {
     const getRespondentsForIds = (rIds: Set<string>) => {
       const filtered: typeof respondents = [];
       rIds.forEach(id => {
-        if (distributionId && !respondentIds.includes(id)) return;
         const r = respondentMap.get(id);
         if (r) filtered.push(r);
       });
@@ -253,7 +279,6 @@ export async function GET(request: Request) {
     }
 
     // ── Per-category breakdowns ──
-    // Group stimuli by type
     const stimuliByType: Record<string, string[]> = {};
     for (const s of stimuli || []) {
       if (!stimuliByType[s.type]) stimuliByType[s.type] = [];
@@ -262,7 +287,6 @@ export async function GET(request: Request) {
 
     const perCategoryBreakdowns: Record<string, ReturnType<typeof computeBreakdowns> & { responseCount: number }> = {};
     for (const [catType, stimulusIds] of Object.entries(stimuliByType)) {
-      // Merge respondent sets from all stimuli in this category
       const mergedIds = new Set<string>();
       let catResponseCount = 0;
       for (const sid of stimulusIds) {
@@ -279,14 +303,56 @@ export async function GET(request: Request) {
       };
     }
 
-    const total = totalRespondents || 0;
-    const completed = completedRespondents || 0;
+    // ── Per-distribution summary (only in global/unfiltered mode) ──
+    let distributionSummary: { id: string; name: string; tag: string; total: number; completed: number }[] = [];
+    if (!distributionId) {
+      const { data: dists } = await supabase
+        .from("survey_distributions")
+        .select("id, name, tag")
+        .order("created_at");
+      if (dists && dists.length > 0) {
+        const distMap: Record<string, { total: number; completed: number }> = {};
+        let noDistTotal = 0;
+        let noDistCompleted = 0;
+        for (const r of respondents) {
+          const did = (r as any).distribution_id;
+          if (did) {
+            if (!distMap[did]) distMap[did] = { total: 0, completed: 0 };
+            distMap[did].total++;
+            if (r.completed_at) distMap[did].completed++;
+          } else {
+            noDistTotal++;
+            if (r.completed_at) noDistCompleted++;
+          }
+        }
+        distributionSummary = dists.map(d => ({
+          id: d.id,
+          name: d.name,
+          tag: d.tag,
+          total: distMap[d.id]?.total || 0,
+          completed: distMap[d.id]?.completed || 0,
+        }));
+        // Add "fara distributie" if there are respondents without a distribution
+        if (noDistTotal > 0) {
+          distributionSummary.unshift({ id: "__none__", name: "Fara link", tag: "", total: noDistTotal, completed: noDistCompleted });
+        }
+      }
+    }
+
+    // ── Debug info (temporary — helps diagnose production issues) ──
+    const uniqueStimIdsInResponses = Array.from(new Set(allFilteredResponses.map(r => r.stimulus_id)));
+    const activeStimIds = (stimuli || []).map(s => s.id);
+    const orphanStimIds = uniqueStimIdsInResponses.filter(id => !activeStimIds.includes(id));
 
     return NextResponse.json({
-      totalRespondents: total,
-      completedRespondents: completed,
-      completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-      totalResponses: totalResponses || 0,
+      totalRespondents,
+      completedRespondents,
+      completionRate: totalRespondents > 0 ? Math.round((completedRespondents / totalRespondents) * 100) : 0,
+      totalResponses,
+      completedToday,
+      completedMonth,
+      avgSessionTime,
+      distributionSummary,
       stimuliResults,
       aiEvaluations: aiEvaluations || [],
       demographics,
@@ -295,10 +361,21 @@ export async function GET(request: Request) {
       localeCounts: globalLocaleCounts,
       perCategoryBreakdowns,
       perStimulusBreakdowns,
+      _debug: {
+        respondentQueryError: respondentError?.message || null,
+        respondentCount: respondents.length,
+        responseCount: allFilteredResponses.length,
+        activeStimuli: activeStimIds.length,
+        uniqueStimIdsInResponses: uniqueStimIdsInResponses.length,
+        orphanStimulusIds: orphanStimIds,
+        hasOrphans: orphanStimIds.length > 0,
+        sampleResponse: allFilteredResponses[0] || null,
+        sampleRespondent: respondents[0] ? { id: respondents[0].id, completed_at: respondents[0].completed_at, started_at: (respondents[0] as any).started_at } : null,
+      },
     });
-  } catch {
+  } catch (err: any) {
     return NextResponse.json(
-      { error: "Internal error" },
+      { error: "Internal error", message: err?.message || "Unknown" },
       { status: 500 }
     );
   }

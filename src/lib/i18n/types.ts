@@ -1123,6 +1123,7 @@ export interface Dictionary {
     welcomeAnonymousBold: string;
     welcomePrivacy: string;
     welcomePrivacyBold: string;
+    welcomeCookie: string;
     welcomeStart: string;
     welcomeMaterials: string;
     welcomeLang: string;
@@ -1231,6 +1232,11 @@ export interface Dictionary {
     ctaQuestion: string;
     ctaLow: string;
     ctaHigh: string;
+    // Brand familiarity
+    brandQuestion: string;
+    brandYes: string;
+    brandNo: string;
+    brandShortLabel: string;
     // Media buttons
     viewLarger: string;
     openPdf: string;

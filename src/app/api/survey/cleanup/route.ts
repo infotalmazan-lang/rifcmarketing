@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceRole } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +10,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Must confirm with DELETE_TEST_DATA" }, { status: 400 });
     }
 
-    const supabase = createServiceRole();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    );
 
-    // 1. Delete all survey responses
+    // 1. Delete all survey responses first (FK constraint)
     const { error: e1 } = await supabase
       .from("survey_responses")
       .delete()
@@ -34,10 +38,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      deleted: {
-        responses: "all",
-        respondents: "all",
-      },
+      deleted: { responses: "all", respondents: "all" },
       preserved: ["categories", "stimuli", "distributions", "expert_evaluations", "ai_evaluations"],
     });
   } catch (err: any) {

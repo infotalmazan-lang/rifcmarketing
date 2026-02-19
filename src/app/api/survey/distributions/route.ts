@@ -117,6 +117,39 @@ export async function POST(request: Request) {
   }
 }
 
+// PATCH — edit an existing distribution (name, description, estimated_completions — tag is LOCKED)
+export async function PATCH(request: Request) {
+  try {
+    const supabase = createServiceRole();
+    const body = await request.json();
+    const { id, name, description, estimated_completions } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: "ID obligatoriu" }, { status: 400 });
+    }
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: "Numele este obligatoriu" }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("survey_distributions")
+      .update({
+        name: name.trim(),
+        description: (description || "").trim(),
+        estimated_completions: parseInt(estimated_completions) || 0,
+      })
+      .eq("id", id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
 // DELETE — remove a distribution link
 export async function DELETE(request: Request) {
   try {

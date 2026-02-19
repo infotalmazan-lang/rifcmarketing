@@ -44,9 +44,10 @@ export interface BehavioralData {
 export interface PsychographicData {
   adReceptivity: number;
   visualPreference: number;
-  impulseBuying: number;
+  marketingExpertise: number;
   irrelevanceAnnoyance: number;
   attentionCapture: number;
+  irrelevanceTolerance: number;
 }
 
 export interface StimulusResponse {
