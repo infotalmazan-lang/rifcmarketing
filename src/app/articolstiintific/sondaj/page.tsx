@@ -1738,11 +1738,7 @@ export default function StudiuAdminPage() {
                               <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={newStimData.industry || ""} onChange={(v) => setNewStimData({ ...newStimData, industry: v })} /></div>
                               <div style={S.formField}><label style={S.formLabel}>Ordine Afișare</label><input style={S.formInput} type="number" value={newStimData.display_order || 0} onChange={(e) => setNewStimData({ ...newStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
                             </div>
-                            <div style={S.formRow3}>
-                              <div style={S.formField}><label style={S.formLabel}>Varianta (A/B/C)</label><select style={S.formInput} value={newStimData.variant_label || ""} onChange={(e) => setNewStimData({ ...newStimData, variant_label: e.target.value || null })}><option value="">Neasignat</option>{VARIANT_LABELS.map(v => <option key={v} value={v}>Varianta {v}</option>)}</select></div>
-                              <div style={S.formField}><label style={S.formLabel}>Calitate Executie</label><select style={S.formInput} value={newStimData.execution_quality || ""} onChange={(e) => setNewStimData({ ...newStimData, execution_quality: e.target.value || null })}><option value="">Neasignat</option>{EXECUTION_QUALITIES.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}</select></div>
-                              <div />
-                            </div>
+                            {/* Variant A/B/C and Execution Quality removed — not used */}
                             <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={newStimData.description || ""} onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })} /></div>
                             {uploadStatus && (
                               <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: uploadStatus.includes("EROARE") ? "#fef2f2" : uploadStatus.includes("complet") ? "#f0fdf4" : "#eff6ff", color: uploadStatus.includes("EROARE") ? "#dc2626" : uploadStatus.includes("complet") ? "#16a34a" : "#2563eb", border: `1px solid ${uploadStatus.includes("EROARE") ? "#fecaca" : uploadStatus.includes("complet") ? "#bbf7d0" : "#bfdbfe"}`, marginBottom: 8, fontFamily: "monospace" }}>
@@ -1827,8 +1823,7 @@ export default function StudiuAdminPage() {
                               <span style={{ ...S.matNum, background: cat.color, width: 36, height: 36, fontSize: 16 }}>{activeMatIdx + 1}</span>
                               <h3 style={S.matWorkTitle}>{activeStim.name}</h3>
                               {activeStim.industry && <span style={S.stimIndustry}>{activeStim.industry}</span>}
-                              {activeStim.variant_label && <span style={{ ...S.stimIndustry, background: "#dbeafe", color: "#1d4ed8" }}>V{activeStim.variant_label}</span>}
-                              {activeStim.execution_quality && <span style={{ ...S.stimIndustry, background: EXECUTION_QUALITIES.find(q => q.value === activeStim.execution_quality)?.color || "#6B7280", color: "#fff" }}>{EXECUTION_QUALITIES.find(q => q.value === activeStim.execution_quality)?.label || activeStim.execution_quality}</span>}
+                              {/* Variant/Quality badges removed */}
                               <div style={S.matMediaRow}>
                                 {getMediaIcons(activeStim).map((m, i) => { const MIcon = m.icon; return <span key={i} title={m.label} style={S.matMediaTag}><MIcon size={12} /> {m.label}</span>; })}
                               </div>
@@ -1855,11 +1850,7 @@ export default function StudiuAdminPage() {
                                 <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={editStimData.industry || ""} onChange={(v) => setEditStimData({ ...editStimData, industry: v })} /></div>
                                 <div style={S.formField}><label style={S.formLabel}>Ordine Afișare</label><input style={S.formInput} type="number" value={editStimData.display_order || 0} onChange={(e) => setEditStimData({ ...editStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
                               </div>
-                              <div style={S.formRow3}>
-                                <div style={S.formField}><label style={S.formLabel}>Varianta (A/B/C)</label><select style={S.formInput} value={editStimData.variant_label || ""} onChange={(e) => setEditStimData({ ...editStimData, variant_label: e.target.value || null })}><option value="">Neasignat</option>{VARIANT_LABELS.map(v => <option key={v} value={v}>Varianta {v}</option>)}</select></div>
-                                <div style={S.formField}><label style={S.formLabel}>Calitate Executie</label><select style={S.formInput} value={editStimData.execution_quality || ""} onChange={(e) => setEditStimData({ ...editStimData, execution_quality: e.target.value || null })}><option value="">Neasignat</option>{EXECUTION_QUALITIES.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}</select></div>
-                                <div />
-                              </div>
+                              {/* Variant A/B/C and Execution Quality removed — not used */}
                               <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={editStimData.description || ""} onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })} /></div>
                               {uploadStatus && (
                                 <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: uploadStatus.includes("EROARE") ? "#fef2f2" : uploadStatus.includes("complet") ? "#f0fdf4" : "#eff6ff", color: uploadStatus.includes("EROARE") ? "#dc2626" : uploadStatus.includes("complet") ? "#16a34a" : "#2563eb", border: `1px solid ${uploadStatus.includes("EROARE") ? "#fecaca" : uploadStatus.includes("complet") ? "#bbf7d0" : "#bfdbfe"}`, marginBottom: 8, fontFamily: "monospace" }}>
@@ -2447,7 +2438,7 @@ export default function StudiuAdminPage() {
                                         </td>
                                         <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>
                                           {s.name}
-                                          {s.variant_label && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: "#dbeafe", color: "#2563EB" }}>{s.variant_label}</span>}
+                                          {/* variant badge removed */}
                                         </td>
                                         <td style={tdStyle}>
                                           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: cc?.color ? `${cc.color}18` : "#f3f4f6", color: cc?.color || "#6B7280" }}>{cc?.short_code || s.type}</span>
@@ -2842,7 +2833,7 @@ export default function StudiuAdminPage() {
                                   <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                                     <td style={{ ...tdStyle, textAlign: "left" as const, fontWeight: 600, color: "#111827", fontSize: 13 }}>
                                       {s.name}
-                                      {s.variant_label && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: "#dbeafe", color: "#2563EB" }}>{s.variant_label}</span>}
+                                      {/* variant badge removed */}
                                     </td>
                                     <td style={{ ...tdStyle, fontWeight: 600 }}>{s.response_count}</td>
                                     <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.response_count > 0 ? s.avg_r : "\u2014"}</td>
@@ -4553,7 +4544,7 @@ export default function StudiuAdminPage() {
                       }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#9CA3AF" }}>
-                            {{ "#": "NUMAR", DATA: "DATA", STATUS: "STATUS", N: "N (RASPUNSURI)", IP: "ADRESA IP", "DISP.": "DISPOZITIV", LIMBA: "LIMBA", GRUP: "GRUP VARIANT", DEMOGRAFIE: "DEMOGRAFIE", TIMP: "TIMP" }[logTooltip] || logTooltip}
+                            {{ "#": "NUMAR", DATA: "DATA", STATUS: "STATUS", N: "N (RASPUNSURI)", IP: "ADRESA IP", "DISP.": "DISPOZITIV", LIMBA: "LIMBA", DEMOGRAFIE: "DEMOGRAFIE", TIMP: "TIMP" }[logTooltip] || logTooltip}
                           </span>
                           <button onClick={() => setLogTooltip(null)} style={{ background: "none", border: "none", color: "#6B7280", cursor: "pointer", padding: 2 }}><X size={16} /></button>
                         </div>
@@ -4565,7 +4556,7 @@ export default function StudiuAdminPage() {
                           {logTooltip === "IP" && "Adresa IP a respondentului. Se foloseste pentru: detectarea raspunsurilor duplicate, verificarea geografica (tara reala vs declarata), si asigurarea calitatii datelor. NU se face geolocalizare publica."}
                           {logTooltip === "DISP." && (<>Tipul de dispozitiv detectat automat: <strong>mobile</strong> (telefon), <strong>desktop</strong> (laptop/PC), sau <strong>tablet</strong>. Se determina din User-Agent-ul browser-ului.</>)}
                           {logTooltip === "LIMBA" && (<>Limba in care respondentul a completat sondajul: <span style={{ color: "#60a5fa" }}>RO</span> = Romana, <span style={{ color: "#f87171" }}>RU</span> = Rusa, <span style={{ color: "#34d399" }}>EN</span> = Engleza. Se alege de respondent la inceput.</>)}
-                          {logTooltip === "GRUP" && "Grupul de variante (A, B, C) atribuit aleator respondentului. Se foloseste pentru testarea A/B — fiecare grup poate vedea variante diferite ale stimulilor (ex: executie puternica vs slaba)."}
+                          {/* GRUP tooltip removed */}
                           {logTooltip === "DEMOGRAFIE" && "Profilul demografic auto-raportat: Gen (masculin/feminin) · Grupa de varsta (18-24, 25-34, etc.) · Tara de rezidenta. Click pe rand pentru detalii complete (venit, educatie, comportament, psihografic)."}
                           {logTooltip === "TIMP" && "Durata totala a sesiunii, de la start pana la completare. Se calculeaza: completed_at minus started_at. Utila pentru detectarea raspunsurilor grabite (sub 2 min) sau abandonate."}
                         </div>
@@ -4590,7 +4581,7 @@ export default function StudiuAdminPage() {
                           { key: "IP", align: "left" as const },
                           { key: "DISP.", align: "center" as const },
                           { key: "LIMBA", align: "center" as const },
-                          { key: "GRUP", align: "center" as const },
+                          /* GRUP column removed */
                           { key: "DEMOGRAFIE", align: "left" as const },
                           { key: "TIMP", align: "center" as const },
                         ].map((col) => (
@@ -4654,7 +4645,7 @@ export default function StudiuAdminPage() {
                                   {(log.locale || "—").toUpperCase()}
                                 </span>
                               </td>
-                              <td style={{ padding: "10px 10px", textAlign: "center", fontSize: 13, fontWeight: 700, color: "#374151" }}>{log.variant_group || "—"}</td>
+                              {/* variant_group column removed */}
                               <td style={{ padding: "10px 10px", fontSize: 12, color: "#374151" }}>
                                 <span style={{ fontWeight: 500 }}>{demoGender}</span>
                                 <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>

@@ -69,10 +69,6 @@ export async function POST(request: Request) {
 
     // In preview mode, skip respondent creation — just return stimuli
     if (!isPreview) {
-      // Randomly assign variant group A/B/C
-      const variantGroups = ["A", "B", "C"];
-      const variantGroup = variantGroups[Math.floor(Math.random() * 3)];
-
       // Create respondent (ip_address may not exist if migration 016 not run yet)
       const insertData: Record<string, unknown> = {
         session_id: sessionId,
@@ -81,7 +77,6 @@ export async function POST(request: Request) {
         ip_address: ip,
         user_agent: ua.slice(0, 255),
         device_type: deviceType,
-        variant_group: variantGroup,
         locale,
         ...(fingerprint ? { browser_fingerprint: fingerprint } : {}),
         ...(distributionId ? { distribution_id: distributionId } : {}),

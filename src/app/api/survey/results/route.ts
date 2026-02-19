@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     // Always exclude archived respondents (is_archived = false OR null for pre-migration rows)
     let respondentQuery = supabase
       .from("survey_respondents")
-      .select("id, demographics, behavioral, psychographic, device_type, variant_group, completed_at, locale, started_at, distribution_id")
+      .select("id, demographics, behavioral, psychographic, device_type, completed_at, locale, started_at, distribution_id")
       .or("is_archived.eq.false,is_archived.is.null");
 
     if (distributionId === "__none__") {
