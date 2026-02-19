@@ -26,7 +26,35 @@ export async function GET(request: Request) {
 
     const { data: filteredRespondents, error: respondentError } = await respondentQuery;
 
-    const respondents = filteredRespondents || [];
+    const allRespondents = filteredRespondents || [];
+    const allRespondentIds = allRespondents.map((r: { id: string }) => r.id);
+
+    // Fetch ALL responses first — then filter respondents to only those with responses
+    // This ensures Results matches LOG (both show only respondents who interacted with survey)
+    let allFilteredResponses: any[] = [];
+    if (allRespondentIds.length > 0) {
+      const PAGE_SIZE = 1000;
+      let offset = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data: respData } = await supabase
+          .from("survey_responses")
+          .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
+          .in("respondent_id", allRespondentIds)
+          .range(offset, offset + PAGE_SIZE - 1);
+        const batch = respData || [];
+        allFilteredResponses = allFilteredResponses.concat(batch);
+        hasMore = batch.length === PAGE_SIZE;
+        offset += PAGE_SIZE;
+      }
+    }
+    const totalResponses = allFilteredResponses.length;
+
+    // Build set of respondent IDs that actually have responses (syncs with LOG view)
+    const respondentIdsWithResponses = new Set(allFilteredResponses.map(r => r.respondent_id));
+
+    // Only count respondents who have at least 1 response (matches LOG display)
+    const respondents = allRespondents.filter(r => respondentIdsWithResponses.has(r.id));
     const totalRespondents = respondents.length;
 
     // Completed respondents — those with completed_at set
@@ -46,31 +74,8 @@ export async function GET(request: Request) {
       .filter(s => s > 0 && s < 7200); // ignore outliers > 2h
     const avgSessionTime = durations.length > 0 ? Math.round(durations.reduce((a, v) => a + v, 0) / durations.length) : 0;
 
-    // Get respondent IDs for filtering responses
+    // Respondent IDs (only those with responses)
     const respondentIds = respondents.map((r: { id: string }) => r.id);
-
-    // Total responses (filtered by respondent IDs)
-    // Use pagination to ensure ALL responses are fetched (PostgREST defaults to 1000 max)
-    let totalResponses = 0;
-    let allFilteredResponses: any[] = [];
-    if (respondentIds.length > 0) {
-      // Fetch responses in batches to avoid PostgREST row limits
-      const PAGE_SIZE = 1000;
-      let offset = 0;
-      let hasMore = true;
-      while (hasMore) {
-        const { data: respData } = await supabase
-          .from("survey_responses")
-          .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
-          .in("respondent_id", respondentIds)
-          .range(offset, offset + PAGE_SIZE - 1);
-        const batch = respData || [];
-        allFilteredResponses = allFilteredResponses.concat(batch);
-        hasMore = batch.length === PAGE_SIZE;
-        offset += PAGE_SIZE;
-      }
-      totalResponses = allFilteredResponses.length;
-    }
 
     // Build map: stimulus_id → responses[] (from filtered respondents only)
     const responsesByStimulus: Record<string, typeof allFilteredResponses> = {};
