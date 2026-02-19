@@ -377,7 +377,7 @@ const ROADMAP_SCRIPT = `
   var LANGS = ["ro", "en", "ru"];
   var LANG_LABELS = { ro: "RO", en: "EN", ru: "RU" };
   // Block types that support trilingual content
-  var TRILINGUAL_TYPES = ["text-short", "text-long", "link", "code"];
+  var TRILINGUAL_TYPES = ["text-short", "text-long", "link", "code", "table"];
 
   /* ═══ SVG ICONS ═══ */
   var ICONS = {
@@ -524,6 +524,7 @@ const ROADMAP_SCRIPT = `
     if (type === "text-long") return { ro: "", en: "", ru: "" };
     if (type === "link") return { ro: "", en: "", ru: "" };
     if (type === "code") return { ro: { lang: "json", code: "" }, en: { lang: "json", code: "" }, ru: { lang: "json", code: "" } };
+    if (type === "table") return { ro: { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] }, en: { cols: ["Column 1","Column 2"], rows: [["",""]] }, ru: { cols: ["Колонка 1","Колонка 2"], rows: [["",""]] } };
     return "";
   }
 
@@ -532,7 +533,7 @@ const ROADMAP_SCRIPT = `
     var val = null;
     if (isTrilingual(type)) {
       val = makeTriVal(type);
-    } else if (type === "table") val = { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] };
+    }
     else if (type === "dropdown") val = { category: "", value: "" };
     else if (type === "number") val = { label: "", value: 0 };
     else if (type === "file") val = null;
@@ -565,7 +566,7 @@ const ROADMAP_SCRIPT = `
 
   // ═══ SEED PRE-POPULATED BLOCKS ═══
   function seedBlocksIfNeeded() {
-    var SEED_KEY = "rifc-blocks-seeded-v3";
+    var SEED_KEY = "rifc-blocks-seeded-v4";
     try { if (localStorage.getItem(SEED_KEY)) return; } catch(e) { return; }
 
     // Clear old seeds on version bump
@@ -602,14 +603,27 @@ const ROADMAP_SCRIPT = `
       { id: genId(), type: "link", value: { ro: "https://osf.io", en: "https://osf.io", ru: "https://osf.io" } },
       { id: genId(), type: "code", value: { ro: { lang: "json", code: rubricJson }, en: { lang: "json", code: rubricJson }, ru: { lang: "json", code: rubricJson } } },
       { id: genId(), type: "table", value: {
-        cols: ["Dimensiune", "Itemi", "Scor Max", "Formula"],
-        rows: [
+        ro: { cols: ["Dimensiune", "Itemi", "Scor Max", "Formula"], rows: [
           ["R — Relevanță", "7 (R1-R7)", "35", "Poartă: media < 3 = eșec"],
           ["I — Impact", "10 (I1-I10)", "50", "I_mean = sum/10"],
           ["F — Frecvență", "11 (F1-F11)", "55", "F_mean = sum/11"],
           ["C — Conversie", "7 (C1-C7)", "35", "C_observed = sum/7"],
           ["TOTAL", "35 itemi", "175", "C_pred = R_gate × (I×F)"]
-        ]
+        ]},
+        en: { cols: ["Dimension", "Items", "Max Score", "Formula"], rows: [
+          ["R — Relevance", "7 (R1-R7)", "35", "Gate: mean < 3 = fail"],
+          ["I — Impact", "10 (I1-I10)", "50", "I_mean = sum/10"],
+          ["F — Frequency", "11 (F1-F11)", "55", "F_mean = sum/11"],
+          ["C — Conversion", "7 (C1-C7)", "35", "C_observed = sum/7"],
+          ["TOTAL", "35 items", "175", "C_pred = R_gate × (I×F)"]
+        ]},
+        ru: { cols: ["Измерение", "Пункты", "Макс. балл", "Формула"], rows: [
+          ["R — Релевантность", "7 (R1-R7)", "35", "Порог: среднее < 3 = провал"],
+          ["I — Воздействие", "10 (I1-I10)", "50", "I_mean = sum/10"],
+          ["F — Частота", "11 (F1-F11)", "55", "F_mean = sum/11"],
+          ["C — Конверсия", "7 (C1-C7)", "35", "C_observed = sum/7"],
+          ["ИТОГО", "35 пунктов", "175", "C_pred = R_gate × (I×F)"]
+        ]}
       }}
     ];
 
@@ -625,14 +639,27 @@ const ROADMAP_SCRIPT = `
         ru: "Документ RIFC Scoring Rubric содержит полный перевод всех 35 шкал Лайкерта на три языка.\\n\\n• РУМЫНСКИЙ (RO) — основной язык, оригинальные пункты\\n• АНГЛИЙСКИЙ (EN) — академический перевод для международной публикации\\n• РУССКИЙ (RU) — перевод для рынка Республики Молдова\\n\\nМетод: обратный перевод с проверкой носителями языка.\\n\\nЯкоря: 1 = Полностью не согласен · 3 = Нейтрально · 5 = Полностью согласен"
       }},
       { id: genId(), type: "table", value: {
-        cols: ["Dimensiune", "Itemi", "RO", "EN", "RU"],
-        rows: [
+        ro: { cols: ["Dimensiune", "Itemi", "RO", "EN", "RU"], rows: [
           ["R — Relevanță", "7", "Finalizat", "Finalizat", "Finalizat"],
           ["I — Impact", "10", "Finalizat", "Finalizat", "Finalizat"],
           ["F — Frecvență", "11", "Finalizat", "Finalizat", "Finalizat"],
           ["C — Conversie", "7", "Finalizat", "Finalizat", "Finalizat"],
           ["TOTAL", "35", "35/35", "35/35", "35/35"]
-        ]
+        ]},
+        en: { cols: ["Dimension", "Items", "RO", "EN", "RU"], rows: [
+          ["R — Relevance", "7", "Completed", "Completed", "Completed"],
+          ["I — Impact", "10", "Completed", "Completed", "Completed"],
+          ["F — Frequency", "11", "Completed", "Completed", "Completed"],
+          ["C — Conversion", "7", "Completed", "Completed", "Completed"],
+          ["TOTAL", "35", "35/35", "35/35", "35/35"]
+        ]},
+        ru: { cols: ["Измерение", "Пункты", "RO", "EN", "RU"], rows: [
+          ["R — Релевантность", "7", "Завершено", "Завершено", "Завершено"],
+          ["I — Воздействие", "10", "Завершено", "Завершено", "Завершено"],
+          ["F — Частота", "11", "Завершено", "Завершено", "Завершено"],
+          ["C — Конверсия", "7", "Завершено", "Завершено", "Завершено"],
+          ["ИТОГО", "35", "35/35", "35/35", "35/35"]
+        ]}
       }}
     ];
 
@@ -833,6 +860,12 @@ const ROADMAP_SCRIPT = `
         block.value = { ro: { lang: val.lang, code: val.code }, en: { lang: val.lang, code: "" }, ru: { lang: val.lang, code: "" } };
         saveBlocks();
       }
+    } else if (block.type === "table") {
+      // Old format: { cols: [...], rows: [...] } → trilingual { ro: {...}, en: {...}, ru: {...} }
+      if (val && val.cols && Array.isArray(val.cols)) {
+        block.value = { ro: { cols: val.cols.slice(), rows: val.rows.map(function(r) { return r.slice(); }) }, en: { cols: val.cols.map(function() { return ""; }), rows: val.rows.map(function(r) { return r.map(function() { return ""; }); }) }, ru: { cols: val.cols.map(function() { return ""; }), rows: val.rows.map(function(r) { return r.map(function() { return ""; }); }) } };
+        saveBlocks();
+      }
     } else {
       if (typeof val === "string") {
         block.value = { ro: val, en: "", ru: "" };
@@ -912,26 +945,32 @@ const ROADMAP_SCRIPT = `
         return '<div class="blk-dropzone" data-dropzone="' + block.id + '">' + ICONS.upload + '<p>Click sau drag & drop</p><p class="hint">img, pdf, csv, audio, video, doc (max 1MB)</p><input type="file" data-file-input="' + block.id + '" accept="image/*,.pdf,.csv,.doc,.docx,.xls,.xlsx,.mp3,.mp4,.wav,.webm" /></div>';
 
       case "table":
-        if (!val || !val.cols) val = { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] };
-        var h = '<div class="blk-table-wrap"><table class="blk-table"><thead><tr>';
-        val.cols.forEach(function(c, ci) {
-          h += '<th><input type="text" value="' + escAttr(c) + '" data-tbl-col="' + block.id + '" data-col-idx="' + ci + '" /></th>';
-        });
-        h += '</tr></thead><tbody>';
-        val.rows.forEach(function(row, ri) {
-          h += '<tr>';
-          row.forEach(function(cell, ci) {
-            h += '<td><input type="text" value="' + escAttr(cell) + '" data-tbl-cell="' + block.id + '" data-row="' + ri + '" data-col="' + ci + '" /></td>';
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var tv = (val && val[lang]) || { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] };
+          if (!tv || !tv.cols) tv = { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] };
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<div class="blk-table-wrap"><table class="blk-table"><thead><tr>';
+          tv.cols.forEach(function(c, ci) {
+            h += '<th><input type="text" value="' + escAttr(c) + '" data-tbl-col="' + block.id + '" data-col-idx="' + ci + '" data-lang="' + lang + '" /></th>';
           });
-          h += '</tr>';
+          h += '</tr></thead><tbody>';
+          tv.rows.forEach(function(row, ri) {
+            h += '<tr>';
+            row.forEach(function(cell, ci) {
+              h += '<td><input type="text" value="' + escAttr(cell) + '" data-tbl-cell="' + block.id + '" data-row="' + ri + '" data-col="' + ci + '" data-lang="' + lang + '" /></td>';
+            });
+            h += '</tr>';
+          });
+          h += '</tbody></table></div>';
+          h += '<div class="blk-table-actions">';
+          h += '<button class="blk-table-btn" data-tbl-add-row="' + block.id + '" data-lang="' + lang + '">+ Rând</button>';
+          h += '<button class="blk-table-btn" data-tbl-add-col="' + block.id + '" data-lang="' + lang + '">+ Coloană</button>';
+          if (tv.rows.length > 1) h += '<button class="blk-table-btn danger" data-tbl-del-row="' + block.id + '" data-lang="' + lang + '">- Rând</button>';
+          if (tv.cols.length > 1) h += '<button class="blk-table-btn danger" data-tbl-del-col="' + block.id + '" data-lang="' + lang + '">- Coloană</button>';
+          h += '</div>';
+          h += '</div>';
         });
-        h += '</tbody></table></div>';
-        h += '<div class="blk-table-actions">';
-        h += '<button class="blk-table-btn" data-tbl-add-row="' + block.id + '">+ Rând</button>';
-        h += '<button class="blk-table-btn" data-tbl-add-col="' + block.id + '">+ Coloană</button>';
-        if (val.rows.length > 1) h += '<button class="blk-table-btn danger" data-tbl-del-row="' + block.id + '">- Rând</button>';
-        if (val.cols.length > 1) h += '<button class="blk-table-btn danger" data-tbl-del-col="' + block.id + '">- Coloană</button>';
-        h += '</div>';
         return h;
 
       case "dropdown":
@@ -1155,50 +1194,61 @@ const ROADMAP_SCRIPT = `
       btn.addEventListener("click", function() { updateBlockValue(key, btn.getAttribute("data-file-remove"), null); renderBlocks(key); });
     });
 
-    // Table — cell edits
+    // Table — cell edits (trilingual)
     document.querySelectorAll("[data-tbl-cell]").forEach(function(input) {
       input.addEventListener("input", function() {
         var bid = input.getAttribute("data-tbl-cell");
+        var lang = input.getAttribute("data-lang") || "ro";
         var ri = parseInt(input.getAttribute("data-row"), 10);
         var ci = parseInt(input.getAttribute("data-col"), 10);
         var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value.rows[ri][ci] = input.value; saveBlocks(); break; } }
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { if (blocks[i].value[lang]) blocks[i].value[lang].rows[ri][ci] = input.value; saveBlocks(); break; } }
       });
     });
-    // Table — col header edits
+    // Table — col header edits (trilingual)
     document.querySelectorAll("[data-tbl-col]").forEach(function(input) {
       input.addEventListener("input", function() {
-        var bid = input.getAttribute("data-tbl-col"); var ci = parseInt(input.getAttribute("data-col-idx"), 10);
+        var bid = input.getAttribute("data-tbl-col");
+        var lang = input.getAttribute("data-lang") || "ro";
+        var ci = parseInt(input.getAttribute("data-col-idx"), 10);
         var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value.cols[ci] = input.value; saveBlocks(); break; } }
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { if (blocks[i].value[lang]) blocks[i].value[lang].cols[ci] = input.value; saveBlocks(); break; } }
       });
     });
-    // Table — add row
+    // Table — add row (trilingual)
     document.querySelectorAll("[data-tbl-add-row]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-add-row"); var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { var nCols = blocks[i].value.cols.length; var nr = []; for (var c = 0; c < nCols; c++) nr.push(""); blocks[i].value.rows.push(nr); saveBlocks(); renderBlocks(key); break; } }
+        var bid = btn.getAttribute("data-tbl-add-row");
+        var lang = btn.getAttribute("data-lang") || "ro";
+        var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value[lang]) { var nCols = blocks[i].value[lang].cols.length; var nr = []; for (var c = 0; c < nCols; c++) nr.push(""); blocks[i].value[lang].rows.push(nr); saveBlocks(); renderBlocks(key); break; } }
       });
     });
-    // Table — add col
+    // Table — add col (trilingual)
     document.querySelectorAll("[data-tbl-add-col]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-add-col"); var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid) { blocks[i].value.cols.push("Coloana " + (blocks[i].value.cols.length + 1)); blocks[i].value.rows.forEach(function(r) { r.push(""); }); saveBlocks(); renderBlocks(key); break; } }
+        var bid = btn.getAttribute("data-tbl-add-col");
+        var lang = btn.getAttribute("data-lang") || "ro";
+        var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value[lang]) { blocks[i].value[lang].cols.push("Coloana " + (blocks[i].value[lang].cols.length + 1)); blocks[i].value[lang].rows.forEach(function(r) { r.push(""); }); saveBlocks(); renderBlocks(key); break; } }
       });
     });
-    // Table — delete last row
+    // Table — delete last row (trilingual)
     document.querySelectorAll("[data-tbl-del-row]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-del-row"); var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value.rows.length > 1) { blocks[i].value.rows.pop(); saveBlocks(); renderBlocks(key); break; } }
+        var bid = btn.getAttribute("data-tbl-del-row");
+        var lang = btn.getAttribute("data-lang") || "ro";
+        var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value[lang] && blocks[i].value[lang].rows.length > 1) { blocks[i].value[lang].rows.pop(); saveBlocks(); renderBlocks(key); break; } }
       });
     });
-    // Table — delete last col
+    // Table — delete last col (trilingual)
     document.querySelectorAll("[data-tbl-del-col]").forEach(function(btn) {
       btn.addEventListener("click", function() {
-        var bid = btn.getAttribute("data-tbl-del-col"); var blocks = getTaskBlocks(key);
-        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value.cols.length > 1) { blocks[i].value.cols.pop(); blocks[i].value.rows.forEach(function(r) { r.pop(); }); saveBlocks(); renderBlocks(key); break; } }
+        var bid = btn.getAttribute("data-tbl-del-col");
+        var lang = btn.getAttribute("data-lang") || "ro";
+        var blocks = getTaskBlocks(key);
+        for (var i = 0; i < blocks.length; i++) { if (blocks[i].id === bid && blocks[i].value[lang] && blocks[i].value[lang].cols.length > 1) { blocks[i].value[lang].cols.pop(); blocks[i].value[lang].rows.forEach(function(r) { r.pop(); }); saveBlocks(); renderBlocks(key); break; } }
       });
     });
 
