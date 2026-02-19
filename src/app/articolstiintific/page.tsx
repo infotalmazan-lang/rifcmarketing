@@ -3,10 +3,10 @@
 import { useRef, useEffect } from "react";
 
 // ============================================================
-// R IF C — Articol Științific v5 — content blocks system
-// 12 etape, 42 sarcini — each task has addable content blocks
-// 8 block types: text-short, text-long, link, file, table,
-//                dropdown, number, date
+// R IF C — Articol Științific v6 — content blocks system
+// 11 etape, 49 sarcini — each task has addable content blocks
+// 9 block types: text-short, text-long, link, file, table,
+//                dropdown, number, date, code
 // Access code: RIFC2026
 // ============================================================
 
@@ -303,8 +303,8 @@ const ROADMAP_HTML = `<!DOCTYPE html>
       </div>
       <div class="sb-bar"><div class="sb-bar-fill" id="bar-fill" style="width:0%"></div></div>
       <div class="sb-progress-stats">
-        <span id="stats-text">0/42 sarcini</span>
-        <span>12 etape</span>
+        <span id="stats-text">0/49 sarcini</span>
+        <span>11 etape</span>
       </div>
     </div>
     <div class="sb-actions">
@@ -324,7 +324,7 @@ const ROADMAP_HTML = `<!DOCTYPE html>
     <div class="page-view active" id="view-overview">
       <div class="ov">
         <h1>Studiu de Validare R+(I×F)=C</h1>
-        <p class="lead">Plan de cercetare cu 12 etape și 42 de sarcini concrete. Conținutul de pe rifcmarketing.com alimentează direct cercetarea.</p>
+        <p class="lead">Plan de cercetare cu 11 etape și 49 de sarcini concrete. Conținutul de pe rifcmarketing.com alimentează direct cercetarea.</p>
         <div class="ov-card" onclick="navigateTo('articol')"><h3>ARTICOL</h3><p>Manuscrisul final OSF — structura completă a articolului științific.</p></div>
         <div class="ov-card" onclick="navigateTo('sondaj')"><h3>SONDAJ ADMIN</h3><p>Administrare sondaj — răspunsuri, statistici, export date.</p></div>
       </div>
