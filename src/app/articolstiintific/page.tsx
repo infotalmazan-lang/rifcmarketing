@@ -3,8 +3,9 @@
 import { useRef, useEffect } from "react";
 
 // ============================================================
-// R IF C — Articol Științific v3 — full menu rebuild
-// 12 etape, 42 sarcini, progress bar, clickable sub-items
+// R IF C — Articol Științific v4 — interactive stage/task cards
+// 12 etape, 42 sarcini — click stage → progress + task cards
+// Click task card → opens task content area
 // Access code: RIFC2026
 // ============================================================
 
@@ -26,7 +27,7 @@ const ROADMAP_HTML = `<!DOCTYPE html>
     --text: #171717; --text2: #525252; --text3: #A3A3A3;
     --red: #DC2626; --green: #059669; --green2: #10b981; --amber: #D97706;
     --blue: #2563EB; --pink: #EC4899; --violet: #7C3AED;
-    --sidebar-w: 290px;
+    --sidebar-w: 260px;
   }
 
   body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; overflow: hidden; height: 100vh; }
@@ -79,12 +80,13 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .sb-nav { padding: 10px 0; flex: 1; }
   .sb-nav-title { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text3); padding: 0 14px; margin-bottom: 6px; }
 
-  /* Stage separator (for Etapa 00) */
+  /* Stage separator */
   .sb-separator { height: 1px; background: var(--border); margin: 6px 14px; }
+  .sb-prep-label { padding: 0 14px; margin-bottom: 2px; font-size: 8px; color: var(--text3); font-style: italic; }
 
   /* Stage item */
   .sb-stage { padding: 0 8px; }
-  .sb-stage-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 8px; border: none; border-radius: 6px; background: transparent; cursor: pointer; transition: background 0.15s; text-align: left; font-family: 'Inter', sans-serif; }
+  .sb-stage-btn { display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 8px; border: none; border-radius: 6px; background: transparent; cursor: pointer; transition: background 0.15s; text-align: left; font-family: 'Inter', sans-serif; }
   .sb-stage-btn:hover { background: var(--surface2); }
   .sb-stage-btn.active { background: var(--red); color: #fff; }
   .sb-stage-btn.active .sb-stage-num { background: rgba(255,255,255,0.2); color: #fff; }
@@ -93,21 +95,23 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .sb-stage-btn.active .sb-site-tag { background: rgba(255,255,255,0.2); color: #fff; }
   .sb-stage-btn.done .sb-stage-num { background: var(--green); color: #fff; }
 
-  .sb-stage-num { width: 26px; height: 26px; border-radius: 6px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: var(--text2); flex-shrink: 0; }
-  .sb-stage-name { font-size: 12px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.3; }
+  .sb-stage-num { width: 24px; height: 24px; border-radius: 6px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; color: var(--text2); flex-shrink: 0; }
+  .sb-stage-name { font-size: 11px; font-weight: 600; color: var(--text); flex: 1; line-height: 1.3; }
   .sb-stage-count { font-size: 9px; color: var(--text3); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
-  .sb-site-tag { font-size: 8px; font-weight: 700; letter-spacing: 0.5px; padding: 1px 5px; border-radius: 3px; background: var(--pink); color: #fff; flex-shrink: 0; margin-left: 2px; }
+  .sb-site-tag { font-size: 7px; font-weight: 700; letter-spacing: 0.5px; padding: 1px 4px; border-radius: 3px; background: var(--pink); color: #fff; flex-shrink: 0; }
 
-  /* Sub-items (tasks) */
+  /* Sub-items in sidebar — simple text links */
   .sb-tasks { padding: 2px 0 4px 0; display: none; }
   .sb-tasks.open { display: block; }
-  .sb-task { display: flex; align-items: flex-start; gap: 7px; padding: 4px 8px 4px 50px; cursor: pointer; border-radius: 4px; transition: background 0.1s; }
+  .sb-task { display: flex; align-items: center; gap: 6px; padding: 4px 8px 4px 44px; cursor: pointer; border-radius: 4px; transition: background 0.1s; }
   .sb-task:hover { background: var(--surface2); }
-  .sb-task-check { width: 14px; height: 14px; border: 1.5px solid var(--border2); border-radius: 3px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
-  .sb-task-check.checked { background: var(--green); border-color: var(--green); }
-  .sb-task-check.checked::after { content: ''; display: block; width: 5px; height: 8px; border: solid #fff; border-width: 0 1.5px 1.5px 0; transform: rotate(45deg) translate(-0.5px, -0.5px); }
-  .sb-task-name { font-size: 11px; color: var(--text2); line-height: 1.4; flex: 1; }
-  .sb-task.done .sb-task-name { color: var(--text3); text-decoration: line-through; }
+  .sb-task.active-task { background: rgba(5,150,105,0.08); }
+  .sb-task-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+  .sb-task.done-task .sb-task-dot { background: var(--green); }
+  .sb-task.active-task .sb-task-dot { background: var(--red); }
+  .sb-task-name { font-size: 10.5px; color: var(--text2); line-height: 1.4; flex: 1; }
+  .sb-task.done-task .sb-task-name { color: var(--text3); text-decoration: line-through; }
+  .sb-task.active-task .sb-task-name { color: var(--text); font-weight: 600; }
 
   /* ===== MAIN AREA ===== */
   .main-area { margin-left: var(--sidebar-w); height: 100vh; overflow: hidden; background: var(--bg); }
@@ -116,13 +120,74 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .iframe-container { width: 100%; height: 100%; }
   .iframe-container iframe { width: 100%; height: 100%; border: none; display: block; }
 
-  /* Overview */
+  /* ===== OVERVIEW (home) ===== */
   .ov { padding: 40px; max-width: 760px; overflow-y: auto; height: 100%; }
   .ov h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
   .ov .lead { font-size: 14px; color: var(--text2); margin-bottom: 24px; line-height: 1.6; }
-  .ov-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 10px; }
+  .ov-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s; }
+  .ov-card:hover { border-color: var(--border2); }
   .ov-card h3 { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
   .ov-card p { font-size: 12px; color: var(--text2); line-height: 1.5; }
+
+  /* ===== STAGE VIEW (main content) ===== */
+  .stage-view { padding: 32px 40px; overflow-y: auto; height: 100%; }
+
+  /* Stage header */
+  .sv-header { margin-bottom: 28px; }
+  .sv-back { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text3); cursor: pointer; border: none; background: none; font-family: 'Inter', sans-serif; padding: 4px 0; margin-bottom: 12px; transition: color 0.15s; }
+  .sv-back:hover { color: var(--text2); }
+  .sv-back svg { width: 14px; height: 14px; }
+  .sv-num-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .sv-num { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: var(--red); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; }
+  .sv-title { font-size: 20px; font-weight: 800; color: var(--text); }
+  .sv-site-tag { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 4px; background: var(--pink); color: #fff; }
+
+  /* Stage progress bar */
+  .sv-progress { margin-bottom: 28px; }
+  .sv-progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .sv-progress-header span { font-size: 11px; color: var(--text3); font-weight: 600; }
+  .sv-progress-header .sv-pct { font-family: 'JetBrains Mono', monospace; color: var(--green); font-weight: 700; font-size: 13px; }
+  .sv-bar { width: 100%; height: 8px; background: var(--surface2); border-radius: 6px; overflow: hidden; }
+  .sv-bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--green2)); border-radius: 6px; transition: width 0.4s ease; }
+
+  /* Task cards grid */
+  .sv-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .sv-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; cursor: pointer; transition: all 0.15s; display: flex; align-items: flex-start; gap: 12px; }
+  .sv-card:hover { border-color: var(--border2); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  .sv-card.done-card { border-color: var(--green); background: rgba(5,150,105,0.03); }
+  .sv-card-num { width: 28px; height: 28px; border-radius: 6px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--text2); flex-shrink: 0; }
+  .sv-card.done-card .sv-card-num { background: var(--green); color: #fff; }
+  .sv-card-content { flex: 1; min-width: 0; }
+  .sv-card-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4; margin-bottom: 4px; }
+  .sv-card.done-card .sv-card-title { text-decoration: line-through; color: var(--text3); }
+  .sv-card-status { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .sv-card.done-card .sv-card-status { color: var(--green); }
+
+  /* ===== TASK VIEW (individual task content) ===== */
+  .task-view { padding: 32px 40px; overflow-y: auto; height: 100%; max-width: 900px; }
+  .tv-back { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text3); cursor: pointer; border: none; background: none; font-family: 'Inter', sans-serif; padding: 4px 0; margin-bottom: 16px; transition: color 0.15s; }
+  .tv-back:hover { color: var(--text2); }
+  .tv-back svg { width: 14px; height: 14px; }
+  .tv-breadcrumb { font-size: 11px; color: var(--text3); margin-bottom: 12px; }
+  .tv-breadcrumb strong { color: var(--text2); font-weight: 600; }
+  .tv-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 16px; }
+
+  .tv-status-row { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .tv-status-label { font-size: 11px; color: var(--text3); font-weight: 600; }
+  .tv-toggle { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+  .tv-toggle input { display: none; }
+  .tv-toggle-track { width: 40px; height: 22px; background: var(--surface3); border-radius: 12px; transition: background 0.2s; position: relative; }
+  .tv-toggle input:checked + .tv-toggle-track { background: var(--green); }
+  .tv-toggle-thumb { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .tv-toggle input:checked ~ .tv-toggle-track .tv-toggle-thumb { transform: translateX(18px); }
+  .tv-done-text { font-size: 12px; font-weight: 600; color: var(--text3); }
+  .tv-done-text.is-done { color: var(--green); }
+
+  .tv-content { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 28px; min-height: 200px; }
+  .tv-content-placeholder { text-align: center; padding: 40px 20px; }
+  .tv-content-placeholder svg { width: 40px; height: 40px; color: var(--border2); margin-bottom: 12px; }
+  .tv-content-placeholder p { font-size: 13px; color: var(--text3); line-height: 1.6; }
+  .tv-content-placeholder .hint { font-size: 11px; color: var(--text3); margin-top: 8px; font-style: italic; }
 </style>
 </head>
 <body>
@@ -187,12 +252,14 @@ const ROADMAP_HTML = `<!DOCTYPE html>
       <div class="ov">
         <h1>Studiu de Validare R+(I×F)=C</h1>
         <p class="lead">Plan de cercetare cu 12 etape și 42 de sarcini concrete. Conținutul de pe rifcmarketing.com alimentează direct cercetarea.</p>
-        <div class="ov-card"><h3>ARTICOL</h3><p>Manuscrisul final OSF — structura completă a articolului științific.</p></div>
-        <div class="ov-card"><h3>SONDAJ ADMIN</h3><p>Administrare sondaj — răspunsuri, statistici, export date.</p></div>
+        <div class="ov-card" onclick="navigateTo('articol')"><h3>ARTICOL</h3><p>Manuscrisul final OSF — structura completă a articolului științific.</p></div>
+        <div class="ov-card" onclick="navigateTo('sondaj')"><h3>SONDAJ ADMIN</h3><p>Administrare sondaj — răspunsuri, statistici, export date.</p></div>
       </div>
     </div>
     <div class="page-view" id="view-articol"><div class="iframe-container"><iframe id="iframe-articol" src="about:blank" title="Articol OSF"></iframe></div></div>
     <div class="page-view" id="view-sondaj"><div class="iframe-container"><iframe id="iframe-sondaj" src="about:blank" title="Sondaj Admin"></iframe></div></div>
+    <div class="page-view" id="view-stage"><div class="stage-view" id="stage-content"></div></div>
+    <div class="page-view" id="view-task"><div class="task-view" id="task-content"></div></div>
   </div>
 </div>
 
@@ -205,9 +272,10 @@ const ROADMAP_SCRIPT = `
 
   var ACCESS_CODE = "RIFC2026";
   var STORAGE_KEY = "rifc-articol-access";
-  var TASKS_KEY = "rifc-tasks-v3";
+  var TASKS_KEY = "rifc-tasks-v4";
   var currentView = "overview";
   var activeStageId = null;
+  var activeTaskIdx = null;
   var checkedTasks = {};
 
   // ═══ STAGES DATA ═══
@@ -322,9 +390,9 @@ const ROADMAP_SCRIPT = `
       var isActive = activeStageId === s.id;
       var isOpen = isActive;
 
-      // Separator before main stages (after s0)
+      // Separator for s0
       if (s.separate) {
-        html += '<div style="padding:0 14px;margin-bottom:2px;"><span style="font-size:8px;color:var(--text3);font-style:italic;">Pregătire internă</span></div>';
+        html += '<div class="sb-prep-label">Pregătire internă</div>';
       }
       if (idx === 1) {
         html += '<div class="sb-separator"></div>';
@@ -338,13 +406,17 @@ const ROADMAP_SCRIPT = `
       if (s.site) html += '<span class="sb-site-tag">SITE</span>';
       html += '</button>';
 
-      // Sub-tasks
+      // Sub-tasks as simple clickable items (not checkboxes)
       html += '<div class="sb-tasks' + (isOpen ? ' open' : '') + '">';
       s.tasks.forEach(function(t, ti) {
         var key = getTaskKey(s.id, ti);
         var isDone = !!checkedTasks[key];
-        html += '<div class="sb-task' + (isDone ? ' done' : '') + '" data-stage="' + s.id + '" data-task="' + ti + '">';
-        html += '<div class="sb-task-check' + (isDone ? ' checked' : '') + '"></div>';
+        var isTaskActive = activeStageId === s.id && activeTaskIdx === ti;
+        var cls = 'sb-task';
+        if (isDone) cls += ' done-task';
+        if (isTaskActive) cls += ' active-task';
+        html += '<div class="' + cls + '" data-stage="' + s.id + '" data-task="' + ti + '">';
+        html += '<div class="sb-task-dot"></div>';
         html += '<span class="sb-task-name">' + t + '</span>';
         html += '</div>';
       });
@@ -367,30 +439,237 @@ const ROADMAP_SCRIPT = `
   }
 
   function bindNavEvents() {
-    // Stage buttons — toggle expand
+    // Stage buttons — open stage view in main content
     document.querySelectorAll(".sb-stage-btn").forEach(function(btn) {
       btn.addEventListener("click", function() {
         var sid = btn.getAttribute("data-stage");
-        if (activeStageId === sid) {
+        activeTaskIdx = null;
+        if (activeStageId === sid && currentView === "stage") {
+          // clicking same stage again → collapse + go overview
           activeStageId = null;
+          showView("overview");
         } else {
           activeStageId = sid;
+          showView("stage");
+          renderStageView(sid);
         }
         renderNav();
       });
     });
 
-    // Task checkboxes
+    // Task items — open task view in main content
     document.querySelectorAll(".sb-task").forEach(function(task) {
-      task.addEventListener("click", function() {
+      task.addEventListener("click", function(e) {
+        e.stopPropagation();
         var sid = task.getAttribute("data-stage");
         var tid = parseInt(task.getAttribute("data-task"), 10);
-        var key = getTaskKey(sid, tid);
-        checkedTasks[key] = !checkedTasks[key];
-        saveTasks();
+        activeStageId = sid;
+        activeTaskIdx = tid;
+        showView("task");
+        renderTaskView(sid, tid);
         renderNav();
       });
     });
+  }
+
+  // ═══ STAGE VIEW — progress bar + task cards ═══
+  function renderStageView(stageId) {
+    var container = document.getElementById("stage-content");
+    if (!container) return;
+
+    var stage = null;
+    for (var i = 0; i < STAGES.length; i++) { if (STAGES[i].id === stageId) { stage = STAGES[i]; break; } }
+    if (!stage) return;
+
+    var sDone = getStageDone(stage);
+    var sTotal = stage.tasks.length;
+    var sPct = sTotal > 0 ? Math.round(sDone / sTotal * 100) : 0;
+
+    var arrowSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+
+    var html = '';
+    html += '<div class="sv-header">';
+    html += '<button class="sv-back" id="stage-back-btn">' + arrowSvg + ' Înapoi la prezentare generală</button>';
+    html += '<div class="sv-num-row">';
+    html += '<div class="sv-num">' + stage.num + '</div>';
+    html += '<div class="sv-title">' + stage.name + '</div>';
+    if (stage.site) html += '<span class="sv-site-tag">SITE</span>';
+    html += '</div>';
+    html += '</div>';
+
+    // Progress bar for this stage
+    html += '<div class="sv-progress">';
+    html += '<div class="sv-progress-header"><span>Progres etapă</span><span class="sv-pct">' + sPct + '%</span></div>';
+    html += '<div class="sv-bar"><div class="sv-bar-fill" style="width:' + sPct + '%"></div></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--text3);font-family:JetBrains Mono,monospace;">';
+    html += '<span>' + sDone + '/' + sTotal + ' sarcini finalizate</span>';
+    if (sDone === sTotal && sTotal > 0) html += '<span style="color:var(--green);font-weight:600;">Etapă completă</span>';
+    html += '</div></div>';
+
+    // Task cards
+    html += '<div class="sv-cards">';
+    stage.tasks.forEach(function(t, ti) {
+      var key = getTaskKey(stage.id, ti);
+      var isDone = !!checkedTasks[key];
+      html += '<div class="sv-card' + (isDone ? ' done-card' : '') + '" data-stage="' + stage.id + '" data-task="' + ti + '">';
+      html += '<div class="sv-card-num">' + (ti + 1) + '</div>';
+      html += '<div class="sv-card-content">';
+      html += '<div class="sv-card-title">' + t + '</div>';
+      html += '<div class="sv-card-status">' + (isDone ? 'Finalizat' : 'În așteptare') + '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    // Bind back button
+    var backBtn = document.getElementById("stage-back-btn");
+    if (backBtn) {
+      backBtn.addEventListener("click", function() {
+        activeStageId = null;
+        activeTaskIdx = null;
+        showView("overview");
+        renderNav();
+      });
+    }
+
+    // Bind card clicks → open task view
+    container.querySelectorAll(".sv-card").forEach(function(card) {
+      card.addEventListener("click", function() {
+        var sid = card.getAttribute("data-stage");
+        var tid = parseInt(card.getAttribute("data-task"), 10);
+        activeStageId = sid;
+        activeTaskIdx = tid;
+        showView("task");
+        renderTaskView(sid, tid);
+        renderNav();
+      });
+    });
+  }
+
+  // ═══ TASK VIEW — individual task content ═══
+  function renderTaskView(stageId, taskIdx) {
+    var container = document.getElementById("task-content");
+    if (!container) return;
+
+    var stage = null;
+    for (var i = 0; i < STAGES.length; i++) { if (STAGES[i].id === stageId) { stage = STAGES[i]; break; } }
+    if (!stage || taskIdx < 0 || taskIdx >= stage.tasks.length) return;
+
+    var taskName = stage.tasks[taskIdx];
+    var key = getTaskKey(stageId, taskIdx);
+    var isDone = !!checkedTasks[key];
+
+    var arrowSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
+
+    var html = '';
+    html += '<button class="tv-back" id="task-back-btn">' + arrowSvg + ' Înapoi la Etapa ' + stage.num + '</button>';
+    html += '<div class="tv-breadcrumb">Etapa ' + stage.num + ' — <strong>' + stage.name + '</strong> — Sarcina ' + (taskIdx + 1) + '/' + stage.tasks.length + '</div>';
+    html += '<div class="tv-title">' + taskName + '</div>';
+
+    // Status toggle
+    html += '<div class="tv-status-row">';
+    html += '<span class="tv-status-label">Status:</span>';
+    html += '<label class="tv-toggle">';
+    html += '<input type="checkbox" id="task-done-check"' + (isDone ? ' checked' : '') + ' />';
+    html += '<div class="tv-toggle-track"><div class="tv-toggle-thumb"></div></div>';
+    html += '</label>';
+    html += '<span class="tv-done-text' + (isDone ? ' is-done' : '') + '" id="task-done-label">' + (isDone ? 'Finalizat' : 'În lucru') + '</span>';
+    html += '</div>';
+
+    // Content placeholder
+    html += '<div class="tv-content">';
+    html += '<div class="tv-content-placeholder">';
+    html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
+    html += '<p>Zona de conținut pentru această sarcină.</p>';
+    html += '<p class="hint">Aici se va adăuga conținutul specific, notele, link-urile și documentația relevantă.</p>';
+    html += '</div>';
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    // Bind back button → go back to stage view
+    var backBtn = document.getElementById("task-back-btn");
+    if (backBtn) {
+      backBtn.addEventListener("click", function() {
+        activeTaskIdx = null;
+        showView("stage");
+        renderStageView(stageId);
+        renderNav();
+      });
+    }
+
+    // Bind toggle done
+    var checkbox = document.getElementById("task-done-check");
+    if (checkbox) {
+      checkbox.addEventListener("change", function() {
+        checkedTasks[key] = checkbox.checked;
+        saveTasks();
+        var label = document.getElementById("task-done-label");
+        if (label) {
+          label.textContent = checkbox.checked ? "Finalizat" : "În lucru";
+          label.className = "tv-done-text" + (checkbox.checked ? " is-done" : "");
+        }
+        updateProgress();
+        renderNav();
+      });
+    }
+  }
+
+  // ═══ VIEW MANAGEMENT ═══
+  function showView(view) {
+    currentView = view;
+    document.querySelectorAll(".page-view").forEach(function(v) { v.classList.remove("active"); });
+    var target = document.getElementById("view-" + view);
+    if (target) target.classList.add("active");
+    updateButtons();
+    if (view === "articol" || view === "sondaj") loadIframeIfNeeded(view);
+  }
+
+  function updateButtons() {
+    var a = document.getElementById("btn-articol");
+    var s = document.getElementById("btn-sondaj");
+    if (a) a.classList.toggle("active", currentView === "articol");
+    if (s) s.classList.toggle("active", currentView === "sondaj");
+  }
+
+  function loadIframeIfNeeded(view) {
+    if (view === "articol") {
+      var f = document.getElementById("iframe-articol");
+      if (f && (!f.src || f.src === "about:blank" || f.src.indexOf("/osf") === -1)) f.src = "/articolstiintific/osf";
+    } else if (view === "sondaj") {
+      var f2 = document.getElementById("iframe-sondaj");
+      if (f2 && (!f2.src || f2.src === "about:blank" || f2.src.indexOf("/sondaj") === -1)) f2.src = "/articolstiintific/sondaj";
+    }
+  }
+
+  // ═══ NAVIGATION (buttons) ═══
+  window.navigateTo = function(view) {
+    activeStageId = null;
+    activeTaskIdx = null;
+    showView(view);
+    updateParentUrl(view);
+    renderNav();
+  };
+
+  function updateParentUrl(view) {
+    try {
+      var p = window.parent || window;
+      var base = "/articolstiintific";
+      var path = view === "articol" ? base + "/osf" : view === "sondaj" ? base + "/sondaj" : base;
+      if (p.history && p.history.pushState) p.history.pushState({view: view}, "", path);
+    } catch(e) {}
+  }
+
+  function detectRouteFromParent() {
+    try {
+      var pp = ""; try { pp = window.parent.location.pathname; } catch(e) { pp = window.location.pathname; }
+      if (pp.indexOf("/osf") !== -1) currentView = "articol";
+      else if (pp.indexOf("/sondaj") !== -1) currentView = "sondaj";
+      else currentView = "overview";
+      showView(currentView);
+    } catch(e) {}
   }
 
   // ═══ ACCESS ═══
@@ -422,55 +701,6 @@ const ROADMAP_SCRIPT = `
     if (app) app.style.display = "block";
     renderNav();
     detectRouteFromParent();
-  }
-
-  // ═══ NAVIGATION ═══
-  window.navigateTo = function(view) {
-    if (view === currentView) return;
-    currentView = view;
-    updateViews(); updateButtons(); updateParentUrl(view); loadIframeIfNeeded(view);
-  };
-
-  function updateViews() {
-    document.querySelectorAll(".page-view").forEach(function(v) { v.classList.remove("active"); });
-    var t = document.getElementById("view-" + currentView);
-    if (t) t.classList.add("active");
-  }
-
-  function updateButtons() {
-    var a = document.getElementById("btn-articol");
-    var s = document.getElementById("btn-sondaj");
-    if (a) a.classList.toggle("active", currentView === "articol");
-    if (s) s.classList.toggle("active", currentView === "sondaj");
-  }
-
-  function loadIframeIfNeeded(view) {
-    if (view === "articol") {
-      var f = document.getElementById("iframe-articol");
-      if (f && (!f.src || f.src === "about:blank" || f.src.indexOf("/osf") === -1)) f.src = "/articolstiintific/osf";
-    } else if (view === "sondaj") {
-      var f2 = document.getElementById("iframe-sondaj");
-      if (f2 && (!f2.src || f2.src === "about:blank" || f2.src.indexOf("/sondaj") === -1)) f2.src = "/articolstiintific/sondaj";
-    }
-  }
-
-  function updateParentUrl(view) {
-    try {
-      var p = window.parent || window;
-      var base = "/articolstiintific";
-      var path = view === "articol" ? base + "/osf" : view === "sondaj" ? base + "/sondaj" : base;
-      if (p.history && p.history.pushState) p.history.pushState({view: view}, "", path);
-    } catch(e) {}
-  }
-
-  function detectRouteFromParent() {
-    try {
-      var pp = ""; try { pp = window.parent.location.pathname; } catch(e) { pp = window.location.pathname; }
-      if (pp.indexOf("/osf") !== -1) currentView = "articol";
-      else if (pp.indexOf("/sondaj") !== -1) currentView = "sondaj";
-      else currentView = "overview";
-      updateViews(); updateButtons(); loadIframeIfNeeded(currentView);
-    } catch(e) {}
   }
 
   // ═══ INIT ═══
