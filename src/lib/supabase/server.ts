@@ -36,6 +36,13 @@ export function createServiceRole() {
         autoRefreshToken: false,
         persistSession: false,
       },
+      global: {
+        headers: {
+          // Prevent PostgREST/CDN caching — ensures fresh data on every request
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          "Pragma": "no-cache",
+        },
+      },
     }
   );
 }
