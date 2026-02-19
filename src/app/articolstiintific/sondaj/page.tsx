@@ -43,6 +43,9 @@ import {
   ShieldOff,
   Mail,
   Phone,
+  Target,
+  TrendingUp,
+  Trophy,
 } from "lucide-react";
 import * as tus from "tus-js-client";
 
@@ -937,6 +940,9 @@ export default function StudiuAdminPage() {
   useEffect(() => {
     if (activeTab === "rezultate") {
       fetchResults(resultsSegment);
+      fetchGlobalStats();
+    }
+    if (activeTab === "distributie") {
       fetchGlobalStats();
     }
   }, [activeTab, resultsSegment, fetchResults, fetchGlobalStats]);
@@ -2894,6 +2900,131 @@ export default function StudiuAdminPage() {
                 ADAUGA LINK
               </button>
             </div>
+
+            {/* ═══ KPI Cards ═══ */}
+            {(() => {
+              const TARGET = 10000;
+              // Sum completions from all distribution links
+              const distCompletions = distributions.reduce((sum, d) => sum + (d.completions || 0), 0);
+              // Get general link completions from globalStats
+              const generalCompleted = globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0;
+              const totalCompleted = distCompletions + generalCompleted;
+              // Also check globalStats.completed if available (more reliable)
+              const kpiCompleted = globalStats ? globalStats.completed : totalCompleted;
+              const kpiRemaining = Math.max(TARGET - kpiCompleted, 0);
+              const kpiPct = TARGET > 0 ? Math.min(Math.round((kpiCompleted / TARGET) * 100), 100) : 0;
+              const pctColor = kpiPct >= 100 ? "#10b981" : kpiPct >= 50 ? "#f59e0b" : "#DC2626";
+
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
+                  {/* Card 1 — Total completat */}
+                  <div style={{
+                    background: "linear-gradient(135deg, #111827 0%, #1e293b 100%)",
+                    borderRadius: 16,
+                    padding: "24px 20px",
+                    position: "relative" as const,
+                    overflow: "hidden",
+                    border: "1px solid #1e293b",
+                  }}>
+                    <div style={{ position: "absolute" as const, top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(16,185,129,0.08)" }} />
+                    <div style={{ position: "relative" as const, zIndex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <UserCheck size={14} style={{ color: "#10b981" }} />
+                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", textTransform: "uppercase" as const }}>Completari totale</span>
+                        </div>
+                        <div style={{
+                          background: "rgba(16,185,129,0.15)",
+                          borderRadius: 8,
+                          padding: "4px 8px",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#6B7280",
+                          fontFamily: "JetBrains Mono, monospace",
+                        }}>
+                          KPI {TARGET.toLocaleString("ro-RO")}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 56, fontWeight: 900, color: "#10b981", fontFamily: "JetBrains Mono, monospace", lineHeight: 1, marginBottom: 4 }}>
+                        {kpiCompleted.toLocaleString("ro-RO")}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        din toate sursele de distributie
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 2 — Ramas de completat */}
+                  <div style={{
+                    background: "linear-gradient(135deg, #111827 0%, #1e293b 100%)",
+                    borderRadius: 16,
+                    padding: "24px 20px",
+                    position: "relative" as const,
+                    overflow: "hidden",
+                    border: "1px solid #1e293b",
+                  }}>
+                    <div style={{ position: "absolute" as const, top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: "rgba(245,158,11,0.08)" }} />
+                    <div style={{ position: "relative" as const, zIndex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <Target size={14} style={{ color: "#f59e0b" }} />
+                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", textTransform: "uppercase" as const }}>Mai trebuie</span>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 56, fontWeight: 900, color: kpiRemaining === 0 ? "#10b981" : "#f59e0b", fontFamily: "JetBrains Mono, monospace", lineHeight: 1, marginBottom: 4 }}>
+                        {kpiRemaining.toLocaleString("ro-RO")}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#4B5563" }}>
+                        {kpiRemaining > 0
+                          ? `respondenti pana la KPI de ${TARGET.toLocaleString("ro-RO")}`
+                          : "Obiectivul KPI a fost atins!"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card 3 — Procent indeplinire */}
+                  <div style={{
+                    background: "linear-gradient(135deg, #111827 0%, #1e293b 100%)",
+                    borderRadius: 16,
+                    padding: "24px 20px",
+                    position: "relative" as const,
+                    overflow: "hidden",
+                    border: "1px solid #1e293b",
+                  }}>
+                    <div style={{ position: "absolute" as const, top: -20, right: -20, width: 100, height: 100, borderRadius: "50%", background: `${pctColor}14` }} />
+                    <div style={{ position: "relative" as const, zIndex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <TrendingUp size={14} style={{ color: pctColor }} />
+                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", textTransform: "uppercase" as const }}>Indeplinire KPI</span>
+                        </div>
+                        {kpiPct >= 100 && (
+                          <Trophy size={18} style={{ color: "#10b981" }} />
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
+                        <span style={{ fontSize: 56, fontWeight: 900, color: pctColor, fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>
+                          {kpiPct}
+                        </span>
+                        <span style={{ fontSize: 24, fontWeight: 700, color: pctColor, fontFamily: "JetBrains Mono, monospace" }}>%</span>
+                      </div>
+                      {/* Mini progress bar */}
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ width: "100%", height: 6, background: "#1e293b", borderRadius: 4, overflow: "hidden", border: "1px solid #334155" }}>
+                          <div style={{
+                            height: "100%",
+                            width: `${kpiPct}%`,
+                            background: kpiPct >= 100 ? "linear-gradient(90deg, #10b981, #34d399)" : kpiPct >= 50 ? "linear-gradient(90deg, #f59e0b, #fbbf24)" : "linear-gradient(90deg, #DC2626, #ef4444)",
+                            borderRadius: 4,
+                            transition: "width 0.6s ease",
+                          }} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Public link card */}
             <div style={{ ...S.configCard, marginBottom: 20 }}>
