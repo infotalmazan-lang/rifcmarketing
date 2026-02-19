@@ -389,34 +389,38 @@ function StudiuWizardInner() {
 
   // ── Advance with transition ────────────────────────────
   const advanceTo = useCallback((nextStep: number) => {
-    // ── GA4 tracking ──
+    // ── Unified tracking: GA4 + Facebook Pixel + CAPI ──
     const label = getStepLabel(nextStep, profileStepCount, stepsPerStimulus, thankYouStep);
-    trackEvent("wizard_step", { step_number: nextStep, step_label: label });
-    // Special milestone events
-    if (nextStep === 1) trackEvent("wizard_start");
-    if (nextStep === firstStimulusStep) trackEvent("profile_complete");
-    if (nextStep >= thankYouStep) trackEvent("survey_complete");
 
-    // ── Facebook Pixel + CAPI tracking ──
+    // Every step (GA4 + FB)
+    trackEvent("wizard_step", { step_number: nextStep, step_label: label });
+    fbTrackCustom("WizardStep", { step_number: nextStep, step_label: label });
+
+    // Survey started — user clicked "Incepe" from welcome
     if (nextStep === 1) {
-      // Survey started — user clicked "Incepe" from welcome
+      trackEvent("wizard_start");
       fbTrackCustom("SurveyStart", { content_name: "RIFC Survey", content_category: "survey" });
     }
+
+    // Profile section completed — all demographic/behavioral/psychographic done
     if (nextStep === firstStimulusStep) {
-      // Profile section completed — all demographic/behavioral/psychographic done
+      trackEvent("profile_complete");
       fbTrackCustom("ProfileComplete", { content_name: "RIFC Profile", step: nextStep });
     }
-    // Track every 5th stimulus (not every sub-step, to avoid spam)
+
+    // Stimulus tracking — each new cartonas (first sub-step)
     if (nextStep >= firstStimulusStep && nextStep <= lastStimulusStep) {
       const stimIdx = Math.floor((nextStep - firstStimulusStep) / stepsPerStimulus);
       const subStep = (nextStep - firstStimulusStep) % stepsPerStimulus;
       if (subStep === 0) {
-        // First sub-step of each new stimulus = user moved to next cartonas
+        trackEvent("stimulus_view", { stimulus_index: stimIdx + 1, step: nextStep });
         fbTrackCustom("StimulusView", { content_name: `Stimulus ${stimIdx + 1}`, step: nextStep, stimulus_index: stimIdx });
       }
     }
+
+    // Survey completed — main conversion event
     if (nextStep >= thankYouStep) {
-      // Survey completed! — this is the main conversion event
+      trackEvent("survey_complete");
       fbTrack("CompleteRegistration", { content_name: "RIFC Survey Complete", status: "completed", value: 1, currency: "EUR" });
     }
 

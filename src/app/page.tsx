@@ -18,9 +18,17 @@ import AIPromptsSection from "@/components/landing/AIPromptsSection";
 import AuthorSection from "@/components/landing/AuthorSection";
 import { fbTrack } from "@/components/FacebookPixel";
 
+// GA4 helper (same as wizard)
+function trackGA(eventName: string, params?: Record<string, string | number>) {
+  if (typeof window !== "undefined" && (window as any).gtag) {
+    (window as any).gtag("event", eventName, params);
+  }
+}
+
 export default function HomePage() {
-  // Fire ViewContent on landing page load (once)
+  // Fire ViewContent on landing page load — GA4 + FB (once)
   useEffect(() => {
+    trackGA("view_content", { content_type: "landing_page", page_title: "RIFC Landing" });
     fbTrack("ViewContent", { content_name: "RIFC Landing Page", content_category: "landing" });
   }, []);
   return (
