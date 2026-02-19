@@ -378,11 +378,7 @@ export async function GET(request: Request) {
         responseCount: allFilteredResponses.length,
         activeStimuli: activeStimIds.length,
         uniqueStimIdsInResponses: uniqueStimIdsInResponses.length,
-        orphanStimulusIds: orphanStimIds,
         hasOrphans: orphanStimIds.length > 0,
-        respondentIds: respondentIds,
-        respondentDetails: respondents.map(r => ({ id: r.id, completed_at: r.completed_at, started_at: r.started_at, distribution_id: r.distribution_id })),
-        responsesPerRespondent: respondentIds.map(id => ({ id, count: allFilteredResponses.filter(r => r.respondent_id === id).length })),
       },
     });
   } catch (err: any) {
