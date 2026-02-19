@@ -337,7 +337,7 @@ function ExpertPageContent() {
       {/* Header — with PROFILUL MEU button */}
       <div style={P.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={P.logo}>R IF C</span>
+          <img src="/images/rifc-logo-black.png" alt="R IF C" style={{ height: 32, width: "auto", borderRadius: 4 }} />
           <span style={P.badge}>EXPERT</span>
         </div>
 

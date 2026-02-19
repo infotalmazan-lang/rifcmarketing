@@ -1370,10 +1370,8 @@ export default function StudiuAdminPage() {
     <div style={S.page}>
       {/* Header bar */}
       <div style={S.headerBar}>
-        <a href="/articolstiintific" style={{ ...S.logo, textDecoration: "none", cursor: "pointer" }}>
-          <span style={{ color: "#DC2626", fontWeight: 800 }}>R</span>
-          <span style={{ color: "#6B7280", fontWeight: 300 }}> IF </span>
-          <span style={{ color: "#DC2626", fontWeight: 800 }}>C</span>
+        <a href="/articolstiintific" style={{ textDecoration: "none", cursor: "pointer", display: "flex", alignItems: "center" }}>
+          <img src="/images/rifc-logo-black.png" alt="R IF C" style={{ height: 32, width: "auto", borderRadius: 4 }} />
         </a>
         <div style={S.headerBadge}>SONDAJ</div>
         <div style={{ flex: 1 }} />
