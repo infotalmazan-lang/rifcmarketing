@@ -588,11 +588,12 @@ export default function StudiuAdminPage() {
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsSegment, setResultsSegment] = useState<string>("all");
   const [globalStats, setGlobalStats] = useState<{ total: number; completed: number; rate: number; responses: number; today: number; month: number; avgTime: number; perDist: { id: string; name: string; total: number; completed: number }[] } | null>(null);
-  const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic" | "canale">("scoruri");
+  const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic" | "canale" | "industrii">("scoruri");
   const [resultsCatFilter, setResultsCatFilter] = useState<string | null>(null);
   const [expandedStimulusId, setExpandedStimulusId] = useState<string | null>(null);
   const [tooltipCol, setTooltipCol] = useState<string | null>(null);
   const [expandedChannelType, setExpandedChannelType] = useState<string | null>(null);
+  const [expandedIndustryType, setExpandedIndustryType] = useState<string | null>(null);
 
   // Log panel state
   const [logData, setLogData] = useState<any[]>([]);
@@ -607,6 +608,9 @@ export default function StudiuAdminPage() {
   const [archiveData, setArchiveData] = useState<any[]>([]);
   const [archiveLoading, setArchiveLoading] = useState(false);
   const [archiveSelected, setArchiveSelected] = useState<Set<string>>(new Set());
+
+  // ── Dismissed duplicate suspects (user confirmed as coincidence) ──
+  const [dismissedDupIds, setDismissedDupIds] = useState<Set<string>>(new Set());
 
   // ── Flag/unflag respondents ────────────────────────────────
   const toggleFlag = async (ids: string[], flagged: boolean, reason?: string) => {
@@ -2239,15 +2243,16 @@ export default function StudiuAdminPage() {
                   );
                 })()}
 
-                {/* Content sub-tabs: SCORURI | PROFIL | PSIHOGRAFIC | CANALE */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                {/* Content sub-tabs: SCORURI | PROFIL | PSIHOGRAFIC | CANALE | INDUSTRII */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" as const }}>
                   {([
                     { key: "scoruri" as const, label: "Scoruri R·I·F·C·CTA" },
                     { key: "profil" as const, label: "Profil Respondenți" },
                     { key: "psihografic" as const, label: "Psihografic" },
                     { key: "canale" as const, label: "Total Canale" },
+                    { key: "industrii" as const, label: "Industrii" },
                   ]).map((t) => (
-                    <button key={t.key} onClick={() => { setResultsSubTab(t.key); if (t.key !== "canale") setExpandedChannelType(null); }} style={{
+                    <button key={t.key} onClick={() => { setResultsSubTab(t.key); if (t.key !== "canale") setExpandedChannelType(null); if (t.key !== "industrii") setExpandedIndustryType(null); }} style={{
                       padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6, border: "1px solid #e5e7eb", cursor: "pointer",
                       background: resultsSubTab === t.key ? "#111827" : "#fff",
                       color: resultsSubTab === t.key ? "#fff" : "#6B7280",
@@ -2858,6 +2863,229 @@ export default function StudiuAdminPage() {
                                   <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 800 }}>{ch.avg_cta}</td>
                                   <td style={{ ...tdStyle, color: "#9CA3AF" }}></td>
                                   <td style={{ ...tdStyle, color: "#9CA3AF", fontSize: 11 }}>{ch.avg_time ? `${ch.avg_time}s` : ""}</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  );
+                })()}
+
+                {/* ── SUB-TAB: INDUSTRII ── */}
+                {resultsSubTab === "industrii" && (() => {
+                  // Group stimuliResults by industry
+                  const byIndustry: Record<string, StimulusResult[]> = {};
+                  results.stimuliResults.forEach(s => {
+                    const ind = s.industry || "Neatribuit";
+                    if (!byIndustry[ind]) byIndustry[ind] = [];
+                    byIndustry[ind].push(s);
+                  });
+
+                  // Deterministic color palette for industries
+                  const INDUSTRY_COLORS = [
+                    "#2563EB", "#DC2626", "#059669", "#D97706", "#7C3AED",
+                    "#EC4899", "#0D9488", "#EA580C", "#4F46E5", "#CA8A04",
+                    "#0891B2", "#BE123C", "#16A34A", "#9333EA", "#C2410C",
+                    "#0E7490", "#DB2777", "#65A30D", "#6D28D9", "#B45309",
+                  ];
+
+                  // Build industry aggregates sorted by total responses (descending)
+                  type IndustryAgg = {
+                    industry: string;
+                    color: string;
+                    materialCount: number;
+                    materialsWithData: number;
+                    totalResponses: number;
+                    avg_r: number; avg_i: number; avg_f: number; avg_c: number;
+                    avg_c_score: number; avg_cta: number; avg_time: number;
+                    items: StimulusResult[];
+                    channels: string[];
+                  };
+
+                  const industryKeys = Object.keys(byIndustry).sort((a, b) => {
+                    // "Neatribuit" last, then by response count desc
+                    if (a === "Neatribuit") return 1;
+                    if (b === "Neatribuit") return -1;
+                    const aResp = byIndustry[a].reduce((s, x) => s + x.response_count, 0);
+                    const bResp = byIndustry[b].reduce((s, x) => s + x.response_count, 0);
+                    return bResp - aResp;
+                  });
+
+                  const industryData: IndustryAgg[] = industryKeys.map((ind, idx) => {
+                    const items = byIndustry[ind];
+                    const withData = items.filter(s => s.response_count > 0);
+                    const n = withData.length || 1;
+                    const uniqueChannels = Array.from(new Set(items.map(s => s.type)));
+                    return {
+                      industry: ind,
+                      color: INDUSTRY_COLORS[idx % INDUSTRY_COLORS.length],
+                      materialCount: items.length,
+                      materialsWithData: withData.length,
+                      totalResponses: items.reduce((a, s) => a + s.response_count, 0),
+                      avg_r: Math.round((withData.reduce((a, s) => a + s.avg_r, 0) / n) * 100) / 100,
+                      avg_i: Math.round((withData.reduce((a, s) => a + s.avg_i, 0) / n) * 100) / 100,
+                      avg_f: Math.round((withData.reduce((a, s) => a + s.avg_f, 0) / n) * 100) / 100,
+                      avg_c: Math.round((withData.reduce((a, s) => a + s.avg_c, 0) / n) * 100) / 100,
+                      avg_c_score: Math.round((withData.reduce((a, s) => a + s.avg_c_score, 0) / n) * 100) / 100,
+                      avg_cta: Math.round((withData.reduce((a, s) => a + s.avg_cta, 0) / n) * 100) / 100,
+                      avg_time: Math.round(withData.reduce((a, s) => a + s.avg_time, 0) / n),
+                      items,
+                      channels: uniqueChannels,
+                    };
+                  });
+
+                  if (industryData.length === 0) {
+                    return (
+                      <div style={S.placeholderTab}>
+                        <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                        <p style={{ color: "#6B7280", fontSize: 14 }}>Niciun raspuns inca pentru a genera totaluri per industrie.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div>
+                      {/* Industry cards grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+                        {industryData.map(ind => {
+                          const isExpanded = expandedIndustryType === ind.industry;
+                          return (
+                            <div
+                              key={ind.industry}
+                              onClick={() => setExpandedIndustryType(isExpanded ? null : ind.industry)}
+                              style={{
+                                ...S.configItem,
+                                cursor: "pointer",
+                                borderColor: isExpanded ? ind.color : "#e5e7eb",
+                                borderWidth: isExpanded ? 2 : 1,
+                                background: isExpanded ? `${ind.color}08` : "#f9fafb",
+                                transition: "all 0.15s",
+                              }}
+                            >
+                              {/* Industry name + color dot */}
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                                <span style={{ width: 10, height: 10, borderRadius: "50%", background: ind.color, flexShrink: 0 }} />
+                                <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{ind.industry}</span>
+                              </div>
+                              {/* Materials + Responses + Channels */}
+                              <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 10 }}>
+                                {ind.materialCount} material{ind.materialCount !== 1 ? "e" : ""} · {ind.totalResponses} raspunsuri
+                              </div>
+                              {/* Channel badges */}
+                              <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const, marginBottom: 8 }}>
+                                {ind.channels.map(ch => {
+                                  const cat = categories.find(c => c.type === ch);
+                                  return (
+                                    <span key={ch} style={{
+                                      fontSize: 9, fontWeight: 700, letterSpacing: 0.3, padding: "1px 5px", borderRadius: 3,
+                                      background: cat ? `${cat.color}18` : "#f3f4f6",
+                                      color: cat?.color || "#6B7280",
+                                    }}>{cat?.short_code || ch}</span>
+                                  );
+                                })}
+                              </div>
+                              {/* RIFC scores row */}
+                              {ind.totalResponses > 0 ? (
+                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "baseline" }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#DC2626" }}>R:{ind.avg_r}</span>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#D97706" }}>I:{ind.avg_i}</span>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#7C3AED" }}>F:{ind.avg_f}</span>
+                                  <span style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>C<sub style={{ fontSize: 8 }}>f</sub>:{ind.avg_c}</span>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#059669" }}>C<sub style={{ fontSize: 8 }}>p</sub>:{ind.avg_c_score}</span>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#2563EB" }}>CTA:{ind.avg_cta}</span>
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>Fara date inca</div>
+                              )}
+                              {/* Expand indicator */}
+                              <div style={{ marginTop: 8, textAlign: "center" as const }}>
+                                {isExpanded
+                                  ? <ChevronUp size={14} style={{ color: ind.color }} />
+                                  : <ChevronDown size={14} style={{ color: "#9CA3AF" }} />
+                                }
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Expanded industry detail — materials table */}
+                      {expandedIndustryType && (() => {
+                        const ind = industryData.find(i => i.industry === expandedIndustryType);
+                        if (!ind) return null;
+                        return (
+                          <div style={{
+                            marginTop: 16,
+                            border: `2px solid ${ind.color}40`,
+                            borderRadius: 10,
+                            background: "#fff",
+                            overflow: "auto",
+                          }}>
+                            {/* Header */}
+                            <div style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: ind.color }} />
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{ind.industry}</span>
+                              <span style={{ fontSize: 11, color: "#6B7280" }}>— {ind.materialCount} materiale · {ind.totalResponses} raspunsuri</span>
+                            </div>
+                            {/* Compact table */}
+                            <table style={{ width: "100%", borderCollapse: "collapse" as const, minWidth: 700 }}>
+                              <thead>
+                                <tr style={{ background: "#f9fafb" }}>
+                                  <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 160 }}>MATERIAL</th>
+                                  <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 80 }}>CANAL</th>
+                                  <th style={thStyle}>N</th>
+                                  <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                                  <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                                  <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                                  <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C<sub style={{ fontSize: 8 }}>form</sub></th>
+                                  <th style={{ ...thStyle, color: "#059669" }}>C<sub style={{ fontSize: 8 }}>perc</sub></th>
+                                  <th style={{ ...thStyle, color: "#2563EB" }}>CTA</th>
+                                  <th style={thStyle}>SD</th>
+                                  <th style={thStyle}>T(s)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {ind.items.map((s: StimulusResult) => {
+                                  const cat = categories.find(c => c.type === s.type);
+                                  return (
+                                    <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                      <td style={{ ...tdStyle, textAlign: "left" as const, fontWeight: 600, color: "#111827", fontSize: 13 }}>
+                                        {s.name}
+                                      </td>
+                                      <td style={{ ...tdStyle, textAlign: "left" as const }}>
+                                        <span style={{
+                                          fontSize: 9, fontWeight: 700, letterSpacing: 0.3, padding: "2px 6px", borderRadius: 4,
+                                          background: cat ? `${cat.color}18` : "#f3f4f6",
+                                          color: cat?.color || "#6B7280",
+                                        }}>{cat?.short_code || s.type}</span>
+                                      </td>
+                                      <td style={{ ...tdStyle, fontWeight: 600 }}>{s.response_count}</td>
+                                      <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.response_count > 0 ? s.avg_r : "\u2014"}</td>
+                                      <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.response_count > 0 ? s.avg_i : "\u2014"}</td>
+                                      <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.response_count > 0 ? s.avg_f : "\u2014"}</td>
+                                      <td style={{ ...tdStyle, color: "#111827", fontWeight: 800, fontSize: 15 }}>{s.response_count > 0 ? s.avg_c : "\u2014"}</td>
+                                      <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{s.response_count > 0 ? s.avg_c_score : "\u2014"}</td>
+                                      <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 600 }}>{s.response_count > 0 ? s.avg_cta : "\u2014"}</td>
+                                      <td style={{ ...tdStyle, color: "#9CA3AF" }}>{s.response_count > 0 ? s.sd_c : "\u2014"}</td>
+                                      <td style={{ ...tdStyle, color: "#9CA3AF", fontSize: 11 }}>{s.avg_time ? `${s.avg_time}s` : "\u2014"}</td>
+                                    </tr>
+                                  );
+                                })}
+                                {/* Industry total row */}
+                                <tr style={{ borderTop: "2px solid #e5e7eb", background: "#f9fafb" }}>
+                                  <td style={{ ...tdStyle, textAlign: "left" as const, fontWeight: 800, color: "#111827", fontSize: 13 }}>MEDIE INDUSTRIE</td>
+                                  <td style={tdStyle}></td>
+                                  <td style={{ ...tdStyle, fontWeight: 700 }}>{ind.totalResponses}</td>
+                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 800 }}>{ind.avg_r}</td>
+                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 800 }}>{ind.avg_i}</td>
+                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 800 }}>{ind.avg_f}</td>
+                                  <td style={{ ...tdStyle, color: "#111827", fontWeight: 900, fontSize: 15 }}>{ind.avg_c}</td>
+                                  <td style={{ ...tdStyle, color: "#059669", fontWeight: 800 }}>{ind.avg_c_score}</td>
+                                  <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 800 }}>{ind.avg_cta}</td>
+                                  <td style={{ ...tdStyle, color: "#9CA3AF" }}></td>
+                                  <td style={{ ...tdStyle, color: "#9CA3AF", fontSize: 11 }}>{ind.avg_time ? `${ind.avg_time}s` : ""}</td>
                                 </tr>
                               </tbody>
                             </table>
@@ -4228,7 +4456,8 @@ export default function StudiuAdminPage() {
                 const flaggedCount = filtered.filter((l: any) => l.is_flagged).length;
                 const cleanCount = filtered.length - flaggedCount;
                 const { suspectIds } = computeDuplicates(filtered);
-                const autoDetected = Array.from(suspectIds).filter(id => !filtered.find((l: any) => l.id === id)?.is_flagged).length;
+                const autoDetectedIds = Array.from(suspectIds).filter(id => !filtered.find((l: any) => l.id === id)?.is_flagged && !dismissedDupIds.has(id));
+                const autoDetected = autoDetectedIds.length;
 
                 // Avg time calculation (from completed entries with both dates)
                 const withDuration = filtered.filter((l: any) => l.completed_at && l.started_at).map((l: any) => {
@@ -4293,7 +4522,20 @@ export default function StudiuAdminPage() {
                         FLAGGED
                       </div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: flaggedCount > 0 ? "#DC2626" : "#059669" }}>{flaggedCount}</div>
-                      <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 2 }}>{autoDetected > 0 ? `+${autoDetected} suspecte` : `${cleanCount} curate`}</div>
+                      {autoDetected > 0 ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                          <span style={{ fontSize: 9, color: "#D97706", fontWeight: 600 }}>+{autoDetected} suspecte</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDismissedDupIds(prev => { const n = new Set(prev); autoDetectedIds.forEach(id => n.add(id)); return n; }); }}
+                            style={{ padding: "1px 4px", borderRadius: 3, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 8, fontWeight: 700, cursor: "pointer", lineHeight: 1 }}
+                            title="Ignora suspectele — marcheaza ca OK"
+                          >
+                            IGNORA
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 2 }}>{cleanCount} curate</div>
+                      )}
                     </div>
                   </div>
                 );
@@ -4336,7 +4578,7 @@ export default function StudiuAdminPage() {
               {logSubTab === "flagged" && (() => {
                 const { dupIps, dupFps, suspectIds } = computeDuplicates(logData);
                 const flaggedItems = logData.filter((l: any) => l.is_flagged);
-                const suspectNotFlagged = logData.filter((l: any) => suspectIds.has(l.id) && !l.is_flagged);
+                const suspectNotFlagged = logData.filter((l: any) => suspectIds.has(l.id) && !l.is_flagged && !dismissedDupIds.has(l.id));
 
                 return (
                   <div>
@@ -4365,26 +4607,39 @@ export default function StudiuAdminPage() {
                         </div>
                         <div style={{ display: "grid", gap: 8 }}>
                           {dupIps.map(([ip, ids]) => {
-                            const entries = logData.filter((l: any) => ids.includes(l.id));
+                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id));
+                            if (entries.length === 0) return null; // all dismissed
+                            const hasFlagged = entries.some((l: any) => l.is_flagged);
+                            const hasUnflagged = entries.some((l: any) => !l.is_flagged);
                             return (
                               <div key={ip} style={{ background: "#fff", border: "1px solid #fecaca", borderRadius: 8, padding: "12px 14px" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#fee2e2", color: "#991b1b" }}>{ip}</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#DC2626" }}>{ids.length} completari</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#DC2626" }}>{entries.length} completari</span>
                                   </div>
                                   <div style={{ display: "flex", gap: 4 }}>
+                                    {hasUnflagged && (
+                                      <button
+                                        onClick={() => toggleFlag(entries.filter((l: any) => !l.is_flagged).map((l: any) => l.id), true, `IP duplicat: ${ip}`)}
+                                        style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#DC2626", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                                      >
+                                        Flag toate
+                                      </button>
+                                    )}
+                                    {hasFlagged && (
+                                      <button
+                                        onClick={() => { toggleFlag(entries.filter((l: any) => l.is_flagged).map((l: any) => l.id), false); }}
+                                        style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
+                                      >
+                                        Unflag toate
+                                      </button>
+                                    )}
                                     <button
-                                      onClick={() => toggleFlag(ids.filter(id => !logData.find((l: any) => l.id === id)?.is_flagged), true, `IP duplicat: ${ip}`)}
-                                      style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#DC2626", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                                      onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); entries.forEach((l: any) => n.add(l.id)); return n; }); }}
+                                      style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
                                     >
-                                      Flag toate
-                                    </button>
-                                    <button
-                                      onClick={() => toggleFlag(ids.filter(id => logData.find((l: any) => l.id === id)?.is_flagged), false)}
-                                      style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
-                                    >
-                                      Unflag toate
+                                      Coincidenta OK
                                     </button>
                                   </div>
                                 </div>
@@ -4400,12 +4655,29 @@ export default function StudiuAdminPage() {
                                         <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{(l.locale || "ro").toUpperCase()}</span>
                                         {l.browser_fingerprint && <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: "#9CA3AF" }} title={`Fingerprint: ${l.browser_fingerprint}`}><Fingerprint size={10} style={{ display: "inline", verticalAlign: "middle" }} /> {l.browser_fingerprint.slice(0, 8)}...</span>}
                                         <span style={{ flex: 1 }} />
-                                        <button
-                                          onClick={() => toggleFlag([l.id], !l.is_flagged, l.is_flagged ? undefined : `IP duplicat: ${ip}`)}
-                                          style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: l.is_flagged ? "#059669" : "#DC2626", color: "#fff", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
-                                        >
-                                          {l.is_flagged ? "UNFLAG" : "FLAG"}
-                                        </button>
+                                        {l.is_flagged ? (
+                                          <button
+                                            onClick={() => toggleFlag([l.id], false)}
+                                            style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: "#059669", color: "#fff", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                                          >
+                                            UNFLAG
+                                          </button>
+                                        ) : (
+                                          <div style={{ display: "flex", gap: 3 }}>
+                                            <button
+                                              onClick={() => toggleFlag([l.id], true, `IP duplicat: ${ip}`)}
+                                              style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: "#DC2626", color: "#fff", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                                            >
+                                              FLAG
+                                            </button>
+                                            <button
+                                              onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); n.add(l.id); return n; }); }}
+                                              style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                                            >
+                                              OK
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
@@ -4425,29 +4697,42 @@ export default function StudiuAdminPage() {
                         </div>
                         <div style={{ display: "grid", gap: 8 }}>
                           {dupFps.map(([fp, ids]) => {
-                            const entries = logData.filter((l: any) => ids.includes(l.id));
+                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id));
+                            if (entries.length === 0) return null; // all dismissed
                             // Show unique IPs for this fingerprint group
                             const uniqueIps = Array.from(new Set(entries.map((l: any) => l.ip_address || l.ip_hash).filter(Boolean)));
+                            const hasFlagged = entries.some((l: any) => l.is_flagged);
+                            const hasUnflagged = entries.some((l: any) => !l.is_flagged);
                             return (
                               <div key={fp} style={{ background: "#fff", border: "1px solid #e9d5ff", borderRadius: 8, padding: "12px 14px" }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#f3e8ff", color: "#6b21a8" }}><Fingerprint size={11} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />{fp.slice(0, 16)}...</span>
-                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed" }}>{ids.length} completari</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed" }}>{entries.length} completari</span>
                                     {uniqueIps.length > 1 && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: "#fef3c7", color: "#92400e", fontWeight: 600 }}>{uniqueIps.length} IP-uri diferite!</span>}
                                   </div>
                                   <div style={{ display: "flex", gap: 4 }}>
+                                    {hasUnflagged && (
+                                      <button
+                                        onClick={() => toggleFlag(entries.filter((l: any) => !l.is_flagged).map((l: any) => l.id), true, `Fingerprint duplicat: ${fp.slice(0, 16)}`)}
+                                        style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#7c3aed", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                                      >
+                                        Flag toate
+                                      </button>
+                                    )}
+                                    {hasFlagged && (
+                                      <button
+                                        onClick={() => { toggleFlag(entries.filter((l: any) => l.is_flagged).map((l: any) => l.id), false); }}
+                                        style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
+                                      >
+                                        Unflag toate
+                                      </button>
+                                    )}
                                     <button
-                                      onClick={() => toggleFlag(ids.filter(id => !logData.find((l: any) => l.id === id)?.is_flagged), true, `Fingerprint duplicat: ${fp.slice(0, 16)}`)}
-                                      style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: "#7c3aed", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                                      onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); entries.forEach((l: any) => n.add(l.id)); return n; }); }}
+                                      style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
                                     >
-                                      Flag toate
-                                    </button>
-                                    <button
-                                      onClick={() => toggleFlag(ids.filter(id => logData.find((l: any) => l.id === id)?.is_flagged), false)}
-                                      style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 10, fontWeight: 600, cursor: "pointer" }}
-                                    >
-                                      Unflag toate
+                                      Coincidenta OK
                                     </button>
                                   </div>
                                 </div>
@@ -4462,12 +4747,29 @@ export default function StudiuAdminPage() {
                                         <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: l.completed_at ? "#d1fae5" : "#fef3c7", color: l.completed_at ? "#065f46" : "#92400e", fontWeight: 600 }}>{l.completed_at ? "COMPLET" : `Pas ${l.step_completed}`}</span>
                                         <span style={{ fontSize: 11, color: "#6B7280" }}>{l.device_type}</span>
                                         <span style={{ flex: 1 }} />
-                                        <button
-                                          onClick={() => toggleFlag([l.id], !l.is_flagged, l.is_flagged ? undefined : `Fingerprint duplicat: ${fp.slice(0, 16)}`)}
-                                          style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: l.is_flagged ? "#059669" : "#7c3aed", color: "#fff", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
-                                        >
-                                          {l.is_flagged ? "UNFLAG" : "FLAG"}
-                                        </button>
+                                        {l.is_flagged ? (
+                                          <button
+                                            onClick={() => toggleFlag([l.id], false)}
+                                            style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: "#059669", color: "#fff", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                                          >
+                                            UNFLAG
+                                          </button>
+                                        ) : (
+                                          <div style={{ display: "flex", gap: 3 }}>
+                                            <button
+                                              onClick={() => toggleFlag([l.id], true, `Fingerprint duplicat: ${fp.slice(0, 16)}`)}
+                                              style={{ padding: "3px 8px", borderRadius: 4, border: "none", background: "#7c3aed", color: "#fff", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                                            >
+                                              FLAG
+                                            </button>
+                                            <button
+                                              onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); n.add(l.id); return n; }); }}
+                                              style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
+                                            >
+                                              OK
+                                            </button>
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
