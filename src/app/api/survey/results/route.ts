@@ -9,11 +9,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const distributionId = searchParams.get("distribution_id");
 
-    // Build respondent query — fetch demographics/behavioral/psychographic for breakdowns
+    // Build respondent query — use select("*") for reliable column retrieval
+    // (PostgREST can return inconsistent results with specific column selects on JSONB tables)
     // Always exclude archived respondents (is_archived = false OR null for pre-migration rows)
     let respondentQuery = supabase
       .from("survey_respondents")
-      .select("id, demographics, behavioral, psychographic, device_type, completed_at, locale, started_at, distribution_id")
+      .select("*")
       .or("is_archived.eq.false,is_archived.is.null");
 
     if (distributionId === "__none__") {
