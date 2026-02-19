@@ -150,6 +150,11 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .sv-card-status { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
   .sv-card.done-card .sv-card-status { color: var(--green); }
   .sv-card-blocks { font-size: 10px; color: var(--text3); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+  .sv-card-bar { width: 100%; height: 4px; background: var(--surface2); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+  .sv-card-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+  .sv-card-bar-fill.empty { background: var(--border2); width: 0%; }
+  .sv-card-bar-fill.partial { background: linear-gradient(90deg, var(--amber), #f59e0b); }
+  .sv-card-bar-fill.full { background: linear-gradient(90deg, var(--green), var(--green2)); }
 
   /* ===== TASK VIEW ===== */
   .task-view { padding: 32px 40px; overflow-y: auto; height: 100%; max-width: 900px; }
@@ -620,7 +625,6 @@ const ROADMAP_SCRIPT = `
       html += '<div class="sb-stage-num">' + s.num + '</div>';
       html += '<div class="sb-stage-name">' + s.name + '</div>';
       html += '<span class="sb-stage-count">' + sDone + '/' + sTotal + '</span>';
-      if (s.site) html += '<span class="sb-site-tag">SITE</span>';
       html += '</button>';
       html += '<div class="sb-tasks' + (isActive ? ' open' : '') + '">';
       s.tasks.forEach(function(t, ti) {
@@ -677,7 +681,6 @@ const ROADMAP_SCRIPT = `
     var html = '<div class="sv-header">';
     html += '<button class="sv-back" id="stage-back-btn">' + ICONS.arrowLeft + ' Înapoi</button>';
     html += '<div class="sv-num-row"><div class="sv-num">' + stage.num + '</div><div class="sv-title">' + stage.name + '</div>';
-    if (stage.site) html += '<span class="sv-site-tag">SITE</span>';
     html += '</div></div>';
     html += '<div class="sv-progress"><div class="sv-progress-header"><span>Progres etapă</span><span class="sv-pct">' + sPct + '%</span></div>';
     html += '<div class="sv-bar"><div class="sv-bar-fill" style="width:' + sPct + '%"></div></div>';
@@ -689,11 +692,13 @@ const ROADMAP_SCRIPT = `
     stage.tasks.forEach(function(t, ti) {
       var key = getTaskKey(stage.id, ti); var isDone = !!checkedTasks[key];
       var nBlocks = getTaskBlocks(key).length;
+      var barPct = isDone ? 100 : (nBlocks > 0 ? Math.min(Math.round(nBlocks / 5 * 100), 90) : 0);
+      var barClass = isDone ? 'full' : (nBlocks > 0 ? 'partial' : 'empty');
       html += '<div class="sv-card' + (isDone ? ' done-card' : '') + '" data-stage="' + stage.id + '" data-task="' + ti + '">';
       html += '<div class="sv-card-num">' + (ti + 1) + '</div><div class="sv-card-content">';
       html += '<div class="sv-card-title">' + t + '</div>';
-      html += '<div class="sv-card-status">' + (isDone ? 'Finalizat' : 'În așteptare') + '</div>';
-      if (nBlocks > 0) html += '<div class="sv-card-blocks">' + nBlocks + ' bloc' + (nBlocks > 1 ? 'uri' : '') + '</div>';
+      html += '<div class="sv-card-status">' + (isDone ? 'Finalizat' : (nBlocks > 0 ? 'În lucru — ' + nBlocks + ' bloc' + (nBlocks > 1 ? 'uri' : '') : 'În așteptare')) + '</div>';
+      html += '<div class="sv-card-bar"><div class="sv-card-bar-fill ' + barClass + '" style="width:' + barPct + '%"></div></div>';
       html += '</div></div>';
     });
     html += '</div>';
