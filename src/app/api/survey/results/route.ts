@@ -381,11 +381,6 @@ export async function GET(request: Request) {
         activeStimuli: activeStimIds.length,
         uniqueStimIdsInResponses: uniqueStimIdsInResponses.length,
         hasOrphans: orphanStimIds.length > 0,
-        // Per-respondent response counts for verification
-        perRespondent: respondents.map((r: any) => ({
-          id: r.id?.substring(0, 8),
-          responses: allFilteredResponses.filter((resp: any) => resp.respondent_id === r.id).length,
-        })),
       },
     });
   } catch (err: any) {
