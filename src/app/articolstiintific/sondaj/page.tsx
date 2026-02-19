@@ -3141,16 +3141,31 @@ export default function StudiuAdminPage() {
               const TARGET = 10000;
               // Sum completions from all distribution links
               const distCompletions = distributions.reduce((sum, d) => sum + (d.completions || 0), 0);
+              // Sum estimated KPI from all individual distribution links
+              const distEstimated = distributions.reduce((sum, d) => sum + (d.estimated_completions || 0), 0);
               // Get general link completions from globalStats
               const generalCompleted = globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0;
               const totalCompleted = distCompletions + generalCompleted;
               // Also check globalStats.completed if available (more reliable)
               const kpiCompleted = globalStats ? globalStats.completed : totalCompleted;
               const kpiRemaining = Math.max(TARGET - kpiCompleted, 0);
-              const kpiPct = TARGET > 0 ? Math.min(Math.round((kpiCompleted / TARGET) * 100), 100) : 0;
-              const pctColor = kpiPct >= 100 ? "#10b981" : kpiPct >= 50 ? "#f59e0b" : "#DC2626";
+              // Percentage with decimals: show 2 decimals when < 1%, whole number when >= 1%
+              const kpiPctRaw = TARGET > 0 ? Math.min((kpiCompleted / TARGET) * 100, 100) : 0;
+              const kpiPct = kpiPctRaw >= 1 ? Math.round(kpiPctRaw) : parseFloat(kpiPctRaw.toFixed(2));
+              const kpiPctDisplay = kpiPctRaw >= 1 ? String(Math.round(kpiPctRaw)) : kpiPctRaw.toFixed(2);
+              const pctColor = kpiPctRaw >= 100 ? "#10b981" : kpiPctRaw >= 50 ? "#f59e0b" : "#DC2626";
+
+              // ── Link Public General: KPI = TARGET minus all individual source KPIs ──
+              const generalKpi = Math.max(TARGET - distEstimated, 0);
+              // Completions for general link = total completions minus completions from named sources
+              const generalCompletions = Math.max(kpiCompleted - distCompletions, 0);
+              const generalRemaining = Math.max(generalKpi - generalCompletions, 0);
+              const generalPctRaw = generalKpi > 0 ? Math.min((generalCompletions / generalKpi) * 100, 100) : 0;
+              const generalPct = generalPctRaw >= 1 ? Math.round(generalPctRaw) : parseFloat(generalPctRaw.toFixed(2));
+              const generalPctDisplay = generalPctRaw >= 1 ? String(Math.round(generalPctRaw)) : generalPctRaw.toFixed(2);
 
               return (
+                <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
                   {/* Card 1 — Total completat */}
                   <div style={{
@@ -3233,13 +3248,13 @@ export default function StudiuAdminPage() {
                           <TrendingUp size={14} style={{ color: pctColor }} />
                           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", textTransform: "uppercase" as const }}>Indeplinire KPI</span>
                         </div>
-                        {kpiPct >= 100 && (
+                        {kpiPctRaw >= 100 && (
                           <Trophy size={18} style={{ color: "#10b981" }} />
                         )}
                       </div>
                       <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-                        <span style={{ fontSize: 56, fontWeight: 900, color: pctColor, fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>
-                          {kpiPct}
+                        <span style={{ fontSize: kpiPctDisplay.length > 4 ? 42 : 56, fontWeight: 900, color: pctColor, fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>
+                          {kpiPctDisplay}
                         </span>
                         <span style={{ fontSize: 24, fontWeight: 700, color: pctColor, fontFamily: "JetBrains Mono, monospace" }}>%</span>
                       </div>
@@ -3248,8 +3263,8 @@ export default function StudiuAdminPage() {
                         <div style={{ width: "100%", height: 6, background: "#1e293b", borderRadius: 4, overflow: "hidden", border: "1px solid #334155" }}>
                           <div style={{
                             height: "100%",
-                            width: `${kpiPct}%`,
-                            background: kpiPct >= 100 ? "linear-gradient(90deg, #10b981, #34d399)" : kpiPct >= 50 ? "linear-gradient(90deg, #f59e0b, #fbbf24)" : "linear-gradient(90deg, #DC2626, #ef4444)",
+                            width: `${Math.max(kpiPctRaw, 0.5)}%`,
+                            background: kpiPctRaw >= 100 ? "linear-gradient(90deg, #10b981, #34d399)" : kpiPctRaw >= 50 ? "linear-gradient(90deg, #f59e0b, #fbbf24)" : "linear-gradient(90deg, #DC2626, #ef4444)",
                             borderRadius: 4,
                             transition: "width 0.6s ease",
                           }} />
@@ -3258,41 +3273,75 @@ export default function StudiuAdminPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Public link card — with computed KPI stats */}
+                <div style={{ ...S.configCard, marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <Globe size={16} style={{ color: "#DC2626" }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280" }}>LINK PUBLIC GENERAL</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                    <code style={{
+                      flex: 1,
+                      padding: "10px 14px",
+                      background: "#f9fafb",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 8,
+                      fontSize: 14,
+                      fontFamily: "JetBrains Mono, monospace",
+                      color: "#DC2626",
+                      wordBreak: "break-all" as const,
+                    }}>
+                      {baseUrl}/articolstiintific/sondaj/wizard
+                    </code>
+                    <button
+                      style={{ ...S.galleryEditBtn, gap: 6 }}
+                      onClick={() => copyToClipboard(`${baseUrl}/articolstiintific/sondaj/wizard`, "general")}
+                    >
+                      {copiedId === "general" ? <Check size={14} style={{ color: "#059669" }} /> : <Copy size={14} />}
+                      {copiedId === "general" ? "Copiat!" : "Copiaza"}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 8 }}>
+                    Acest link duce la sondaj fara segment de distributie (rezultatele apar doar in GENERAL).
+                  </p>
+
+                  {/* ── Stats row for general link ── */}
+                  <div style={{ display: "flex", gap: 20, marginTop: 14, flexWrap: "wrap" as const, alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Users size={14} style={{ color: "#6B7280" }} />
+                      <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
+                        {generalCompletions.toLocaleString("ro-RO")}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                        / {generalKpi.toLocaleString("ro-RO")} completari
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <span style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "JetBrains Mono, monospace" }}>
+                        KPI = {TARGET.toLocaleString("ro-RO")} &minus; {distEstimated.toLocaleString("ro-RO")} (surse)
+                      </span>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  {generalKpi > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={S.counterBar}>
+                        <div style={{
+                          ...S.counterFill,
+                          width: `${Math.max(generalPctRaw, generalPctRaw > 0 ? 0.5 : 0)}%`,
+                          background: generalPctRaw >= 100 ? "#059669" : "#DC2626",
+                        }} />
+                      </div>
+                      <span style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4, display: "block" }}>
+                        {generalPctDisplay}% completat
+                      </span>
+                    </div>
+                  )}
+                </div>
+                </>
               );
             })()}
-
-            {/* Public link card */}
-            <div style={{ ...S.configCard, marginBottom: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <Globe size={16} style={{ color: "#DC2626" }} />
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280" }}>LINK PUBLIC GENERAL</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
-                <code style={{
-                  flex: 1,
-                  padding: "10px 14px",
-                  background: "#f9fafb",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontFamily: "JetBrains Mono, monospace",
-                  color: "#DC2626",
-                  wordBreak: "break-all" as const,
-                }}>
-                  {baseUrl}/articolstiintific/sondaj/wizard
-                </code>
-                <button
-                  style={{ ...S.galleryEditBtn, gap: 6 }}
-                  onClick={() => copyToClipboard(`${baseUrl}/articolstiintific/sondaj/wizard`, "general")}
-                >
-                  {copiedId === "general" ? <Check size={14} style={{ color: "#059669" }} /> : <Copy size={14} />}
-                  {copiedId === "general" ? "Copiat!" : "Copiaza"}
-                </button>
-              </div>
-              <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 8 }}>
-                Acest link duce la sondaj fara segment de distributie (rezultatele apar doar in GENERAL).
-              </p>
-            </div>
 
             {/* Add distribution form */}
             {showAddDist && (
@@ -3389,9 +3438,11 @@ export default function StudiuAdminPage() {
               <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
                 {distributions.map((dist, idx) => {
                   const link = getDistLink(dist.tag);
-                  const pct = dist.estimated_completions > 0
-                    ? Math.min(100, Math.round((dist.completions / dist.estimated_completions) * 100))
+                  const pctRaw = dist.estimated_completions > 0
+                    ? Math.min(100, (dist.completions / dist.estimated_completions) * 100)
                     : 0;
+                  const pct = pctRaw >= 1 ? Math.round(pctRaw) : parseFloat(pctRaw.toFixed(2));
+                  const pctDisplay = pctRaw >= 1 ? String(Math.round(pctRaw)) : pctRaw.toFixed(2);
                   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
                   const isEditing = editingDistId === dist.id;
 
@@ -3595,12 +3646,12 @@ export default function StudiuAdminPage() {
                           <div style={S.counterBar}>
                             <div style={{
                               ...S.counterFill,
-                              width: `${pct}%`,
-                              background: pct >= 100 ? "#059669" : "#DC2626",
+                              width: `${Math.max(pctRaw, pctRaw > 0 ? 0.5 : 0)}%`,
+                              background: pctRaw >= 100 ? "#059669" : "#DC2626",
                             }} />
                           </div>
                           <span style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4, display: "block" }}>
-                            {pct}% completat
+                            {pctDisplay}% completat
                           </span>
                         </div>
                       )}
