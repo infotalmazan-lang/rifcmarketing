@@ -377,7 +377,7 @@ const ROADMAP_SCRIPT = `
   var LANGS = ["ro", "en", "ru"];
   var LANG_LABELS = { ro: "RO", en: "EN", ru: "RU" };
   // Block types that support trilingual content
-  var TRILINGUAL_TYPES = ["text-short", "text-long", "link", "code", "table"];
+  var TRILINGUAL_TYPES = ["text-short", "text-long", "link", "code", "table", "number"];
 
   /* ═══ SVG ICONS ═══ */
   var ICONS = {
@@ -525,6 +525,7 @@ const ROADMAP_SCRIPT = `
     if (type === "link") return { ro: "", en: "", ru: "" };
     if (type === "code") return { ro: { lang: "json", code: "" }, en: { lang: "json", code: "" }, ru: { lang: "json", code: "" } };
     if (type === "table") return { ro: { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] }, en: { cols: ["Column 1","Column 2"], rows: [["",""]] }, ru: { cols: ["Колонка 1","Колонка 2"], rows: [["",""]] } };
+    if (type === "number") return { ro: { label: "", value: 0 }, en: { label: "", value: 0 }, ru: { label: "", value: 0 } };
     return "";
   }
 
@@ -535,7 +536,6 @@ const ROADMAP_SCRIPT = `
       val = makeTriVal(type);
     }
     else if (type === "dropdown") val = { category: "", value: "" };
-    else if (type === "number") val = { label: "", value: 0 };
     else if (type === "file") val = null;
     else val = "";
     var newBlock = { id: genId(), type: type, value: val };
@@ -827,7 +827,7 @@ const ROADMAP_SCRIPT = `
       if (!typeDef) return;
       html += '<div class="blk" data-blk-id="' + block.id + '">';
       var headerLabel = typeDef.label;
-      if (block.type === "number" && block.value && block.value.label) headerLabel += ' — ' + escHtml(block.value.label);
+      if (block.type === "number" && block.value) { var _nl = (block.value.ro && block.value.ro.label) || (block.value.label) || ""; if (_nl) headerLabel += ' — ' + escHtml(_nl); }
       html += '<div class="blk-header">' + ICONS[typeDef.icon] + '<span class="blk-type-label">' + headerLabel + '</span>';
       if (idx > 0) html += '<button class="blk-action" data-action="up" data-blk="' + block.id + '" title="Mută sus">' + ICONS.arrowUp + '</button>';
       if (idx < blocks.length - 1) html += '<button class="blk-action" data-action="down" data-blk="' + block.id + '" title="Mută jos">' + ICONS.arrowDown + '</button>';
@@ -864,6 +864,16 @@ const ROADMAP_SCRIPT = `
       // Old format: { cols: [...], rows: [...] } → trilingual { ro: {...}, en: {...}, ru: {...} }
       if (val && val.cols && Array.isArray(val.cols)) {
         block.value = { ro: { cols: val.cols.slice(), rows: val.rows.map(function(r) { return r.slice(); }) }, en: { cols: val.cols.map(function() { return ""; }), rows: val.rows.map(function(r) { return r.map(function() { return ""; }); }) }, ru: { cols: val.cols.map(function() { return ""; }), rows: val.rows.map(function(r) { return r.map(function() { return ""; }); }) } };
+        saveBlocks();
+      }
+    } else if (block.type === "number") {
+      // Old format: { label: "x", value: 0 } or plain number → trilingual
+      if (typeof val === "number" || typeof val === "string") {
+        var nv = parseFloat(val) || 0;
+        block.value = { ro: { label: "", value: nv }, en: { label: "", value: nv }, ru: { label: "", value: nv } };
+        saveBlocks();
+      } else if (val && (val.label !== undefined || val.value !== undefined) && !val.ro) {
+        block.value = { ro: { label: val.label || "", value: val.value || 0 }, en: { label: "", value: val.value || 0 }, ru: { label: "", value: val.value || 0 } };
         saveBlocks();
       }
     } else {
@@ -993,10 +1003,19 @@ const ROADMAP_SCRIPT = `
         return h;
 
       case "number":
-        // Migrate old plain number to object format
-        if (typeof val === "number" || typeof val === "string") { val = { label: "", value: parseFloat(val) || 0 }; block.value = val; saveBlocks(); }
-        if (!val || typeof val !== "object" || val.ro !== undefined) val = { label: "", value: 0 };
-        return '<div class="blk-num-wrap"><input class="blk-num-title" type="text" data-num-label="' + block.id + '" value="' + escAttr(val.label || '') + '" placeholder="Titlu / Etichetă (ex: Total itemi)" /><div class="blk-num-row"><input class="blk-num-input" type="number" data-num-val="' + block.id + '" value="' + (val.value || 0) + '" step="any" /><span class="blk-num-label">' + (val.label ? escHtml(val.label) : 'valoare numerică') + '</span></div></div>';
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var nv = (val && val[lang]) || { label: "", value: 0 };
+          if (!nv || typeof nv !== "object") nv = { label: "", value: 0 };
+          var placeholders = { ro: "Titlu / Etichetă (ex: Total itemi)", en: "Title / Label (e.g.: Total items)", ru: "Название / Метка (напр.: Всего пунктов)" };
+          var hints = { ro: "valoare numerică", en: "numeric value", ru: "числовое значение" };
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<div class="blk-num-wrap"><input class="blk-num-title" type="text" data-num-label="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(nv.label || '') + '" placeholder="' + placeholders[lang] + '" />';
+          h += '<div class="blk-num-row"><input class="blk-num-input" type="number" data-num-val="' + block.id + '" data-lang="' + lang + '" value="' + (nv.value || 0) + '" step="any" />';
+          h += '<span class="blk-num-label">' + (nv.label ? escHtml(nv.label) : hints[lang]) + '</span></div></div>';
+          h += '</div>';
+        });
+        return h;
 
       case "date":
         return '<input class="blk-date" type="date" data-blk-val="' + block.id + '" value="' + escAttr(val || '') + '" />';
@@ -1138,22 +1157,23 @@ const ROADMAP_SCRIPT = `
       });
     });
 
-    // Number — label + value
+    // Number — label + value (trilingual)
     document.querySelectorAll("[data-num-label]").forEach(function(input) {
       var debounce = null;
       input.addEventListener("input", function() {
         clearTimeout(debounce);
         debounce = setTimeout(function() {
           var bid = input.getAttribute("data-num-label");
+          var lang = input.getAttribute("data-lang") || "ro";
           var blocks = getTaskBlocks(key);
           for (var i = 0; i < blocks.length; i++) {
             if (blocks[i].id === bid) {
-              if (typeof blocks[i].value !== "object" || !blocks[i].value) blocks[i].value = { label: "", value: 0 };
-              blocks[i].value.label = input.value;
+              if (!blocks[i].value[lang]) blocks[i].value[lang] = { label: "", value: 0 };
+              blocks[i].value[lang].label = input.value;
               saveBlocks();
-              // Update the hint label in realtime
               var wrap = input.closest(".blk-num-wrap");
-              if (wrap) { var lbl = wrap.querySelector(".blk-num-label"); if (lbl) lbl.textContent = input.value || "valoare numerică"; }
+              var hints = { ro: "valoare numerică", en: "numeric value", ru: "числовое значение" };
+              if (wrap) { var lbl = wrap.querySelector(".blk-num-label"); if (lbl) lbl.textContent = input.value || hints[lang]; }
               break;
             }
           }
@@ -1166,11 +1186,12 @@ const ROADMAP_SCRIPT = `
         clearTimeout(debounce);
         debounce = setTimeout(function() {
           var bid = input.getAttribute("data-num-val");
+          var lang = input.getAttribute("data-lang") || "ro";
           var blocks = getTaskBlocks(key);
           for (var i = 0; i < blocks.length; i++) {
             if (blocks[i].id === bid) {
-              if (typeof blocks[i].value !== "object" || !blocks[i].value) blocks[i].value = { label: "", value: 0 };
-              blocks[i].value.value = parseFloat(input.value) || 0;
+              if (!blocks[i].value[lang]) blocks[i].value[lang] = { label: "", value: 0 };
+              blocks[i].value[lang].value = parseFloat(input.value) || 0;
               saveBlocks(); break;
             }
           }
