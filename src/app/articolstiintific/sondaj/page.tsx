@@ -4556,7 +4556,7 @@ export default function StudiuAdminPage() {
                           {logTooltip === "IP" && "Adresa IP a respondentului. Se foloseste pentru: detectarea raspunsurilor duplicate, verificarea geografica (tara reala vs declarata), si asigurarea calitatii datelor. NU se face geolocalizare publica."}
                           {logTooltip === "DISP." && (<>Tipul de dispozitiv detectat automat: <strong>mobile</strong> (telefon), <strong>desktop</strong> (laptop/PC), sau <strong>tablet</strong>. Se determina din User-Agent-ul browser-ului.</>)}
                           {logTooltip === "LIMBA" && (<>Limba in care respondentul a completat sondajul: <span style={{ color: "#60a5fa" }}>RO</span> = Romana, <span style={{ color: "#f87171" }}>RU</span> = Rusa, <span style={{ color: "#34d399" }}>EN</span> = Engleza. Se alege de respondent la inceput.</>)}
-                          {/* GRUP tooltip removed */}
+                          {logTooltip === "SURSA" && (<>Sursa (canalul de distributie) prin care respondentul a accesat sondajul: <span style={{ color: "#60a5fa" }}>General</span> = link-ul public principal, sau un <span style={{ color: "#f59e0b" }}>link personalizat</span> creat in tab-ul Distributie (ex: TD Instagram, Facebook Ads, etc.).</>)}
                           {logTooltip === "DEMOGRAFIE" && "Profilul demografic auto-raportat: Gen (masculin/feminin) · Grupa de varsta (18-24, 25-34, etc.) · Tara de rezidenta. Click pe rand pentru detalii complete (venit, educatie, comportament, psihografic)."}
                           {logTooltip === "TIMP" && "Durata totala a sesiunii, de la start pana la completare. Se calculeaza: completed_at minus started_at. Utila pentru detectarea raspunsurilor grabite (sub 2 min) sau abandonate."}
                         </div>
@@ -4581,7 +4581,7 @@ export default function StudiuAdminPage() {
                           { key: "IP", align: "left" as const },
                           { key: "DISP.", align: "center" as const },
                           { key: "LIMBA", align: "center" as const },
-                          /* GRUP column removed */
+                          { key: "SURSA", align: "center" as const },
                           { key: "DEMOGRAFIE", align: "left" as const },
                           { key: "TIMP", align: "center" as const },
                         ].map((col) => (
@@ -4645,7 +4645,19 @@ export default function StudiuAdminPage() {
                                   {(log.locale || "—").toUpperCase()}
                                 </span>
                               </td>
-                              {/* variant_group column removed */}
+                              <td style={{ padding: "10px 10px", textAlign: "center" }}>
+                                <span style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: "2px 8px",
+                                  borderRadius: 4,
+                                  background: log.distribution_name === "General" ? "#dbeafe" : "#fef3c7",
+                                  color: log.distribution_name === "General" ? "#1e40af" : "#92400e",
+                                  whiteSpace: "nowrap" as const,
+                                }}>
+                                  {log.distribution_name || "General"}
+                                </span>
+                              </td>
                               <td style={{ padding: "10px 10px", fontSize: 12, color: "#374151" }}>
                                 <span style={{ fontWeight: 500 }}>{demoGender}</span>
                                 <span style={{ color: "#d1d5db", margin: "0 4px" }}>|</span>

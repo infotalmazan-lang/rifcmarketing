@@ -52,12 +52,23 @@ export async function GET(request: Request) {
       });
     });
 
+    // Fetch distributions to resolve names
+    const { data: distData } = await supabase
+      .from("survey_distributions")
+      .select("id, name, tag");
+    const distMap: Record<string, { name: string; tag: string }> = {};
+    (distData || []).forEach((d: { id: string; name: string; tag: string }) => {
+      distMap[d.id] = { name: d.name, tag: d.tag };
+    });
+
     // Build logs with response count + details, sort by most recent date (newest first)
     const logs = (respondents || [])
       .map((r) => ({
         ...r,
         responseCount: responseCounts[r.id] || 0,
         responses: responseDetails[r.id] || [],
+        distribution_name: r.distribution_id ? (distMap[r.distribution_id]?.name || "Link necunoscut") : "General",
+        distribution_tag: r.distribution_id ? (distMap[r.distribution_id]?.tag || "") : "",
       }))
       .sort((a, b) => {
         const dateA = a.completed_at || a.started_at || "1970-01-01";
