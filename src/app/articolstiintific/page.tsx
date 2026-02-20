@@ -568,15 +568,14 @@ const ROADMAP_SCRIPT = `
 
   // ═══ SEED PRE-POPULATED BLOCKS ═══
   function seedBlocksIfNeeded() {
-    var SEED_KEY = "rifc-blocks-seeded-v5";
+    var SEED_KEY = "rifc-blocks-seeded-v6";
     try { if (localStorage.getItem(SEED_KEY)) return; } catch(e) { return; }
 
-    // Clear old seeds on version bump
-    allBlocks = {};
+    // MERGE mode: only seed tasks that have NO existing blocks (don't overwrite user data)
 
     // --- s2-0: Transformare sub-factori → Itemi Likert ---
     var k0 = "s2-0";
-    allBlocks[k0] = [
+    if (!allBlocks[k0] || !allBlocks[k0].length) allBlocks[k0] = [
       { id: genId(), type: "text-short", value: { ro: "RIFC Scoring Rubric — 35 Itemi Likert (Scala 1-5)", en: "RIFC Scoring Rubric — 35 Likert Items (Scale 1-5)", ru: "RIFC Scoring Rubric — 35 шкал Лайкерта (Шкала 1-5)" } },
       { id: genId(), type: "link", value: { ro: { name: "OSF Repository", url: "https://osf.io" }, en: { name: "OSF Repository", url: "https://osf.io" }, ru: { name: "Репозиторий OSF", url: "https://osf.io" } } },
       { id: genId(), type: "text-long", value: {
@@ -588,7 +587,7 @@ const ROADMAP_SCRIPT = `
 
     // --- s2-2: Construire Scoring Rubric standardizat ---
     var k2 = "s2-2";
-    var rubricJson = JSON.stringify({
+    if (!allBlocks[k2] || !allBlocks[k2].length) { var rubricJson = JSON.stringify({
       scale: "1-5 Likert",
       anchors: { 1: "Total dezacord / Deloc", 3: "Neutru / Moderat", 5: "Total acord / Complet" },
       dimensions: {
@@ -627,11 +626,11 @@ const ROADMAP_SCRIPT = `
           ["ИТОГО", "35 пунктов", "175", "C_pred = R_gate × (I×F)"]
         ]}
       }}
-    ];
+    ]; }
 
     // --- s2-7: Traducere & Validare trilingvă (RO / EN / RU) ---
     var k7 = "s2-7";
-    allBlocks[k7] = [
+    if (!allBlocks[k7] || !allBlocks[k7].length) allBlocks[k7] = [
       { id: genId(), type: "text-short", value: { ro: "Traducere & Validare Trilingvă", en: "Translation & Trilingual Validation", ru: "Перевод и трёхъязычная валидация" } },
       { id: genId(), type: "dropdown", value: { category: "Status", value: "Finalizat" } },
       { id: genId(), type: "link", value: { ro: { name: "OSF Repository", url: "https://osf.io" }, en: { name: "OSF Repository", url: "https://osf.io" }, ru: { name: "Репозиторий OSF", url: "https://osf.io" } } },
