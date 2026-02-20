@@ -46,6 +46,10 @@ import {
   Target,
   TrendingUp,
   Trophy,
+  Type,
+  ListOrdered,
+  Hash,
+  LayoutList,
 } from "lucide-react";
 import * as tus from "tus-js-client";
 
@@ -774,7 +778,11 @@ export default function StudiuAdminPage() {
   const [cviSaving, setCviSaving] = useState(false);
   const defaultCviExpertForm = { name: "", org: "", role: "", experience: "", email: "" };
   const [cviExpertForm, setCviExpertForm] = useState(defaultCviExpertForm);
-  const [cviSubTab, setCviSubTab] = useState<"edit" | "preview">("edit");
+  const [cviSubTab, setCviSubTab] = useState<"main" | "edit" | "preview">("main");
+
+  // CVI item editor state (for Editează sub-tab)
+  const [cviItemEdits, setCviItemEdits] = useState<Record<string, { text?: string; sub?: string }>>({});
+  const [cviEditExpanded, setCviEditExpanded] = useState<string | null>(null); // expanded dimension: R, I, F, C
 
   // AI benchmark state
   const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
@@ -4550,9 +4558,10 @@ export default function StudiuAdminPage() {
                     </p>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    {/* Sub-tabs: Editează / Preview */}
+                    {/* Sub-tabs: Pagina / Editează / Preview */}
                     <div style={{ display: "flex", borderRadius: 8, border: "1px solid #e5e7eb", overflow: "hidden" }}>
                       {([
+                        { key: "main" as const, label: "Pagina", icon: <LayoutList size={13} /> },
                         { key: "edit" as const, label: "Editează", icon: <Pencil size={13} /> },
                         { key: "preview" as const, label: "Preview", icon: <Eye size={13} /> },
                       ]).map(t => (
@@ -4571,7 +4580,7 @@ export default function StudiuAdminPage() {
                         </button>
                       ))}
                     </div>
-                    {cviSubTab === "edit" && (
+                    {cviSubTab === "main" && (
                       <button style={{ ...S.addCatBtn, background: "#6366F1" }} onClick={() => setShowAddCviExpert(true)}>
                         <Plus size={16} />
                         ADAUGA EXPERT
@@ -4615,8 +4624,198 @@ export default function StudiuAdminPage() {
                   </>
                 )}
 
-                {/* ═══ EDIT SUB-TAB ═══ */}
+                {/* ═══ EDITEAZĂ SUB-TAB (Edit CVI Test Content) ═══ */}
                 {cviSubTab === "edit" && (
+                  <>
+                    {/* Info banner */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 20px", borderRadius: 10, background: "#EEF2FF", border: "1px solid #C7D2FE", marginBottom: 20 }}>
+                      <Pencil size={16} style={{ color: "#6366F1", flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: "#4338CA", lineHeight: 1.5 }}>
+                        Editează conținutul testului CVI: textul fiecărui item, sub-factorii, scala de evaluare și instrucțiunile. Modificările se reflectă în formularul pe care experții îl completează.
+                      </span>
+                    </div>
+
+                    {/* ── Scale Editor ── */}
+                    <div style={{ ...S.configCard, marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                        <Hash size={16} style={{ color: "#6366F1" }} />
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6366F1" }}>SCALA DE EVALUARE (LIKERT 1-4)</span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+                        {[
+                          { v: 1, label: "Irelevant", desc: "Itemul nu măsoară constructul indicat", color: "#EF4444", bg: "#FEF2F2" },
+                          { v: 2, label: "Parțial relevant", desc: "Itemul măsoară parțial, necesită revizuire majoră", color: "#F97316", bg: "#FFF7ED" },
+                          { v: 3, label: "Relevant", desc: "Itemul măsoară constructul cu revizuiri minore", color: "#EAB308", bg: "#FEFCE8" },
+                          { v: 4, label: "Extrem relevant", desc: "Itemul măsoară perfect constructul — nicio modificare", color: "#22C55E", bg: "#F0FDF4" },
+                        ].map(s => (
+                          <div key={s.v} style={{ padding: "12px 14px", borderRadius: 8, background: s.bg, border: `1px solid ${s.color}20` }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                              <span style={{ width: 24, height: 24, borderRadius: "50%", background: s.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{s.v}</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: s.color }}>{s.label}</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.5 }}>{s.desc}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ── Dimension Editors (4 collapsible sections) ── */}
+                    {([
+                      { dim: "R", label: "Relevanță", color: "#DC2626", bg: "#FEF2F2", items: [
+                        { id: "R1", text: "Mesajul se adresează unui segment specific de audiență cu o nevoie identificabilă pe care produsul sau serviciul o rezolvă.", sub: "Audiență / ICP" },
+                        { id: "R2", text: "Mesajul este difuzat la momentul potrivit din perspectiva ciclului de cumpărare al audienței.", sub: "Timing" },
+                        { id: "R3", text: "Conținutul mesajului corespunde etapei corecte din buyer journey a destinatarului (conștientizare, evaluare sau decizie).", sub: "Etapa Journey" },
+                        { id: "R4", text: "Mesajul ia în considerare contextul fizic sau digital în care este consumat de audiență.", sub: "Context Situațional" },
+                        { id: "R5", text: "Mesajul este adaptat cultural și lingvistic specificului geografic al audienței țintă.", sub: "Geografie / Cultură" },
+                        { id: "R6", text: "Formatul și conținutul mesajului sunt optimizate nativ pentru canalul specific de distribuție.", sub: "Potrivire Canal" },
+                        { id: "R7", text: "Mesajul utilizează date comportamentale pentru a personaliza comunicarea pentru segmente specifice.", sub: "Segmentare Comportamentală" },
+                      ]},
+                      { dim: "I", label: "Interes", color: "#2563EB", bg: "#EFF6FF", items: [
+                        { id: "I1", text: "Mesajul articulează o promisiune centrală clară și atractivă, specifică pentru audiența vizată.", sub: "Promisiune Centrală" },
+                        { id: "I2", text: "Beneficiul principal al ofertei este comunicat în primele 5 secunde de expunere la mesaj.", sub: "Beneficiu Imediat" },
+                        { id: "I3", text: "Mesajul activează o emoție specifică și autentică, aliniată cu dorința sau durerea principală a audienței.", sub: "Trigger Emoțional" },
+                        { id: "I4", text: "Mesajul creează un gol informațional care motivează audiența să continue să consume conținutul.", sub: "Gap de Curiozitate" },
+                        { id: "I5", text: "Mesajul conține un element de urgență sau raritate legitimă care motivează acțiunea imediată.", sub: "Urgență / Scarcity" },
+                        { id: "I6", text: "Mesajul conține cel puțin un element neașteptat sau surprinzător față de norma din industrie.", sub: "Noutate / Surpriză" },
+                        { id: "I7", text: "Destinatarul simte că mesajul a fost creat specific pentru situația sau nevoile sale personale.", sub: "Relevanță Personală Percepută" },
+                        { id: "I8", text: "Mesajul include dovezi specifice și verificabile de credibilitate (statistici cu sursă, testimoniale cu identitate reală, studii de caz cu cifre).", sub: "Credibilitate / Dovadă Socială" },
+                        { id: "I9", text: "Valoarea ofertei este construită strategic înainte de prezentarea prețului, făcând costul să pară mic față de beneficii.", sub: "Valoare Percepută" },
+                        { id: "I10", text: "Primele cuvinte sau secunde ale mesajului capturează imediat atenția prin originalitate, specificitate sau shock pozitiv.", sub: "Hook / Primul Impact" },
+                      ]},
+                      { dim: "F", label: "Formă", color: "#059669", bg: "#ECFDF5", items: [
+                        { id: "F1", text: "Elementele vizuale ale mesajului clarifică și amplifică conținutul, fără a crea confuzie sau distracție.", sub: "Claritate Vizuală" },
+                        { id: "F2", text: "Titlul sau headline-ul este clar, specific și comunică un beneficiu diferențiat în mai puțin de 5 secunde.", sub: "Puterea Titlului" },
+                        { id: "F3", text: "Există un singur CTA principal, orientat pe beneficiu, vizibil și cu fricțiune minimă pentru utilizator.", sub: "CTA — Call to Action" },
+                        { id: "F4", text: "Mesajul urmează o structură logică deliberată care ghidează natural audiența de la problemă la soluție și la acțiune.", sub: "Structură și Flow" },
+                        { id: "F5", text: "Lungimea mesajului este perfect calibrată pentru canalul de distribuție și obiectivul de comunicare.", sub: "Densitate Optimă (Lungime)" },
+                        { id: "F6", text: "Tonul mesajului este consistent, autentic și perfect calibrat pentru audiența și contextul specific.", sub: "Ton și Voce" },
+                        { id: "F7", text: "Mesajul este consistent cu identitatea vizuală și valorile brandului, recognoscibil fără a vedea logo-ul.", sub: "Consistență Brand" },
+                        { id: "F8", text: "Textul mesajului este ușor de citit la prima vedere, cu font adecvat, contrast și propoziții directe.", sub: "Lizibilitate" },
+                        { id: "F9", text: "Elementele vizuale sunt organizate ierarhic, ghidând ochiul natural de la cel mai important spre CTA.", sub: "Ierarhie Vizuală" },
+                        { id: "F10", text: "Specificațiile tehnice ale mesajului (dimensiuni, format, durate) sunt perfect adaptate platformei de distribuție.", sub: "Optimizare Format-Canal" },
+                        { id: "F11", text: "Mesajul este liber de erori gramaticale, ortografice și de punctuație, cu diacritice complete.", sub: "Corectitudine Lingvistică" },
+                      ]},
+                      { dim: "C", label: "Claritate (Rezultat)", color: "#D97706", bg: "#FFFBEB", items: [
+                        { id: "C1", text: "Mesajul este înțeles corect și complet la prima expunere de cel puțin 90% din audiența țintă.", sub: "Înțelegere Imediată" },
+                        { id: "C2", text: "Mesajul lasă o amprentă mentală specifică pe care audiența o poate reproduce după 72 de ore fără re-expunere.", sub: "Memorabilitate" },
+                        { id: "C3", text: "Mesajul generează o intenție puternică și imediată de a efectua acțiunea propusă.", sub: "Intenție de Acțiune" },
+                        { id: "C4", text: "Audiența poate articula clar de ce această ofertă este diferită și superioară alternativelor disponibile.", sub: "Diferențiere Percepută" },
+                        { id: "C5", text: "Mesajul anticipează și neutralizează proactiv principalele obiecții ale audienței țintă.", sub: "Reducerea Obiecțiilor" },
+                        { id: "C6", text: "Experiența post-click sau post-conversie corespunde perfect cu promisiunea comunicată în mesaj.", sub: "Coerență Mesaj-Așteptare" },
+                        { id: "C7", text: "Mesajul lasă o impresie generală puternic pozitivă, generând dorința de a împărtăși sau de a acționa imediat.", sub: "Impact General Perceput" },
+                      ]},
+                    ] as { dim: string; label: string; color: string; bg: string; items: { id: string; text: string; sub: string }[] }[]).map(section => (
+                      <div key={section.dim} style={{ ...S.configCard, marginBottom: 16, borderColor: cviEditExpanded === section.dim ? section.color : "#e5e7eb", borderWidth: cviEditExpanded === section.dim ? 2 : 1 }}>
+                        {/* Dimension header (clickable to expand) */}
+                        <button
+                          onClick={() => setCviEditExpanded(cviEditExpanded === section.dim ? null : section.dim)}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%",
+                            padding: 0, border: "none", background: "none", cursor: "pointer", textAlign: "left",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{
+                              width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                              background: section.bg, color: section.color, fontSize: 16, fontWeight: 800,
+                            }}>
+                              {section.dim}
+                            </span>
+                            <div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{section.label}</div>
+                              <div style={{ fontSize: 12, color: "#6B7280" }}>{section.items.length} itemi</div>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 11, fontWeight: 600, color: section.color, background: section.bg, padding: "3px 10px", borderRadius: 12 }}>
+                              {section.items.length} itemi
+                            </span>
+                            {cviEditExpanded === section.dim ? <ChevronUp size={18} style={{ color: "#6B7280" }} /> : <ChevronDown size={18} style={{ color: "#6B7280" }} />}
+                          </div>
+                        </button>
+
+                        {/* Expanded items editor */}
+                        {cviEditExpanded === section.dim && (
+                          <div style={{ marginTop: 16, borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
+                            {section.items.map((item, idx) => {
+                              const editedText = cviItemEdits[item.id]?.text ?? item.text;
+                              const editedSub = cviItemEdits[item.id]?.sub ?? item.sub;
+                              return (
+                                <div key={item.id} style={{ marginBottom: idx < section.items.length - 1 ? 16 : 0, padding: 16, borderRadius: 8, background: "#FAFBFC", border: "1px solid #f3f4f6" }}>
+                                  {/* Item header: ID + Sub-factor */}
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                                    <span style={{ fontSize: 12, fontWeight: 800, color: section.color, background: `${section.color}10`, padding: "3px 8px", borderRadius: 6, fontFamily: "'Inter', sans-serif" }}>
+                                      {item.id}
+                                    </span>
+                                    <span style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", letterSpacing: 1 }}>SUB-FACTOR</span>
+                                  </div>
+
+                                  {/* Sub-factor input */}
+                                  <div style={{ marginBottom: 10 }}>
+                                    <input
+                                      style={{ ...S.catEditInput, width: "100%", fontSize: 13, fontWeight: 600, color: "#374151" }}
+                                      value={editedSub}
+                                      onChange={(e) => setCviItemEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], sub: e.target.value } }))}
+                                      placeholder="Sub-factor"
+                                    />
+                                  </div>
+
+                                  {/* Item text textarea */}
+                                  <div>
+                                    <label style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", letterSpacing: 1, display: "block", marginBottom: 4 }}>TEXT ITEM</label>
+                                    <textarea
+                                      style={{
+                                        ...S.catEditInput, width: "100%", minHeight: 72, resize: "vertical" as const,
+                                        fontSize: 13, lineHeight: 1.6, color: "#1F2937", fontFamily: "'Inter', sans-serif",
+                                      }}
+                                      value={editedText}
+                                      onChange={(e) => setCviItemEdits(prev => ({ ...prev, [item.id]: { ...prev[item.id], text: e.target.value } }))}
+                                      placeholder="Textul itemului..."
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* ── Instruction Text Editor ── */}
+                    <div style={{ ...S.configCard, marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                        <Type size={16} style={{ color: "#6366F1" }} />
+                        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6366F1" }}>INSTRUCȚIUNI FORMULAR</span>
+                      </div>
+                      <div style={{ padding: 16, borderRadius: 8, background: "#FAFBFC", border: "1px solid #f3f4f6" }}>
+                        <div style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.7 }}>
+                          <p style={{ marginBottom: 8 }}><strong style={{ color: "#374151" }}>Notă academică:</strong> Acest instrument evaluează <strong>validitatea de conținut</strong> a celor 35 de itemi ai scalei RIFC Marketing.</p>
+                          <p style={{ marginBottom: 8 }}>Evaluarea se face pe scala <strong>Likert 1-4</strong>: 1 = Irelevant, 2 = Parțial relevant, 3 = Relevant, 4 = Extrem relevant.</p>
+                          <p style={{ marginBottom: 0 }}>Rezultatele sunt procesate conform metodologiei <strong>CVI (Content Validity Index)</strong> și <strong>Fleiss&apos; Kappa</strong> pentru concordanța inter-evaluatori.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ── Summary ── */}
+                    <div style={{ padding: "16px 20px", borderRadius: 10, background: "#F9FAFB", border: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <ListOrdered size={16} style={{ color: "#6B7280" }} />
+                        <span style={{ fontSize: 13, color: "#6B7280" }}>
+                          <strong style={{ color: "#111827" }}>35 itemi</strong> în 4 dimensiuni: R (7) + I (10) + F (11) + C (7)
+                        </span>
+                      </div>
+                      <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                        {Object.keys(cviItemEdits).length > 0
+                          ? `${Object.keys(cviItemEdits).length} itemi modificați`
+                          : "Nicio modificare"
+                        }
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {/* ═══ MAIN SUB-TAB (Expert Cards + Stats + Results) ═══ */}
+                {cviSubTab === "main" && (
                 <>
 
                 {/* ── Stats Panel ── */}
