@@ -1187,12 +1187,19 @@ const ROADMAP_SCRIPT = `
         clearTimeout(debounce);
         debounce = setTimeout(function() {
           var bid = input.getAttribute("data-num-val");
-          var lang = input.getAttribute("data-lang") || "ro";
+          var numVal = parseFloat(input.value) || 0;
           var blocks = getTaskBlocks(key);
           for (var i = 0; i < blocks.length; i++) {
             if (blocks[i].id === bid) {
-              if (!blocks[i].value[lang]) blocks[i].value[lang] = { label: "", value: 0 };
-              blocks[i].value[lang].value = parseFloat(input.value) || 0;
+              // Sync numeric value across ALL languages
+              LANGS.forEach(function(l) {
+                if (!blocks[i].value[l]) blocks[i].value[l] = { label: "", value: 0 };
+                blocks[i].value[l].value = numVal;
+              });
+              // Also update the other lang inputs in DOM
+              document.querySelectorAll('[data-num-val="' + bid + '"]').forEach(function(other) {
+                if (other !== input) other.value = input.value;
+              });
               saveBlocks(); break;
             }
           }
