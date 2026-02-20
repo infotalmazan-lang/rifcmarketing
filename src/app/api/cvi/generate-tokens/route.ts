@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("CVI insert error:", error);
-      return NextResponse.json({ error: "Failed to create expert" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to create expert: " + error.message }, { status: 500 });
     }
 
     return NextResponse.json({

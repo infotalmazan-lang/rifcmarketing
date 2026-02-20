@@ -1028,8 +1028,11 @@ export default function StudiuAdminPage() {
       const expData = await expRes.json();
       const resData = await resRes.json();
       if (expData.experts) setCviExperts(expData.experts);
+      if (expData.error) console.error("CVI fetch experts error:", expData.error);
       setCviResults(resData);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("CVI fetch error:", err);
+    }
     setCviLoading(false);
   }, []);
 
@@ -1041,26 +1044,31 @@ export default function StudiuAdminPage() {
     if (!cviExpertForm.name.trim()) return;
     setCviSaving(true);
     try {
-      if (editingCviExpertId) {
-        // Update existing
-        await fetch("/api/cvi/generate-tokens", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingCviExpertId, ...cviExpertForm }),
-        });
-      } else {
-        // Create new
-        await fetch("/api/cvi/generate-tokens", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...cviExpertForm, invited_by: "talmazan" }),
-        });
+      const res = editingCviExpertId
+        ? await fetch("/api/cvi/generate-tokens", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: editingCviExpertId, ...cviExpertForm }),
+          })
+        : await fetch("/api/cvi/generate-tokens", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...cviExpertForm, invited_by: "talmazan" }),
+          });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        alert("Eroare la salvare: " + (data.error || "Server error"));
+        setCviSaving(false);
+        return;
       }
       setShowAddCviExpert(false);
       setEditingCviExpertId(null);
       setCviExpertForm({ name: "", org: "", role: "", experience: "", email: "" });
       fetchCviData();
-    } catch { /* ignore */ }
+    } catch (err) {
+      alert("Eroare de rețea la salvare expert CVI");
+      console.error("CVI save error:", err);
+    }
     setCviSaving(false);
   }, [cviExpertForm, editingCviExpertId, fetchCviData]);
 
