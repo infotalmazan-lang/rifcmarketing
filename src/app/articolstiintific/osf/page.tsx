@@ -544,9 +544,12 @@ export default function ArticolOSFPage() {
           case "number": {
             const nv = typeof lv === "object" && lv ? lv : null;
             if (nv && (nv.label || nv.value)) {
+              // Format decimals: 0.8 → "0.80", 0.7 → "0.70", 35 → "35"
+              const raw = nv.value || 0;
+              const display = typeof raw === "number" && !Number.isInteger(raw) ? raw.toFixed(2) : raw;
               elements.push(
                 <span key={block.id} style={S.numberStat}>
-                  {nv.label ? <>{nv.label} <strong style={{ color: "#111827", fontFamily: "'JetBrains Mono', monospace" }}>: {nv.value || 0}</strong></> : <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{nv.value || 0}</strong>}
+                  {nv.label ? <>{nv.label} <strong style={{ color: "#111827", fontFamily: "'JetBrains Mono', monospace" }}>: {display}</strong></> : <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{display}</strong>}
                 </span>
               );
             }
