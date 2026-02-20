@@ -81,6 +81,7 @@ const MANUSCRIPT_SECTIONS: ManuscriptSection[] = [
       { key: "s6-0", label: "Introduction + Literature Review" },
     ],
   },
+  /* ── 2. Literature Review cu 4 subsecțiuni ── */
   {
     id: "literature",
     heading: { ro: "2. Recenzia Literaturii", en: "2. Literature Review", ru: "2. Обзор литературы" },
@@ -92,53 +93,136 @@ const MANUSCRIPT_SECTIONS: ManuscriptSection[] = [
     ],
   },
   {
+    id: "lit-2-1",
+    heading: { ro: "2.1 Teorii ale comunicării de marketing", en: "2.1 Marketing Communication Theories", ru: "2.1 Теории маркетинговой коммуникации" },
+    tasks: [],
+  },
+  {
+    id: "lit-2-2",
+    heading: { ro: "2.2 Framework-uri existente de evaluare", en: "2.2 Existing Assessment Frameworks", ru: "2.2 Существующие фреймворки оценки" },
+    tasks: [],
+  },
+  {
+    id: "lit-2-3",
+    heading: { ro: "2.3 Lacuna diagnostică în practica curentă", en: "2.3 The Diagnostic Gap in Current Practice", ru: "2.3 Диагностический пробел в текущей практике" },
+    tasks: [],
+  },
+  {
+    id: "lit-2-4",
+    heading: { ro: "2.4 Fundamentare psihometrică", en: "2.4 Psychometric Foundation", ru: "2.4 Психометрическое обоснование" },
+    tasks: [],
+  },
+  /* ── 3. Metodologie cu 4 subsecțiuni ── */
+  {
     id: "methodology",
     heading: { ro: "3. Metodologie", en: "3. Methodology", ru: "3. Методология" },
     targetWords: 2000,
     tasks: [
+      { key: "s6-1", label: "Framework + Methodology + Results" },
+    ],
+  },
+  {
+    id: "met-3-1",
+    heading: { ro: "3.1 Design general (6 straturi)", en: "3.1 General Design (6 Layers)", ru: "3.1 Общий дизайн (6 слоёв)" },
+    tasks: [
       { key: "s2-0", label: "Transformare sub-factori → itemi Likert" },
       { key: "s2-1", label: "Formalizare Conversie Likert → Scoring" },
       { key: "s2-2", label: "Construire Scoring Rubric standardizat" },
+    ],
+  },
+  {
+    id: "met-3-2",
+    heading: { ro: "3.2 Participanți și procedură", en: "3.2 Participants and Procedure", ru: "3.2 Участники и процедура" },
+    tasks: [
       { key: "s2-3", label: "Panel de experți (15–20 persoane)" },
       { key: "s2-4", label: "Interviuri cognitive (10–15 utilizatori)" },
-      { key: "s2-5", label: "Inter-Rater Reliability (2 evaluatori independenți)" },
       { key: "s2-6", label: "Etică & Consimțământ" },
+      { key: "s3b-1", label: "Eșantion Consumatori N=1.000–3.000" },
+      { key: "s3b-2", label: "Segmentare: demografie + comportament + psihografie" },
+    ],
+  },
+  {
+    id: "met-3-3",
+    heading: { ro: "3.3 Instrumente de măsurare", en: "3.3 Measurement Instruments", ru: "3.3 Инструменты измерения" },
+    tasks: [
+      { key: "s2-5", label: "Inter-Rater Reliability (2 evaluatori independenți)" },
       { key: "s2-7", label: "Traducere & Validare trilingvă (RO / EN / RU)" },
       { key: "s2b-0", label: "Test Instrument (10–15 evaluatori, 5–10 stimuli)" },
       { key: "s2b-1", label: "Verificare timp, claritate, probleme" },
       { key: "s2b-2", label: "Design Attention Checks" },
       { key: "s2b-3", label: "Ajustări finale pre-colectare" },
       { key: "s3-0", label: "Set Stimuli (10 canale × 3 variante = 30 mesaje)" },
-      { key: "s3b-0", label: "Design: 10 canale × 3 variante × 5 întrebări" },
-      { key: "s3b-1", label: "Eșantion Consumatori N=1.000–3.000" },
-      { key: "s3b-2", label: "Segmentare: demografie + comportament + psihografie" },
-      { key: "s3b-3", label: "Implementare randomizare Latin Square" },
-      { key: "s6-1", label: "Framework + Methodology + Results" },
     ],
   },
+  {
+    id: "met-3-4",
+    heading: { ro: "3.4 Analiza datelor", en: "3.4 Data Analysis", ru: "3.4 Анализ данных" },
+    tasks: [
+      { key: "s3b-0", label: "Design: 10 canale × 3 variante × 5 întrebări" },
+      { key: "s3b-3", label: "Implementare randomizare Latin Square" },
+    ],
+  },
+  /* ── 4. Rezultate cu 6 subsecțiuni ── */
   {
     id: "results",
     heading: { ro: "4. Rezultate", en: "4. Results", ru: "4. Результаты" },
     targetWords: 3000,
     tasks: [
+      { key: "s6-1", label: "Framework + Methodology + Results" },
+    ],
+  },
+  {
+    id: "res-4-1",
+    heading: { ro: "4.1 CVI — Panelul de Experți", en: "4.1 CVI — Expert Panel", ru: "4.1 CVI — Экспертная панель" },
+    tasks: [
       { key: "s3-1", label: "Eșantion Experți N=250–350" },
+    ],
+  },
+  {
+    id: "res-4-2",
+    heading: { ro: "4.2 Analiza Factorială Exploratorie (EFA)", en: "4.2 Exploratory Factor Analysis (EFA)", ru: "4.2 Эксплораторный факторный анализ (EFA)" },
+    tasks: [
       { key: "s3-2", label: "Exploratory Factor Analysis (EFA)" },
+    ],
+  },
+  {
+    id: "res-4-3",
+    heading: { ro: "4.3 Analiza Factorială Confirmatorie (CFA)", en: "4.3 Confirmatory Factor Analysis (CFA)", ru: "4.3 Конфирматорный факторный анализ (CFA)" },
+    tasks: [
       { key: "s4-0", label: "Colectare eșantion nou N=300–500" },
       { key: "s4-1", label: "CFA — Confirmatory Factor Analysis" },
       { key: "s4-2", label: "TESTUL CENTRAL: Additive vs Multiplicative" },
+    ],
+  },
+  {
+    id: "res-4-4",
+    heading: { ro: "4.4 Poarta Relevanței (Threshold R < 3)", en: "4.4 Relevance Gate (Threshold R < 3)", ru: "4.4 Порог релевантности (Threshold R < 3)" },
+    tasks: [
       { key: "s4-3", label: "Testul Porții Relevanței (Threshold R < 3)" },
       { key: "s4-4", label: "Robustness Checks (cross-canal, cross-industrie)" },
-      { key: "s4b-0", label: "Configurare prompt AI standardizat" },
-      { key: "s4b-1", label: "Comparație AI vs Human (ICC, Bland-Altman)" },
-      { key: "s4b-2", label: "Analiză bias și calibrare AI" },
+    ],
+  },
+  {
+    id: "res-4-5",
+    heading: { ro: "4.5 Validare Predictivă", en: "4.5 Predictive Validity", ru: "4.5 Предиктивная валидность" },
+    tasks: [
       { key: "s5-0", label: "Colectare KPI-uri reale (30–50 campanii)" },
       { key: "s5-1", label: "Known-Groups Validity (via Arhetipuri)" },
       { key: "s5-2", label: "Validare Convergentă / Discriminantă" },
       { key: "s5-3", label: "Inter-Rater Reliability (confirmare finală)" },
-      { key: "s5-4", label: "Study 5: AI vs Human Agreement" },
-      { key: "s6-1", label: "Framework + Methodology + Results" },
     ],
   },
+  {
+    id: "res-4-6",
+    heading: { ro: "4.6 AI vs Human — Comparație", en: "4.6 AI vs Human — Comparison", ru: "4.6 ИИ vs Человек — Сравнение" },
+    tasks: [
+      { key: "s4b-0", label: "Configurare prompt AI standardizat" },
+      { key: "s4b-1", label: "Comparație AI vs Human (ICC, Bland-Altman)" },
+      { key: "s4b-2", label: "Analiză bias și calibrare AI" },
+      { key: "s5-4", label: "Study 5: AI vs Human Agreement" },
+    ],
+  },
+  /* ── 5. Discuție ── */
   {
     id: "discussion",
     heading: { ro: "5. Discuție", en: "5. Discussion", ru: "5. Дискуссия" },
@@ -151,6 +235,7 @@ const MANUSCRIPT_SECTIONS: ManuscriptSection[] = [
       { key: "s6-2", label: "Discussion + Conclusion + AI Declaration" },
     ],
   },
+  /* ── 6. Concluzii ── */
   {
     id: "conclusion",
     heading: { ro: "6. Concluzii", en: "6. Conclusion", ru: "6. Заключение" },
@@ -159,6 +244,7 @@ const MANUSCRIPT_SECTIONS: ManuscriptSection[] = [
       { key: "s6-2", label: "Discussion + Conclusion + AI Declaration" },
     ],
   },
+  /* ── Referințe ── */
   {
     id: "references",
     heading: { ro: "Referințe", en: "References", ru: "Литература" },
@@ -168,6 +254,41 @@ const MANUSCRIPT_SECTIONS: ManuscriptSection[] = [
       { key: "s6-3", label: "Citarea site-ului în paper" },
       { key: "s6-4", label: "Review intern + Formatare + Submisie" },
     ],
+  },
+  /* ── COPE Mandatory Declarations ── */
+  {
+    id: "declarations",
+    heading: { ro: "Declarații", en: "Declarations", ru: "Декларации" },
+    tasks: [],
+  },
+  {
+    id: "decl-conflict",
+    heading: { ro: "Conflict de Interese", en: "Conflict of Interest", ru: "Конфликт интересов" },
+    tasks: [],
+  },
+  {
+    id: "decl-funding",
+    heading: { ro: "Finanțare", en: "Funding", ru: "Финансирование" },
+    tasks: [],
+  },
+  {
+    id: "decl-ai",
+    heading: { ro: "Declarație privind utilizarea AI", en: "AI Use Declaration", ru: "Декларация об использовании ИИ" },
+    tasks: [
+      { key: "s6-2", label: "Discussion + Conclusion + AI Declaration" },
+    ],
+  },
+  {
+    id: "decl-consent",
+    heading: { ro: "Consimțământul Participanților", en: "Participant Consent", ru: "Согласие участников" },
+    tasks: [
+      { key: "s2-6", label: "Etică & Consimțământ" },
+    ],
+  },
+  {
+    id: "decl-data",
+    heading: { ro: "Disponibilitatea Datelor", en: "Data Availability", ru: "Доступность данных" },
+    tasks: [],
   },
 ];
 
@@ -764,17 +885,32 @@ export default function ArticolOSFPage() {
           </div>
 
           {/* ═══ SECTIONS ═══ */}
-          {sectionsData.map((sd) => (
+          {sectionsData.map((sd) => {
+            // Subsections have hyphenated IDs (lit-2-1, met-3-1, res-4-1, decl-*)
+            const isSubsection = sd.section.id.includes("-") && sd.section.id !== "decl-conflict" && sd.section.id !== "decl-funding" && sd.section.id !== "decl-ai" && sd.section.id !== "decl-consent" && sd.section.id !== "decl-data";
+            const isDeclaration = sd.section.id.startsWith("decl-") && sd.section.id !== "declarations";
+            const isDeclarationsParent = sd.section.id === "declarations";
+            return (
             <section key={sd.section.id} id={`section-${sd.section.id}`}>
               {/* Section heading */}
-              <div style={S.sectionHeading}>
-                <span>{sd.section.heading[lang]}</span>
-                {sd.section.targetWords && (
-                  <span style={S.sectionWordCount}>
-                    ({sd.totalWords.toLocaleString()} / {sd.section.targetWords.toLocaleString()})
-                  </span>
-                )}
-              </div>
+              {isDeclarationsParent ? (
+                <div style={{ ...S.sectionHeading, marginTop: 48 }}>
+                  <span>{sd.section.heading[lang]}</span>
+                </div>
+              ) : isSubsection || isDeclaration ? (
+                <h4 style={{ ...S.subHeading, marginTop: isDeclaration ? 20 : 28 }}>
+                  {sd.section.heading[lang]}
+                </h4>
+              ) : (
+                <div style={S.sectionHeading}>
+                  <span>{sd.section.heading[lang]}</span>
+                  {sd.section.targetWords && (
+                    <span style={S.sectionWordCount}>
+                      ({sd.totalWords.toLocaleString()} / {sd.section.targetWords.toLocaleString()})
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Content or placeholder */}
               {sd.hasContent ? (
@@ -785,6 +921,51 @@ export default function ArticolOSFPage() {
                     </div>
                   ))}
                 </div>
+              ) : sd.section.id === "decl-conflict" ? (
+                <p style={{ fontSize: 13, lineHeight: 1.7, color: "#374151", margin: "12px 0" }}>
+                  {lang === "ro"
+                    ? "Autorul declară că nu există niciun conflict de interese. Autorul este fondatorul Talmazan School SRL și Continuum SRL, companii care oferă servicii de consultanță în marketing. Protocolul R IF C a fost dezvoltat în cadrul activității academice și de cercetare, independent de interesele comerciale ale companiilor menționate."
+                    : lang === "en"
+                    ? "The author declares no conflict of interest. The author is the founder of Talmazan School SRL and Continuum SRL, companies providing marketing consulting services. The R IF C Protocol was developed as part of academic and research activity, independently of the commercial interests of the aforementioned companies."
+                    : "\u0410\u0432\u0442\u043e\u0440 \u0437\u0430\u044f\u0432\u043b\u044f\u0435\u0442 \u043e\u0431 \u043e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0438\u0438 \u043a\u043e\u043d\u0444\u043b\u0438\u043a\u0442\u0430 \u0438\u043d\u0442\u0435\u0440\u0435\u0441\u043e\u0432. \u0410\u0432\u0442\u043e\u0440 \u044f\u0432\u043b\u044f\u0435\u0442\u0441\u044f \u043e\u0441\u043d\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u043c Talmazan School SRL \u0438 Continuum SRL. \u041f\u0440\u043e\u0442\u043e\u043a\u043e\u043b R IF C \u0431\u044b\u043b \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0430\u043d \u0432 \u0440\u0430\u043c\u043a\u0430\u0445 \u0430\u043a\u0430\u0434\u0435\u043c\u0438\u0447\u0435\u0441\u043a\u043e\u0439 \u0434\u0435\u044f\u0442\u0435\u043b\u044c\u043d\u043e\u0441\u0442\u0438, \u043d\u0435\u0437\u0430\u0432\u0438\u0441\u0438\u043c\u043e \u043e\u0442 \u043a\u043e\u043c\u043c\u0435\u0440\u0447\u0435\u0441\u043a\u0438\u0445 \u0438\u043d\u0442\u0435\u0440\u0435\u0441\u043e\u0432 \u0443\u043a\u0430\u0437\u0430\u043d\u043d\u044b\u0445 \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u0439."
+                  }
+                </p>
+              ) : sd.section.id === "decl-funding" ? (
+                <p style={{ fontSize: 13, lineHeight: 1.7, color: "#374151", margin: "12px 0" }}>
+                  {lang === "ro"
+                    ? "Această cercetare nu a beneficiat de nicio finanțare externă. Toate costurile asociate cu dezvoltarea instrumentului, colectarea datelor și publicarea au fost suportate integral de autor."
+                    : lang === "en"
+                    ? "This research received no external funding. All costs associated with instrument development, data collection, and publication were borne entirely by the author."
+                    : "\u042d\u0442\u043e \u0438\u0441\u0441\u043b\u0435\u0434\u043e\u0432\u0430\u043d\u0438\u0435 \u043d\u0435 \u043f\u043e\u043b\u0443\u0447\u0430\u043b\u043e \u0432\u043d\u0435\u0448\u043d\u0435\u0433\u043e \u0444\u0438\u043d\u0430\u043d\u0441\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u044f. \u0412\u0441\u0435 \u0440\u0430\u0441\u0445\u043e\u0434\u044b \u0431\u044b\u043b\u0438 \u043f\u043e\u043a\u0440\u044b\u0442\u044b \u0430\u0432\u0442\u043e\u0440\u043e\u043c."
+                  }
+                </p>
+              ) : sd.section.id === "decl-ai" ? (
+                <p style={{ fontSize: 13, lineHeight: 1.7, color: "#374151", margin: "12px 0" }}>
+                  {lang === "ro"
+                    ? "În realizarea acestei cercetări au fost utilizate următoarele instrumente de inteligență artificială: Claude Sonnet 3.5/4 (Anthropic) — pentru asistență în scrierea codului platformei de sondaj, analiza datelor și redactarea manuscrisului; Google Gemini — pentru verificări încrucișate ale analizelor statistice; ChatGPT (OpenAI) — pentru asistență în formularea academică. Toate rezultatele generate de AI au fost verificate, validate și editate de autor. Responsabilitatea pentru conținutul final revine exclusiv autorului."
+                    : lang === "en"
+                    ? "The following AI tools were used in this research: Claude Sonnet 3.5/4 (Anthropic) — for assistance with survey platform coding, data analysis, and manuscript drafting; Google Gemini — for cross-checking statistical analyses; ChatGPT (OpenAI) — for assistance with academic formulation. All AI-generated outputs were verified, validated, and edited by the author. Sole responsibility for the final content lies with the author."
+                    : "\u0412 \u0434\u0430\u043d\u043d\u043e\u043c \u0438\u0441\u0441\u043b\u0435\u0434\u043e\u0432\u0430\u043d\u0438\u0438 \u0431\u044b\u043b\u0438 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u044b: Claude Sonnet 3.5/4 (Anthropic), Google Gemini, ChatGPT (OpenAI). \u0412\u0441\u0435 \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442\u044b \u0431\u044b\u043b\u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u044b \u0430\u0432\u0442\u043e\u0440\u043e\u043c. \u041e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u044c \u0437\u0430 \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u043d\u0438\u0435 \u043d\u0435\u0441\u0451\u0442 \u0430\u0432\u0442\u043e\u0440."
+                  }
+                </p>
+              ) : sd.section.id === "decl-consent" ? (
+                <p style={{ fontSize: 13, lineHeight: 1.7, color: "#374151", margin: "12px 0" }}>
+                  {lang === "ro"
+                    ? "Toți participanții au fost informați cu privire la scopul cercetării, natura voluntară a participării și dreptul de a se retrage în orice moment fără consecințe. Consimțământul informat a fost obținut electronic înainte de completarea sondajului. Datele au fost colectate anonim, fără informații de identificare personală. Cercetarea respectă principiile Declarației de la Helsinki și Regulamentul General privind Protecția Datelor (GDPR)."
+                    : lang === "en"
+                    ? "All participants were informed about the research purpose, the voluntary nature of participation, and the right to withdraw at any time without consequences. Informed consent was obtained electronically prior to survey completion. Data were collected anonymously, without personally identifiable information. The research adheres to the principles of the Declaration of Helsinki and the General Data Protection Regulation (GDPR)."
+                    : "\u0412\u0441\u0435 \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u043a\u0438 \u0431\u044b\u043b\u0438 \u043f\u0440\u043e\u0438\u043d\u0444\u043e\u0440\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u044b \u043e \u0446\u0435\u043b\u044f\u0445 \u0438\u0441\u0441\u043b\u0435\u0434\u043e\u0432\u0430\u043d\u0438\u044f. \u0418\u043d\u0444\u043e\u0440\u043c\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u043e\u0435 \u0441\u043e\u0433\u043b\u0430\u0441\u0438\u0435 \u043f\u043e\u043b\u0443\u0447\u0435\u043d\u043e \u044d\u043b\u0435\u043a\u0442\u0440\u043e\u043d\u043d\u043e. \u0414\u0430\u043d\u043d\u044b\u0435 \u0441\u043e\u0431\u0440\u0430\u043d\u044b \u0430\u043d\u043e\u043d\u0438\u043c\u043d\u043e, \u0432 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0438 \u0441 GDPR."
+                  }
+                </p>
+              ) : sd.section.id === "decl-data" ? (
+                <p style={{ fontSize: 13, lineHeight: 1.7, color: "#374151", margin: "12px 0" }}>
+                  {lang === "ro"
+                    ? <>Protocolul de cercetare, instrumentele de măsurare, seturile de date anonimizate și materialele suplimentare sunt disponibile public pe Open Science Framework (OSF): <a href="https://osf.io/9y75d" target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", fontWeight: 600, textDecoration: "none" }}>osf.io/9y75d</a>. Codul sursă al platformei de sondaj este disponibil la cerere.</>
+                    : lang === "en"
+                    ? <>The research protocol, measurement instruments, anonymized datasets, and supplementary materials are publicly available on the Open Science Framework (OSF): <a href="https://osf.io/9y75d" target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", fontWeight: 600, textDecoration: "none" }}>osf.io/9y75d</a>. Survey platform source code is available upon request.</>
+                    : <>{"\u041f\u0440\u043e\u0442\u043e\u043a\u043e\u043b, \u0438\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u044b \u0438 \u0430\u043d\u043e\u043d\u0438\u043c\u0438\u0437\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b \u043d\u0430 OSF: "}<a href="https://osf.io/9y75d" target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", fontWeight: 600, textDecoration: "none" }}>osf.io/9y75d</a></>
+                  }
+                </p>
               ) : (
                 <div style={S.placeholder}>
                   <div style={S.placeholderLabel}>{SOON_LABELS[lang]}</div>
@@ -792,7 +973,8 @@ export default function ArticolOSFPage() {
                 </div>
               )}
             </section>
-          ))}
+          );
+          })}
         </div>
       </div>
 
