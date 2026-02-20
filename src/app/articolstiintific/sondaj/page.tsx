@@ -3539,7 +3539,7 @@ export default function StudiuAdminPage() {
             ) : (
               <>
                 {/* ── 3-column gallery grid ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14, marginBottom: 16 }}>
                   {distributions.map((dist, idx) => {
                     const link = getDistLink(dist.tag);
                     const pctRaw = dist.estimated_completions > 0
@@ -3558,7 +3558,8 @@ export default function StudiuAdminPage() {
                         position: "relative" as const,
                         display: "flex",
                         flexDirection: "column" as const,
-                        minHeight: 0,
+                        minWidth: 0,
+                        overflow: "hidden" as const,
                         transition: "border-color 0.2s, box-shadow 0.2s",
                       }}>
                         {/* Number badge + action buttons */}
@@ -3626,7 +3627,7 @@ export default function StudiuAdminPage() {
                             {/* Name + description */}
                             <h4 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: "0 0 2px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{dist.name}</h4>
                             {dist.description && (
-                              <p style={{ fontSize: 11, color: "#6B7280", margin: "0 0 8px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{dist.description}</p>
+                              <p style={{ fontSize: 11, color: "#6B7280", margin: "0 0 8px 0", lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>{dist.description}</p>
                             )}
                             {!dist.description && <div style={{ marginBottom: 8 }} />}
 
