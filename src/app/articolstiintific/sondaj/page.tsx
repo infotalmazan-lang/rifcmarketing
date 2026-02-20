@@ -4499,6 +4499,52 @@ export default function StudiuAdminPage() {
                   ))}
                 </div>
 
+                {/* ── General CVI Access Link Card ── */}
+                <div style={{ background: "linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)", border: "1px solid #BFDBFE", borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: "#2563EB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <Globe size={20} color="#fff" />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: "#1E3A5F", marginBottom: 2 }}>Link General — Pagina CVI</div>
+                        <div style={{ fontSize: 12, color: "#6B7280" }}>Pagina de informare pentru experți (fără token). Experții primesc link individual de mai jos.</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <code style={{ fontSize: 12, color: "#2563EB", background: "#EFF6FF", padding: "4px 10px", borderRadius: 6, border: "1px solid #BFDBFE", fontFamily: "monospace" }}>
+                        rifcmarketing.com/articolstiintific/cvi
+                      </code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText("https://rifcmarketing.com/articolstiintific/cvi");
+                          setCviCopied("general");
+                          setTimeout(() => setCviCopied(null), 2000);
+                        }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          padding: "6px 14px", borderRadius: 8, border: "none",
+                          background: cviCopied === "general" ? "#22C55E" : "#2563EB",
+                          color: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                          transition: "all 0.2s",
+                        }}
+                      >
+                        {cviCopied === "general" ? <><Check size={13} /> Copiat!</> : <><Copy size={13} /> Copiază Link</>}
+                      </button>
+                      <button
+                        onClick={() => window.open("https://rifcmarketing.com/articolstiintific/cvi", "_blank")}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          padding: "6px 14px", borderRadius: 8, border: "1px solid #BFDBFE",
+                          background: "#fff", color: "#2563EB", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        }}
+                      >
+                        <ExternalLink size={13} /> Deschide
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* ── Generate Links Section ── */}
                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, marginBottom: 20 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>

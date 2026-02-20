@@ -1026,7 +1026,7 @@ const ROADMAP_SCRIPT = `
           var hints = { ro: "valoare numerică", en: "numeric value", ru: "числовое значение" };
           h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
           h += '<div class="blk-num-wrap"><input class="blk-num-title" type="text" data-num-label="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(nv.label || '') + '" placeholder="' + placeholders[lang] + '" />';
-          h += '<div class="blk-num-row"><input class="blk-num-input" type="number" data-num-val="' + block.id + '" data-lang="' + lang + '" value="' + (nv.value || 0) + '" step="any" />';
+          h += '<div class="blk-num-row"><input class="blk-num-input" type="number" data-num-val="' + block.id + '" data-lang="' + lang + '" value="' + (nv.value || 0) + '" step="0.01" min="0" inputmode="decimal" />';
           h += '<span class="blk-num-label">' + (nv.label ? escHtml(nv.label) : hints[lang]) + '</span></div></div>';
           h += '</div>';
         });
