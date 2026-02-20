@@ -269,7 +269,7 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .blk-num-title:focus { border-color: var(--green); }
   .blk-num-title::placeholder { color: var(--text3); }
   .blk-num-row { display: flex; gap: 8px; align-items: center; }
-  .blk-num-input { width: 120px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text); background: var(--surface); outline: none; text-align: center; }
+  .blk-num-input { width: 160px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text); background: var(--surface); outline: none; text-align: center; }
   .blk-num-input:focus { border-color: var(--green); }
   .blk-num-label { font-size: 12px; color: var(--text3); }
 
@@ -602,7 +602,7 @@ const ROADMAP_SCRIPT = `
     if (type === "link") return { ro: { name: "", url: "" }, en: { name: "", url: "" }, ru: { name: "", url: "" } };
     if (type === "code") return { ro: { lang: "json", code: "" }, en: { lang: "json", code: "" }, ru: { lang: "json", code: "" } };
     if (type === "table") return { ro: { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] }, en: { cols: ["Column 1","Column 2"], rows: [["",""]] }, ru: { cols: ["Колонка 1","Колонка 2"], rows: [["",""]] } };
-    if (type === "number") return { ro: { label: "", value: 0 }, en: { label: "", value: 0 }, ru: { label: "", value: 0 } };
+    if (type === "number") return { ro: { label: "", value: "" }, en: { label: "", value: "" }, ru: { label: "", value: "" } };
     return "";
   }
 
@@ -958,11 +958,12 @@ const ROADMAP_SCRIPT = `
     } else if (block.type === "number") {
       // Old format: { label: "x", value: 0 } or plain number → trilingual
       if (typeof val === "number" || typeof val === "string") {
-        var nv = parseFloat(val) || 0;
-        block.value = { ro: { label: "", value: nv }, en: { label: "", value: nv }, ru: { label: "", value: nv } };
+        var sv = String(val);
+        block.value = { ro: { label: "", value: sv }, en: { label: "", value: sv }, ru: { label: "", value: sv } };
         saveBlocks();
       } else if (val && (val.label !== undefined || val.value !== undefined) && !val.ro) {
-        block.value = { ro: { label: val.label || "", value: val.value || 0 }, en: { label: "", value: val.value || 0 }, ru: { label: "", value: val.value || 0 } };
+        var sv2 = String(val.value || "");
+        block.value = { ro: { label: val.label || "", value: sv2 }, en: { label: "", value: sv2 }, ru: { label: "", value: sv2 } };
         saveBlocks();
       }
     } else if (block.type === "link") {
@@ -1084,10 +1085,10 @@ const ROADMAP_SCRIPT = `
       case "number":
         var h = renderLangTabs(block.id);
         LANGS.forEach(function(lang) {
-          var nv = (val && val[lang]) || { label: "", value: 0 };
-          if (!nv || typeof nv !== "object") nv = { label: "", value: 0 };
+          var nv = (val && val[lang]) || { label: "", value: "" };
+          if (!nv || typeof nv !== "object") nv = { label: "", value: "" };
           h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
-          h += '<div class="blk-view-num"><span class="blk-view-num-val">' + (nv.value || 0) + '</span>';
+          h += '<div class="blk-view-num"><span class="blk-view-num-val">' + escHtml(String(nv.value || '—')) + '</span>';
           h += '<span class="blk-view-num-label">' + escHtml(nv.label || '') + '</span></div>';
           h += '</div>';
         });
@@ -1227,13 +1228,13 @@ const ROADMAP_SCRIPT = `
       case "number":
         var h = renderLangTabs(block.id);
         LANGS.forEach(function(lang) {
-          var nv = (val && val[lang]) || { label: "", value: 0 };
-          if (!nv || typeof nv !== "object") nv = { label: "", value: 0 };
+          var nv = (val && val[lang]) || { label: "", value: "" };
+          if (!nv || typeof nv !== "object") nv = { label: "", value: "" };
           var placeholders = { ro: "Titlu / Etichetă (ex: Total itemi)", en: "Title / Label (e.g.: Total items)", ru: "Название / Метка (напр.: Всего пунктов)" };
           var hints = { ro: "valoare numerică", en: "numeric value", ru: "числовое значение" };
           h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
           h += '<div class="blk-num-wrap"><input class="blk-num-title" type="text" data-num-label="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(nv.label || '') + '" placeholder="' + placeholders[lang] + '" />';
-          h += '<div class="blk-num-row"><input class="blk-num-input" type="number" data-num-val="' + block.id + '" data-lang="' + lang + '" value="' + (nv.value || 0) + '" step="0.01" min="0" inputmode="decimal" />';
+          h += '<div class="blk-num-row"><input class="blk-num-input" type="text" data-num-val="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(String(nv.value || '')) + '" inputmode="text" placeholder="ex: 3,63 sau 85%" />';
           h += '<span class="blk-num-label">' + (nv.label ? escHtml(nv.label) : hints[lang]) + '</span></div></div>';
           h += '</div>';
         });
@@ -1481,14 +1482,14 @@ const ROADMAP_SCRIPT = `
         clearTimeout(debounce);
         debounce = setTimeout(function() {
           var bid = input.getAttribute("data-num-val");
-          var numVal = parseFloat(input.value) || 0;
+          var rawVal = input.value;
           var blocks = getTaskBlocks(key);
           for (var i = 0; i < blocks.length; i++) {
             if (blocks[i].id === bid) {
-              // Sync numeric value across ALL languages
+              // Sync value across ALL languages (stored as string to allow commas, dots, %)
               LANGS.forEach(function(l) {
-                if (!blocks[i].value[l]) blocks[i].value[l] = { label: "", value: 0 };
-                blocks[i].value[l].value = numVal;
+                if (!blocks[i].value[l]) blocks[i].value[l] = { label: "", value: "" };
+                blocks[i].value[l].value = rawVal;
               });
               // Also update the other lang inputs in DOM
               document.querySelectorAll('[data-num-val="' + bid + '"]').forEach(function(other) {
