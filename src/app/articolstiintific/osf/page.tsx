@@ -347,11 +347,15 @@ const S = {
     fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1,
     textTransform: "uppercase" as const, marginBottom: 8,
   } as React.CSSProperties,
+  numberStatWrap: {
+    display: "flex", flexWrap: "wrap" as const, gap: 8, margin: "12px 0",
+  } as React.CSSProperties,
   numberStat: {
-    display: "inline-flex", alignItems: "baseline", gap: 6,
-    padding: "6px 14px", borderRadius: 6, background: "#F9FAFB",
-    border: "1px solid #E5E7EB", margin: "8px 8px 8px 0",
-    fontSize: 13, fontFamily: "'Inter', sans-serif",
+    display: "inline-flex", alignItems: "baseline", gap: 4,
+    padding: "6px 14px", borderRadius: 20, background: "#FEF3F2",
+    border: "1px solid #FECDD3",
+    fontSize: 12, fontFamily: "'Inter', sans-serif", color: "#9F1239",
+    whiteSpace: "nowrap" as const,
   } as React.CSSProperties,
   linkRef: {
     fontSize: 13, lineHeight: 1.7, color: "#1F2937",
@@ -474,17 +478,32 @@ export default function ArticolOSFPage() {
           case "text-short": {
             const txt = typeof lv === "string" ? lv.trim() : "";
             if (txt) {
-              elements.push(<p key={block.id} style={section.isAbstract ? S.abstractText : S.bodyText}>{txt}</p>);
+              // text-short renders as a subsection heading within the manuscript
+              elements.push(<h4 key={block.id} style={S.subHeading}>{txt}</h4>);
               taskWords += countWords(txt);
             }
             break;
           }
           case "text-long": {
-            const txt = typeof lv === "string" ? lv.trim() : "";
+            let txt = typeof lv === "string" ? lv.trim() : "";
             if (txt) {
+              // Handle escaped newlines from seed data (\\n -> real newline)
+              txt = txt.replace(/\\n/g, "\n");
               const paras = txt.split(/\n\n+/).filter(Boolean);
               paras.forEach((p, pi) => {
-                elements.push(<p key={block.id + "-p" + pi} style={section.isAbstract ? S.abstractText : S.bodyText}>{p}</p>);
+                // Within a paragraph, convert single \n to <br> for line-by-line lists
+                const lines = p.split(/\n/).filter(Boolean);
+                if (lines.length > 1) {
+                  elements.push(
+                    <p key={block.id + "-p" + pi} style={section.isAbstract ? S.abstractText : S.bodyText}>
+                      {lines.map((line, li) => (
+                        <span key={li}>{li > 0 && <br />}{line}</span>
+                      ))}
+                    </p>
+                  );
+                } else {
+                  elements.push(<p key={block.id + "-p" + pi} style={section.isAbstract ? S.abstractText : S.bodyText}>{p}</p>);
+                }
               });
               taskWords += countWords(txt);
             }
@@ -527,7 +546,7 @@ export default function ArticolOSFPage() {
             if (nv && (nv.label || nv.value)) {
               elements.push(
                 <span key={block.id} style={S.numberStat}>
-                  {nv.label ? <><strong>{nv.label}</strong>: {nv.value || 0}</> : <strong>{nv.value || 0}</strong>}
+                  {nv.label ? <>{nv.label} <strong style={{ color: "#111827", fontFamily: "'JetBrains Mono', monospace" }}>: {nv.value || 0}</strong></> : <strong style={{ fontFamily: "'JetBrains Mono', monospace" }}>{nv.value || 0}</strong>}
                 </span>
               );
             }
@@ -550,8 +569,10 @@ export default function ArticolOSFPage() {
               );
             } else if (linkUrl) {
               elements.push(
-                <p key={block.id} style={{ ...S.bodyText, fontSize: 13, color: "#2563EB" }}>
-                  {linkName ? <strong>{linkName}: </strong> : null}<a href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "none" }}>{linkUrl}</a>
+                <p key={block.id} style={{ ...S.bodyText, fontSize: 13, margin: "12px 0" }}>
+                  <a href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "underline", textDecorationColor: "#93C5FD", textUnderlineOffset: "2px" }}>
+                    <strong>{linkName || linkUrl}</strong>{linkName ? <>: <span style={{ fontWeight: 400 }}>{linkUrl}</span></> : null}
+                  </a>
                 </p>
               );
             }
@@ -594,8 +615,26 @@ export default function ArticolOSFPage() {
         }
       });
 
+      // Post-process: wrap consecutive number spans in a flex container
       if (elements.length > 0) {
-        taskContents.push({ task, elements, words: taskWords });
+        const grouped: React.ReactNode[] = [];
+        let numBatch: React.ReactNode[] = [];
+        const flushNums = () => {
+          if (numBatch.length > 0) {
+            grouped.push(<div key={"num-group-" + grouped.length} style={S.numberStatWrap}>{numBatch}</div>);
+            numBatch = [];
+          }
+        };
+        elements.forEach((el: any) => {
+          if (el && el.props && el.props.style === S.numberStat) {
+            numBatch.push(el);
+          } else {
+            flushNums();
+            grouped.push(el);
+          }
+        });
+        flushNums();
+        taskContents.push({ task, elements: grouped, words: taskWords });
         totalWords += taskWords;
       }
     });
@@ -704,10 +743,6 @@ export default function ArticolOSFPage() {
                 <div>
                   {sd.taskContents.map((tc, tci) => (
                     <div key={tc.task.key + "-" + tci}>
-                      {/* Sub-heading for task (only if multiple tasks with content) */}
-                      {sd.taskContents.length > 1 && (
-                        <h4 style={S.subHeading}>{tc.task.label}</h4>
-                      )}
                       {tc.elements}
                     </div>
                   ))}
