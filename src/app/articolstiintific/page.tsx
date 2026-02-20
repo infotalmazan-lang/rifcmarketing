@@ -188,7 +188,27 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .blk-action { width: 26px; height: 26px; border: none; border-radius: 5px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.1s; color: var(--text3); }
   .blk-action:hover { background: var(--surface); color: var(--text2); }
   .blk-action.danger:hover { background: rgba(220,38,38,0.08); color: var(--red); }
+  .blk-action.edit:hover { background: rgba(37,99,235,0.08); color: #3B82F6; }
+  .blk-action.save:hover { background: rgba(5,150,105,0.08); color: var(--green); }
+  .blk-action.cancel:hover { background: rgba(220,38,38,0.08); color: var(--red); }
   .blk-action svg { width: 13px; height: 13px; }
+  .blk.editing { border-color: var(--green); }
+  .blk-view-text { font-size: 13px; color: var(--text); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .blk-view-text.empty { color: var(--text3); font-style: italic; }
+  .blk-view-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #3B82F6; text-decoration: none; }
+  .blk-view-link:hover { text-decoration: underline; }
+  .blk-view-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .blk-view-table th, .blk-view-table td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+  .blk-view-table th { background: var(--surface2); font-weight: 600; color: var(--text2); }
+  .blk-view-table td { color: var(--text); }
+  .blk-view-code { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); white-space: pre-wrap; overflow-x: auto; line-height: 1.5; }
+  .blk-view-num { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .blk-view-num-val { font-size: 22px; font-weight: 700; color: var(--green); }
+  .blk-view-num-label { color: var(--text2); }
+  .blk-view-dd { font-size: 13px; color: var(--text); }
+  .blk-view-dd-cat { font-weight: 600; color: var(--text2); margin-right: 8px; }
+  .blk-sync-indicator { font-size: 10px; color: var(--green); margin-left: 8px; opacity: 0; transition: opacity 0.3s; }
+  .blk-sync-indicator.show { opacity: 1; }
   .blk-body { padding: 14px; }
 
   /* Block type inputs */
@@ -376,6 +396,8 @@ const ROADMAP_SCRIPT = `
   var allBlocks = {};
   var pickerOpen = false;
   var blockLangTab = {}; // tracks active lang tab per block: { blockId: "ro"|"en"|"ru" }
+  var editingBlocks = {}; // tracks which blocks are in edit mode: { blockId: true }
+  var editingSnapshots = {}; // stores original value before editing: { blockId: deepCopy }
   var LANGS = ["ro", "en", "ru"];
   var LANG_LABELS = { ro: "RO", en: "EN", ru: "RU" };
   // Block types that support trilingual content
@@ -402,7 +424,10 @@ const ROADMAP_SCRIPT = `
     globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
     code: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
-    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>',
+    save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+    cancelX: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
   };
 
   var BLOCK_TYPES = [
@@ -502,8 +527,58 @@ const ROADMAP_SCRIPT = `
   // ═══ PERSISTENCE ═══
   try { checkedTasks = JSON.parse(localStorage.getItem(TASKS_KEY) || "{}"); } catch(e) {}
   try { allBlocks = JSON.parse(localStorage.getItem(BLOCKS_KEY) || "{}"); } catch(e) {}
-  function saveTasks() { try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(e) {} }
-  function saveBlocks() { try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(e) {} }
+  function saveTasks() { try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(e) {} syncToServer("tasks"); }
+  function saveBlocks() { try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(e) {} syncToServer("blocks"); }
+
+  // ═══ SUPABASE SYNC ═══
+  var _syncDebounce = null;
+  function syncToServer(what) {
+    clearTimeout(_syncDebounce);
+    _syncDebounce = setTimeout(function() {
+      var payload = {};
+      if (what === "tasks" || what === "both") payload.tasks = checkedTasks;
+      if (what === "blocks" || what === "both") payload.blocks = allBlocks;
+      fetch("/api/article/progress", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(function(r) { return r.json(); })
+        .catch(function(err) { console.error("Sync failed:", err); });
+    }, 500);
+  }
+
+  function loadFromServer(callback) {
+    fetch("/api/article/progress")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) callback(data.tasks || {}, data.blocks || {});
+        else callback(null, null);
+      })
+      .catch(function() { callback(null, null); });
+  }
+
+  function initFromServer() {
+    loadFromServer(function(serverTasks, serverBlocks) {
+      if (serverTasks === null && serverBlocks === null) {
+        seedBlocksIfNeeded();
+        syncToServer("both");
+        return;
+      }
+      var hasServerData = (Object.keys(serverTasks).length > 0 || Object.keys(serverBlocks).length > 0);
+      if (hasServerData) {
+        checkedTasks = serverTasks;
+        allBlocks = serverBlocks;
+        try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(e) {}
+        try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(e) {}
+      } else {
+        seedBlocksIfNeeded();
+        syncToServer("both");
+      }
+      renderNav();
+      if (currentView === "stage" && activeStageId) renderStageView(activeStageId);
+      if (currentView === "task" && activeStageId !== null && activeTaskIdx !== null) renderTaskView(activeStageId, activeTaskIdx);
+    });
+  }
 
   function getTaskKey(stageId, taskIdx) { return stageId + "-" + taskIdx; }
   function genId() { return "b" + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
@@ -543,6 +618,7 @@ const ROADMAP_SCRIPT = `
     var newBlock = { id: genId(), type: type, value: val };
     allBlocks[key].push(newBlock);
     blockLangTab[newBlock.id] = "ro";
+    editingBlocks[newBlock.id] = true;
     saveBlocks();
   }
   function updateBlockValue(key, blockId, value) {
@@ -826,16 +902,27 @@ const ROADMAP_SCRIPT = `
       var typeDef = null;
       for (var t = 0; t < BLOCK_TYPES.length; t++) { if (BLOCK_TYPES[t].key === block.type) { typeDef = BLOCK_TYPES[t]; break; } }
       if (!typeDef) return;
-      html += '<div class="blk" data-blk-id="' + block.id + '">';
+      var isEditing = !!editingBlocks[block.id];
+      html += '<div class="blk' + (isEditing ? ' editing' : '') + '" data-blk-id="' + block.id + '">';
       var headerLabel = typeDef.label;
       if (block.type === "number" && block.value) { var _nl = (block.value.ro && block.value.ro.label) || (block.value.label) || ""; if (_nl) headerLabel += ' — ' + escHtml(_nl); }
       if (block.type === "link" && block.value) { var _ln = (block.value.ro && block.value.ro.name) || ""; if (_ln) headerLabel += ' — ' + escHtml(_ln); }
       html += '<div class="blk-header">' + ICONS[typeDef.icon] + '<span class="blk-type-label">' + headerLabel + '</span>';
+      if (isEditing) {
+        html += '<button class="blk-action save" data-action="save" data-blk="' + block.id + '" title="Salvează">' + ICONS.save + '</button>';
+        html += '<button class="blk-action cancel" data-action="cancel" data-blk="' + block.id + '" title="Anulează">' + ICONS.cancelX + '</button>';
+      } else {
+        html += '<button class="blk-action edit" data-action="edit" data-blk="' + block.id + '" title="Editează">' + ICONS.edit + '</button>';
+      }
       if (idx > 0) html += '<button class="blk-action" data-action="up" data-blk="' + block.id + '" title="Mută sus">' + ICONS.arrowUp + '</button>';
       if (idx < blocks.length - 1) html += '<button class="blk-action" data-action="down" data-blk="' + block.id + '" title="Mută jos">' + ICONS.arrowDown + '</button>';
       html += '<button class="blk-action danger" data-action="delete" data-blk="' + block.id + '" title="Șterge">' + ICONS.trash + '</button>';
       html += '</div>';
-      html += '<div class="blk-body">' + renderBlockBody(block) + '</div>';
+      if (isEditing) {
+        html += '<div class="blk-body">' + renderBlockBody(block) + '</div>';
+      } else {
+        html += '<div class="blk-body">' + renderBlockViewBody(block) + '</div>';
+      }
       html += '</div>';
     });
 
@@ -908,6 +995,126 @@ const ROADMAP_SCRIPT = `
     });
     h += '</div>';
     return h;
+  }
+
+  function renderBlockViewBody(block) {
+    var val = block.value;
+    if (isTrilingual(block.type)) migrateBlock(block);
+    val = block.value;
+    var activeLang = blockLangTab[block.id] || "ro";
+
+    switch (block.type) {
+      case "text-short":
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || "";
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<div class="blk-view-text' + (!lv ? ' empty' : '') + '">' + (lv ? escHtml(lv) : 'Fără conținut') + '</div>';
+          h += '</div>';
+        });
+        return h;
+
+      case "text-long":
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || "";
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<div class="blk-view-text' + (!lv ? ' empty' : '') + '">' + (lv ? escHtml(lv) : 'Fără conținut') + '</div>';
+          h += '</div>';
+        });
+        return h;
+
+      case "link":
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || { name: "", url: "" };
+          if (typeof lv === "string") lv = { name: "", url: lv };
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          if (lv.url) {
+            h += '<a class="blk-view-link" href="' + escAttr(lv.url) + '" target="_blank" rel="noopener">' + ICONS.externalLink + escHtml(lv.name || lv.url) + '</a>';
+          } else {
+            h += '<div class="blk-view-text empty">Fără link</div>';
+          }
+          h += '</div>';
+        });
+        return h;
+
+      case "file":
+        if (val && val.data) {
+          var isImg = val.type && val.type.indexOf("image/") === 0;
+          var h = '<div class="blk-file-info">';
+          h += '<div class="blk-file-icon">' + ICONS.file + '</div>';
+          h += '<div class="blk-file-details"><div class="blk-file-name">' + escHtml(val.name) + '</div>';
+          h += '<div class="blk-file-size">' + formatSize(val.size) + '</div></div></div>';
+          if (isImg) h += '<img class="blk-img-preview" src="' + val.data + '" alt="Preview" />';
+          return h;
+        }
+        return '<div class="blk-view-text empty">Fără fișier încărcat</div>';
+
+      case "table":
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var tv = (val && val[lang]) || { cols: [], rows: [] };
+          if (!tv || !tv.cols) tv = { cols: [], rows: [] };
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          if (tv.cols.length > 0) {
+            h += '<table class="blk-view-table"><thead><tr>';
+            tv.cols.forEach(function(c) { h += '<th>' + escHtml(c || '') + '</th>'; });
+            h += '</tr></thead><tbody>';
+            tv.rows.forEach(function(row) {
+              h += '<tr>';
+              row.forEach(function(cell) { h += '<td>' + escHtml(cell || '') + '</td>'; });
+              h += '</tr>';
+            });
+            h += '</tbody></table>';
+          } else {
+            h += '<div class="blk-view-text empty">Tabel gol</div>';
+          }
+          h += '</div>';
+        });
+        return h;
+
+      case "dropdown":
+        if (!val || typeof val !== "object" || val.ro !== undefined) val = val && val.category ? val : { category: "", value: "" };
+        if (val.category && val.value) {
+          return '<div class="blk-view-dd"><span class="blk-view-dd-cat">' + escHtml(val.category) + ':</span>' + escHtml(val.value) + '</div>';
+        }
+        return '<div class="blk-view-text empty">Neselectat</div>';
+
+      case "number":
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var nv = (val && val[lang]) || { label: "", value: 0 };
+          if (!nv || typeof nv !== "object") nv = { label: "", value: 0 };
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          h += '<div class="blk-view-num"><span class="blk-view-num-val">' + (nv.value || 0) + '</span>';
+          h += '<span class="blk-view-num-label">' + escHtml(nv.label || '') + '</span></div>';
+          h += '</div>';
+        });
+        return h;
+
+      case "date":
+        if (val) return '<div class="blk-view-text">' + escHtml(val) + '</div>';
+        return '<div class="blk-view-text empty">Fără dată</div>';
+
+      case "code":
+        var h = renderLangTabs(block.id);
+        LANGS.forEach(function(lang) {
+          var lv = (val && val[lang]) || { lang: "json", code: "" };
+          if (typeof lv !== "object") lv = { lang: "json", code: "" };
+          h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
+          if (lv.code) {
+            h += '<div style="font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;">' + escHtml(lv.lang || 'code') + '</div>';
+            h += '<pre class="blk-view-code">' + escHtml(lv.code) + '</pre>';
+          } else {
+            h += '<div class="blk-view-text empty">Fără cod</div>';
+          }
+          h += '</div>';
+        });
+        return h;
+
+      default: return '<em style="color:var(--text3);font-size:12px;">Tip necunoscut</em>';
+    }
   }
 
   function renderBlockBody(block) {
@@ -1083,13 +1290,42 @@ const ROADMAP_SCRIPT = `
       });
     });
 
-    // Move / Delete actions
+    // Move / Delete / Edit / Save / Cancel actions
     document.querySelectorAll("[data-action]").forEach(function(btn) {
       btn.addEventListener("click", function(e) {
         e.stopPropagation();
         var action = btn.getAttribute("data-action");
         var bid = btn.getAttribute("data-blk");
-        if (action === "delete") { deleteBlock(key, bid); renderBlocks(key); renderNav(); }
+        if (action === "edit") {
+          var blocks = getTaskBlocks(key);
+          for (var i = 0; i < blocks.length; i++) {
+            if (blocks[i].id === bid) {
+              editingSnapshots[bid] = JSON.parse(JSON.stringify(blocks[i].value));
+              break;
+            }
+          }
+          editingBlocks[bid] = true;
+          renderBlocks(key);
+        }
+        else if (action === "save") {
+          delete editingBlocks[bid];
+          delete editingSnapshots[bid];
+          saveBlocks();
+          renderBlocks(key);
+          renderNav();
+        }
+        else if (action === "cancel") {
+          if (editingSnapshots[bid] !== undefined) {
+            var blocks = getTaskBlocks(key);
+            for (var i = 0; i < blocks.length; i++) {
+              if (blocks[i].id === bid) { blocks[i].value = editingSnapshots[bid]; break; }
+            }
+          }
+          delete editingBlocks[bid];
+          delete editingSnapshots[bid];
+          renderBlocks(key);
+        }
+        else if (action === "delete") { deleteBlock(key, bid); renderBlocks(key); renderNav(); }
         else if (action === "up") { moveBlock(key, bid, -1); renderBlocks(key); }
         else if (action === "down") { moveBlock(key, bid, 1); renderBlocks(key); }
       });
@@ -1494,7 +1730,9 @@ const ROADMAP_SCRIPT = `
   function grantAccess() {
     var gate = document.getElementById("access-gate"); var app = document.getElementById("app");
     if (gate) gate.style.display = "none"; if (app) app.style.display = "block";
+    seedBlocksIfNeeded();
     renderNav(); detectRouteFromParent();
+    initFromServer();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAccess);
