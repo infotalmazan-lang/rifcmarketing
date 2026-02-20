@@ -376,6 +376,10 @@ const ROADMAP_HTML = `<!DOCTYPE html>
           RESTAURARE
         </button>
       </div>
+      <button class="sb-btn green" onclick="forceSync()" style="font-size:10px;padding:6px 8px;margin-top:3px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        FORCE SYNC
+      </button>
       <div class="sb-sync-status" id="sync-status"></div>
     </div>
     <div class="sb-nav" id="stages-nav"></div>
@@ -562,7 +566,7 @@ const ROADMAP_SCRIPT = `
     if (!el) return;
     el.textContent = msg;
     el.className = "sb-sync-status" + (type === "ok" ? " ok" : type === "err" ? " err" : "");
-    if (type) setTimeout(function() { el.textContent = ""; el.className = "sb-sync-status"; }, 4000);
+    if (type) setTimeout(function() { el.textContent = ""; el.className = "sb-sync-status"; }, 8000);
   }
 
   // ═══ SUPABASE SYNC ═══
@@ -573,17 +577,46 @@ const ROADMAP_SCRIPT = `
       var payload = {};
       if (what === "tasks" || what === "both") payload.tasks = checkedTasks;
       if (what === "blocks" || what === "both") payload.blocks = allBlocks;
+      showSyncStatus("Se trimite... (" + Object.keys(allBlocks).length + " blocuri)", "");
       fetch(BASE_URL + "/api/article/progress", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
-      }).then(function(r) { return r.json(); })
+      }).then(function(r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
         .then(function(result) {
-          if (result.success) showSyncStatus("Sincronizat", "ok");
+          if (result.success) showSyncStatus("Sincronizat OK (" + Object.keys(allBlocks).length + " bl)", "ok");
+          else showSyncStatus("Eroare: " + (result.error || "?"), "err");
         })
-        .catch(function() { showSyncStatus("Sync offline", "err"); });
-    }, 500);
+        .catch(function(err) { showSyncStatus("Sync eroare: " + err.message, "err"); });
+    }, 300);
   }
+
+  // Force sync — bypass debounce, direct push ALL data
+  window.forceSync = function() {
+    showSyncStatus("FORCE SYNC...", "");
+    var payload = { tasks: checkedTasks, blocks: allBlocks };
+    fetch(BASE_URL + "/api/article/progress", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function(r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(result) {
+      if (result.success) {
+        var tCount = Object.keys(checkedTasks).length;
+        var bCount = Object.keys(allBlocks).length;
+        showSyncStatus("FORCE OK: " + tCount + "t " + bCount + "b", "ok");
+      } else {
+        showSyncStatus("FORCE EROARE: " + (result.error || "?"), "err");
+      }
+    }).catch(function(err) {
+      showSyncStatus("FORCE FAIL: " + err.message, "err");
+    });
+  };
 
   function loadFromServer(callback) {
     fetch(BASE_URL + "/api/article/progress")
@@ -630,30 +663,50 @@ const ROADMAP_SCRIPT = `
   }
 
   function initFromServer() {
-    // Smart sync: compare server vs local, keep the MORE COMPLETE dataset
+    // MERGE strategy: combine server + local, keep the BEST of both
     loadFromServer(function(serverTasks, serverBlocks) {
       var hasLocalTasks = Object.keys(checkedTasks).length > 0;
       var hasLocalBlocks = Object.keys(allBlocks).length > 0;
       var hasLocal = hasLocalTasks || hasLocalBlocks;
+      var serverOk = serverTasks !== null && serverBlocks !== null;
+      var hasServerData = serverOk && (Object.keys(serverTasks).length > 0 || Object.keys(serverBlocks).length > 0);
 
-      // Case 1: Server has data
-      if (serverTasks !== null && serverBlocks !== null) {
-        var hasServerData = (Object.keys(serverTasks).length > 0 || Object.keys(serverBlocks).length > 0);
-        if (hasServerData) {
-          // SMART: compare which is more complete
-          var localScore = dataScore(checkedTasks, allBlocks);
-          var serverScore = dataScore(serverTasks, serverBlocks);
-          if (localScore > serverScore && hasLocal) {
-            // Local has MORE data than server → push local to server
-            syncToServer("both");
-            showSyncStatus("Local > server, sincronizat", "ok");
-          } else {
-            // Server has more or equal data → use server
-            applyData(serverTasks, serverBlocks, "server");
-          }
-          refreshUI();
-          return;
+      if (hasServerData && hasLocal) {
+        // MERGE: combine both — for tasks, keep true if EITHER has true
+        var mergedTasks = {};
+        var allTaskKeys = {};
+        for (var sk in serverTasks) allTaskKeys[sk] = true;
+        for (var lk in checkedTasks) allTaskKeys[lk] = true;
+        for (var mk in allTaskKeys) {
+          mergedTasks[mk] = !!(serverTasks[mk] || checkedTasks[mk]);
         }
+        // MERGE blocks: keep local block if it has MORE content, else keep server
+        var mergedBlocks = {};
+        var allBlockKeys = {};
+        for (var sbk in serverBlocks) allBlockKeys[sbk] = true;
+        for (var lbk in allBlocks) allBlockKeys[lbk] = true;
+        for (var mbk in allBlockKeys) {
+          var sBlk = serverBlocks[mbk] || [];
+          var lBlk = allBlocks[mbk] || [];
+          // Keep whichever has more blocks (local usually has user-added content)
+          mergedBlocks[mbk] = lBlk.length >= sBlk.length ? lBlk : sBlk;
+        }
+        checkedTasks = mergedTasks;
+        allBlocks = mergedBlocks;
+        try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(e) {}
+        try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(e) {}
+        // Push merged data back to server
+        syncToServer("both");
+        showSyncStatus("Merge complet", "ok");
+        refreshUI();
+        return;
+      }
+
+      if (hasServerData && !hasLocal) {
+        // Only server has data → use server
+        applyData(serverTasks, serverBlocks, "server");
+        refreshUI();
+        return;
       }
 
       // Case 2: Server empty/error but local has data → push to server
