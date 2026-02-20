@@ -774,6 +774,7 @@ export default function StudiuAdminPage() {
   const [cviSaving, setCviSaving] = useState(false);
   const defaultCviExpertForm = { name: "", org: "", role: "", experience: "", email: "" };
   const [cviExpertForm, setCviExpertForm] = useState(defaultCviExpertForm);
+  const [cviSubTab, setCviSubTab] = useState<"edit" | "preview">("edit");
 
   // AI benchmark state
   const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
@@ -4540,7 +4541,7 @@ export default function StudiuAdminPage() {
               </div>
             ) : (
               <>
-                {/* ── Header + Add Button ── */}
+                {/* ── Header + Sub-tabs + Add Button ── */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                   <div>
                     <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Evaluare Itemi (CVI)</h2>
@@ -4548,11 +4549,75 @@ export default function StudiuAdminPage() {
                       Fiecare expert primeste un link unic, evalueaza 35 itemi RIFC pe scala Likert 1-4.
                     </p>
                   </div>
-                  <button style={{ ...S.addCatBtn, background: "#6366F1" }} onClick={() => setShowAddCviExpert(true)}>
-                    <Plus size={16} />
-                    ADAUGA EXPERT
-                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {/* Sub-tabs: Editează / Preview */}
+                    <div style={{ display: "flex", borderRadius: 8, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                      {([
+                        { key: "edit" as const, label: "Editează", icon: <Pencil size={13} /> },
+                        { key: "preview" as const, label: "Preview", icon: <Eye size={13} /> },
+                      ]).map(t => (
+                        <button
+                          key={t.key}
+                          onClick={() => setCviSubTab(t.key)}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 5,
+                            padding: "7px 16px", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                            background: cviSubTab === t.key ? "#6366F1" : "#fff",
+                            color: cviSubTab === t.key ? "#fff" : "#6B7280",
+                            transition: "all 0.15s",
+                          }}
+                        >
+                          {t.icon} {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    {cviSubTab === "edit" && (
+                      <button style={{ ...S.addCatBtn, background: "#6366F1" }} onClick={() => setShowAddCviExpert(true)}>
+                        <Plus size={16} />
+                        ADAUGA EXPERT
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {/* ═══ PREVIEW SUB-TAB ═══ */}
+                {cviSubTab === "preview" && (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#F59E0B" }} />
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#6B7280", letterSpacing: 0.5 }}>MOD PREVIEW — datele NU se salveaza in baza de date</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const iframe = document.querySelector<HTMLIFrameElement>("#cvi-preview-iframe");
+                          if (iframe) { iframe.src = iframe.src; }
+                        }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "8px 16px", borderRadius: 8, border: "1px solid #e5e7eb",
+                          background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <RotateCcw size={14} />
+                        Reset Preview
+                      </button>
+                    </div>
+                    <div style={{ width: "100%", height: "80vh", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+                      <iframe
+                        id="cvi-preview-iframe"
+                        src="/articolstiintific/cvi?preview=1"
+                        style={{ width: "100%", height: "100%", border: "none" }}
+                        title="Preview CVI"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* ═══ EDIT SUB-TAB ═══ */}
+                {cviSubTab === "edit" && (
+                <>
 
                 {/* ── Stats Panel ── */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
@@ -4934,6 +4999,10 @@ export default function StudiuAdminPage() {
                     </div>
                   </div>
                 )}
+
+                </>
+                )}
+
               </>
             )}
           </div>

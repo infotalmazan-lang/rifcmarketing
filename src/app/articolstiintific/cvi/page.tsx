@@ -93,8 +93,9 @@ export default function CviPage() {
 function CviForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
+  const isPreview = searchParams.get("preview") === "1";
 
-  const [status, setStatus] = useState<"loading" | "valid" | "completed" | "invalid" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "valid" | "completed" | "invalid" | "error">(isPreview ? "valid" : "loading");
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [expert, setExpert] = useState({ name: "", org: "", role: "", experience: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -102,8 +103,9 @@ function CviForm() {
   const [success, setSuccess] = useState(false);
   const [cviResult, setCviResult] = useState<Record<string, number> | null>(null);
 
-  // Validate token on load
+  // Validate token on load (skip in preview mode)
   useEffect(() => {
+    if (isPreview) return; // Preview mode: no token validation
     if (!token) { setStatus("invalid"); return; }
     fetch(`/api/cvi/validate?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
@@ -113,7 +115,7 @@ function CviForm() {
         else setStatus("invalid");
       })
       .catch(() => setStatus("error"));
-  }, [token]);
+  }, [token, isPreview]);
 
   const ratedCount = Object.keys(ratings).length;
   const pct = Math.round((ratedCount / TOTAL) * 100);
@@ -139,6 +141,15 @@ function CviForm() {
     for (const [dim, items] of Object.entries(dims)) {
       const relevant = items.filter(id => (ratings[id] || 0) >= 3).length;
       cvi[dim] = Number((relevant / items.length).toFixed(2));
+    }
+
+    // Preview mode: show results without saving
+    if (isPreview) {
+      setCviResult(cvi);
+      setSuccess(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setSubmitting(false);
+      return;
     }
 
     try {
@@ -255,8 +266,16 @@ function CviForm() {
       {/* Progress bar */}
       <div style={{ position: "fixed", top: 0, left: 0, height: 3, background: "#DC2626", width: `${pct}%`, transition: "width .4s ease", zIndex: 1000 }} />
 
+      {/* Preview Banner */}
+      {isPreview && (
+        <div style={{ background: "#FEF3C7", borderBottom: "2px solid #F59E0B", padding: "8px 32px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#F59E0B" }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#92400E", letterSpacing: 0.5 }}>MOD PREVIEW — datele NU se salveaza in baza de date</span>
+        </div>
+      )}
+
       {/* Header */}
-      <header style={{ background: "white", borderBottom: `1px solid ${border}`, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
+      <header style={{ background: "white", borderBottom: `1px solid ${border}`, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: isPreview ? 0 : 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 16, fontWeight: 700 }}>
             <span style={{ color: "#DC2626" }}>R</span> + (<span style={{ color: "#2563EB" }}>I</span> × <span style={{ color: "#059669" }}>F</span>) = <span style={{ color: "#D97706" }}>C</span>
