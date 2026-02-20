@@ -572,6 +572,44 @@ export default function StudiuAdminPage() {
   interface CategoryBreakdown extends BreakdownData {
     responseCount: number;
   }
+  interface FatiguePositionData {
+    position: number;
+    n: number;
+    avg_r: number;
+    avg_i: number;
+    avg_f: number;
+    avg_c: number;
+    avg_cta: number;
+    avg_time: number;
+  }
+  interface FatigueThird {
+    avg_r: number; avg_i: number; avg_f: number; avg_c: number; avg_cta: number; avg_time: number;
+  }
+  interface FatigueAnalysis {
+    completedRespondentsAnalyzed: number;
+    maxPosition: number;
+    perPosition: FatiguePositionData[];
+    firstThird: FatigueThird;
+    lastThird: FatigueThird;
+    delta: { r: number; i: number; f: number; c: number; cta: number; time: number };
+  }
+  interface FunnelStep {
+    step: number;
+    label: string;
+    reached: number;
+    rate: number;
+    dropped: number;
+  }
+  interface CompletionFunnel {
+    totalStarted: number;
+    totalCompleted: number;
+    overallRate: number;
+    funnelSteps: FunnelStep[];
+    worstDropout: { step: number; label: string; dropped: number; dropRate: number };
+    medianSessionTime: number;
+    avgSessionTime: number;
+    timeBuckets: { under5m: number; m5to15: number; m15to30: number; m30to60: number; over60m: number };
+  }
   interface ResultsData {
     totalRespondents: number;
     completedRespondents: number;
@@ -588,12 +626,14 @@ export default function StudiuAdminPage() {
     localeCounts?: Record<string, number>;
     perCategoryBreakdowns?: Record<string, CategoryBreakdown>;
     perStimulusBreakdowns?: Record<string, BreakdownData>;
+    fatigueAnalysis?: FatigueAnalysis;
+    completionFunnel?: CompletionFunnel;
   }
   const [results, setResults] = useState<ResultsData | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsSegment, setResultsSegment] = useState<string>("all");
   const [globalStats, setGlobalStats] = useState<{ total: number; completed: number; rate: number; responses: number; today: number; month: number; avgTime: number; perDist: { id: string; name: string; total: number; completed: number }[] } | null>(null);
-  const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic" | "canale" | "industrii">("scoruri");
+  const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic" | "canale" | "industrii" | "fatigue" | "funnel">("scoruri");
   const [resultsCatFilter, setResultsCatFilter] = useState<string | null>(null);
   const [expandedStimulusId, setExpandedStimulusId] = useState<string | null>(null);
   const [tooltipCol, setTooltipCol] = useState<string | null>(null);
@@ -2369,6 +2409,8 @@ export default function StudiuAdminPage() {
                     { key: "psihografic" as const, label: "Psihografic" },
                     { key: "canale" as const, label: "Total Canale" },
                     { key: "industrii" as const, label: "Industrii" },
+                    { key: "fatigue" as const, label: "Fatigue Analysis" },
+                    { key: "funnel" as const, label: "Completion Funnel" },
                   ]).map((t) => (
                     <button key={t.key} onClick={() => { setResultsSubTab(t.key); if (t.key !== "canale") setExpandedChannelType(null); if (t.key !== "industrii") setExpandedIndustryType(null); }} style={{
                       padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6, border: "1px solid #e5e7eb", cursor: "pointer",
@@ -2992,6 +3034,355 @@ export default function StudiuAdminPage() {
                 })()}
 
                 {/* ── SUB-TAB: INDUSTRII ── */}
+                {/* ── SUB-TAB: FATIGUE ANALYSIS ── */}
+                {resultsSubTab === "fatigue" && (() => {
+                  const fa = results.fatigueAnalysis;
+                  if (!fa || fa.perPosition.length === 0) {
+                    return (
+                      <div style={S.placeholderTab}>
+                        <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                        <p style={{ color: "#6B7280", fontSize: 14 }}>Insuficiente date pentru analiza de fatigue. Sunt necesari respondenti completati.</p>
+                      </div>
+                    );
+                  }
+
+                  const dims: { key: keyof typeof fa.delta; label: string; color: string }[] = [
+                    { key: "r", label: "R", color: "#DC2626" },
+                    { key: "i", label: "I", color: "#D97706" },
+                    { key: "f", label: "F", color: "#7C3AED" },
+                    { key: "c", label: "C", color: "#059669" },
+                    { key: "cta", label: "CTA", color: "#2563EB" },
+                    { key: "time", label: "Timp", color: "#6B7280" },
+                  ];
+
+                  // Find max score for chart scaling
+                  const maxScore = Math.max(
+                    ...fa.perPosition.flatMap(p => [p.avg_r, p.avg_i, p.avg_f, p.avg_c, p.avg_cta]),
+                    10
+                  );
+                  const maxTime = Math.max(...fa.perPosition.map(p => p.avg_time), 1);
+                  const chartH = 200;
+                  const chartW = Math.max(600, fa.perPosition.length * 28);
+
+                  return (
+                    <div>
+                      {/* Header info */}
+                      <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" as const }}>
+                        <div style={{ padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 12 }}>
+                          <span style={{ fontWeight: 700, color: "#166534" }}>{fa.completedRespondentsAnalyzed}</span>
+                          <span style={{ color: "#6B7280" }}> respondenti analizati</span>
+                        </div>
+                        <div style={{ padding: "10px 16px", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 8, fontSize: 12 }}>
+                          <span style={{ fontWeight: 700, color: "#854d0e" }}>{fa.maxPosition}</span>
+                          <span style={{ color: "#6B7280" }}> stimuli per respondent</span>
+                        </div>
+                      </div>
+
+                      {/* Delta summary cards */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
+                        PRIMA TREIME vs ULTIMA TREIME — Delta (%)
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 8, marginBottom: 20 }}>
+                        {dims.map(d => {
+                          const val = fa.delta[d.key];
+                          const isNeg = val < 0;
+                          const isTime = d.key === "time";
+                          // Negative time delta = respondents are faster = possible fatigue/rushing
+                          const concern = isTime ? isNeg : isNeg;
+                          return (
+                            <div key={d.key} style={{
+                              padding: "12px 10px", borderRadius: 8, textAlign: "center" as const,
+                              background: Math.abs(val) < 3 ? "#f9fafb" : concern ? "#fef2f2" : "#f0fdf4",
+                              border: `1px solid ${Math.abs(val) < 3 ? "#e5e7eb" : concern ? "#fecaca" : "#bbf7d0"}`,
+                            }}>
+                              <div style={{ fontSize: 10, fontWeight: 600, color: d.color, marginBottom: 4, letterSpacing: 0.5 }}>{d.label}</div>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: concern ? "#DC2626" : val > 0 ? "#059669" : "#374151" }}>
+                                {val > 0 ? "+" : ""}{val}%
+                              </div>
+                              <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 2 }}>
+                                {isTime
+                                  ? `${fa.firstThird.avg_time}s → ${fa.lastThird.avg_time}s`
+                                  : `${(fa.firstThird as any)[`avg_${d.key}`]} → ${(fa.lastThird as any)[`avg_${d.key}`]}`
+                                }
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Score trend chart (SVG bar chart) */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
+                        SCORURI MEDII PER POZITIE STIMULUS
+                      </div>
+                      <div style={{ overflowX: "auto" as const, marginBottom: 20, border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, background: "#fafafa" }}>
+                        <svg viewBox={`0 0 ${chartW} ${chartH + 40}`} width={chartW} height={chartH + 40} style={{ display: "block" }}>
+                          {/* Y-axis labels */}
+                          {[0, 2, 4, 6, 8, 10].map(v => (
+                            <g key={v}>
+                              <line x1={30} y1={chartH - (v / maxScore) * chartH} x2={chartW} y2={chartH - (v / maxScore) * chartH} stroke="#e5e7eb" strokeWidth={0.5} />
+                              <text x={25} y={chartH - (v / maxScore) * chartH + 4} textAnchor="end" fontSize={9} fill="#9CA3AF">{v}</text>
+                            </g>
+                          ))}
+                          {/* Lines for R, I, F, C, CTA */}
+                          {([
+                            { key: "avg_r" as const, color: "#DC2626" },
+                            { key: "avg_i" as const, color: "#D97706" },
+                            { key: "avg_f" as const, color: "#7C3AED" },
+                            { key: "avg_c" as const, color: "#059669" },
+                            { key: "avg_cta" as const, color: "#2563EB" },
+                          ] as const).map(line => (
+                            <polyline
+                              key={line.key}
+                              fill="none"
+                              stroke={line.color}
+                              strokeWidth={1.5}
+                              strokeLinejoin="round"
+                              points={fa.perPosition.map((p, i) => {
+                                const x = 40 + i * ((chartW - 50) / Math.max(fa.perPosition.length - 1, 1));
+                                const y = chartH - (p[line.key] / maxScore) * chartH;
+                                return `${x},${y}`;
+                              }).join(" ")}
+                            />
+                          ))}
+                          {/* X-axis labels */}
+                          {fa.perPosition.map((p, i) => {
+                            const x = 40 + i * ((chartW - 50) / Math.max(fa.perPosition.length - 1, 1));
+                            const showLabel = fa.perPosition.length <= 15 || i % Math.ceil(fa.perPosition.length / 15) === 0;
+                            return showLabel ? (
+                              <text key={i} x={x} y={chartH + 14} textAnchor="middle" fontSize={8} fill="#9CA3AF">#{p.position}</text>
+                            ) : null;
+                          })}
+                          {/* Dots on each point */}
+                          {fa.perPosition.map((p, i) => {
+                            const x = 40 + i * ((chartW - 50) / Math.max(fa.perPosition.length - 1, 1));
+                            return (
+                              <g key={`dots-${i}`}>
+                                {([
+                                  { val: p.avg_r, color: "#DC2626" },
+                                  { val: p.avg_i, color: "#D97706" },
+                                  { val: p.avg_f, color: "#7C3AED" },
+                                  { val: p.avg_c, color: "#059669" },
+                                  { val: p.avg_cta, color: "#2563EB" },
+                                ]).map((dot, di) => (
+                                  <circle key={di} cx={x} cy={chartH - (dot.val / maxScore) * chartH} r={2.5} fill={dot.color} />
+                                ))}
+                              </g>
+                            );
+                          })}
+                          {/* Legend */}
+                          {([
+                            { label: "R", color: "#DC2626" },
+                            { label: "I", color: "#D97706" },
+                            { label: "F", color: "#7C3AED" },
+                            { label: "C", color: "#059669" },
+                            { label: "CTA", color: "#2563EB" },
+                          ]).map((leg, i) => (
+                            <g key={leg.label} transform={`translate(${40 + i * 60}, ${chartH + 26})`}>
+                              <rect width={10} height={3} fill={leg.color} rx={1} />
+                              <text x={14} y={4} fontSize={9} fontWeight={600} fill={leg.color}>{leg.label}</text>
+                            </g>
+                          ))}
+                        </svg>
+                      </div>
+
+                      {/* Time trend chart (separate) */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
+                        TIMP MEDIU PER POZITIE (secunde)
+                      </div>
+                      <div style={{ overflowX: "auto" as const, border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, background: "#fafafa" }}>
+                        <svg viewBox={`0 0 ${chartW} 140`} width={chartW} height={140} style={{ display: "block" }}>
+                          {/* Bars */}
+                          {fa.perPosition.map((p, i) => {
+                            const barW = Math.max(8, ((chartW - 50) / fa.perPosition.length) - 4);
+                            const x = 40 + i * ((chartW - 50) / fa.perPosition.length) + 2;
+                            const barH = maxTime > 0 ? (p.avg_time / maxTime) * 100 : 0;
+                            return (
+                              <g key={i}>
+                                <rect x={x} y={110 - barH} width={barW} height={barH} fill="#6B7280" rx={2} opacity={0.6} />
+                                <text x={x + barW / 2} y={110 - barH - 4} textAnchor="middle" fontSize={8} fill="#374151" fontWeight={600}>
+                                  {p.avg_time > 0 ? `${p.avg_time}s` : ""}
+                                </text>
+                                {(fa.perPosition.length <= 15 || i % Math.ceil(fa.perPosition.length / 15) === 0) && (
+                                  <text x={x + barW / 2} y={124} textAnchor="middle" fontSize={8} fill="#9CA3AF">#{p.position}</text>
+                                )}
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      </div>
+
+                      {/* Per-position data table */}
+                      <details style={{ marginTop: 16 }}>
+                        <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#6B7280", padding: "8px 0" }}>
+                          Date brute per pozitie ({fa.perPosition.length} pozitii)
+                        </summary>
+                        <div style={{ overflowX: "auto" as const, marginTop: 8 }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 11 }}>
+                            <thead>
+                              <tr style={{ background: "#f3f4f6" }}>
+                                {["#", "N", "R", "I", "F", "C", "CTA", "Timp (s)"].map(h => (
+                                  <th key={h} style={{ padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb", textAlign: "center" as const }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {fa.perPosition.map(p => (
+                                <tr key={p.position} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, fontWeight: 700 }}>{p.position}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#9CA3AF" }}>{p.n}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#DC2626", fontWeight: 600 }}>{p.avg_r}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#D97706", fontWeight: 600 }}>{p.avg_i}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontWeight: 600 }}>{p.avg_f}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#059669", fontWeight: 600 }}>{p.avg_c}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontWeight: 600 }}>{p.avg_cta}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#6B7280" }}>{p.avg_time}s</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    </div>
+                  );
+                })()}
+
+                {/* ── SUB-TAB: COMPLETION FUNNEL ── */}
+                {resultsSubTab === "funnel" && (() => {
+                  const cf = results.completionFunnel;
+                  if (!cf || cf.funnelSteps.length === 0) {
+                    return (
+                      <div style={S.placeholderTab}>
+                        <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                        <p style={{ color: "#6B7280", fontSize: 14 }}>Niciun respondent inca.</p>
+                      </div>
+                    );
+                  }
+
+                  const fmtTime = (sec: number) => sec >= 60 ? `${Math.floor(sec / 60)}m ${sec % 60}s` : `${sec}s`;
+                  const maxReached = cf.funnelSteps[0]?.reached || 1;
+
+                  return (
+                    <div>
+                      {/* KPI cards */}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                        {([
+                          { label: "Inceputi", value: cf.totalStarted, color: "#2563EB", bg: "#eff6ff", border: "#bfdbfe" },
+                          { label: "Completati", value: cf.totalCompleted, color: "#059669", bg: "#f0fdf4", border: "#bbf7d0" },
+                          { label: "Rata completare", value: `${cf.overallRate}%`, color: cf.overallRate >= 70 ? "#059669" : cf.overallRate >= 40 ? "#D97706" : "#DC2626", bg: "#fafafa", border: "#e5e7eb" },
+                          { label: "Timp median", value: fmtTime(cf.medianSessionTime), color: "#6B7280", bg: "#f9fafb", border: "#e5e7eb" },
+                        ]).map((kpi, i) => (
+                          <div key={i} style={{ padding: "14px 12px", borderRadius: 8, textAlign: "center" as const, background: kpi.bg, border: `1px solid ${kpi.border}` }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", letterSpacing: 0.5, marginBottom: 4, textTransform: "uppercase" as const }}>{kpi.label}</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: kpi.color }}>{kpi.value}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Worst dropout alert */}
+                      {cf.worstDropout.dropped > 0 && (
+                        <div style={{ padding: "12px 16px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#DC2626", flexShrink: 0 }} />
+                          <div style={{ fontSize: 12 }}>
+                            <span style={{ fontWeight: 700, color: "#991b1b" }}>Cel mai mare abandon:</span>{" "}
+                            <span style={{ color: "#374151" }}>
+                              &laquo;{cf.worstDropout.label}&raquo; — {cf.worstDropout.dropped} respondenti pierduti ({cf.worstDropout.dropRate}% drop rate)
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Visual funnel */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
+                        FUNNEL DE COMPLETARE
+                      </div>
+                      <div style={{ marginBottom: 20 }}>
+                        {cf.funnelSteps.map((fs, i) => {
+                          const widthPct = maxReached > 0 ? Math.max(8, (fs.reached / maxReached) * 100) : 8;
+                          const isProfile = fs.step < 17;
+                          const isComplete = fs.label === "Completat";
+                          const barColor = isComplete ? "#059669" : isProfile ? "#2563EB" : "#D97706";
+
+                          return (
+                            <div key={fs.step} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
+                              <div style={{ width: 110, flexShrink: 0, fontSize: 10, fontWeight: 600, color: "#6B7280", textAlign: "right" as const, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                                {fs.label}
+                              </div>
+                              <div style={{ flex: 1, position: "relative" as const, height: 20 }}>
+                                <div style={{
+                                  width: `${widthPct}%`, height: "100%", borderRadius: 4,
+                                  background: barColor, opacity: 0.7 + (fs.rate / 100) * 0.3,
+                                  transition: "width 300ms ease",
+                                }} />
+                                <div style={{
+                                  position: "absolute" as const, left: `${Math.min(widthPct + 1, 90)}%`, top: "50%", transform: "translateY(-50%)",
+                                  fontSize: 10, fontWeight: 700, color: "#374151", whiteSpace: "nowrap" as const,
+                                }}>
+                                  {fs.reached} ({fs.rate}%)
+                                </div>
+                              </div>
+                              {i > 0 && fs.dropped > 0 && (
+                                <div style={{ width: 60, flexShrink: 0, fontSize: 9, color: "#DC2626", fontWeight: 600, textAlign: "right" as const }}>
+                                  -{fs.dropped}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Session time distribution */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 8 }}>
+                        DISTRIBUTIA TIMPULUI DE COMPLETARE
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 16 }}>
+                        {([
+                          { label: "< 5 min", value: cf.timeBuckets.under5m, color: "#DC2626" },
+                          { label: "5-15 min", value: cf.timeBuckets.m5to15, color: "#D97706" },
+                          { label: "15-30 min", value: cf.timeBuckets.m15to30, color: "#059669" },
+                          { label: "30-60 min", value: cf.timeBuckets.m30to60, color: "#2563EB" },
+                          { label: "> 60 min", value: cf.timeBuckets.over60m, color: "#7C3AED" },
+                        ]).map(b => (
+                          <div key={b.label} style={{ padding: "10px 8px", borderRadius: 8, textAlign: "center" as const, background: "#f9fafb", border: "1px solid #e5e7eb" }}>
+                            <div style={{ fontSize: 20, fontWeight: 800, color: b.color }}>{b.value}</div>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", fontWeight: 600, marginTop: 2 }}>{b.label}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Funnel data table */}
+                      <details>
+                        <summary style={{ cursor: "pointer", fontSize: 12, fontWeight: 600, color: "#6B7280", padding: "8px 0" }}>
+                          Date brute funnel ({cf.funnelSteps.length} etape)
+                        </summary>
+                        <div style={{ overflowX: "auto" as const, marginTop: 8 }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 11 }}>
+                            <thead>
+                              <tr style={{ background: "#f3f4f6" }}>
+                                {["Pas", "Etapa", "Au ajuns", "Rata (%)", "Pierduti"].map(h => (
+                                  <th key={h} style={{ padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb", textAlign: "center" as const }}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {cf.funnelSteps.map((fs, i) => (
+                                <tr key={fs.step} style={{ borderBottom: "1px solid #f3f4f6", background: fs.label === "Completat" ? "#f0fdf4" : undefined }}>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#9CA3AF" }}>{fs.step}</td>
+                                  <td style={{ padding: "5px 8px", fontWeight: 600, color: "#374151" }}>{fs.label}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, fontWeight: 700 }}>{fs.reached}</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, fontWeight: 600, color: fs.rate >= 70 ? "#059669" : fs.rate >= 40 ? "#D97706" : "#DC2626" }}>{fs.rate}%</td>
+                                  <td style={{ padding: "5px 8px", textAlign: "center" as const, color: i > 0 && fs.dropped > 0 ? "#DC2626" : "#9CA3AF", fontWeight: fs.dropped > 0 ? 600 : 400 }}>
+                                    {i === 0 ? "—" : fs.dropped > 0 ? `-${fs.dropped}` : "0"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    </div>
+                  );
+                })()}
+
                 {resultsSubTab === "industrii" && (() => {
                   // Group stimuliResults by industry
                   const byIndustry: Record<string, StimulusResult[]> = {};

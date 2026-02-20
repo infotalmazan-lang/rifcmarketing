@@ -44,7 +44,7 @@ export async function GET(request: Request) {
         while (hasMore) {
           const { data: respData } = await supabase
             .from("survey_responses")
-            .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar")
+            .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
             .in("respondent_id", batchIds)
             .range(offset, offset + PAGE_SIZE - 1);
           const batch = respData || [];
@@ -351,6 +351,223 @@ export async function GET(request: Request) {
       }
     }
 
+    // ── Fatigue / Time Decay Analysis ──────────────────────
+    // Groups each respondent's responses by chronological order (created_at),
+    // then compares first-third vs last-third to detect cognitive fatigue.
+    const fatigueAnalysis = (() => {
+      // Build per-respondent ordered responses (need created_at for ordering)
+      const byRespondent: Record<string, any[]> = {};
+      for (const resp of allFilteredResponses) {
+        if (!byRespondent[resp.respondent_id]) byRespondent[resp.respondent_id] = [];
+        byRespondent[resp.respondent_id].push(resp);
+      }
+
+      // Only use completed respondents with enough responses
+      const completedIds = new Set(
+        respondents.filter(r => r.completed_at != null).map(r => r.id)
+      );
+
+      // Collect per-position scores (position = index within respondent's sequence)
+      const positionData: Record<number, { r: number[]; i: number[]; f: number[]; c: number[]; cta: number[]; time: number[] }> = {};
+
+      for (const [rId, resps] of Object.entries(byRespondent)) {
+        if (!completedIds.has(rId)) continue;
+        if (resps.length < 6) continue; // need meaningful sequence
+
+        // Sort by created_at to get evaluation order
+        resps.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        for (let pos = 0; pos < resps.length; pos++) {
+          const r = resps[pos];
+          if (!positionData[pos]) positionData[pos] = { r: [], i: [], f: [], c: [], cta: [], time: [] };
+          if (r.r_score) positionData[pos].r.push(r.r_score);
+          if (r.i_score) positionData[pos].i.push(r.i_score);
+          if (r.f_score) positionData[pos].f.push(r.f_score);
+          if (r.c_score != null) positionData[pos].c.push(r.c_score);
+          if (r.cta_score != null) positionData[pos].cta.push(r.cta_score);
+          if (r.time_spent_seconds != null && r.time_spent_seconds > 0) positionData[pos].time.push(r.time_spent_seconds);
+        }
+      }
+
+      const maxPos = Math.max(...Object.keys(positionData).map(Number), 0);
+      const avg = (arr: number[]) => arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
+
+      // Per-position averages (for chart)
+      const perPosition: { position: number; n: number; avg_r: number; avg_i: number; avg_f: number; avg_c: number; avg_cta: number; avg_time: number }[] = [];
+      for (let pos = 0; pos <= maxPos; pos++) {
+        const pd = positionData[pos];
+        if (!pd) continue;
+        perPosition.push({
+          position: pos + 1, // 1-indexed for display
+          n: pd.r.length,
+          avg_r: avg(pd.r),
+          avg_i: avg(pd.i),
+          avg_f: avg(pd.f),
+          avg_c: avg(pd.c),
+          avg_cta: avg(pd.cta),
+          avg_time: avg(pd.time),
+        });
+      }
+
+      // First third vs last third comparison
+      const thirdSize = Math.max(1, Math.floor(maxPos / 3));
+      const firstThirdPositions = perPosition.filter(p => p.position <= thirdSize);
+      const lastThirdPositions = perPosition.filter(p => p.position > maxPos - thirdSize);
+
+      const avgGroup = (group: typeof perPosition, key: "avg_r" | "avg_i" | "avg_f" | "avg_c" | "avg_cta" | "avg_time") =>
+        group.length > 0 ? Math.round((group.reduce((a, p) => a + p[key], 0) / group.length) * 100) / 100 : 0;
+
+      const firstThird = {
+        avg_r: avgGroup(firstThirdPositions, "avg_r"),
+        avg_i: avgGroup(firstThirdPositions, "avg_i"),
+        avg_f: avgGroup(firstThirdPositions, "avg_f"),
+        avg_c: avgGroup(firstThirdPositions, "avg_c"),
+        avg_cta: avgGroup(firstThirdPositions, "avg_cta"),
+        avg_time: avgGroup(firstThirdPositions, "avg_time"),
+      };
+      const lastThird = {
+        avg_r: avgGroup(lastThirdPositions, "avg_r"),
+        avg_i: avgGroup(lastThirdPositions, "avg_i"),
+        avg_f: avgGroup(lastThirdPositions, "avg_f"),
+        avg_c: avgGroup(lastThirdPositions, "avg_c"),
+        avg_cta: avgGroup(lastThirdPositions, "avg_cta"),
+        avg_time: avgGroup(lastThirdPositions, "avg_time"),
+      };
+      const delta = {
+        r: firstThird.avg_r > 0 ? Math.round(((lastThird.avg_r - firstThird.avg_r) / firstThird.avg_r) * 10000) / 100 : 0,
+        i: firstThird.avg_i > 0 ? Math.round(((lastThird.avg_i - firstThird.avg_i) / firstThird.avg_i) * 10000) / 100 : 0,
+        f: firstThird.avg_f > 0 ? Math.round(((lastThird.avg_f - firstThird.avg_f) / firstThird.avg_f) * 10000) / 100 : 0,
+        c: firstThird.avg_c > 0 ? Math.round(((lastThird.avg_c - firstThird.avg_c) / firstThird.avg_c) * 10000) / 100 : 0,
+        cta: firstThird.avg_cta > 0 ? Math.round(((lastThird.avg_cta - firstThird.avg_cta) / firstThird.avg_cta) * 10000) / 100 : 0,
+        time: firstThird.avg_time > 0 ? Math.round(((lastThird.avg_time - firstThird.avg_time) / firstThird.avg_time) * 10000) / 100 : 0,
+      };
+
+      return {
+        completedRespondentsAnalyzed: completedIds.size,
+        maxPosition: maxPos + 1,
+        perPosition,
+        firstThird,
+        lastThird,
+        delta,
+      };
+    })();
+
+    // ── Completion Funnel Analysis ───────────────────────────
+    // Shows how many respondents reached each step, identifying dropout points.
+    const completionFunnel = (() => {
+      // Profile steps (fixed): 0=welcome, 1=gender, 2=age, 3=country, 4=urbanRural,
+      // 5=income, 6=education, 7=purchaseFreq, 8=channels, 9=onlineTime, 10=device,
+      // 11-16=psychographic
+      const PROFILE_STEP_COUNT = 17; // steps 0-16
+      const totalStimuli = (stimuli || []).length;
+      const STEPS_PER_STIMULUS = 6; // R, I, F, C, CTA, BRAND
+      const totalSteps = PROFILE_STEP_COUNT + (totalStimuli * STEPS_PER_STIMULUS) + 1; // +1 for thank-you
+
+      // Labels for key steps
+      const stepLabels: Record<number, string> = {
+        0: "Welcome",
+        1: "Gen",
+        2: "Varsta",
+        3: "Tara",
+        4: "Urban/Rural",
+        5: "Venit",
+        6: "Educatie",
+        7: "Frecventa cumparaturi",
+        8: "Canale preferate",
+        9: "Timp online",
+        10: "Dispozitiv",
+        11: "Psihografic 1",
+        12: "Psihografic 2",
+        13: "Psihografic 3",
+        14: "Psihografic 4",
+        15: "Psihografic 5",
+        16: "Psihografic 6",
+      };
+      for (let s = 0; s < totalStimuli; s++) {
+        const baseStep = PROFILE_STEP_COUNT + (s * STEPS_PER_STIMULUS);
+        stepLabels[baseStep] = `Stimul ${s + 1} (R)`;
+      }
+
+      // Count respondents per step_completed
+      const stepCounts: Record<number, number> = {};
+      for (const r of respondents) {
+        const sc = r.step_completed || 0;
+        stepCounts[sc] = (stepCounts[sc] || 0) + 1;
+      }
+
+      // Build cumulative funnel: how many reached AT LEAST step X
+      const funnelSteps: { step: number; label: string; reached: number; rate: number; dropped: number }[] = [];
+
+      // Key milestone steps (don't enumerate every sub-step)
+      const milestones = [
+        0,  // Welcome
+        1,  // Started demographics
+        7,  // Finished demographics, started behavioral
+        11, // Finished behavioral, started psychographic
+        PROFILE_STEP_COUNT, // Finished profile, started stimuli
+      ];
+      // Add every stimulus start
+      for (let s = 0; s < totalStimuli; s++) {
+        milestones.push(PROFILE_STEP_COUNT + (s * STEPS_PER_STIMULUS));
+      }
+      // Add completion
+      milestones.push(totalSteps);
+
+      const uniqueMilestones = [...new Set(milestones)].sort((a, b) => a - b);
+
+      for (const ms of uniqueMilestones) {
+        const reached = respondents.filter(r => (r.step_completed || 0) >= ms).length;
+        const prevReached = funnelSteps.length > 0 ? funnelSteps[funnelSteps.length - 1].reached : totalRespondents;
+
+        let label = stepLabels[ms] || `Pas ${ms}`;
+        if (ms === totalSteps) label = "Completat";
+        if (ms >= PROFILE_STEP_COUNT && ms < totalSteps) {
+          const stimIdx = Math.floor((ms - PROFILE_STEP_COUNT) / STEPS_PER_STIMULUS);
+          if (stimIdx < totalStimuli) label = `Stimul ${stimIdx + 1}`;
+        }
+
+        funnelSteps.push({
+          step: ms,
+          label,
+          reached,
+          rate: totalRespondents > 0 ? Math.round((reached / totalRespondents) * 100) : 0,
+          dropped: prevReached - reached,
+        });
+      }
+
+      // Identify worst dropout point
+      let worstDropout = { step: 0, label: "", dropped: 0, dropRate: 0 };
+      for (let i = 1; i < funnelSteps.length; i++) {
+        const prev = funnelSteps[i - 1];
+        const curr = funnelSteps[i];
+        const dropRate = prev.reached > 0 ? Math.round(((prev.reached - curr.reached) / prev.reached) * 100) : 0;
+        if (curr.dropped > worstDropout.dropped) {
+          worstDropout = { step: curr.step, label: curr.label, dropped: curr.dropped, dropRate };
+        }
+      }
+
+      // Session time distribution (buckets)
+      const timeBuckets = { under5m: 0, m5to15: 0, m15to30: 0, m30to60: 0, over60m: 0 };
+      for (const d of durations) {
+        if (d < 300) timeBuckets.under5m++;
+        else if (d < 900) timeBuckets.m5to15++;
+        else if (d < 1800) timeBuckets.m15to30++;
+        else if (d < 3600) timeBuckets.m30to60++;
+        else timeBuckets.over60m++;
+      }
+
+      return {
+        totalStarted: totalRespondents,
+        totalCompleted: completedRespondents,
+        overallRate: totalRespondents > 0 ? Math.round((completedRespondents / totalRespondents) * 100) : 0,
+        funnelSteps,
+        worstDropout,
+        medianSessionTime: durations.length > 0 ? durations.sort((a, b) => a - b)[Math.floor(durations.length / 2)] : 0,
+        avgSessionTime,
+        timeBuckets,
+      };
+    })();
+
     // ── Debug info (temporary — helps diagnose production issues) ──
     const uniqueStimIdsInResponses = Array.from(new Set(allFilteredResponses.map(r => r.stimulus_id)));
     const activeStimIds = (stimuli || []).map(s => s.id);
@@ -373,6 +590,8 @@ export async function GET(request: Request) {
       localeCounts: globalLocaleCounts,
       perCategoryBreakdowns,
       perStimulusBreakdowns,
+      fatigueAnalysis,
+      completionFunnel,
       _debug: {
         respondentQueryError: respondentError?.message || null,
         respondentCount: respondents.length,
