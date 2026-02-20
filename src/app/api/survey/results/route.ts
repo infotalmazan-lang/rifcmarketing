@@ -463,8 +463,30 @@ export async function GET(request: Request) {
     //        Stimulus 0: steps 4-9, Stimulus 1: steps 10-15, etc.
     //   completed_at IS SET when survey is done (separate from step_completed)
     const completionFunnel = (() => {
-      const totalStimuli = (stimuli || []).length;
       const STIM_SUBSTEPS = 6; // R, I, F, C, CTA, BRAND
+
+      // Determine how many stimuli a respondent actually evaluates.
+      // This is NOT all stimuli in DB (could be 30), but the subset each respondent gets.
+      // Best heuristic: count responses per completed respondent, take the maximum.
+      // Alternatively, derive from max step_completed: stimCount = (maxStep - 4 + STIM_SUBSTEPS) / STIM_SUBSTEPS
+      const completedResps = respondents.filter(r => r.completed_at != null);
+      let actualStimuliCount = 0;
+      if (completedResps.length > 0) {
+        // Count responses per completed respondent
+        const respCounts: number[] = completedResps.map(r => {
+          return allFilteredResponses.filter(resp => resp.respondent_id === r.id).length;
+        });
+        actualStimuliCount = Math.max(...respCounts, 0);
+      }
+      if (actualStimuliCount === 0) {
+        // Fallback: derive from max step_completed across all respondents
+        const maxStep = Math.max(...respondents.map(r => r.step_completed || 0), 0);
+        if (maxStep >= 4) {
+          actualStimuliCount = Math.ceil((maxStep - 4 + 1) / STIM_SUBSTEPS);
+        }
+      }
+      // Final fallback: if still 0, use total stimuli from DB (but cap at reasonable number)
+      const stimuliForFunnel = actualStimuliCount > 0 ? actualStimuliCount : Math.min((stimuli || []).length, 10);
 
       // Build milestones using NORMALIZED step values (as stored in DB)
       const milestones: { step: number; label: string }[] = [
@@ -475,7 +497,7 @@ export async function GET(request: Request) {
       ];
 
       // Each stimulus: first sub-step = 4 + (stimIdx * 6)
-      for (let s = 0; s < totalStimuli; s++) {
+      for (let s = 0; s < stimuliForFunnel; s++) {
         const stimStart = 4 + (s * STIM_SUBSTEPS);
         milestones.push({ step: stimStart, label: `Stimul ${s + 1}` });
       }
