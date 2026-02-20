@@ -513,7 +513,7 @@ export async function GET(request: Request) {
       // Add completion
       milestones.push(totalSteps);
 
-      const uniqueMilestones = [...new Set(milestones)].sort((a, b) => a - b);
+      const uniqueMilestones = Array.from(new Set(milestones)).sort((a, b) => a - b);
 
       for (const ms of uniqueMilestones) {
         const reached = respondents.filter(r => (r.step_completed || 0) >= ms).length;
