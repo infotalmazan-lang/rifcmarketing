@@ -53,7 +53,8 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
   .sb-header { padding: 16px 14px 12px; border-bottom: 1px solid var(--border); }
-  .sb-logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .sb-logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; transition: opacity 0.15s; }
+  .sb-logo-row:hover { opacity: 0.75; }
   .sb-logo-row img { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; }
   .sb-title { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.2; }
   .sb-subtitle { font-size: 10px; color: var(--text3); }
@@ -308,13 +309,13 @@ const ROADMAP_HTML = `<!DOCTYPE html>
 <div id="app">
   <div class="sidebar">
     <div class="sb-header">
-      <div class="sb-logo-row">
+      <a href="https://www.rifcmarketing.com/articolstiintific" target="_blank" rel="noopener noreferrer" class="sb-logo-row" style="text-decoration:none;color:inherit;cursor:pointer;">
         <img src="/images/rifc-logo-black.png" alt="R IF C" />
         <div>
           <div class="sb-title">Articol Științific</div>
           <div class="sb-subtitle">Validare Empirică R IF C</div>
         </div>
-      </div>
+      </a>
     </div>
     <div class="sb-progress">
       <div class="sb-progress-label">
