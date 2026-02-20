@@ -84,7 +84,6 @@ export async function PUT(request: Request) {
       }
 
       if (upsertError) {
-        console.error("Failed to save response:", upsertError);
         return NextResponse.json(
           { error: "Failed to save response" },
           { status: 500 }

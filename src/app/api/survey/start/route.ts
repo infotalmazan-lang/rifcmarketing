@@ -95,7 +95,6 @@ export async function POST(request: Request) {
       }
 
       if (respError) {
-        console.error("Failed to create respondent:", respError);
         return NextResponse.json(
           { error: "Failed to start survey" },
           { status: 500 }
@@ -111,7 +110,6 @@ export async function POST(request: Request) {
       .order("display_order");
 
     if (stimError) {
-      console.error("Failed to fetch stimuli:", stimError);
       return NextResponse.json(
         { error: "Failed to load stimuli" },
         { status: 500 }

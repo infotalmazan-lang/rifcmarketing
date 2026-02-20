@@ -98,13 +98,11 @@ export async function POST(request: Request) {
     const result = await response.json();
 
     if (!response.ok) {
-      console.error("[CAPI] Meta API error:", result);
-      return NextResponse.json({ ok: false, error: result.error?.message || "Meta API error" }, { status: 502 });
+      return NextResponse.json({ ok: false, error: "Meta API error" }, { status: 502 });
     }
 
     return NextResponse.json({ ok: true, events_received: result.events_received });
-  } catch (err: any) {
-    console.error("[CAPI] Error:", err.message);
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+  } catch {
+    return NextResponse.json({ ok: false, error: "Internal error" }, { status: 500 });
   }
 }

@@ -114,7 +114,6 @@ export async function POST(req: NextRequest) {
       .insert(responseRow);
 
     if (insertError) {
-      console.error("CVI insert error:", insertError);
       return NextResponse.json(
         { error: "Eroare la salvarea răspunsului" },
         { status: 500 }
@@ -132,7 +131,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("CVI submit error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

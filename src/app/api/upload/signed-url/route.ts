@@ -27,9 +27,8 @@ export async function POST(req: NextRequest) {
       .createSignedUploadUrl(path);
 
     if (error || !data) {
-      console.error("Signed URL error:", error);
       return NextResponse.json(
-        { error: `Failed to create upload URL: ${error?.message || "unknown"}` },
+        { error: "Failed to create upload URL" },
         { status: 500 }
       );
     }
@@ -53,7 +52,6 @@ export async function POST(req: NextRequest) {
       objectPath: path,
     });
   } catch (err) {
-    console.error("Upload config error:", err);
     return NextResponse.json(
       { error: "Internal error" },
       { status: 500 }

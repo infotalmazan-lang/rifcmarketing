@@ -458,8 +458,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Audit API error:", error);
-
     if (error instanceof Anthropic.APIError) {
       if (error.status === 401) {
         return NextResponse.json(

@@ -543,7 +543,7 @@ const ROADMAP_SCRIPT = `
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       }).then(function(r) { return r.json(); })
-        .catch(function(err) { console.error("Sync failed:", err); });
+        .catch(function() { /* sync failed silently */ });
     }, 500);
   }
 

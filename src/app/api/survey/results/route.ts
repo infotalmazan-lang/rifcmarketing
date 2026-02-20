@@ -563,11 +563,6 @@ export async function GET(request: Request) {
       };
     })();
 
-    // ── Debug info (temporary — helps diagnose production issues) ──
-    const uniqueStimIdsInResponses = Array.from(new Set(allFilteredResponses.map(r => r.stimulus_id)));
-    const activeStimIds = (stimuli || []).map(s => s.id);
-    const orphanStimIds = uniqueStimIdsInResponses.filter(id => !activeStimIds.includes(id));
-
     return NextResponse.json({
       totalRespondents,
       completedRespondents,
@@ -587,15 +582,6 @@ export async function GET(request: Request) {
       perStimulusBreakdowns,
       fatigueAnalysis,
       completionFunnel,
-      _debug: {
-        respondentQueryError: respondentError?.message || null,
-        respondentCount: respondents.length,
-        completedRespondentCount: completedRespondents,
-        responseCount: allFilteredResponses.length,
-        activeStimuli: activeStimIds.length,
-        uniqueStimIdsInResponses: uniqueStimIdsInResponses.length,
-        hasOrphans: orphanStimIds.length > 0,
-      },
     });
   } catch (err: any) {
     return NextResponse.json(

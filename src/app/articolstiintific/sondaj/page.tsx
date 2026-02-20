@@ -851,7 +851,7 @@ export default function StudiuAdminPage() {
       const config = await configRes.json();
       if (!config.path) {
         const errMsg = `Eroare configurare: ${config.error || "raspuns invalid de la server"}`;
-        console.error(errMsg, config);
+
         setUploadStatus(errMsg);
         return null;
       }
@@ -876,7 +876,6 @@ export default function StudiuAdminPage() {
               resolve(config.publicUrl);
             } else {
               const errMsg = `Upload EROARE (${xhr.status}): ${xhr.responseText}`;
-              console.error(errMsg);
               setUploadStatus(errMsg);
               resolve(null);
             }
@@ -911,7 +910,6 @@ export default function StudiuAdminPage() {
             },
             onError: (err) => {
               const errMsg = `Upload EROARE: ${err.message || err}`;
-              console.error("Tus upload error:", err);
               setUploadStatus(errMsg);
               setUploading((prev) => ({ ...prev, [fieldKey]: false }));
               resolve(null);
@@ -938,7 +936,6 @@ export default function StudiuAdminPage() {
       }
     } catch (err) {
       const errMsg = `Upload EROARE: ${err instanceof Error ? err.message : String(err)}`;
-      console.error("Upload failed:", err);
       setUploadStatus(errMsg);
       return null;
     } finally {
@@ -1068,10 +1065,9 @@ export default function StudiuAdminPage() {
       const expData = await expRes.json();
       const resData = await resRes.json();
       if (expData.experts) setCviExperts(expData.experts);
-      if (expData.error) console.error("CVI fetch experts error:", expData.error);
       setCviResults(resData);
-    } catch (err) {
-      console.error("CVI fetch error:", err);
+    } catch {
+      /* fetch failed silently */
     }
     setCviLoading(false);
   }, []);
@@ -1107,7 +1103,6 @@ export default function StudiuAdminPage() {
       fetchCviData();
     } catch (err) {
       alert("Eroare de rețea la salvare expert CVI");
-      console.error("CVI save error:", err);
     }
     setCviSaving(false);
   }, [cviExpertForm, editingCviExpertId, fetchCviData]);
