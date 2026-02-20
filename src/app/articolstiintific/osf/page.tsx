@@ -52,9 +52,9 @@ const TITLE: Record<Lang, string> = {
 };
 
 const KEYWORDS: Record<Lang, string[]> = {
-  ro: ["Comunicare de Marketing", "Dezvoltare Scală", "Claritatea Mesajului", "Validare Empirică", "R IF C"],
-  en: ["Marketing Communication", "Scale Development", "Message Clarity", "Empirical Validation", "R IF C"],
-  ru: ["Маркетинговая коммуникация", "Разработка шкалы", "Ясность сообщения", "Эмпирическая валидация", "R IF C"],
+  ro: ["Protocolul RIFC", "Claritatea Mesajului", "Dezvoltare Scal\u0103", "Analiz\u0103 Factorial\u0103 Exploratorie", "Analiz\u0103 Factorial\u0103 Confirmatorie", "Validare Predictiv\u0103", "Diagnostic Marketing", "Model Multiplicativ"],
+  en: ["RIFC Protocol", "Message Clarity", "Scale Development", "Exploratory Factor Analysis", "Confirmatory Factor Analysis", "Predictive Validity", "Marketing Diagnostics", "Multiplicative Model"],
+  ru: ["\u041f\u0440\u043e\u0442\u043e\u043a\u043e\u043b RIFC", "\u042f\u0441\u043d\u043e\u0441\u0442\u044c \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u044f", "\u0420\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u043a\u0430 \u0448\u043a\u0430\u043b\u044b", "\u042d\u043a\u0441\u043f\u043b\u043e\u0440\u0430\u0442\u043e\u0440\u043d\u044b\u0439 \u0444\u0430\u043a\u0442\u043e\u0440\u043d\u044b\u0439 \u0430\u043d\u0430\u043b\u0438\u0437", "\u041a\u043e\u043d\u0444\u0438\u0440\u043c\u0430\u0442\u043e\u0440\u043d\u044b\u0439 \u0444\u0430\u043a\u0442\u043e\u0440\u043d\u044b\u0439 \u0430\u043d\u0430\u043b\u0438\u0437", "\u041f\u0440\u0435\u0434\u0438\u043a\u0442\u0438\u0432\u043d\u0430\u044f \u0432\u0430\u043b\u0438\u0434\u043d\u043e\u0441\u0442\u044c", "\u041c\u0430\u0440\u043a\u0435\u0442\u0438\u043d\u0433\u043e\u0432\u0430\u044f \u0434\u0438\u0430\u0433\u043d\u043e\u0441\u0442\u0438\u043a\u0430", "\u041c\u0443\u043b\u044c\u0442\u0438\u043f\u043b\u0438\u043a\u0430\u0442\u0438\u0432\u043d\u0430\u044f \u043c\u043e\u0434\u0435\u043b\u044c"],
 };
 
 const MANUSCRIPT_SECTIONS: ManuscriptSection[] = [
@@ -716,16 +716,51 @@ export default function ArticolOSFPage() {
 
           {/* Author */}
           <p style={S.author}>Dumitru Talmazan</p>
-          <p style={S.affiliation}>Talmazan School SRL, Republic of Moldova</p>
-          <p style={S.correspondence}>
-            {lang === "ro" ? "Corespondență" : lang === "en" ? "Correspondence" : "Корреспонденция"}: info.talmazan@gmail.com
+          <p style={S.affiliation}>
+            {lang === "ro" ? "Lector Universitar" : lang === "en" ? "University Lecturer" : "\u0423\u043d\u0438\u0432\u0435\u0440\u0441\u0438\u0442\u0435\u0442\u0441\u043a\u0438\u0439 \u043f\u0440\u0435\u043f\u043e\u0434\u0430\u0432\u0430\u0442\u0435\u043b\u044c"}
+          </p>
+          <p style={{ ...S.affiliation, margin: "0 0 2px", fontStyle: "italic" as const }}>
+            Universitatea Tehnic&#259; a Moldovei (UTM)
+          </p>
+          <p style={{ ...S.affiliation, margin: "0 0 6px", fontStyle: "italic" as const }}>
+            Universitatea de Stat din Moldova (USM)
+          </p>
+          <p style={{ ...S.affiliation, margin: "0 0 2px" }}>
+            {lang === "ro" ? "Fondator" : lang === "en" ? "Founder" : "\u041e\u0441\u043d\u043e\u0432\u0430\u0442\u0435\u043b\u044c"}: Talmazan School SRL, Republic of Moldova
+          </p>
+          <p style={{ ...S.affiliation, margin: "0 0 10px" }}>
+            Continuum SRL, Republic of Moldova
           </p>
 
-          {/* Keywords */}
-          <div style={S.keywordsWrap}>
-            {KEYWORDS[lang].map((kw) => (
-              <span key={kw} style={S.keywordTag}>{kw}</span>
-            ))}
+          {/* ORCID */}
+          <p style={{ fontSize: 11, color: "#6B7280", textAlign: "center" as const, margin: "0 0 4px" }}>
+            <a href="https://orcid.org/0009-0000-3832-8392" target="_blank" rel="noopener noreferrer" style={{ color: "#059669", textDecoration: "none" }}>
+              <svg width="14" height="14" viewBox="0 0 256 256" style={{ verticalAlign: "middle", marginRight: 4 }}><path fill="#A6CE39" d="M256 128c0 70.7-57.3 128-128 128S0 198.7 0 128 57.3 0 128 0s128 57.3 128 128z"/><path fill="#fff" d="M86.3 186.2H70.9V79.1h15.4v107.1zm22.2 0h15.4V130c0-16.1 8.4-24.6 21.6-24.6 13 0 18.8 8.5 18.8 24.6v56.2h15.4v-56.2c0-24.8-12.4-38.8-34.2-38.8-13.8 0-21.6 6.1-21.6 6.1V79.1h-15.4v107.1zm-22.2-120h15.4V51H86.3v15.2z"/></svg>
+              0009-0000-3832-8392
+            </a>
+          </p>
+
+          {/* Correspondence */}
+          <p style={S.correspondence}>
+            {lang === "ro" ? "Coresponden\u021b\u0103" : lang === "en" ? "Correspondence" : "\u041a\u043e\u0440\u0440\u0435\u0441\u043f\u043e\u043d\u0434\u0435\u043d\u0446\u0438\u044f"}: info.talmazan@gmail.com
+          </p>
+
+          {/* Pre-registration */}
+          <p style={{ fontSize: 11, color: "#6B7280", textAlign: "center" as const, margin: "0 0 24px", fontWeight: 500 }}>
+            Pre-registered:{" "}
+            <a href="https://osf.io/9y75d" target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "none", fontWeight: 600 }}>
+              osf.io/9y75d
+            </a>
+          </p>
+
+          {/* Keywords — APA format: semicolon-separated, italic label */}
+          <div style={{ ...S.keywordsWrap, justifyContent: "center", display: "block", textAlign: "center" as const }}>
+            <span style={{ fontStyle: "italic" as const, fontWeight: 600, fontSize: 12, color: "#374151" }}>
+              {lang === "ro" ? "Cuvinte cheie" : lang === "en" ? "Keywords" : "\u041a\u043b\u044e\u0447\u0435\u0432\u044b\u0435 \u0441\u043b\u043e\u0432\u0430"}:{" "}
+            </span>
+            <span style={{ fontSize: 12, color: "#6B7280" }}>
+              {KEYWORDS[lang].join("; ")}
+            </span>
           </div>
 
           {/* ═══ SECTIONS ═══ */}
