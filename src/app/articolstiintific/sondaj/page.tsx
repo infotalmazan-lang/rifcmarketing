@@ -5079,8 +5079,8 @@ export default function StudiuAdminPage() {
                   </div>
                 )}
 
-                {/* ── CVI Results Table ── */}
-                {cviResults?.summary && cviResults.summary.length > 0 && (
+                {/* ── CVI Results Table (only show when there are completed responses) ── */}
+                {cviResults?.summary && cviResults.summary.length > 0 && (cviResults.stats?.completed > 0 || cviResults.stats?.totalResponses > 0) && (
                   <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, marginBottom: 20 }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                       <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Rezultate CVI per Item</h3>
