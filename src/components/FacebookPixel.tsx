@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import Script from "next/script";
-import { useEffect } from "react";
 
 const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID;
 
@@ -26,6 +25,15 @@ declare global {
     fbq: (...args: any[]) => void;
     _fbq: any;
   }
+}
+
+// ── Generate unique event_id for Meta deduplication ─────
+// CRITICAL: Same event_id must be sent to BOTH browser Pixel AND server CAPI
+// so Meta can deduplicate events instead of double-counting them.
+function generateEventId(eventName: string): string {
+  const ts = Date.now();
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `${eventName}_${ts}_${rand}`;
 }
 
 /**
@@ -72,30 +80,25 @@ export default function FacebookPixel() {
   );
 }
 
-// ── Helper: fire browser-side FB events ──────────────────
-export function fbEvent(eventName: string, params?: Record<string, any>) {
+// ── Helper: fire browser-side FB event WITH eventID ─────
+// fbq('track', eventName, params, { eventID }) enables deduplication
+export function fbEvent(eventName: string, params?: Record<string, any>, eventId?: string) {
   if (typeof window !== "undefined" && window.fbq) {
-    if (params) {
-      window.fbq("track", eventName, params);
-    } else {
-      window.fbq("track", eventName);
-    }
+    const opts = eventId ? { eventID: eventId } : undefined;
+    window.fbq("track", eventName, params || {}, opts);
   }
 }
 
-// Custom events (not standard FB events)
-export function fbCustomEvent(eventName: string, params?: Record<string, any>) {
+// Custom events (not standard FB events) WITH eventID
+export function fbCustomEvent(eventName: string, params?: Record<string, any>, eventId?: string) {
   if (typeof window !== "undefined" && window.fbq) {
-    if (params) {
-      window.fbq("trackCustom", eventName, params);
-    } else {
-      window.fbq("trackCustom", eventName);
-    }
+    const opts = eventId ? { eventID: eventId } : undefined;
+    window.fbq("trackCustom", eventName, params || {}, opts);
   }
 }
 
-// ── Helper: fire event to CAPI (server-side) too ─────────
-export async function fbServerEvent(eventName: string, params?: Record<string, any>) {
+// ── Helper: fire event to CAPI (server-side) with shared event_id ──
+export async function fbServerEvent(eventName: string, params?: Record<string, any>, eventId?: string) {
   try {
     await fetch("/api/fb-event", {
       method: "POST",
@@ -103,6 +106,7 @@ export async function fbServerEvent(eventName: string, params?: Record<string, a
       body: JSON.stringify({
         eventName,
         eventSourceUrl: window.location.href,
+        eventId, // shared event_id for Meta deduplication
         ...params,
       }),
     });
@@ -111,13 +115,16 @@ export async function fbServerEvent(eventName: string, params?: Record<string, a
   }
 }
 
-// ── Combined: fire both browser + server event ───────────
+// ── Combined: fire BOTH browser + server with SAME event_id ──
+// This is the KEY fix for Meta deduplication — identical event_id on both sides
 export function fbTrack(eventName: string, params?: Record<string, any>) {
-  fbEvent(eventName, params);
-  fbServerEvent(eventName, params);
+  const eventId = generateEventId(eventName);
+  fbEvent(eventName, params, eventId);
+  fbServerEvent(eventName, params, eventId);
 }
 
 export function fbTrackCustom(eventName: string, params?: Record<string, any>) {
-  fbCustomEvent(eventName, params);
-  fbServerEvent(eventName, { ...params, customEvent: true });
+  const eventId = generateEventId(eventName);
+  fbCustomEvent(eventName, params, eventId);
+  fbServerEvent(eventName, { ...params, customEvent: true }, eventId);
 }

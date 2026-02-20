@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     const {
       eventName,
       eventSourceUrl,
+      eventId,       // shared event_id from browser for deduplication
       customEvent,
       // Optional user data for matching
       email,
@@ -70,10 +71,11 @@ export async function POST(request: Request) {
       user_data: userData,
     };
 
-    // Add custom_data if any relevant fields
+    // Add custom_data if any relevant fields (exclude internal keys)
+    const internalKeys = new Set(["customEvent", "eventId"]);
     const relevantCustom: Record<string, any> = {};
     for (const [key, val] of Object.entries(customData)) {
-      if (val !== undefined && val !== null && key !== "customEvent") {
+      if (val !== undefined && val !== null && !internalKeys.has(key)) {
         relevantCustom[key] = val;
       }
     }
@@ -81,8 +83,10 @@ export async function POST(request: Request) {
       event.custom_data = relevantCustom;
     }
 
-    // Deduplication: generate event_id that matches browser pixel
-    event.event_id = `${eventName}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Deduplication: use event_id from browser (shared between Pixel + CAPI)
+    // This is CRITICAL — Meta uses event_id to match browser + server events
+    // and count them as ONE event instead of TWO
+    event.event_id = eventId || `${eventName}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     // Send to Meta Conversions API
     const url = `https://graph.facebook.com/${FB_API_VERSION}/${FB_PIXEL_ID}/events`;
