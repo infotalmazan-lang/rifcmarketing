@@ -408,6 +408,13 @@ const ROADMAP_SCRIPT = `
   var STORAGE_KEY = "rifc-articol-access";
   var TASKS_KEY = "rifc-tasks-v4";
   var BLOCKS_KEY = "rifc-blocks-v1";
+
+  // ═══ BASE URL — iframe runs in about:blank, relative URLs don't work ═══
+  var BASE_URL = "";
+  try { BASE_URL = window.parent.location.origin; } catch(e) {
+    try { BASE_URL = window.location.origin; } catch(e2) { BASE_URL = ""; }
+  }
+  if (BASE_URL === "about:" || BASE_URL === "null" || !BASE_URL) BASE_URL = "https://rifcmarketing.vercel.app";
   var currentView = "overview";
   var activeStageId = null;
   var activeTaskIdx = null;
@@ -566,7 +573,7 @@ const ROADMAP_SCRIPT = `
       var payload = {};
       if (what === "tasks" || what === "both") payload.tasks = checkedTasks;
       if (what === "blocks" || what === "both") payload.blocks = allBlocks;
-      fetch("/api/article/progress", {
+      fetch(BASE_URL + "/api/article/progress", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -579,7 +586,7 @@ const ROADMAP_SCRIPT = `
   }
 
   function loadFromServer(callback) {
-    fetch("/api/article/progress")
+    fetch(BASE_URL + "/api/article/progress")
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) callback(data.tasks || {}, data.blocks || {});
@@ -590,7 +597,7 @@ const ROADMAP_SCRIPT = `
 
   // Load Git-tracked seed file as last-resort fallback
   function loadGitSeed(callback) {
-    fetch("/data/article-seed.json")
+    fetch(BASE_URL + "/data/article-seed.json")
       .then(function(r) { return r.json(); })
       .then(function(data) {
         var hasSeed = data && data.tasks && data.blocks &&
