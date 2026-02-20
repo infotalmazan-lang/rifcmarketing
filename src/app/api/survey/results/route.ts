@@ -454,81 +454,56 @@ export async function GET(request: Request) {
 
     // ── Completion Funnel Analysis ───────────────────────────
     // Shows how many respondents reached each step, identifying dropout points.
+    // IMPORTANT: Wizard sends NORMALIZED step values to the API:
+    //   0 = started (welcome only)
+    //   1 = demographics saved
+    //   2 = behavioral saved
+    //   3 = psychographic saved
+    //   4+ = stimulus sub-steps: step = (wizardStep - 17) + 4
+    //        Stimulus 0: steps 4-9, Stimulus 1: steps 10-15, etc.
+    //   completed_at IS SET when survey is done (separate from step_completed)
     const completionFunnel = (() => {
-      // Profile steps (fixed): 0=welcome, 1=gender, 2=age, 3=country, 4=urbanRural,
-      // 5=income, 6=education, 7=purchaseFreq, 8=channels, 9=onlineTime, 10=device,
-      // 11-16=psychographic
-      const PROFILE_STEP_COUNT = 17; // steps 0-16
       const totalStimuli = (stimuli || []).length;
-      const STEPS_PER_STIMULUS = 6; // R, I, F, C, CTA, BRAND
-      const totalSteps = PROFILE_STEP_COUNT + (totalStimuli * STEPS_PER_STIMULUS) + 1; // +1 for thank-you
+      const STIM_SUBSTEPS = 6; // R, I, F, C, CTA, BRAND
 
-      // Labels for key steps
-      const stepLabels: Record<number, string> = {
-        0: "Welcome",
-        1: "Gen",
-        2: "Varsta",
-        3: "Tara",
-        4: "Urban/Rural",
-        5: "Venit",
-        6: "Educatie",
-        7: "Frecventa cumparaturi",
-        8: "Canale preferate",
-        9: "Timp online",
-        10: "Dispozitiv",
-        11: "Psihografic 1",
-        12: "Psihografic 2",
-        13: "Psihografic 3",
-        14: "Psihografic 4",
-        15: "Psihografic 5",
-        16: "Psihografic 6",
-      };
+      // Build milestones using NORMALIZED step values (as stored in DB)
+      const milestones: { step: number; label: string }[] = [
+        { step: 0, label: "Inceput (Welcome)" },
+        { step: 1, label: "Demografie" },
+        { step: 2, label: "Comportament" },
+        { step: 3, label: "Psihografic" },
+      ];
+
+      // Each stimulus: first sub-step = 4 + (stimIdx * 6)
       for (let s = 0; s < totalStimuli; s++) {
-        const baseStep = PROFILE_STEP_COUNT + (s * STEPS_PER_STIMULUS);
-        stepLabels[baseStep] = `Stimul ${s + 1} (R)`;
+        const stimStart = 4 + (s * STIM_SUBSTEPS);
+        milestones.push({ step: stimStart, label: `Stimul ${s + 1}` });
       }
 
-      // Count respondents per step_completed
-      const stepCounts: Record<number, number> = {};
-      for (const r of respondents) {
-        const sc = r.step_completed || 0;
-        stepCounts[sc] = (stepCounts[sc] || 0) + 1;
-      }
+      // "Completed" = has completed_at set (separate check, not step-based)
+      // Use a very high step number as sentinel for completed
+      const COMPLETED_SENTINEL = 9999;
+      milestones.push({ step: COMPLETED_SENTINEL, label: "Completat" });
 
-      // Build cumulative funnel: how many reached AT LEAST step X
+      // Build cumulative funnel
       const funnelSteps: { step: number; label: string; reached: number; rate: number; dropped: number }[] = [];
 
-      // Key milestone steps (don't enumerate every sub-step)
-      const milestones = [
-        0,  // Welcome
-        1,  // Started demographics
-        7,  // Finished demographics, started behavioral
-        11, // Finished behavioral, started psychographic
-        PROFILE_STEP_COUNT, // Finished profile, started stimuli
-      ];
-      // Add every stimulus start
-      for (let s = 0; s < totalStimuli; s++) {
-        milestones.push(PROFILE_STEP_COUNT + (s * STEPS_PER_STIMULUS));
-      }
-      // Add completion
-      milestones.push(totalSteps);
+      for (let i = 0; i < milestones.length; i++) {
+        const ms = milestones[i];
+        let reached: number;
 
-      const uniqueMilestones = Array.from(new Set(milestones)).sort((a, b) => a - b);
-
-      for (const ms of uniqueMilestones) {
-        const reached = respondents.filter(r => (r.step_completed || 0) >= ms).length;
-        const prevReached = funnelSteps.length > 0 ? funnelSteps[funnelSteps.length - 1].reached : totalRespondents;
-
-        let label = stepLabels[ms] || `Pas ${ms}`;
-        if (ms === totalSteps) label = "Completat";
-        if (ms >= PROFILE_STEP_COUNT && ms < totalSteps) {
-          const stimIdx = Math.floor((ms - PROFILE_STEP_COUNT) / STEPS_PER_STIMULUS);
-          if (stimIdx < totalStimuli) label = `Stimul ${stimIdx + 1}`;
+        if (ms.step === COMPLETED_SENTINEL) {
+          // "Completed" means completed_at is set
+          reached = respondents.filter(r => r.completed_at != null).length;
+        } else {
+          reached = respondents.filter(r => (r.step_completed || 0) >= ms.step).length;
         }
 
+        const prevReached = i > 0 ? funnelSteps[i - 1].reached : totalRespondents;
+
         funnelSteps.push({
-          step: ms,
-          label,
+          step: ms.step,
+          label: ms.label,
           reached,
           rate: totalRespondents > 0 ? Math.round((reached / totalRespondents) * 100) : 0,
           dropped: prevReached - reached,
