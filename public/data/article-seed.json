@@ -1,0 +1,10 @@
+{
+  "_meta": {
+    "description": "RIFC Article Seed Data — Git-tracked backup fallback. This file is loaded when both Supabase and localStorage are empty. To update: use the SALVARE button in the app, then copy the downloaded JSON content here.",
+    "version": "v4",
+    "lastUpdated": "2026-02-21",
+    "source": "seed"
+  },
+  "tasks": {},
+  "blocks": {}
+}

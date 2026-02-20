@@ -74,6 +74,14 @@ const ROADMAP_HTML = `<!DOCTYPE html>
   .sb-btn.active { box-shadow: inset 0 0 0 2px rgba(255,255,255,0.3); }
   .sb-btn.green { background: var(--green); }
   .sb-btn.red { background: var(--red); }
+  .sb-btn.blue { background: var(--blue); }
+  .sb-btn.amber { background: var(--amber); }
+  .sb-backup-row { display: flex; gap: 5px; }
+  .sb-backup-row .sb-btn { flex: 1; font-size: 10px; padding: 7px 8px; }
+  .sb-backup-row .sb-btn svg { width: 14px; height: 14px; }
+  .sb-sync-status { font-size: 9px; color: var(--text3); text-align: center; padding: 0 14px 4px; font-family: 'JetBrains Mono', monospace; }
+  .sb-sync-status.ok { color: var(--green); }
+  .sb-sync-status.err { color: var(--red); }
   .sb-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
 
   .sb-nav { padding: 10px 0; flex: 1; }
@@ -358,6 +366,17 @@ const ROADMAP_HTML = `<!DOCTYPE html>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
         SONDAJ ADMIN
       </button>
+      <div class="sb-backup-row">
+        <button class="sb-btn blue" onclick="exportBackup()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          SALVARE
+        </button>
+        <button class="sb-btn amber" onclick="importBackup()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          RESTAURARE
+        </button>
+      </div>
+      <div class="sb-sync-status" id="sync-status"></div>
     </div>
     <div class="sb-nav" id="stages-nav"></div>
   </div>
@@ -530,6 +549,15 @@ const ROADMAP_SCRIPT = `
   function saveTasks() { try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(e) {} syncToServer("tasks"); }
   function saveBlocks() { try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(e) {} syncToServer("blocks"); }
 
+  // ═══ SYNC STATUS ═══
+  function showSyncStatus(msg, type) {
+    var el = document.getElementById("sync-status");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = "sb-sync-status" + (type === "ok" ? " ok" : type === "err" ? " err" : "");
+    if (type) setTimeout(function() { el.textContent = ""; el.className = "sb-sync-status"; }, 4000);
+  }
+
   // ═══ SUPABASE SYNC ═══
   var _syncDebounce = null;
   function syncToServer(what) {
@@ -543,7 +571,10 @@ const ROADMAP_SCRIPT = `
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       }).then(function(r) { return r.json(); })
-        .catch(function() { /* sync failed silently */ });
+        .then(function(result) {
+          if (result.success) showSyncStatus("Sincronizat", "ok");
+        })
+        .catch(function() { showSyncStatus("Sync offline", "err"); });
     }, 500);
   }
 
@@ -557,26 +588,69 @@ const ROADMAP_SCRIPT = `
       .catch(function() { callback(null, null); });
   }
 
+  // Load Git-tracked seed file as last-resort fallback
+  function loadGitSeed(callback) {
+    fetch("/data/article-seed.json")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var hasSeed = data && data.tasks && data.blocks &&
+          (Object.keys(data.tasks).length > 0 || Object.keys(data.blocks).length > 0);
+        if (hasSeed) callback(data.tasks, data.blocks);
+        else callback(null, null);
+      })
+      .catch(function() { callback(null, null); });
+  }
+
+  function applyData(tasks, blocks, source) {
+    checkedTasks = tasks;
+    allBlocks = blocks;
+    try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(e) {}
+    try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(e) {}
+    if (source !== "server") syncToServer("both");
+  }
+
+  function refreshUI() {
+    renderNav();
+    if (currentView === "stage" && activeStageId) renderStageView(activeStageId);
+    if (currentView === "task" && activeStageId !== null && activeTaskIdx !== null) renderTaskView(activeStageId, activeTaskIdx);
+  }
+
   function initFromServer() {
+    // Priority chain: 1. Supabase → 2. localStorage → 3. Git seed → 4. code seed
     loadFromServer(function(serverTasks, serverBlocks) {
-      if (serverTasks === null && serverBlocks === null) {
-        seedBlocksIfNeeded();
+      // Case 1: Supabase has data → use it (source of truth)
+      if (serverTasks !== null && serverBlocks !== null) {
+        var hasServerData = (Object.keys(serverTasks).length > 0 || Object.keys(serverBlocks).length > 0);
+        if (hasServerData) {
+          applyData(serverTasks, serverBlocks, "server");
+          refreshUI();
+          return;
+        }
+      }
+
+      // Case 2: Supabase empty/error — check if localStorage has data
+      var hasLocalTasks = Object.keys(checkedTasks).length > 0;
+      var hasLocalBlocks = Object.keys(allBlocks).length > 0;
+      if (hasLocalTasks || hasLocalBlocks) {
+        // Push local data to server for backup
         syncToServer("both");
+        refreshUI();
         return;
       }
-      var hasServerData = (Object.keys(serverTasks).length > 0 || Object.keys(serverBlocks).length > 0);
-      if (hasServerData) {
-        checkedTasks = serverTasks;
-        allBlocks = serverBlocks;
-        try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(e) {}
-        try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(e) {}
-      } else {
+
+      // Case 3: Both empty — try Git-tracked seed file
+      loadGitSeed(function(seedTasks, seedBlocks) {
+        if (seedTasks !== null && seedBlocks !== null) {
+          applyData(seedTasks, seedBlocks, "git-seed");
+          refreshUI();
+          return;
+        }
+
+        // Case 4: All empty — use code-embedded seed
         seedBlocksIfNeeded();
         syncToServer("both");
-      }
-      renderNav();
-      if (currentView === "stage" && activeStageId) renderStageView(activeStageId);
-      if (currentView === "task" && activeStageId !== null && activeTaskIdx !== null) renderTaskView(activeStageId, activeTaskIdx);
+        refreshUI();
+      });
     });
   }
 
@@ -746,6 +820,84 @@ const ROADMAP_SCRIPT = `
 
   // Run seed on load
   seedBlocksIfNeeded();
+
+  // ═══ EXPORT / IMPORT BACKUP ═══
+  window.exportBackup = function() {
+    try {
+      var exportData = {
+        _meta: {
+          exportedAt: new Date().toISOString(),
+          version: "v4",
+          source: "browser",
+          description: "RIFC Articol Stiintific — tasks & blocks backup"
+        },
+        tasks: checkedTasks,
+        blocks: allBlocks
+      };
+      var json = JSON.stringify(exportData, null, 2);
+      var blob = new Blob([json], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "rifc-article-backup-" + new Date().toISOString().slice(0,10) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showSyncStatus("Backup descărcat", "ok");
+    } catch(err) {
+      showSyncStatus("Eroare export", "err");
+    }
+  };
+
+  window.importBackup = function() {
+    var input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.style.display = "none";
+    input.addEventListener("change", function(e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          var data = JSON.parse(ev.target.result);
+          if (!data.tasks && !data.blocks) {
+            showSyncStatus("Fișier invalid", "err");
+            return;
+          }
+          // Confirm before overwrite
+          var taskCount = data.tasks ? Object.keys(data.tasks).length : 0;
+          var blockCount = data.blocks ? Object.keys(data.blocks).length : 0;
+          var msg = "Restaurare din backup?\\n\\nTask-uri: " + taskCount + "\\nBlocuri: " + blockCount;
+          if (data._meta && data._meta.exportedAt) msg += "\\nData backup: " + data._meta.exportedAt.slice(0,16).replace("T", " ");
+          if (!confirm(msg)) return;
+
+          if (data.tasks) {
+            checkedTasks = data.tasks;
+            try { localStorage.setItem(TASKS_KEY, JSON.stringify(checkedTasks)); } catch(err2) {}
+          }
+          if (data.blocks) {
+            allBlocks = data.blocks;
+            try { localStorage.setItem(BLOCKS_KEY, JSON.stringify(allBlocks)); } catch(err3) {}
+          }
+          // Sync to Supabase
+          syncToServer("both");
+          // Re-render UI
+          renderNav();
+          if (currentView === "stage" && activeStageId) renderStageView(activeStageId);
+          if (currentView === "task" && activeStageId !== null && activeTaskIdx !== null) renderTaskView(activeStageId, activeTaskIdx);
+          showSyncStatus("Restaurat cu succes", "ok");
+        } catch(parseErr) {
+          showSyncStatus("Eroare citire JSON", "err");
+        }
+      };
+      reader.readAsText(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+    document.body.removeChild(input);
+  };
 
   // ═══ RENDER SIDEBAR NAV ═══
   function renderNav() {
