@@ -615,25 +615,44 @@ const ROADMAP_SCRIPT = `
     if (currentView === "task" && activeStageId !== null && activeTaskIdx !== null) renderTaskView(activeStageId, activeTaskIdx);
   }
 
+  // Compare which dataset is more complete (more tasks checked + more blocks)
+  function dataScore(tasks, blocks) {
+    var tCount = 0; for (var k in tasks) { if (tasks[k]) tCount++; }
+    var bCount = 0; for (var k2 in blocks) { if (blocks[k2] && blocks[k2].length) bCount += blocks[k2].length; }
+    return tCount + bCount;
+  }
+
   function initFromServer() {
-    // Priority chain: 1. Supabase → 2. localStorage → 3. Git seed → 4. code seed
+    // Smart sync: compare server vs local, keep the MORE COMPLETE dataset
     loadFromServer(function(serverTasks, serverBlocks) {
-      // Case 1: Supabase has data → use it (source of truth)
+      var hasLocalTasks = Object.keys(checkedTasks).length > 0;
+      var hasLocalBlocks = Object.keys(allBlocks).length > 0;
+      var hasLocal = hasLocalTasks || hasLocalBlocks;
+
+      // Case 1: Server has data
       if (serverTasks !== null && serverBlocks !== null) {
         var hasServerData = (Object.keys(serverTasks).length > 0 || Object.keys(serverBlocks).length > 0);
         if (hasServerData) {
-          applyData(serverTasks, serverBlocks, "server");
+          // SMART: compare which is more complete
+          var localScore = dataScore(checkedTasks, allBlocks);
+          var serverScore = dataScore(serverTasks, serverBlocks);
+          if (localScore > serverScore && hasLocal) {
+            // Local has MORE data than server → push local to server
+            syncToServer("both");
+            showSyncStatus("Local > server, sincronizat", "ok");
+          } else {
+            // Server has more or equal data → use server
+            applyData(serverTasks, serverBlocks, "server");
+          }
           refreshUI();
           return;
         }
       }
 
-      // Case 2: Supabase empty/error — check if localStorage has data
-      var hasLocalTasks = Object.keys(checkedTasks).length > 0;
-      var hasLocalBlocks = Object.keys(allBlocks).length > 0;
-      if (hasLocalTasks || hasLocalBlocks) {
-        // Push local data to server for backup
+      // Case 2: Server empty/error but local has data → push to server
+      if (hasLocal) {
         syncToServer("both");
+        showSyncStatus("Trimis pe server", "ok");
         refreshUI();
         return;
       }
