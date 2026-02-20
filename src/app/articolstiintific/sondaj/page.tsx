@@ -148,7 +148,7 @@ interface Distribution {
   created_at: string;
 }
 
-type TabKey = "cartonase" | "rezultate" | "distributie" | "experti" | "ai" | "preview" | "log";
+type TabKey = "cartonase" | "rezultate" | "distributie" | "experti" | "ai" | "preview" | "log" | "cvi";
 
 const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "cartonase", label: "Cartonase", icon: LayoutGrid },
@@ -157,6 +157,7 @@ const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = 
 ];
 const TABS_RIGHT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "preview", label: "Preview", icon: PlayCircle },
+  { key: "cvi", label: "Evaluare Itemi", icon: Target },
   { key: "experti", label: "Experti", icon: UserCheck },
   { key: "ai", label: "AI Benchmark", icon: Bot },
   { key: "log", label: "Log", icon: ClipboardList },
@@ -761,6 +762,16 @@ export default function StudiuAdminPage() {
   const [editingExpertId, setEditingExpertId] = useState<string | null>(null);
   const [expandedExpertChannelType, setExpandedExpertChannelType] = useState<string | null>(null);
 
+  // CVI (Evaluare Itemi) state
+  const [cviExperts, setCviExperts] = useState<any[]>([]);
+  const [cviResults, setCviResults] = useState<any>(null);
+  const [cviLoading, setCviLoading] = useState(false);
+  const [cviGenerating, setCviGenerating] = useState(false);
+  const [cviGenCount, setCviGenCount] = useState(10);
+  const [cviCopied, setCviCopied] = useState<string | null>(null);
+  const [cviExportingCsv, setCviExportingCsv] = useState(false);
+  const [cviExportingJson, setCviExportingJson] = useState(false);
+
   // AI benchmark state
   const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
@@ -993,6 +1004,26 @@ export default function StudiuAdminPage() {
   useEffect(() => {
     if (activeTab === "log") fetchLog();
   }, [activeTab, fetchLog]);
+
+  // CVI data fetching
+  const fetchCviData = useCallback(async () => {
+    setCviLoading(true);
+    try {
+      const [expRes, resRes] = await Promise.all([
+        fetch("/api/cvi/generate-tokens"),
+        fetch("/api/cvi/results"),
+      ]);
+      const expData = await expRes.json();
+      const resData = await resRes.json();
+      if (expData.experts) setCviExperts(expData.experts);
+      setCviResults(resData);
+    } catch { /* ignore */ }
+    setCviLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "cvi") fetchCviData();
+  }, [activeTab, fetchCviData]);
 
   const defaultExpertForm = { first_name: "", last_name: "", email: "", phone: "", photo_url: "", experience_years: "", brands_worked: [] as string[], total_budget_managed: "", marketing_roles: [] as string[] };
 
@@ -4440,6 +4471,296 @@ export default function StudiuAdminPage() {
                 title="Preview Sondaj"
               />
             </div>
+          </div>
+        )}
+
+        {/* ═══ CVI (EVALUARE ITEMI) TAB ═══ */}
+        {activeTab === "cvi" && (
+          <div style={{ width: "100%" }}>
+            {cviLoading && !cviResults ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#6B7280" }}>
+                <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
+                <p style={{ marginTop: 8 }}>Se încarcă datele CVI...</p>
+              </div>
+            ) : (
+              <>
+                {/* ── Stats Panel ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                  {[
+                    { label: "Invitați", value: cviResults?.stats?.totalExperts || 0, color: "#6366F1" },
+                    { label: "Completat", value: cviResults?.stats?.completed || 0, color: "#22C55E" },
+                    { label: "Pending", value: cviResults?.stats?.pending || 0, color: "#F59E0B" },
+                    { label: "Fleiss κ", value: cviResults?.fleissKappa !== undefined ? cviResults.fleissKappa.toFixed(3) : "—", color: "#8B5CF6" },
+                  ].map((s, i) => (
+                    <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px", textAlign: "center" }}>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: 12, color: "#6B7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── Generate Links Section ── */}
+                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                      <Link size={16} /> Generare Linkuri Unice
+                    </h3>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        type="number" min={1} max={50} value={cviGenCount}
+                        onChange={e => setCviGenCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
+                        style={{ width: 60, padding: "6px 10px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, textAlign: "center" }}
+                      />
+                      <button
+                        onClick={async () => {
+                          setCviGenerating(true);
+                          try {
+                            await fetch("/api/cvi/generate-tokens", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ count: cviGenCount, invited_by: "talmazan" }),
+                            });
+                            fetchCviData();
+                          } catch { /* ignore */ }
+                          setCviGenerating(false);
+                        }}
+                        disabled={cviGenerating}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 6,
+                          padding: "8px 16px", borderRadius: 8, border: "none",
+                          background: "#1C1917", color: "#fff", fontSize: 13, fontWeight: 600,
+                          cursor: cviGenerating ? "wait" : "pointer", opacity: cviGenerating ? 0.6 : 1,
+                        }}
+                      >
+                        <Plus size={14} /> {cviGenerating ? "Se generează..." : `Generează ${cviGenCount} linkuri`}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Expert tokens table */}
+                  {cviExperts.length > 0 && (
+                    <div style={{ maxHeight: 300, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ background: "#f9fafb", position: "sticky", top: 0 }}>
+                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>#</th>
+                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Token</th>
+                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Status</th>
+                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Expert</th>
+                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Data</th>
+                            <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Acțiuni</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {cviExperts.map((exp: any, idx: number) => (
+                            <tr key={exp.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                              <td style={{ padding: "8px 12px", color: "#9CA3AF" }}>{idx + 1}</td>
+                              <td style={{ padding: "8px 12px", fontFamily: "monospace", fontSize: 11 }}>{exp.token?.slice(0, 8)}...</td>
+                              <td style={{ padding: "8px 12px" }}>
+                                <span style={{
+                                  display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+                                  background: exp.status === "completed" ? "#DCFCE7" : exp.status === "revoked" ? "#FEE2E2" : "#FEF3C7",
+                                  color: exp.status === "completed" ? "#16A34A" : exp.status === "revoked" ? "#DC2626" : "#D97706",
+                                }}>
+                                  {exp.status === "completed" ? "Completat" : exp.status === "revoked" ? "Revocat" : "Pending"}
+                                </span>
+                              </td>
+                              <td style={{ padding: "8px 12px" }}>{exp.name || "—"}</td>
+                              <td style={{ padding: "8px 12px", fontSize: 11, color: "#9CA3AF" }}>
+                                {exp.completed_at ? new Date(exp.completed_at).toLocaleDateString("ro-RO") : "—"}
+                              </td>
+                              <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                                <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(`https://rifcmarketing.com/articolstiintific/cvi?token=${exp.token}`);
+                                      setCviCopied(exp.id);
+                                      setTimeout(() => setCviCopied(null), 2000);
+                                    }}
+                                    title="Copiază link"
+                                    style={{ padding: "4px 8px", border: "1px solid #e5e7eb", borderRadius: 6, background: cviCopied === exp.id ? "#DCFCE7" : "#fff", cursor: "pointer", fontSize: 11 }}
+                                  >
+                                    {cviCopied === exp.id ? <Check size={12} /> : <Copy size={12} />}
+                                  </button>
+                                  <button
+                                    onClick={() => window.open(`/articolstiintific/cvi?token=${exp.token}`, "_blank")}
+                                    title="Deschide"
+                                    style={{ padding: "4px 8px", border: "1px solid #e5e7eb", borderRadius: 6, background: "#fff", cursor: "pointer", fontSize: 11 }}
+                                  >
+                                    <ExternalLink size={12} />
+                                  </button>
+                                  {exp.status === "pending" && (
+                                    <button
+                                      onClick={async () => {
+                                        await fetch(`/api/cvi/generate-tokens?token=${exp.token}`, { method: "DELETE" });
+                                        fetchCviData();
+                                      }}
+                                      title="Revocă"
+                                      style={{ padding: "4px 8px", border: "1px solid #FEE2E2", borderRadius: 6, background: "#FEF2F2", cursor: "pointer", fontSize: 11, color: "#DC2626" }}
+                                    >
+                                      <ShieldOff size={12} />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── CVI Results Table ── */}
+                {cviResults?.summary && cviResults.summary.length > 0 && (
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Rezultate CVI per Item</h3>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {/* Export CSV */}
+                        <button
+                          onClick={() => {
+                            setCviExportingCsv(true);
+                            try {
+                              const header = "Item,Label,Construct,N,CVI,Status\n";
+                              const rows = (cviResults.summary || []).map((s: any) =>
+                                `${s.item_id},"${s.item_label}",${s.construct},${s.n_total},${s.cvi_score},${s.status}`
+                              ).join("\n");
+                              const blob = new Blob([header + rows], { type: "text/csv" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url; a.download = `rifc-cvi-results-${new Date().toISOString().slice(0,10)}.csv`;
+                              a.click(); URL.revokeObjectURL(url);
+                            } catch { /* ignore */ }
+                            setCviExportingCsv(false);
+                          }}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 12px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                        >
+                          <FileText size={12} /> Export CSV
+                        </button>
+                        {/* Export JSON */}
+                        <button
+                          onClick={() => {
+                            setCviExportingJson(true);
+                            try {
+                              const exportObj = {
+                                generated: new Date().toISOString(),
+                                protocol: "RIFC Marketing Protocol",
+                                author: "Dumitru Talmazan, 2026",
+                                osf: "osf.io/9y75d",
+                                stats: cviResults.stats,
+                                fleissKappa: cviResults.fleissKappa,
+                                dimensionCvi: cviResults.dimensionCvi,
+                                itemSummary: cviResults.summary,
+                                anonymizedData: cviResults.exportData,
+                              };
+                              const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url; a.download = `rifc-cvi-osf-${new Date().toISOString().slice(0,10)}.json`;
+                              a.click(); URL.revokeObjectURL(url);
+                            } catch { /* ignore */ }
+                            setCviExportingJson(false);
+                          }}
+                          style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "6px 12px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                        >
+                          <FileText size={12} /> Export JSON (OSF)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Dimension CVI summary */}
+                    {cviResults.dimensionCvi && (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+                        {[
+                          { d: "R", label: "Relevanță", color: "#DC2626", bg: "#FEF2F2" },
+                          { d: "I", label: "Interes", color: "#2563EB", bg: "#EFF6FF" },
+                          { d: "F", label: "Formă", color: "#059669", bg: "#ECFDF5" },
+                          { d: "C", label: "Claritate", color: "#D97706", bg: "#FFFBEB" },
+                        ].map(({ d, label, color, bg }) => (
+                          <div key={d} style={{ padding: 14, borderRadius: 10, textAlign: "center", background: bg, color }}>
+                            <strong style={{ display: "block", fontSize: 24, fontWeight: 800 }}>
+                              {cviResults.dimensionCvi[d]?.toFixed(2) || "—"}
+                            </strong>
+                            <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>CVI {label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Items table */}
+                    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ background: "#f9fafb" }}>
+                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Item</th>
+                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Sub-factor</th>
+                            <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Construct</th>
+                            <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>N</th>
+                            <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>CVI</th>
+                            <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(cviResults.summary || []).map((item: any) => {
+                            const dimColor = item.construct === "R" ? "#DC2626" : item.construct === "I" ? "#2563EB" : item.construct === "F" ? "#059669" : "#D97706";
+                            const statusBg = item.status === "PASS" ? "#DCFCE7" : item.status === "REVISE" ? "#FEF3C7" : item.status === "REJECT" ? "#FEE2E2" : "#F3F4F6";
+                            const statusColor = item.status === "PASS" ? "#16A34A" : item.status === "REVISE" ? "#D97706" : item.status === "REJECT" ? "#DC2626" : "#9CA3AF";
+                            return (
+                              <tr key={item.item_id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                <td style={{ padding: "8px 12px" }}>
+                                  <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 6px", borderRadius: 4, color: dimColor, background: `${dimColor}10` }}>
+                                    {item.item_id}
+                                  </span>
+                                </td>
+                                <td style={{ padding: "8px 12px", color: "#374151" }}>{item.item_label}</td>
+                                <td style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700, color: dimColor }}>{item.construct}</td>
+                                <td style={{ padding: "8px 12px", textAlign: "center", color: "#6B7280" }}>{item.n_total}</td>
+                                <td style={{ padding: "8px 12px", textAlign: "center", fontWeight: 700 }}>
+                                  {item.cvi_score > 0 ? item.cvi_score.toFixed(2) : "—"}
+                                </td>
+                                <td style={{ padding: "8px 12px", textAlign: "center" }}>
+                                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 10, fontWeight: 700, background: statusBg, color: statusColor, textTransform: "uppercase" }}>
+                                    {item.status}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Completed Experts List ── */}
+                {cviResults?.experts && cviResults.experts.filter((e: any) => e.status === "completed").length > 0 && (
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 20 }}>
+                    <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+                      <UserCheck size={16} /> Experți care au completat ({cviResults.experts.filter((e: any) => e.status === "completed").length})
+                    </h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
+                      {cviResults.experts.filter((e: any) => e.status === "completed").map((exp: any) => (
+                        <div key={exp.id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{
+                            width: 36, height: 36, borderRadius: "50%",
+                            background: "linear-gradient(135deg, #667eea, #764ba2)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 14, fontWeight: 700, color: "white", flexShrink: 0,
+                          }}>
+                            {exp.name?.charAt(0)?.toUpperCase() || "?"}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 600 }}>{exp.name || "Anonim"}</div>
+                            <div style={{ fontSize: 11, color: "#6B7280" }}>{exp.role || "—"} · {exp.experience || "—"}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
 
