@@ -3,10 +3,11 @@
 import { useRef, useEffect } from "react";
 
 // ============================================================
-// R IF C — Articol Științific v6 — content blocks system
+// R IF C — Articol Științific v7 — content blocks system
 // 11 etape, 49 sarcini — each task has addable content blocks
 // 9 block types: text-short, text-long, link, file, table,
 //                dropdown, number, date, code
+// Trilingual: RO / EN / RU on all text block types
 // Access code: RIFC2026
 // ============================================================
 
