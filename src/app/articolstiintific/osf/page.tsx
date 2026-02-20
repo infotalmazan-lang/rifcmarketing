@@ -223,6 +223,7 @@ function getTextContent(block: Block, lang: Lang): string {
       if (lv && lv.category) return lv.category + ": " + (lv.value || "");
       return "";
     case "link":
+      if (typeof lv === "object" && lv !== null) return (lv.name || "") + " " + (lv.url || "");
       return typeof lv === "string" ? lv : "";
     default:
       return typeof lv === "string" ? lv : "";
@@ -533,11 +534,24 @@ export default function ArticolOSFPage() {
             break;
           }
           case "link": {
-            const url = typeof lv === "string" ? lv.trim() : "";
-            if (url && section.isReferences) {
+            let linkName = "";
+            let linkUrl = "";
+            if (typeof lv === "object" && lv !== null) {
+              linkName = (lv.name || "").trim();
+              linkUrl = (lv.url || "").trim();
+            } else if (typeof lv === "string") {
+              linkUrl = lv.trim();
+            }
+            if (linkUrl && section.isReferences) {
               elements.push(
                 <p key={block.id} style={S.linkRef}>
-                  [{elements.length + 1}] <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "none" }}>{url}</a>
+                  [{elements.length + 1}] {linkName ? <>{linkName} — </> : null}<a href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "none" }}>{linkUrl}</a>
+                </p>
+              );
+            } else if (linkUrl) {
+              elements.push(
+                <p key={block.id} style={{ ...S.bodyText, fontSize: 13, color: "#2563EB" }}>
+                  {linkName ? <strong>{linkName}: </strong> : null}<a href={linkUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#2563EB", textDecoration: "none" }}>{linkUrl}</a>
                 </p>
               );
             }

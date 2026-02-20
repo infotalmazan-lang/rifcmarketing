@@ -523,7 +523,7 @@ const ROADMAP_SCRIPT = `
   function makeTriVal(type) {
     if (type === "text-short") return { ro: "", en: "", ru: "" };
     if (type === "text-long") return { ro: "", en: "", ru: "" };
-    if (type === "link") return { ro: "", en: "", ru: "" };
+    if (type === "link") return { ro: { name: "", url: "" }, en: { name: "", url: "" }, ru: { name: "", url: "" } };
     if (type === "code") return { ro: { lang: "json", code: "" }, en: { lang: "json", code: "" }, ru: { lang: "json", code: "" } };
     if (type === "table") return { ro: { cols: ["Coloana 1","Coloana 2"], rows: [["",""]] }, en: { cols: ["Column 1","Column 2"], rows: [["",""]] }, ru: { cols: ["Колонка 1","Колонка 2"], rows: [["",""]] } };
     if (type === "number") return { ro: { label: "", value: 0 }, en: { label: "", value: 0 }, ru: { label: "", value: 0 } };
@@ -567,7 +567,7 @@ const ROADMAP_SCRIPT = `
 
   // ═══ SEED PRE-POPULATED BLOCKS ═══
   function seedBlocksIfNeeded() {
-    var SEED_KEY = "rifc-blocks-seeded-v4";
+    var SEED_KEY = "rifc-blocks-seeded-v5";
     try { if (localStorage.getItem(SEED_KEY)) return; } catch(e) { return; }
 
     // Clear old seeds on version bump
@@ -577,7 +577,7 @@ const ROADMAP_SCRIPT = `
     var k0 = "s2-0";
     allBlocks[k0] = [
       { id: genId(), type: "text-short", value: { ro: "RIFC Scoring Rubric — 35 Itemi Likert (Scala 1-5)", en: "RIFC Scoring Rubric — 35 Likert Items (Scale 1-5)", ru: "RIFC Scoring Rubric — 35 шкал Лайкерта (Шкала 1-5)" } },
-      { id: genId(), type: "link", value: { ro: "https://osf.io", en: "https://osf.io", ru: "https://osf.io" } },
+      { id: genId(), type: "link", value: { ro: { name: "OSF Repository", url: "https://osf.io" }, en: { name: "OSF Repository", url: "https://osf.io" }, ru: { name: "Репозиторий OSF", url: "https://osf.io" } } },
       { id: genId(), type: "text-long", value: {
         ro: "DIMENSIUNEA R — RELEVANȚĂ (7 itemi, max 35)\\nR1. Mesajul se adresează unei nevoi reale a publicului-țintă.\\nR2. Conținutul este relevant pentru contextul actual al pieței.\\nR3. Problema identificată în mesaj rezonează cu audiența.\\nR4. Mesajul oferă o soluție pertinentă la o problemă reală.\\nR5. Publicul-țintă se poate identifica cu situația descrisă.\\nR6. Informația prezentată este utilă pentru decizia de cumpărare.\\nR7. Mesajul răspunde la întrebări pe care publicul și le pune efectiv.\\n\\nDIMENSIUNEA I — IMPACT (10 itemi, max 50)\\nI1. Mesajul captează atenția în primele 3 secunde.\\nI2. Elementele vizuale susțin și amplifică mesajul verbal.\\nI3. Există un element de surpriză sau diferențiere clară.\\nI4. Tonul emoțional este adecvat și consistent.\\nI5. Mesajul creează o conexiune emoțională cu audiența.\\nI6. Call-to-action-ul este clar, vizibil și motivant.\\nI7. Mesajul se diferențiază clar de comunicarea competitorilor.\\nI8. Intensitatea emoțională este suficientă fără a fi excesivă.\\nI9. Structura narativă menține interesul de la început la final.\\nI10. Mesajul generează dorința de a afla mai mult sau de a acționa.\\n\\nDIMENSIUNEA F — FRECVENȚĂ (11 itemi, max 55)\\nF1. Mesajul este adaptat specificului canalului de distribuție.\\nF2. Frecvența de expunere este suficientă pentru memorare.\\nF3. Există variații ale mesajului pentru diferite puncte de contact.\\nF4. Momentul difuzării este ales strategic.\\nF5. Mesajul este optimizat pentru formatul platformei.\\nF6. Există continuitate narativă între expuneri succesive.\\nF7. Frecvența nu generează oboseală publicitară.\\nF8. Mesajul funcționează atât la prima vizionare cât și la vizionări repetate.\\nF9. Distribuția acoperă punctele de contact relevante.\\nF10. Planificarea media maximizează reach-ul în cadrul bugetului.\\nF11. Secvențialitatea mesajelor urmează o logică de funnel.\\n\\nDIMENSIUNEA C — CONVERSIE (7 itemi, max 35)\\nC1. Mesajul conduce natural spre acțiunea dorită.\\nC2. Beneficiile sunt prezentate clar și convingător.\\nC3. Există dovezi sociale sau de credibilitate.\\nC4. Oferta este percepută ca valoroasă raportat la preț.\\nC5. Procesul de conversie este simplu și fără fricțiuni.\\nC6. Mesajul creează un sentiment de urgență legitimă.\\nC7. Există mecanisme de follow-up post-expunere.",
         en: "DIMENSION R — RELEVANCE (7 items, max 35)\\nR1. The message addresses a real need of the target audience.\\nR2. The content is relevant to the current market context.\\nR3. The problem identified in the message resonates with the audience.\\nR4. The message offers a pertinent solution to a real problem.\\nR5. The target audience can identify with the described situation.\\nR6. The information presented is useful for the purchasing decision.\\nR7. The message answers questions the audience actually asks.\\n\\nDIMENSION I — IMPACT (10 items, max 50)\\nI1. The message captures attention within the first 3 seconds.\\nI2. Visual elements support and amplify the verbal message.\\nI3. There is an element of surprise or clear differentiation.\\nI4. The emotional tone is appropriate and consistent.\\nI5. The message creates an emotional connection with the audience.\\nI6. The call-to-action is clear, visible, and motivating.\\nI7. The message clearly differentiates from competitor communication.\\nI8. Emotional intensity is sufficient without being excessive.\\nI9. The narrative structure maintains interest from start to finish.\\nI10. The message generates desire to learn more or take action.\\n\\nDIMENSION F — FREQUENCY (11 items, max 55)\\nF1. The message is adapted to the specifics of the distribution channel.\\nF2. Exposure frequency is sufficient for memorization.\\nF3. There are message variations for different touchpoints.\\nF4. The timing of broadcast is strategically chosen.\\nF5. The message is optimized for the platform format.\\nF6. There is narrative continuity between successive exposures.\\nF7. Frequency does not generate advertising fatigue.\\nF8. The message works both on first viewing and on repeated viewings.\\nF9. Distribution covers relevant touchpoints.\\nF10. Media planning maximizes reach within the budget.\\nF11. Message sequencing follows a funnel logic.\\n\\nDIMENSION C — CONVERSION (7 items, max 35)\\nC1. The message naturally leads to the desired action.\\nC2. Benefits are presented clearly and convincingly.\\nC3. There is social proof or credibility evidence.\\nC4. The offer is perceived as valuable relative to price.\\nC5. The conversion process is simple and frictionless.\\nC6. The message creates a sense of legitimate urgency.\\nC7. There are post-exposure follow-up mechanisms.",
@@ -601,7 +601,7 @@ const ROADMAP_SCRIPT = `
     }, null, 2);
     allBlocks[k2] = [
       { id: genId(), type: "text-short", value: { ro: "Scoring Rubric R IF C — Ancore 1/3/5", en: "RIFC Scoring Rubric — Anchors 1/3/5", ru: "Scoring Rubric R IF C — Якоря 1/3/5" } },
-      { id: genId(), type: "link", value: { ro: "https://osf.io", en: "https://osf.io", ru: "https://osf.io" } },
+      { id: genId(), type: "link", value: { ro: { name: "OSF Repository", url: "https://osf.io" }, en: { name: "OSF Repository", url: "https://osf.io" }, ru: { name: "Репозиторий OSF", url: "https://osf.io" } } },
       { id: genId(), type: "code", value: { ro: { lang: "json", code: rubricJson }, en: { lang: "json", code: rubricJson }, ru: { lang: "json", code: rubricJson } } },
       { id: genId(), type: "table", value: {
         ro: { cols: ["Dimensiune", "Itemi", "Scor Max", "Formula"], rows: [
@@ -633,7 +633,7 @@ const ROADMAP_SCRIPT = `
     allBlocks[k7] = [
       { id: genId(), type: "text-short", value: { ro: "Traducere & Validare Trilingvă", en: "Translation & Trilingual Validation", ru: "Перевод и трёхъязычная валидация" } },
       { id: genId(), type: "dropdown", value: { category: "Status", value: "Finalizat" } },
-      { id: genId(), type: "link", value: { ro: "https://osf.io", en: "https://osf.io", ru: "https://osf.io" } },
+      { id: genId(), type: "link", value: { ro: { name: "OSF Repository", url: "https://osf.io" }, en: { name: "OSF Repository", url: "https://osf.io" }, ru: { name: "Репозиторий OSF", url: "https://osf.io" } } },
       { id: genId(), type: "text-long", value: {
         ro: "Documentul RIFC Scoring Rubric conține traducerea completă a tuturor celor 35 de itemi Likert în cele trei limbi.\\n\\n• ROMÂNĂ (RO) — limba principală, itemii originali\\n• ENGLEZĂ (EN) — traducere academică pentru publicare internațională\\n• RUSĂ (RU) — traducere pentru piața din Republica Moldova\\n\\nMetoda: back-translation cu verificare de către vorbitori nativi.\\n\\nAncore: 1 = Total dezacord · 3 = Neutru · 5 = Total acord",
         en: "The RIFC Scoring Rubric document contains the complete translation of all 35 Likert items in three languages.\\n\\n• ROMANIAN (RO) — primary language, original items\\n• ENGLISH (EN) — academic translation for international publication\\n• RUSSIAN (RU) — translation for the Republic of Moldova market\\n\\nMethod: back-translation with native speaker verification.\\n\\nAnchors: 1 = Strongly disagree · 3 = Neutral · 5 = Strongly agree",
@@ -829,6 +829,7 @@ const ROADMAP_SCRIPT = `
       html += '<div class="blk" data-blk-id="' + block.id + '">';
       var headerLabel = typeDef.label;
       if (block.type === "number" && block.value) { var _nl = (block.value.ro && block.value.ro.label) || (block.value.label) || ""; if (_nl) headerLabel += ' — ' + escHtml(_nl); }
+      if (block.type === "link" && block.value) { var _ln = (block.value.ro && block.value.ro.name) || ""; if (_ln) headerLabel += ' — ' + escHtml(_ln); }
       html += '<div class="blk-header">' + ICONS[typeDef.icon] + '<span class="blk-type-label">' + headerLabel + '</span>';
       if (idx > 0) html += '<button class="blk-action" data-action="up" data-blk="' + block.id + '" title="Mută sus">' + ICONS.arrowUp + '</button>';
       if (idx < blocks.length - 1) html += '<button class="blk-action" data-action="down" data-blk="' + block.id + '" title="Mută jos">' + ICONS.arrowDown + '</button>';
@@ -875,6 +876,15 @@ const ROADMAP_SCRIPT = `
         saveBlocks();
       } else if (val && (val.label !== undefined || val.value !== undefined) && !val.ro) {
         block.value = { ro: { label: val.label || "", value: val.value || 0 }, en: { label: "", value: val.value || 0 }, ru: { label: "", value: val.value || 0 } };
+        saveBlocks();
+      }
+    } else if (block.type === "link") {
+      // Old format: plain string or { ro: "url", en: "url", ru: "url" } → { ro: { name: "", url: "url" }, ... }
+      if (typeof val === "string") {
+        block.value = { ro: { name: "", url: val }, en: { name: "", url: "" }, ru: { name: "", url: "" } };
+        saveBlocks();
+      } else if (val && val.ro !== undefined && typeof val.ro === "string") {
+        block.value = { ro: { name: "", url: val.ro || "" }, en: { name: "", url: val.en || "" }, ru: { name: "", url: val.ru || "" } };
         saveBlocks();
       }
     } else {
@@ -930,12 +940,16 @@ const ROADMAP_SCRIPT = `
 
       case "link":
         var h = renderLangTabs(block.id);
+        var namePlaceholders = { ro: "Nume link (ex: Documentație OSF)", en: "Link name (e.g.: OSF Documentation)", ru: "Название ссылки (напр.: Документация OSF)" };
         LANGS.forEach(function(lang) {
-          var lv = (val && val[lang]) || "";
+          var lv = (val && val[lang]) || { name: "", url: "" };
+          if (typeof lv === "string") lv = { name: "", url: lv };
+          var url = lv.url || "";
           var domain = "";
-          try { if (lv && lv.indexOf("://") !== -1) domain = lv.split("://")[1].split("/")[0]; } catch(e) {}
+          try { if (url && url.indexOf("://") !== -1) domain = url.split("://")[1].split("/")[0]; } catch(e) {}
           h += '<div class="blk-lang-panel' + (activeLang === lang ? ' active' : '') + '" data-lang-panel="' + block.id + '" data-panel-lang="' + lang + '">';
-          h += '<div class="blk-link-row"><input class="blk-input" type="url" data-blk-lang-val="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(lv) + '" placeholder="' + LANG_LABELS[lang] + ' — https://..." />';
+          h += '<input class="blk-input" type="text" data-link-name="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(lv.name || '') + '" placeholder="' + namePlaceholders[lang] + '" style="margin-bottom:6px;" />';
+          h += '<div class="blk-link-row"><input class="blk-input" type="url" data-link-url="' + block.id + '" data-lang="' + lang + '" value="' + escAttr(url) + '" placeholder="' + LANG_LABELS[lang] + ' — https://..." />';
           h += '<button class="blk-link-open" data-link-open="' + block.id + '" data-link-lang="' + lang + '" title="Deschide link">' + ICONS.externalLink + '</button></div>';
           if (domain) h += '<div class="blk-link-preview">' + ICONS.globe + '<span>' + escHtml(domain) + '</span></div>';
           h += '</div>';
@@ -1102,7 +1116,7 @@ const ROADMAP_SCRIPT = `
       });
     });
 
-    // ═══ TRILINGUAL text/link inputs — auto-save per lang ═══
+    // ═══ TRILINGUAL text inputs — auto-save per lang ═══
     document.querySelectorAll("[data-blk-lang-val]").forEach(function(input) {
       var debounce = null;
       input.addEventListener("input", function() {
@@ -1123,8 +1137,50 @@ const ROADMAP_SCRIPT = `
       });
     });
 
+    // Link — name input (trilingual, auto-save per lang)
+    document.querySelectorAll("[data-link-name]").forEach(function(input) {
+      var debounce = null;
+      input.addEventListener("input", function() {
+        clearTimeout(debounce);
+        debounce = setTimeout(function() {
+          var bid = input.getAttribute("data-link-name");
+          var lang = input.getAttribute("data-lang") || "ro";
+          var blocks = getTaskBlocks(key);
+          for (var i = 0; i < blocks.length; i++) {
+            if (blocks[i].id === bid) {
+              if (!blocks[i].value || typeof blocks[i].value !== "object") blocks[i].value = makeTriVal("link");
+              if (!blocks[i].value[lang] || typeof blocks[i].value[lang] === "string") blocks[i].value[lang] = { name: "", url: typeof blocks[i].value[lang] === "string" ? blocks[i].value[lang] : "" };
+              blocks[i].value[lang].name = input.value;
+              saveBlocks(); break;
+            }
+          }
+        }, 300);
+      });
+    });
+
+    // Link — url input (trilingual, auto-save per lang)
+    document.querySelectorAll("[data-link-url]").forEach(function(input) {
+      var debounce = null;
+      input.addEventListener("input", function() {
+        clearTimeout(debounce);
+        debounce = setTimeout(function() {
+          var bid = input.getAttribute("data-link-url");
+          var lang = input.getAttribute("data-lang") || "ro";
+          var blocks = getTaskBlocks(key);
+          for (var i = 0; i < blocks.length; i++) {
+            if (blocks[i].id === bid) {
+              if (!blocks[i].value || typeof blocks[i].value !== "object") blocks[i].value = makeTriVal("link");
+              if (!blocks[i].value[lang] || typeof blocks[i].value[lang] === "string") blocks[i].value[lang] = { name: "", url: typeof blocks[i].value[lang] === "string" ? blocks[i].value[lang] : "" };
+              blocks[i].value[lang].url = input.value;
+              saveBlocks(); break;
+            }
+          }
+        }, 300);
+      });
+    });
+
     // Link — update preview on blur (trilingual)
-    document.querySelectorAll('input[type="url"][data-blk-lang-val]').forEach(function(input) {
+    document.querySelectorAll('input[type="url"][data-link-url]').forEach(function(input) {
       input.addEventListener("blur", function() { renderBlocks(key); });
     });
 
@@ -1136,8 +1192,10 @@ const ROADMAP_SCRIPT = `
         var blocks = getTaskBlocks(key);
         for (var i = 0; i < blocks.length; i++) {
           if (blocks[i].id === bid && blocks[i].value) {
-            var url = (typeof blocks[i].value === "object" && blocks[i].value[lang]) ? blocks[i].value[lang] : blocks[i].value;
-            if (typeof url !== "string") url = "";
+            var langVal = blocks[i].value[lang];
+            var url = "";
+            if (typeof langVal === "object" && langVal !== null) url = langVal.url || "";
+            else if (typeof langVal === "string") url = langVal;
             if (url && url.indexOf("://") === -1) url = "https://" + url;
             if (url) try { window.open(url, "_blank"); } catch(e) {}
             break;
