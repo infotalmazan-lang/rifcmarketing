@@ -3,11 +3,32 @@ import { createServiceRole } from "@/lib/supabase/server";
 
 export const revalidate = 0; // No cache for admin CRUD
 
+// Shuffle helpers (same logic as /api/survey/start)
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function shuffleByCategoryGroups<T extends { type: string }>(items: T[]): T[] {
+  const groups: Record<string, T[]> = {};
+  for (const item of items) {
+    if (!groups[item.type]) groups[item.type] = [];
+    groups[item.type].push(item);
+  }
+  const categoryKeys = shuffleArray(Object.keys(groups));
+  return categoryKeys.flatMap(key => shuffleArray(groups[key]));
+}
+
 export async function GET(req: NextRequest) {
   try {
     const supabase = createServiceRole();
     const { searchParams } = new URL(req.url);
     const all = searchParams.get("all"); // ?all=true to include inactive
+    const shuffle = searchParams.get("shuffle"); // ?shuffle=1 to randomize by category
 
     let query = supabase
       .from("survey_stimuli")
@@ -27,7 +48,9 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ stimuli: stimuli || [] });
+    const result = shuffle ? shuffleByCategoryGroups(stimuli || []) : (stimuli || []);
+
+    return NextResponse.json({ stimuli: result });
   } catch {
     return NextResponse.json(
       { error: "Internal error" },

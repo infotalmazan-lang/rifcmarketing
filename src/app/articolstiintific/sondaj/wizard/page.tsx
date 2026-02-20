@@ -257,6 +257,9 @@ function StudiuWizardInner() {
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  // Pre-loaded stimuli (fetched on page load, before session creation)
+  const [preloadedStimuli, setPreloadedStimuli] = useState<Stimulus[] | null>(null);
+  const [startingSession, setStartingSession] = useState(false);
 
   // Profile data
   const [demographics, setDemographics] = useState({
@@ -300,7 +303,7 @@ function StudiuWizardInner() {
 
   // ── Computed step boundaries ────────────────────────────
   const profileStepCount = PROFILE_STEPS.length; // 17 (0=welcome, 1-16=profile)
-  const numStimuli = session?.stimuli?.length || 8;
+  const numStimuli = session?.stimuli?.length || preloadedStimuli?.length || 8;
   const stepsPerStimulus = 6; // R, I, F, C, CTA, BRAND — each on its own page
   const firstStimulusStep = profileStepCount; // 16
   const lastStimulusStep = firstStimulusStep + (numStimuli * stepsPerStimulus) - 1;
@@ -317,7 +320,7 @@ function StudiuWizardInner() {
   const stimDashIdx = step >= firstStimulusStep ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
   const currentDash = step <= 0 ? -1 : step >= thankYouStep ? totalDashes : step < firstStimulusStep ? step - 1 : profileDashCount + stimDashIdx;
 
-  // ── Init: load session or create new ────────────────────
+  // ── Init: load existing session OR just fetch stimuli (NO respondent creation) ──
   useEffect(() => {
     const init = async () => {
       // ?reset=1 forces a fresh session (useful after changing stimuli in DB)
@@ -326,6 +329,7 @@ function StudiuWizardInner() {
         localStorage.removeItem(LS_KEY);
       }
 
+      // Try to resume existing session from localStorage
       try {
         const saved = localStorage.getItem(LS_KEY);
         if (saved && !forceReset) {
@@ -339,24 +343,14 @@ function StudiuWizardInner() {
         }
       } catch { /* ignore */ }
 
+      // No existing session — just pre-load stimuli for the welcome screen
+      // Respondent entry will be created only when user clicks "Începe sondajul"
       try {
-        const fingerprint = await generateFingerprint();
-        const res = await fetch("/api/survey/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...(tag ? { tag } : {}), locale, ...(isPreview ? { preview: true } : {}), fingerprint }),
-        });
+        const res = await fetch("/api/survey/stimuli?shuffle=1");
         const data = await res.json();
-        if (data.success) {
-          const s: SessionData = {
-            sessionId: data.sessionId,
-            currentStep: 0,
-            stimuliOrder: data.stimuli.map((st: Stimulus) => st.id),
-            stimuli: data.stimuli,
-          };
-          localStorage.setItem(LS_KEY, JSON.stringify(s));
-          setSession(s);
-          setStep(0);
+        if (data.stimuli?.length > 0) {
+          setPreloadedStimuli(data.stimuli);
+          setStep(0); // Show welcome screen
         } else {
           setError(w.errorStart);
         }
@@ -396,11 +390,8 @@ function StudiuWizardInner() {
     trackEvent("wizard_step", { step_number: nextStep, step_label: label });
     fbTrackCustom("WizardStep", { step_number: nextStep, step_label: label });
 
-    // Survey started — user clicked "Incepe" from welcome
-    if (nextStep === 1) {
-      trackEvent("wizard_start");
-      fbTrackCustom("SurveyStart", { content_name: "RIFC Survey", content_category: "survey" });
-    }
+    // Survey started tracking now happens in startSession() callback
+    // (no longer needed here since advanceTo(1) is called after session creation)
 
     // Profile section completed — all demographic/behavioral/psychographic done
     if (nextStep === firstStimulusStep) {
@@ -440,6 +431,50 @@ function StudiuWizardInner() {
       setTimeout(() => setTransitioning(false), 50);
     }, 200);
   }, [profileStepCount, stepsPerStimulus, thankYouStep, firstStimulusStep]);
+
+  // ── Create session (called only when user clicks "Începe sondajul") ──
+  const startSession = useCallback(async () => {
+    if (startingSession) return;
+    setStartingSession(true);
+    setError(null);
+
+    try {
+      const fingerprint = await generateFingerprint();
+      const stimuli = preloadedStimuli;
+
+      const res = await fetch("/api/survey/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...(tag ? { tag } : {}), locale, ...(isPreview ? { preview: true } : {}), fingerprint }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Use server-shuffled stimuli from start response (they may differ from preloaded)
+        const finalStimuli = data.stimuli?.length > 0 ? data.stimuli : stimuli;
+        const s: SessionData = {
+          sessionId: data.sessionId,
+          currentStep: 1, // Jump straight to step 1 (first question)
+          stimuliOrder: finalStimuli.map((st: Stimulus) => st.id),
+          stimuli: finalStimuli,
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(s));
+        setSession(s);
+        setPreloadedStimuli(null); // Clear preloaded, no longer needed
+
+        // Track survey start
+        trackEvent("wizard_start");
+        fbTrackCustom("SurveyStart", { content_name: "RIFC Survey", content_category: "survey" });
+
+        advanceTo(1);
+      } else {
+        setError(w.errorStart);
+      }
+    } catch {
+      setError(w.errorConnection);
+    } finally {
+      setStartingSession(false);
+    }
+  }, [startingSession, preloadedStimuli, tag, locale, isPreview, advanceTo, w]);
 
   // ── Save profile data to API (fire-and-forget for UX speed) ──
   const saveProfileToApi = useCallback(async (type: string, payload: Record<string, unknown>) => {
@@ -1251,12 +1286,16 @@ function StudiuWizardInner() {
                 </p>
 
                 <button
-                  style={S.btnStart}
-                  onClick={() => advanceTo(1)}
+                  style={{
+                    ...S.btnStart,
+                    ...(startingSession ? { opacity: 0.7, cursor: "wait" } : {}),
+                  }}
+                  onClick={() => startSession()}
                   onMouseDown={(e) => ((e.target as HTMLElement).style.transform = "scale(0.97)")}
                   onMouseUp={(e) => ((e.target as HTMLElement).style.transform = "scale(1)")}
+                  disabled={startingSession}
                 >
-                  {w.welcomeStart}
+                  {startingSession ? "..." : w.welcomeStart}
                 </button>
 
                 <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.7 }}>
