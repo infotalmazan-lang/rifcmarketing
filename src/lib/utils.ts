@@ -22,6 +22,3 @@ export function readingTime(content: string): number {
   return Math.ceil(wordCount / wordsPerMinute);
 }
 
-export function cn(...classes: (string | boolean | undefined | null)[]): string {
-  return classes.filter(Boolean).join(" ");
-}
