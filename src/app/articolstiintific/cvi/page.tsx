@@ -95,7 +95,10 @@ function CviForm() {
   const token = searchParams.get("token") || "";
   const isPreview = searchParams.get("preview") === "1";
 
-  const [status, setStatus] = useState<"loading" | "valid" | "completed" | "invalid" | "error">(isPreview ? "valid" : "loading");
+  const isInfoPage = !token && !isPreview; // General page: no token, no preview
+  const [status, setStatus] = useState<"loading" | "valid" | "completed" | "invalid" | "error" | "info">(
+    isInfoPage ? "info" : isPreview ? "valid" : "loading"
+  );
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [expert, setExpert] = useState({ name: "", org: "", role: "", experience: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -103,9 +106,9 @@ function CviForm() {
   const [success, setSuccess] = useState(false);
   const [cviResult, setCviResult] = useState<Record<string, number> | null>(null);
 
-  // Validate token on load (skip in preview mode)
+  // Validate token on load (skip in preview mode and info page)
   useEffect(() => {
-    if (isPreview) return; // Preview mode: no token validation
+    if (isPreview || isInfoPage) return;
     if (!token) { setStatus("invalid"); return; }
     fetch(`/api/cvi/validate?token=${encodeURIComponent(token)}`)
       .then(r => r.json())
@@ -115,7 +118,7 @@ function CviForm() {
         else setStatus("invalid");
       })
       .catch(() => setStatus("error"));
-  }, [token, isPreview]);
+  }, [token, isPreview, isInfoPage]);
 
   const ratedCount = Object.keys(ratings).length;
   const pct = Math.round((ratedCount / TOTAL) * 100);
@@ -190,13 +193,115 @@ function CviForm() {
     );
   }
 
+  // ── Info/Landing page (general link, no token) ─────────
+  if (status === "info") {
+    return (
+      <div style={{ minHeight: "100vh", background: bgColor, fontFamily: "'Inter', sans-serif" }}>
+        {/* Header */}
+        <header style={{ background: "white", borderBottom: `1px solid ${border}`, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>
+              <span style={{ color: "#DC2626" }}>R</span> + (<span style={{ color: "#2563EB" }}>I</span> &times; <span style={{ color: "#059669" }}>F</span>) = <span style={{ color: "#D97706" }}>C</span>
+            </span>
+            <span style={{ color: border, fontSize: 18 }}>|</span>
+            <span style={{ fontSize: 13, color: muted, fontWeight: 500 }}>Panel CVI &middot; Validare Con&#539;inut</span>
+          </div>
+        </header>
+
+        <div style={{ maxWidth: 760, margin: "0 auto", padding: "60px 32px" }}>
+          {/* Hero */}
+          <div style={{ textAlign: "center", marginBottom: 48 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#EEF2FF", color: "#4F46E5", fontSize: 11, fontWeight: 700, padding: "4px 14px", borderRadius: 20, letterSpacing: .5, textTransform: "uppercase" as const, marginBottom: 20 }}>
+              Content Validity Index &mdash; Stratul 1
+            </div>
+            <h1 style={{ fontSize: 36, fontWeight: 700, lineHeight: 1.15, marginBottom: 16, color: textDark }}>
+              Evaluarea Instrumentului<br />de M&#259;surare RIFC
+            </h1>
+            <p style={{ color: muted, fontSize: 16, maxWidth: 560, margin: "0 auto", lineHeight: 1.7 }}>
+              Protocolul <strong>R IF C Marketing</strong> evalueaz&#259; eficien&#539;a mesajelor de marketing prin 4 dimensiuni: <strong style={{ color: "#DC2626" }}>Relevan&#539;&#259;</strong>, <strong style={{ color: "#2563EB" }}>Interes</strong>, <strong style={{ color: "#059669" }}>Form&#259;</strong> &#537;i <strong style={{ color: "#D97706" }}>Claritate</strong>.
+            </p>
+          </div>
+
+          {/* 4 Dimension cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 40 }}>
+            {([
+              { d: "R", label: "Relevan\u021B\u0103", count: 7, color: "#DC2626", bg: "#FEF2F2" },
+              { d: "I", label: "Interes", count: 10, color: "#2563EB", bg: "#EFF6FF" },
+              { d: "F", label: "Form\u0103", count: 11, color: "#059669", bg: "#ECFDF5" },
+              { d: "C", label: "Claritate", count: 7, color: "#D97706", bg: "#FFFBEB" },
+            ]).map(({ d, label, count, color, bg }) => (
+              <div key={d} style={{ padding: "20px 16px", borderRadius: 12, textAlign: "center", background: bg, border: `1px solid ${color}15` }}>
+                <div style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1 }}>{d}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color, marginTop: 6 }}>{label}</div>
+                <div style={{ fontSize: 11, color: muted, marginTop: 4 }}>{count} itemi</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Info card: How it works */}
+          <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 14, padding: 32, marginBottom: 24 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: textDark }}>Cum func&#539;ioneaz&#259;</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+              {([
+                { step: "1", title: "Primi\u021Bi un link unic", desc: "Fiecare expert prime\u0219te un link personal de evaluare de la cercet\u0103tor." },
+                { step: "2", title: "Evalua\u021Bi 35 itemi", desc: "Pe scala Likert 1-4, evalua\u021Bi relevan\u021Ba fiec\u0103rui item pentru constructul s\u0103u." },
+                { step: "3", title: "Completa\u021Bi profilul", desc: "Ad\u0103uga\u021Bi informa\u021Bii despre experien\u021Ba \u0219i rolul dumneavoastr\u0103 profesional." },
+                { step: "4", title: "Rezultate CVI", desc: "Scorul CVI este calculat automat. Itemii cu CVI \u2265 0.80 sunt p\u0103stra\u021Bi \u00een scar\u0103." },
+              ]).map(({ step, title, desc }) => (
+                <div key={step} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EEF2FF", color: "#4F46E5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
+                    {step}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: textDark, marginBottom: 2 }}>{title}</div>
+                    <div style={{ fontSize: 13, color: muted, lineHeight: 1.5 }}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Scale preview */}
+          <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 14, padding: 32, marginBottom: 24 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 16, color: textDark }}>Scala de evaluare (Likert 1-4)</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
+              {SCALE.map(s => (
+                <div key={s.v} style={{ textAlign: "center", padding: "14px 10px", borderRadius: 8, border: `1px solid ${s.border}`, background: s.bg }}>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: s.color, marginBottom: 4 }}>{s.v}</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: .3, marginBottom: 4 }}>{s.label}</div>
+                  <div style={{ fontSize: 11, color: muted, lineHeight: 1.4 }}>{s.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Access notice */}
+          <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 14, padding: "24px 28px", textAlign: "center" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#92400E", marginBottom: 8 }}>Acces prin link individual</h3>
+            <p style={{ fontSize: 14, color: "#78350F", lineHeight: 1.6, margin: 0, maxWidth: 480, marginLeft: "auto", marginRight: "auto" }}>
+              Pentru a completa evaluarea CVI, ave&#539;i nevoie de un <strong>link unic</strong> primit de la cercet&#259;tor.
+              Dac&#259; sunte&#539;i expert &#238;n marketing &#537;i dori&#539;i s&#259; participa&#539;i, contacta&#539;i echipa de cercetare.
+            </p>
+          </div>
+
+          {/* Footer */}
+          <div style={{ textAlign: "center", marginTop: 40, paddingTop: 20, borderTop: `1px solid ${border}` }}>
+            <p style={{ fontSize: 12, color: muted }}>
+              osf.io/9y75d &middot; RIFC Marketing Protocol &middot; Dumitru Talmazan, 2026
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (status === "invalid") {
     return (
       <div style={{ minHeight: "100vh", background: bgColor, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif", padding: 32 }}>
         <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 16, padding: 48, textAlign: "center", maxWidth: 500 }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>&#x26A0;</div>
           <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>Link invalid sau expirat</h2>
-          <p style={{ color: muted, fontSize: 15 }}>Acest link de evaluare nu este valid. Contactați cercetătorul pentru un link nou.</p>
+          <p style={{ color: muted, fontSize: 15 }}>Acest link de evaluare nu este valid. Contacta&#539;i cercet&#259;torul pentru un link nou.</p>
         </div>
       </div>
     );
