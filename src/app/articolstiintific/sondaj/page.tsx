@@ -3522,7 +3522,7 @@ export default function StudiuAdminPage() {
               </div>
             )}
 
-            {/* Distribution list */}
+            {/* Distribution gallery */}
             {distLoading ? (
               <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>
                 <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
@@ -3537,230 +3537,178 @@ export default function StudiuAdminPage() {
                 </p>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
-                {distributions.map((dist, idx) => {
-                  const link = getDistLink(dist.tag);
-                  const pctRaw = dist.estimated_completions > 0
-                    ? Math.min(100, (dist.completions / dist.estimated_completions) * 100)
-                    : 0;
-                  const pct = pctRaw >= 1 ? Math.round(pctRaw) : parseFloat(pctRaw.toFixed(2));
-                  const pctDisplay = pctRaw >= 1 ? String(Math.round(pctRaw)) : pctRaw.toFixed(2);
-                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
-                  const isEditing = editingDistId === dist.id;
+              <>
+                {/* ── 3-column gallery grid ── */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
+                  {distributions.map((dist, idx) => {
+                    const link = getDistLink(dist.tag);
+                    const pctRaw = dist.estimated_completions > 0
+                      ? Math.min(100, (dist.completions / dist.estimated_completions) * 100)
+                      : 0;
+                    const pctDisplay = pctRaw >= 1 ? String(Math.round(pctRaw)) : pctRaw.toFixed(2);
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
+                    const isEditing = editingDistId === dist.id;
 
-                  return (
-                    <div key={dist.id} style={{ ...S.configCard, position: "relative" as const, ...(isEditing ? { borderColor: "#3b82f6", borderWidth: 2 } : {}) }}>
-                      {/* Number badge */}
-                      <div style={{
-                        position: "absolute" as const,
-                        top: -10,
-                        left: 16,
-                        width: 28,
-                        height: 28,
-                        borderRadius: 8,
+                    return (
+                      <div key={dist.id} style={{
+                        background: "#fff",
+                        border: isEditing ? "2px solid #3b82f6" : "1px solid #e5e7eb",
+                        borderRadius: 12,
+                        padding: isEditing ? 15 : 16,
+                        position: "relative" as const,
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 12,
-                        fontWeight: 800,
-                        color: "#fff",
-                        background: isEditing ? "#3b82f6" : "#DC2626",
-                        fontFamily: "JetBrains Mono, monospace",
+                        flexDirection: "column" as const,
+                        minHeight: 0,
+                        transition: "border-color 0.2s, box-shadow 0.2s",
                       }}>
-                        {idx + 1}
-                      </div>
-
-                      {/* Header row */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 4 }}>
-                        <div style={{ flex: 1, marginRight: 12 }}>
-                          {isEditing ? (
-                            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-                              <div>
-                                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#6B7280", display: "block", marginBottom: 4 }}>NUME SEGMENT</label>
-                                <input
-                                  value={editDistName}
-                                  onChange={(e) => setEditDistName(e.target.value)}
-                                  style={{ ...S.catEditInput, width: "100%", fontSize: 15, fontWeight: 700 }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#6B7280", display: "block", marginBottom: 4 }}>DESCRIERE</label>
-                                <input
-                                  value={editDistDesc}
-                                  onChange={(e) => setEditDistDesc(e.target.value)}
-                                  placeholder="Descriere optionala"
-                                  style={{ ...S.catEditInput, width: "100%" }}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#6B7280", display: "block", marginBottom: 4 }}>ESTIMARE PERSOANE</label>
-                                <input
-                                  type="number"
-                                  value={editDistEstimate}
-                                  onChange={(e) => setEditDistEstimate(e.target.value)}
-                                  placeholder="ex: 100"
-                                  style={{ ...S.catEditInput, width: 160 }}
-                                />
-                              </div>
-                              <div style={{ padding: "6px 10px", background: "#fef2f2", borderRadius: 6 }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#9CA3AF" }}>TAG (BLOCAT): </span>
-                                <span style={{ fontSize: 12, fontFamily: "JetBrains Mono, monospace", color: "#9CA3AF" }}>{dist.tag}</span>
-                              </div>
-                              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
-                                <button
-                                  style={{ ...S.addCatBtn, opacity: editDistSaving ? 0.6 : 1 }}
-                                  onClick={saveEditDist}
-                                  disabled={editDistSaving}
-                                >
-                                  {editDistSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
-                                  {editDistSaving ? "Se salveaza..." : "Salveaza"}
-                                </button>
-                                <button
-                                  style={{ ...S.galleryEditBtn }}
-                                  onClick={cancelEditDist}
-                                >
-                                  <X size={14} />
-                                  Anuleaza
-                                </button>
-                              </div>
+                        {/* Number badge + action buttons */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <div style={{
+                            width: 24, height: 24, borderRadius: 6,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 800, color: "#fff",
+                            background: isEditing ? "#3b82f6" : "#DC2626",
+                            fontFamily: "JetBrains Mono, monospace",
+                          }}>
+                            {idx + 1}
+                          </div>
+                          {!isEditing && (
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button
+                                style={{ ...S.galleryEditBtn, padding: "4px 6px", fontSize: 11 }}
+                                title="Editeaza"
+                                onClick={() => startEditDist(dist)}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                              <button
+                                style={{ ...S.iconBtnDanger, padding: "4px 6px" }}
+                                title="Sterge"
+                                onClick={() => deleteDistribution(dist.id)}
+                              >
+                                <Trash2 size={12} />
+                              </button>
                             </div>
-                          ) : (
-                            <>
-                              <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>{dist.name}</h3>
-                              {dist.description && (
-                                <p style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>{dist.description}</p>
-                              )}
-                            </>
                           )}
                         </div>
-                        {!isEditing && (
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button
-                              style={{ ...S.galleryEditBtn, padding: "6px 8px" }}
-                              title="Editeaza distributia"
-                              onClick={() => startEditDist(dist)}
-                            >
-                              <Pencil size={15} />
-                            </button>
-                            <button
-                              style={{ ...S.iconBtnDanger }}
-                              title="Sterge distributia"
-                              onClick={() => deleteDistribution(dist.id)}
-                            >
-                              <Trash2 size={16} />
-                            </button>
+
+                        {isEditing ? (
+                          /* ── Inline edit form ── */
+                          <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, flex: 1 }}>
+                            <div>
+                              <label style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#6B7280", display: "block", marginBottom: 3 }}>NUME</label>
+                              <input value={editDistName} onChange={(e) => setEditDistName(e.target.value)} style={{ ...S.catEditInput, width: "100%", fontSize: 13, fontWeight: 700 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#6B7280", display: "block", marginBottom: 3 }}>DESCRIERE</label>
+                              <input value={editDistDesc} onChange={(e) => setEditDistDesc(e.target.value)} placeholder="Descriere optionala" style={{ ...S.catEditInput, width: "100%" }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#6B7280", display: "block", marginBottom: 3 }}>ESTIMARE</label>
+                              <input type="number" value={editDistEstimate} onChange={(e) => setEditDistEstimate(e.target.value)} placeholder="ex: 100" style={{ ...S.catEditInput, width: "100%" }} />
+                            </div>
+                            <div style={{ padding: "4px 8px", background: "#fef2f2", borderRadius: 4, fontSize: 10, color: "#9CA3AF" }}>
+                              TAG: <span style={{ fontFamily: "JetBrains Mono, monospace" }}>{dist.tag}</span>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                              <button style={{ ...S.addCatBtn, fontSize: 12, padding: "5px 10px", opacity: editDistSaving ? 0.6 : 1 }} onClick={saveEditDist} disabled={editDistSaving}>
+                                {editDistSaving ? <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={12} />}
+                                {editDistSaving ? "..." : "Salveaza"}
+                              </button>
+                              <button style={{ ...S.galleryEditBtn, fontSize: 12, padding: "5px 10px" }} onClick={cancelEditDist}>
+                                <X size={12} /> Anuleaza
+                              </button>
+                            </div>
                           </div>
+                        ) : (
+                          /* ── Normal card view ── */
+                          <>
+                            {/* Name + description */}
+                            <h4 style={{ fontSize: 14, fontWeight: 700, color: "#111827", margin: "0 0 2px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{dist.name}</h4>
+                            {dist.description && (
+                              <p style={{ fontSize: 11, color: "#6B7280", margin: "0 0 8px 0", lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{dist.description}</p>
+                            )}
+                            {!dist.description && <div style={{ marginBottom: 8 }} />}
+
+                            {/* Link (truncated) */}
+                            <div style={{
+                              padding: "6px 8px", background: "#f9fafb", border: "1px solid #e5e7eb",
+                              borderRadius: 6, fontSize: 10, fontFamily: "JetBrains Mono, monospace",
+                              color: "#DC2626", overflow: "hidden", textOverflow: "ellipsis",
+                              whiteSpace: "nowrap" as const, marginBottom: 8,
+                            }}>
+                              ...wizard?tag={dist.tag}
+                            </div>
+
+                            {/* Action buttons row */}
+                            <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                              <button
+                                style={{ ...S.galleryEditBtn, gap: 4, fontSize: 11, padding: "4px 8px", flex: 1, justifyContent: "center" }}
+                                onClick={() => copyToClipboard(link, dist.id)}
+                              >
+                                {copiedId === dist.id ? <Check size={11} style={{ color: "#059669" }} /> : <Copy size={11} />}
+                                {copiedId === dist.id ? "Copiat!" : "Copiaza"}
+                              </button>
+                              <button
+                                style={{ ...S.galleryEditBtn, gap: 4, fontSize: 11, padding: "4px 8px" }}
+                                onClick={() => setShowQr(showQr === dist.id ? null : dist.id)}
+                              >
+                                <QrCode size={11} />
+                                QR
+                              </button>
+                              <a
+                                href={link} target="_blank" rel="noopener noreferrer"
+                                style={{ ...S.galleryEditBtn, gap: 4, fontSize: 11, padding: "4px 8px", textDecoration: "none" }}
+                              >
+                                <ExternalLink size={11} />
+                              </a>
+                            </div>
+
+                            {/* QR code (collapsible) */}
+                            {showQr === dist.id && (
+                              <div style={{ marginBottom: 10, padding: 10, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, textAlign: "center" as const }}>
+                                <img src={qrUrl} alt={`QR ${dist.name}`} width={140} height={140} style={{ margin: "0 auto", borderRadius: 4 }} />
+                                <p style={{ fontSize: 10, color: "#6B7280", marginTop: 6 }}>Click dreapta &rarr; Save Image</p>
+                              </div>
+                            )}
+
+                            {/* Stats compact */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" as const, marginTop: "auto" }}>
+                              <Users size={12} style={{ color: "#6B7280" }} />
+                              <span style={{ fontSize: 12, color: "#374151", fontWeight: 600 }}>{dist.completions}</span>
+                              <span style={{ fontSize: 11, color: "#9CA3AF" }}>/ {dist.estimated_completions}</span>
+                              <span style={{ fontSize: 10, color: "#d1d5db" }}>|</span>
+                              <span style={{ fontSize: 10, color: "#9CA3AF" }}>{dist.started} incep.</span>
+                            </div>
+
+                            {/* Tag */}
+                            <div style={{ marginTop: 4, fontSize: 9, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", fontFamily: "JetBrains Mono, monospace" }}>
+                              TAG: {dist.tag}
+                            </div>
+
+                            {/* Progress bar */}
+                            {dist.estimated_completions > 0 && (
+                              <div style={{ marginTop: 6 }}>
+                                <div style={{ ...S.counterBar, height: 4 }}>
+                                  <div style={{
+                                    ...S.counterFill,
+                                    height: 4,
+                                    width: `${Math.max(pctRaw, pctRaw > 0 ? 0.5 : 0)}%`,
+                                    background: pctRaw >= 100 ? "#059669" : "#DC2626",
+                                  }} />
+                                </div>
+                                <span style={{ fontSize: 10, color: "#9CA3AF", marginTop: 2, display: "block" }}>
+                                  {pctDisplay}%
+                                </span>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
-
-                      {/* Link row */}
-                      {!isEditing && (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, flexWrap: "wrap" as const }}>
-                          <code style={{
-                            flex: 1,
-                            padding: "8px 12px",
-                            background: "#f9fafb",
-                            border: "1px solid #e5e7eb",
-                            borderRadius: 6,
-                            fontSize: 13,
-                            fontFamily: "JetBrains Mono, monospace",
-                            color: "#DC2626",
-                            wordBreak: "break-all" as const,
-                            minWidth: 0,
-                          }}>
-                            {link}
-                          </code>
-                          <button
-                            style={{ ...S.galleryEditBtn, gap: 6 }}
-                            onClick={() => copyToClipboard(link, dist.id)}
-                          >
-                            {copiedId === dist.id ? <Check size={14} style={{ color: "#059669" }} /> : <Copy size={14} />}
-                            {copiedId === dist.id ? "Copiat!" : "Copiaza"}
-                          </button>
-                          <button
-                            style={{ ...S.galleryEditBtn, gap: 6 }}
-                            onClick={() => setShowQr(showQr === dist.id ? null : dist.id)}
-                          >
-                            <QrCode size={14} />
-                            QR
-                          </button>
-                          <a
-                            href={link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ ...S.galleryEditBtn, gap: 6, textDecoration: "none" }}
-                          >
-                            <ExternalLink size={14} />
-                            Deschide
-                          </a>
-                        </div>
-                      )}
-
-                      {/* QR code (collapsible) */}
-                      {showQr === dist.id && !isEditing && (
-                        <div style={{
-                          marginTop: 12,
-                          padding: 16,
-                          background: "#fff",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: 8,
-                          textAlign: "center" as const,
-                        }}>
-                          <img
-                            src={qrUrl}
-                            alt={`QR Code ${dist.name}`}
-                            width={200}
-                            height={200}
-                            style={{ margin: "0 auto", borderRadius: 4 }}
-                          />
-                          <p style={{ fontSize: 12, color: "#6B7280", marginTop: 8 }}>
-                            Scaneaza sau salveaza (click dreapta &rarr; Save Image)
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Stats row */}
-                      <div style={{ display: "flex", gap: 20, marginTop: 14, flexWrap: "wrap" as const }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <Users size={14} style={{ color: "#6B7280" }} />
-                          <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
-                            {dist.completions}
-                          </span>
-                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
-                            / {dist.estimated_completions} completari
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
-                            {dist.started} incepute
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", fontFamily: "JetBrains Mono, monospace" }}>
-                            TAG: {dist.tag}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Progress bar */}
-                      {dist.estimated_completions > 0 && (
-                        <div style={{ marginTop: 10 }}>
-                          <div style={S.counterBar}>
-                            <div style={{
-                              ...S.counterFill,
-                              width: `${Math.max(pctRaw, pctRaw > 0 ? 0.5 : 0)}%`,
-                              background: pctRaw >= 100 ? "#059669" : "#DC2626",
-                            }} />
-                          </div>
-                          <span style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4, display: "block" }}>
-                            {pctDisplay}% completat
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}
