@@ -463,16 +463,13 @@ export async function GET(request: Request) {
     //        Stimulus 0: steps 4-9, Stimulus 1: steps 10-15, etc.
     //   completed_at IS SET when survey is done (separate from step_completed)
     const completionFunnel = (() => {
-      const STIM_SUBSTEPS = 6; // R, I, F, C, CTA, BRAND
-
       // Determine how many stimuli a respondent actually evaluates.
-      // This is NOT all stimuli in DB (could be 30), but the subset each respondent gets.
+      // Wizard sends step = groupIdx + 4 for each stimulus (groupIdx = 0,1,2,...N-1)
+      // So step_completed for stimulus evaluation goes: 4, 5, 6, 7, ... (N+3)
       // Best heuristic: count responses per completed respondent, take the maximum.
-      // Alternatively, derive from max step_completed: stimCount = (maxStep - 4 + STIM_SUBSTEPS) / STIM_SUBSTEPS
       const completedResps = respondents.filter(r => r.completed_at != null);
       let actualStimuliCount = 0;
       if (completedResps.length > 0) {
-        // Count responses per completed respondent
         const respCounts: number[] = completedResps.map(r => {
           return allFilteredResponses.filter(resp => resp.respondent_id === r.id).length;
         });
@@ -480,9 +477,10 @@ export async function GET(request: Request) {
       }
       if (actualStimuliCount === 0) {
         // Fallback: derive from max step_completed across all respondents
+        // step = groupIdx + 4, so stimuliCount = maxStep - 4 + 1
         const maxStep = Math.max(...respondents.map(r => r.step_completed || 0), 0);
         if (maxStep >= 4) {
-          actualStimuliCount = Math.ceil((maxStep - 4 + 1) / STIM_SUBSTEPS);
+          actualStimuliCount = maxStep - 4 + 1;
         }
       }
       // Final fallback: if still 0, use total stimuli from DB (but cap at reasonable number)
@@ -496,10 +494,10 @@ export async function GET(request: Request) {
         { step: 3, label: "Psihografic" },
       ];
 
-      // Each stimulus: first sub-step = 4 + (stimIdx * 6)
+      // Wizard sends step = groupIdx + 4 for each stimulus
+      // So Stimul 1 → step 4, Stimul 2 → step 5, ..., Stimul N → step N+3
       for (let s = 0; s < stimuliForFunnel; s++) {
-        const stimStart = 4 + (s * STIM_SUBSTEPS);
-        milestones.push({ step: stimStart, label: `Stimul ${s + 1}` });
+        milestones.push({ step: 4 + s, label: `Stimul ${s + 1}` });
       }
 
       // "Completed" = has completed_at set (separate check, not step-based)
