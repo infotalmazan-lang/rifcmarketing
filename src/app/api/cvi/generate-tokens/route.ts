@@ -5,35 +5,44 @@ import { randomUUID } from "crypto";
 export const revalidate = 0;
 
 // POST /api/cvi/generate-tokens
-// Admin: generate N unique CVI expert tokens
+// Admin: create a new CVI expert with profile + unique token
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const count = Math.min(Math.max(body.count || 1, 1), 50); // 1-50
     const invitedBy = body.invited_by || "talmazan";
 
     const supabase = createServiceRole();
 
-    const tokens: { token: string; link: string }[] = [];
+    // Single expert with profile data
+    const token = randomUUID();
+    const insertData: Record<string, unknown> = {
+      token,
+      invited_by: invitedBy,
+    };
 
-    for (let i = 0; i < count; i++) {
-      const token = randomUUID();
-      const { error } = await supabase
-        .from("cvi_experts")
-        .insert({ token, invited_by: invitedBy });
+    // Optional profile fields (pre-filled by admin)
+    if (body.name) insertData.name = body.name.trim();
+    if (body.org) insertData.org = body.org.trim();
+    if (body.role) insertData.role = body.role.trim();
+    if (body.experience) insertData.experience = body.experience.trim();
+    if (body.email) insertData.email = body.email.trim();
 
-      if (!error) {
-        tokens.push({
-          token,
-          link: `https://rifcmarketing.com/articolstiintific/cvi?token=${token}`,
-        });
-      }
+    const { data, error } = await supabase
+      .from("cvi_experts")
+      .insert(insertData)
+      .select("*")
+      .single();
+
+    if (error) {
+      console.error("CVI insert error:", error);
+      return NextResponse.json({ error: "Failed to create expert" }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
-      count: tokens.length,
-      tokens,
+      expert: data,
+      token,
+      link: `https://rifcmarketing.com/articolstiintific/cvi?token=${token}`,
     });
   } catch {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
@@ -68,29 +77,80 @@ export async function GET() {
   }
 }
 
-// DELETE /api/cvi/generate-tokens?token=XXX — revoke a token
-export async function DELETE(req: NextRequest) {
+// PATCH /api/cvi/generate-tokens — update expert profile
+export async function PATCH(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = searchParams.get("token");
+    const body = await req.json();
+    const { id, ...updates } = body;
 
-    if (!token) {
-      return NextResponse.json({ error: "Missing token" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: "Missing expert id" }, { status: 400 });
     }
 
     const supabase = createServiceRole();
 
-    const { error } = await supabase
+    const updateData: Record<string, unknown> = {};
+    if (updates.name !== undefined) updateData.name = updates.name?.trim() || null;
+    if (updates.org !== undefined) updateData.org = updates.org?.trim() || null;
+    if (updates.role !== undefined) updateData.role = updates.role?.trim() || null;
+    if (updates.experience !== undefined) updateData.experience = updates.experience?.trim() || null;
+    if (updates.email !== undefined) updateData.email = updates.email?.trim() || null;
+    if (updates.status !== undefined) updateData.status = updates.status;
+
+    const { data, error } = await supabase
       .from("cvi_experts")
-      .update({ status: "revoked" })
-      .eq("token", token)
-      .eq("status", "pending");
+      .update(updateData)
+      .eq("id", id)
+      .select("*")
+      .single();
 
     if (error) {
-      return NextResponse.json({ error: "Failed to revoke" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to update expert" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, expert: data });
+  } catch {
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+// DELETE /api/cvi/generate-tokens?token=XXX — revoke a token
+// DELETE /api/cvi/generate-tokens?id=XXX&hard=1 — permanently delete
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const token = searchParams.get("token");
+    const id = searchParams.get("id");
+    const hard = searchParams.get("hard");
+
+    const supabase = createServiceRole();
+
+    if (hard && id) {
+      // Hard delete: remove from DB
+      // First delete any responses
+      await supabase.from("cvi_responses").delete().eq("expert_id", id);
+      const { error } = await supabase.from("cvi_experts").delete().eq("id", id);
+      if (error) {
+        return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    if (token) {
+      // Soft revoke
+      const { error } = await supabase
+        .from("cvi_experts")
+        .update({ status: "revoked" })
+        .eq("token", token)
+        .eq("status", "pending");
+
+      if (error) {
+        return NextResponse.json({ error: "Failed to revoke" }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: "Missing token or id" }, { status: 400 });
   } catch {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }

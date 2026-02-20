@@ -766,11 +766,14 @@ export default function StudiuAdminPage() {
   const [cviExperts, setCviExperts] = useState<any[]>([]);
   const [cviResults, setCviResults] = useState<any>(null);
   const [cviLoading, setCviLoading] = useState(false);
-  const [cviGenerating, setCviGenerating] = useState(false);
-  const [cviGenCount, setCviGenCount] = useState(10);
   const [cviCopied, setCviCopied] = useState<string | null>(null);
   const [cviExportingCsv, setCviExportingCsv] = useState(false);
   const [cviExportingJson, setCviExportingJson] = useState(false);
+  const [showAddCviExpert, setShowAddCviExpert] = useState(false);
+  const [editingCviExpertId, setEditingCviExpertId] = useState<string | null>(null);
+  const [cviSaving, setCviSaving] = useState(false);
+  const defaultCviExpertForm = { name: "", org: "", role: "", experience: "", email: "" };
+  const [cviExpertForm, setCviExpertForm] = useState(defaultCviExpertForm);
 
   // AI benchmark state
   const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
@@ -1024,6 +1027,59 @@ export default function StudiuAdminPage() {
   useEffect(() => {
     if (activeTab === "cvi") fetchCviData();
   }, [activeTab, fetchCviData]);
+
+  const saveCviExpert = useCallback(async () => {
+    if (!cviExpertForm.name.trim()) return;
+    setCviSaving(true);
+    try {
+      if (editingCviExpertId) {
+        // Update existing
+        await fetch("/api/cvi/generate-tokens", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingCviExpertId, ...cviExpertForm }),
+        });
+      } else {
+        // Create new
+        await fetch("/api/cvi/generate-tokens", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...cviExpertForm, invited_by: "talmazan" }),
+        });
+      }
+      setShowAddCviExpert(false);
+      setEditingCviExpertId(null);
+      setCviExpertForm({ name: "", org: "", role: "", experience: "", email: "" });
+      fetchCviData();
+    } catch { /* ignore */ }
+    setCviSaving(false);
+  }, [cviExpertForm, editingCviExpertId, fetchCviData]);
+
+  const deleteCviExpert = useCallback(async (id: string) => {
+    if (!confirm("Ești sigur că vrei să ștergi permanent acest expert CVI?")) return;
+    try {
+      await fetch(`/api/cvi/generate-tokens?id=${id}&hard=1`, { method: "DELETE" });
+      fetchCviData();
+    } catch { /* ignore */ }
+  }, [fetchCviData]);
+
+  const toggleCviExpertAccess = useCallback(async (token: string, isActive: boolean) => {
+    if (isActive) {
+      await fetch(`/api/cvi/generate-tokens?token=${token}`, { method: "DELETE" });
+    } else {
+      // Restore — use PATCH to set status back to pending
+      // For now we find the expert by token and update via PATCH
+      const expert = cviExperts.find(e => e.token === token);
+      if (expert) {
+        await fetch("/api/cvi/generate-tokens", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: expert.id, status: "pending" }),
+        });
+      }
+    }
+    fetchCviData();
+  }, [fetchCviData, cviExperts]);
 
   const defaultExpertForm = { first_name: "", last_name: "", email: "", phone: "", photo_url: "", experience_years: "", brands_worked: [] as string[], total_budget_managed: "", marketing_roles: [] as string[] };
 
@@ -4484,13 +4540,27 @@ export default function StudiuAdminPage() {
               </div>
             ) : (
               <>
+                {/* ── Header + Add Button ── */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                  <div>
+                    <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Evaluare Itemi (CVI)</h2>
+                    <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                      Fiecare expert primeste un link unic, evalueaza 35 itemi RIFC pe scala Likert 1-4.
+                    </p>
+                  </div>
+                  <button style={{ ...S.addCatBtn, background: "#6366F1" }} onClick={() => setShowAddCviExpert(true)}>
+                    <Plus size={16} />
+                    ADAUGA EXPERT
+                  </button>
+                </div>
+
                 {/* ── Stats Panel ── */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
                   {[
-                    { label: "Invitați", value: cviResults?.stats?.totalExperts || 0, color: "#6366F1" },
-                    { label: "Completat", value: cviResults?.stats?.completed || 0, color: "#22C55E" },
-                    { label: "Pending", value: cviResults?.stats?.pending || 0, color: "#F59E0B" },
-                    { label: "Fleiss κ", value: cviResults?.fleissKappa !== undefined ? cviResults.fleissKappa.toFixed(3) : "—", color: "#8B5CF6" },
+                    { label: "Invitați", value: cviExperts.length, color: "#6366F1" },
+                    { label: "Completat", value: cviExperts.filter((e: any) => e.status === "completed").length, color: "#22C55E" },
+                    { label: "Pending", value: cviExperts.filter((e: any) => e.status === "pending").length, color: "#F59E0B" },
+                    { label: "Fleiss κ", value: cviResults?.fleissKappa !== undefined && cviResults.fleissKappa > 0 ? cviResults.fleissKappa.toFixed(3) : "—", color: "#8B5CF6" },
                   ].map((s, i) => (
                     <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px", textAlign: "center" }}>
                       <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -4545,117 +4615,205 @@ export default function StudiuAdminPage() {
                   </div>
                 </div>
 
-                {/* ── Generate Links Section ── */}
-                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 20, marginBottom: 20 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                      <Link size={16} /> Generare Linkuri Unice
-                    </h3>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <input
-                        type="number" min={1} max={50} value={cviGenCount}
-                        onChange={e => setCviGenCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
-                        style={{ width: 60, padding: "6px 10px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 13, textAlign: "center" }}
-                      />
-                      <button
-                        onClick={async () => {
-                          setCviGenerating(true);
-                          try {
-                            await fetch("/api/cvi/generate-tokens", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ count: cviGenCount, invited_by: "talmazan" }),
-                            });
-                            fetchCviData();
-                          } catch { /* ignore */ }
-                          setCviGenerating(false);
-                        }}
-                        disabled={cviGenerating}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 6,
-                          padding: "8px 16px", borderRadius: 8, border: "none",
-                          background: "#1C1917", color: "#fff", fontSize: 13, fontWeight: 600,
-                          cursor: cviGenerating ? "wait" : "pointer", opacity: cviGenerating ? 0.6 : 1,
-                        }}
-                      >
-                        <Plus size={14} /> {cviGenerating ? "Se generează..." : `Generează ${cviGenCount} linkuri`}
+                {/* ── Add/Edit CVI Expert Form ── */}
+                {showAddCviExpert && (
+                  <div style={{ ...S.configCard, borderColor: "#6366F1", borderWidth: 2, marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                      <Target size={16} style={{ color: "#6366F1" }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6366F1" }}>{editingCviExpertId ? "EDITARE EXPERT CVI" : "EXPERT CVI NOU"}</span>
+                    </div>
+                    {/* Row 1: Nume + Organizație */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      <div>
+                        <label style={S.configLabel}>NUME COMPLET *</label>
+                        <input style={{ ...S.catEditInput, width: "100%" }} value={cviExpertForm.name} onChange={(e) => setCviExpertForm({ ...cviExpertForm, name: e.target.value })} placeholder="ex: Dr. Maria Popescu" />
+                      </div>
+                      <div>
+                        <label style={S.configLabel}>ORGANIZAȚIE</label>
+                        <input style={{ ...S.catEditInput, width: "100%" }} value={cviExpertForm.org} onChange={(e) => setCviExpertForm({ ...cviExpertForm, org: e.target.value })} placeholder="ex: Universitatea din București" />
+                      </div>
+                    </div>
+                    {/* Row 2: Rol + Experiență + Email */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                      <div>
+                        <label style={S.configLabel}>ROL / FUNCȚIE</label>
+                        <input style={{ ...S.catEditInput, width: "100%" }} value={cviExpertForm.role} onChange={(e) => setCviExpertForm({ ...cviExpertForm, role: e.target.value })} placeholder="ex: Profesor Marketing" />
+                      </div>
+                      <div>
+                        <label style={S.configLabel}>EXPERIENȚĂ</label>
+                        <input style={{ ...S.catEditInput, width: "100%" }} value={cviExpertForm.experience} onChange={(e) => setCviExpertForm({ ...cviExpertForm, experience: e.target.value })} placeholder="ex: 10+ ani, PhD" />
+                      </div>
+                      <div>
+                        <label style={S.configLabel}>EMAIL</label>
+                        <input style={{ ...S.catEditInput, width: "100%" }} value={cviExpertForm.email} onChange={(e) => setCviExpertForm({ ...cviExpertForm, email: e.target.value })} placeholder="expert@email.com" type="email" />
+                      </div>
+                    </div>
+                    {/* Buttons */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button style={{ ...S.addCatBtn, background: "#6366F1", opacity: cviSaving ? 0.6 : 1 }} onClick={saveCviExpert} disabled={cviSaving}>
+                        {cviSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                        {cviSaving ? "Se salveaza..." : editingCviExpertId ? "Salveaza modificarile" : "Salveaza & Genereaza link"}
                       </button>
+                      <button style={S.galleryEditBtn} onClick={() => { setShowAddCviExpert(false); setEditingCviExpertId(null); setCviExpertForm({ name: "", org: "", role: "", experience: "", email: "" }); }}><X size={14} /> Anuleaza</button>
                     </div>
                   </div>
+                )}
 
-                  {/* Expert tokens table */}
-                  {cviExperts.length > 0 && (
-                    <div style={{ maxHeight: 300, overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: 8 }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                        <thead>
-                          <tr style={{ background: "#f9fafb", position: "sticky", top: 0 }}>
-                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>#</th>
-                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Token</th>
-                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Status</th>
-                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Expert</th>
-                            <th style={{ padding: "8px 12px", textAlign: "left", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Data</th>
-                            <th style={{ padding: "8px 12px", textAlign: "center", fontWeight: 600, borderBottom: "1px solid #e5e7eb" }}>Acțiuni</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cviExperts.map((exp: any, idx: number) => (
-                            <tr key={exp.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                              <td style={{ padding: "8px 12px", color: "#9CA3AF" }}>{idx + 1}</td>
-                              <td style={{ padding: "8px 12px", fontFamily: "monospace", fontSize: 11 }}>{exp.token?.slice(0, 8)}...</td>
-                              <td style={{ padding: "8px 12px" }}>
-                                <span style={{
-                                  display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 600,
-                                  background: exp.status === "completed" ? "#DCFCE7" : exp.status === "revoked" ? "#FEE2E2" : "#FEF3C7",
-                                  color: exp.status === "completed" ? "#16A34A" : exp.status === "revoked" ? "#DC2626" : "#D97706",
-                                }}>
-                                  {exp.status === "completed" ? "Completat" : exp.status === "revoked" ? "Revocat" : "Pending"}
-                                </span>
-                              </td>
-                              <td style={{ padding: "8px 12px" }}>{exp.name || "—"}</td>
-                              <td style={{ padding: "8px 12px", fontSize: 11, color: "#9CA3AF" }}>
-                                {exp.completed_at ? new Date(exp.completed_at).toLocaleDateString("ro-RO") : "—"}
-                              </td>
-                              <td style={{ padding: "8px 12px", textAlign: "center" }}>
-                                <div style={{ display: "flex", gap: 4, justifyContent: "center" }}>
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(`https://rifcmarketing.com/articolstiintific/cvi?token=${exp.token}`);
-                                      setCviCopied(exp.id);
-                                      setTimeout(() => setCviCopied(null), 2000);
-                                    }}
-                                    title="Copiază link"
-                                    style={{ padding: "4px 8px", border: "1px solid #e5e7eb", borderRadius: 6, background: cviCopied === exp.id ? "#DCFCE7" : "#fff", cursor: "pointer", fontSize: 11 }}
-                                  >
-                                    {cviCopied === exp.id ? <Check size={12} /> : <Copy size={12} />}
-                                  </button>
-                                  <button
-                                    onClick={() => window.open(`/articolstiintific/cvi?token=${exp.token}`, "_blank")}
-                                    title="Deschide"
-                                    style={{ padding: "4px 8px", border: "1px solid #e5e7eb", borderRadius: 6, background: "#fff", cursor: "pointer", fontSize: 11 }}
-                                  >
-                                    <ExternalLink size={12} />
-                                  </button>
-                                  {exp.status === "pending" && (
-                                    <button
-                                      onClick={async () => {
-                                        await fetch(`/api/cvi/generate-tokens?token=${exp.token}`, { method: "DELETE" });
-                                        fetchCviData();
-                                      }}
-                                      title="Revocă"
-                                      style={{ padding: "4px 8px", border: "1px solid #FEE2E2", borderRadius: 6, background: "#FEF2F2", cursor: "pointer", fontSize: 11, color: "#DC2626" }}
-                                    >
-                                      <ShieldOff size={12} />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
+                {/* ── Expert Cards Grid ── */}
+                {cviExperts.length === 0 && !showAddCviExpert ? (
+                  <div style={S.placeholderTab}>
+                    <Target size={48} style={{ color: "#d1d5db" }} />
+                    <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Niciun expert CVI inregistrat</h3>
+                    <p style={{ color: "#6B7280", fontSize: 14 }}>Apasa &quot;Adauga Expert&quot; pentru a crea un profil si genera un link unic de evaluare CVI.</p>
+                  </div>
+                ) : cviExperts.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 24 }}>
+                    {cviExperts.map((exp: any) => {
+                      const isCompleted = exp.status === "completed";
+                      const isRevoked = exp.status === "revoked";
+                      const isPending = exp.status === "pending";
+                      const initial = exp.name?.charAt(0)?.toUpperCase() || "?";
+                      const cviLink = `https://rifcmarketing.com/articolstiintific/cvi?token=${exp.token}`;
+
+                      return (
+                        <div
+                          key={exp.id}
+                          style={{
+                            ...S.configCard,
+                            borderColor: isCompleted ? "#22C55E" : isRevoked ? "#fca5a5" : "#e5e7eb",
+                            borderWidth: 1,
+                            background: isCompleted ? "#f0fdf4" : isRevoked ? "#fef2f2" : "#fff",
+                            padding: "16px 20px",
+                            position: "relative" as const,
+                          }}
+                        >
+                          {/* Status indicator */}
+                          <div style={{ position: "absolute" as const, top: 12, right: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                            {isRevoked && (
+                              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#DC2626", background: "#fef2f2", border: "1px solid #fca5a5", padding: "2px 8px", borderRadius: 10 }}>REVOCAT</span>
+                            )}
+                            {isCompleted && (
+                              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#16A34A", background: "#DCFCE7", border: "1px solid #86EFAC", padding: "2px 8px", borderRadius: 10 }}>COMPLETAT</span>
+                            )}
+                            <span style={{
+                              width: 8, height: 8, borderRadius: "50%",
+                              background: isCompleted ? "#22C55E" : isRevoked ? "#DC2626" : "#F59E0B",
+                            }} />
+                          </div>
+
+                          {/* Expert info */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                            <div style={{
+                              width: 48, height: 48, borderRadius: "50%",
+                              background: isCompleted ? "linear-gradient(135deg, #22C55E, #16A34A)" : isRevoked ? "#d1d5db" : "linear-gradient(135deg, #6366F1, #4F46E5)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              color: "#fff", fontSize: 16, fontWeight: 700, flexShrink: 0,
+                            }}>
+                              {initial}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{exp.name || "Fără nume"}</div>
+                              <div style={{ display: "flex", gap: 8, marginTop: 2, flexWrap: "wrap" as const }}>
+                                {exp.email && <span style={{ fontSize: 11, color: "#6B7280", display: "flex", alignItems: "center", gap: 3 }}><Mail size={10} /> {exp.email}</span>}
+                                {exp.org && <span style={{ fontSize: 11, color: "#6B7280" }}>{exp.org}</span>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Progress: 0/35 items */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                            <span style={{ fontSize: 11, color: "#6B7280" }}>Progres evaluare</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: isCompleted ? "#22C55E" : "#D97706" }}>
+                              {isCompleted ? "35 / 35" : "0 / 35"}
+                            </span>
+                          </div>
+                          <div style={{ height: 4, background: "#e5e7eb", borderRadius: 2, overflow: "hidden", marginBottom: 12 }}>
+                            <div style={{ height: "100%", background: isCompleted ? "#22C55E" : "#D97706", borderRadius: 2, width: isCompleted ? "100%" : "0%", transition: "width 0.3s" }} />
+                          </div>
+
+                          {/* Info pills */}
+                          {(exp.role || exp.experience) && (
+                            <div style={{ marginBottom: 10, display: "flex", flexWrap: "wrap" as const, gap: 4 }}>
+                              {exp.role && <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 8, background: "#EEF2FF", color: "#6366F1", border: "1px solid #C7D2FE" }}>{exp.role}</span>}
+                              {exp.experience && <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 8, background: "#f0fdf4", color: "#059669", border: "1px solid #bbf7d0" }}>{exp.experience}</span>}
+                            </div>
+                          )}
+
+                          {/* Action buttons */}
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                            <button
+                              style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px" }}
+                              onClick={() => {
+                                setEditingCviExpertId(exp.id);
+                                setCviExpertForm({
+                                  name: exp.name || "",
+                                  org: exp.org || "",
+                                  role: exp.role || "",
+                                  experience: exp.experience || "",
+                                  email: exp.email || "",
+                                });
+                                setShowAddCviExpert(true);
+                              }}
+                              title="Editeaza expert"
+                            >
+                              <Pencil size={12} /> Editeaza
+                            </button>
+                            <button
+                              style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", background: cviCopied === exp.id ? "#dcfce7" : "#f3f4f6" }}
+                              onClick={() => {
+                                navigator.clipboard.writeText(cviLink);
+                                setCviCopied(exp.id);
+                                setTimeout(() => setCviCopied(null), 2000);
+                              }}
+                              title="Copiaza link"
+                            >
+                              {cviCopied === exp.id ? <Check size={12} style={{ color: "#22C55E" }} /> : <Copy size={12} />}
+                              {cviCopied === exp.id ? "Copiat!" : "Link"}
+                            </button>
+                            <button
+                              style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px" }}
+                              onClick={() => window.open(cviLink, "_blank")}
+                              title="Deschide link expert"
+                            >
+                              <ExternalLink size={12} /> Deschide
+                            </button>
+                            {isPending && (
+                              <button
+                                style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", color: "#DC2626" }}
+                                onClick={() => toggleCviExpertAccess(exp.token, true)}
+                                title="Revoca acces"
+                              >
+                                <ShieldOff size={12} /> Revoca
+                              </button>
+                            )}
+                            {isRevoked && (
+                              <button
+                                style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", color: "#059669" }}
+                                onClick={() => toggleCviExpertAccess(exp.token, false)}
+                                title="Restabileste acces"
+                              >
+                                <ShieldCheck size={12} /> Restabileste
+                              </button>
+                            )}
+                            <button
+                              style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", color: "#DC2626" }}
+                              onClick={() => deleteCviExpert(exp.id)}
+                              title="Sterge expert"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+
+                          {/* Created date */}
+                          <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 8 }}>
+                            Creat: {new Date(exp.created_at).toLocaleDateString("ro-RO")}
+                            {exp.completed_at && <span style={{ color: "#22C55E" }}> | Completat: {new Date(exp.completed_at).toLocaleDateString("ro-RO")}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* ── CVI Results Table ── */}
                 {cviResults?.summary && cviResults.summary.length > 0 && (
@@ -4663,7 +4821,6 @@ export default function StudiuAdminPage() {
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                       <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>Rezultate CVI per Item</h3>
                       <div style={{ display: "flex", gap: 8 }}>
-                        {/* Export CSV */}
                         <button
                           onClick={() => {
                             setCviExportingCsv(true);
@@ -4684,7 +4841,6 @@ export default function StudiuAdminPage() {
                         >
                           <FileText size={12} /> Export CSV
                         </button>
-                        {/* Export JSON */}
                         <button
                           onClick={() => {
                             setCviExportingJson(true);
@@ -4775,33 +4931,6 @@ export default function StudiuAdminPage() {
                           })}
                         </tbody>
                       </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Completed Experts List ── */}
-                {cviResults?.experts && cviResults.experts.filter((e: any) => e.status === "completed").length > 0 && (
-                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 20 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
-                      <UserCheck size={16} /> Experți care au completat ({cviResults.experts.filter((e: any) => e.status === "completed").length})
-                    </h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10 }}>
-                      {cviResults.experts.filter((e: any) => e.status === "completed").map((exp: any) => (
-                        <div key={exp.id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 14, display: "flex", alignItems: "center", gap: 12 }}>
-                          <div style={{
-                            width: 36, height: 36, borderRadius: "50%",
-                            background: "linear-gradient(135deg, #667eea, #764ba2)",
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 14, fontWeight: 700, color: "white", flexShrink: 0,
-                          }}>
-                            {exp.name?.charAt(0)?.toUpperCase() || "?"}
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 14, fontWeight: 600 }}>{exp.name || "Anonim"}</div>
-                            <div style={{ fontSize: 11, color: "#6B7280" }}>{exp.role || "—"} · {exp.experience || "—"}</div>
-                          </div>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 )}
