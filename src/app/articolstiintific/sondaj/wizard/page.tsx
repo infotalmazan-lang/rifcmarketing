@@ -1041,7 +1041,9 @@ function StudiuWizardInner() {
   };
 
   // ── Loading state ───────────────────────────────────────
-  if (step === -1 || !session) {
+  // Show loading only when still initializing (step=-1) or when past welcome but no session yet
+  // Welcome screen (step=0) can render with just preloadedStimuli, before session is created
+  if (step === -1 || (!session && step > 0) || (!session && !preloadedStimuli)) {
     return (
       <div style={S.page}>
         <div style={S.cardOuter}>
