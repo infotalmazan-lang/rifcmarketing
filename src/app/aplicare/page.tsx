@@ -1423,7 +1423,7 @@ export default function AplicareProgramePage() {
               <ChevronDown size={12} style={{ position: "absolute", right: 8, color: "#6B7280", pointerEvents: "none" }} />
             </div>
             <button
-              onClick={() => { setFilterAplicate(!filterAplicate); if (!filterAplicate) setFilterInLucru(false); }}
+              onClick={() => { setShowAutoEvent(false); setFilterAplicate(!filterAplicate); if (!filterAplicate) setFilterInLucru(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
                 padding: "8px 14px", fontSize: 11, fontWeight: 700,
@@ -1438,7 +1438,7 @@ export default function AplicareProgramePage() {
               APLICATE ({aplicateCount})
             </button>
             <button
-              onClick={() => { setFilterInLucru(!filterInLucru); if (!filterInLucru) setFilterAplicate(false); }}
+              onClick={() => { setShowAutoEvent(false); setFilterInLucru(!filterInLucru); if (!filterInLucru) setFilterAplicate(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
                 padding: "8px 14px", fontSize: 11, fontWeight: 700,
@@ -1453,7 +1453,7 @@ export default function AplicareProgramePage() {
               IN LUCRU ({inLucruCount})
             </button>
             <button
-              onClick={() => setShowAutoEvent(true)}
+              onClick={() => { setShowAutoEvent(!showAutoEvent); if (!showAutoEvent) { setFilterAplicate(false); setFilterInLucru(false); } }}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
                 padding: "8px 14px", fontSize: 11, fontWeight: 700,
