@@ -1071,7 +1071,7 @@ function StudiuWizardInner() {
   }
 
   // ── Complete / Thank you state ──────────────────────────
-  if (step >= thankYouStep) {
+  if (step >= thankYouStep && session) {
     return (
       <div style={S.page}>
         <div style={S.cardOuter}>
@@ -1090,7 +1090,7 @@ function StudiuWizardInner() {
               {w.thankYouTitle}
             </h2>
             <p style={{ color: textMuted, marginBottom: 24, fontSize: m ? 14 : 15, lineHeight: 1.6 }}>
-              {locale === "ro" ? `Ai evaluat ${session.stimuli.length} ` : locale === "ru" ? `Вы оценили ${session.stimuli.length} ` : `You evaluated ${session.stimuli.length} `}{w.thankYouEvaluated}
+              {locale === "ro" ? `Ai evaluat ${session!.stimuli.length} ` : locale === "ru" ? `Вы оценили ${session!.stimuli.length} ` : `You evaluated ${session!.stimuli.length} `}{w.thankYouEvaluated}
               {" "}{w.thankYouSuccess}
             </p>
             <div style={{
@@ -1191,13 +1191,18 @@ function StudiuWizardInner() {
     );
   }
 
+  // ── Session type narrowing: at step 0 (welcome) session may be null,
+  //    but welcome is rendered below and doesn't use session.
+  //    For all code below that accesses session.stimuli, we need the non-null type. ──
+  const sessionSafe = session || { sessionId: "", currentStep: 0, stimuliOrder: [] as string[], stimuli: [] as Stimulus[] };
+
   // ── Get current stimulus ────────────────────────────────
   const currentStimGroupIdx = step >= firstStimulusStep && step <= lastStimulusStep
     ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
   const currentStimSubStep = step >= firstStimulusStep && step <= lastStimulusStep
     ? (step - firstStimulusStep) % stepsPerStimulus : -1; // 0=R, 1=I, 2=F, 3=C, 4=CTA, 5=BRAND
-  const currentStim = currentStimGroupIdx >= 0 && currentStimGroupIdx < session.stimuli.length
-    ? session.stimuli[currentStimGroupIdx]
+  const currentStim = currentStimGroupIdx >= 0 && currentStimGroupIdx < sessionSafe.stimuli.length
+    ? sessionSafe.stimuli[currentStimGroupIdx]
     : null;
   const currentScores = currentStim
     ? stimulusScores[currentStim.id] || { r: 0, i: 0, f: 0, c: 0, cta: 0, brand: null }
@@ -1211,25 +1216,23 @@ function StudiuWizardInner() {
     // First stimulus always gets interstitial
     if (currentStimGroupIdx === 0) return true;
     // Show only if type changed from previous stimulus
-    const prevStim = session.stimuli[currentStimGroupIdx - 1];
+    const prevStim = sessionSafe.stimuli[currentStimGroupIdx - 1];
     return !prevStim || prevStim.type !== currentStim.type;
   })();
 
   // ── Category grouping info (for interstitial) ──────────
-  const categoryStimCount = currentStim && session
-    ? session.stimuli.filter(s => s.type === currentStim.type).length : 0;
+  const categoryStimCount = currentStim
+    ? sessionSafe.stimuli.filter(s => s.type === currentStim.type).length : 0;
   // Unique categories in order of appearance (since stimuli are grouped by category)
-  const uniqueCategories = session
-    ? session.stimuli.reduce<string[]>((acc, s) => {
-        if (!acc.includes(s.type)) acc.push(s.type);
-        return acc;
-      }, [])
-    : [];
+  const uniqueCategories = sessionSafe.stimuli.reduce<string[]>((acc, s) => {
+    if (!acc.includes(s.type)) acc.push(s.type);
+    return acc;
+  }, []);
   const currentCategoryNum = currentStim ? uniqueCategories.indexOf(currentStim.type) + 1 : 0;
   const totalCategories = uniqueCategories.length;
   // Previous category label (for transition message)
-  const prevCategoryType = currentStimGroupIdx > 0 && session
-    ? session.stimuli[currentStimGroupIdx - 1]?.type : null;
+  const prevCategoryType = currentStimGroupIdx > 0
+    ? sessionSafe.stimuli[currentStimGroupIdx - 1]?.type : null;
 
   // ── Profile step question number ────────────────────────
   const profileQuestionNum = step >= 1 && step < profileStepCount ? step : 0;
@@ -1851,7 +1854,7 @@ function StudiuWizardInner() {
 
                   {isFirst && (
                     <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.6 }}>
-                      {totalCategories} {w.categorySummary} &middot; {session.stimuli.length} {w.categoryMaterialPlural}
+                      {totalCategories} {w.categorySummary} &middot; {sessionSafe.stimuli.length} {w.categoryMaterialPlural}
                     </p>
                   )}
                 </div>
@@ -1910,7 +1913,7 @@ function StudiuWizardInner() {
               <>
                 {renderDashes()}
                 <div style={S.questionNum}>
-                  {w.materialNum} {currentStimGroupIdx + 1} / {session.stimuli.length}
+                  {w.materialNum} {currentStimGroupIdx + 1} / {sessionSafe.stimuli.length}
                 </div>
 
                 {/* ── Brand familiarity card (substep 5) ── */}
