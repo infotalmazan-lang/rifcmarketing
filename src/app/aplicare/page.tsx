@@ -159,11 +159,11 @@ const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "blocks" 
   {
     title: "CBIM International Conference 2026",
     category: "conferinte",
-    description: "Accepta abstracte (nu lucrari complete). RIFC pozitionat ca instrument de diagnostic pentru campanii B2B.",
+    description: "Accepta abstracte (nu lucrari complete). RIFC pozitionat ca instrument de diagnostic pentru campanii B2B. Potential articol in JBIM (Journal of Business & Industrial Marketing).",
     deadline: "16 Martie 2026",
     location: "Spania (Universidade de Vigo, Galicia)",
     url: "https://cbim2026.com/Home/en/",
-    budget: "Publicare in Journal of Business & Industrial Marketing",
+    budget: "Potential publicare in JBIM (Journal of Business & Industrial Marketing)",
     organizer: "CBIM",
     priority: 8,
     tags: ["URGENT", "Pre-publicare"],
@@ -230,15 +230,15 @@ const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "blocks" 
   {
     title: "Horizon Europe WIDERA Twinning 2026",
     category: "granturi",
-    description: "Finanteaza networking, capacity building, staff exchange si pana la 30% activitati de cercetare. CEA MAI VALOROASA OPORTUNITATE DIN LISTA.",
+    description: "Finanteaza networking, capacity building, staff exchange si pana la 30% activitati de cercetare. CEA MAI VALOROASA OPORTUNITATE DIN LISTA. Moldova beneficiaza de acces preferential ca tara Widening (participare extinsa UE).",
     deadline: "9 Aprilie 2026 (17:00 Bruxelles)",
     location: "UE — Parteneri: UTM/USM + min. 2 institutii UE top",
     url: "https://rea.ec.europa.eu/funding-and-grants/horizon-europe-widening-participation",
     budget: "EUR 800,000 — EUR 1,500,000 per proiect",
     organizer: "Comisia Europeana / REA",
     priority: 10,
-    tags: ["CEA MAI MARE VALOARE", "Pre-publicare ideal"],
-    notes: null,
+    tags: ["CEA MAI MARE VALOARE", "Pre-publicare ideal", "Widening"],
+    notes: "Strategie: Prezinta -> Publica -> Premiaza. Profilul dual (lector universitar + antreprenor din Moldova) ofera acces preferential la instrumentele UE de Widening si finantarea din Parteneriatul Estic.",
     lunaAplicare: "Aprilie 2026",
   },
   {
@@ -286,14 +286,14 @@ const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "blocks" 
   {
     title: "COST Action Open Call 2026",
     category: "granturi",
-    description: "Propune o actiune de networking pe 4 ani: 'Innovation in Marketing Measurement Methodology'. Cercetator ar conduce intreaga retea europeana.",
+    description: "Propune o actiune de networking pe 4 ani: 'Innovation in Marketing Measurement Methodology'. Cercetator ar conduce intreaga retea europeana. Moldova ITC eligibila — acces preferential Widening.",
     deadline: "Estimat Octombrie 2026",
     location: "UE — Min. 7 tari, Moldova ITC eligibila",
     url: "https://www.cost.eu/funding/open-call-a-simple-one-step-application-process/",
     budget: "~EUR 575,000 total peste 4 ani",
     organizer: "COST Association",
     priority: 8,
-    tags: ["OCT 2026"],
+    tags: ["OCT 2026", "Widening"],
     notes: null,
     lunaAplicare: "Octombrie 2026",
   },
@@ -314,14 +314,14 @@ const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "blocks" 
   {
     title: "EU4Innovation East — Specific Moldova",
     category: "granturi",
-    description: "Finanteaza incubare, accelerare, hackathoane, mentoring. CONTINUUM GRUP SRL poate aplica pentru integrarea Protocolului RIFC in programe de accelerare startup.",
+    description: "Finanteaza incubare, accelerare, hackathoane, mentoring. CONTINUUM GRUP SRL poate aplica pentru integrarea Protocolului RIFC in programe de accelerare startup. Finantare din Parteneriatul Estic UE.",
     deadline: "Activ acum — pana la EUR 250,000 per grant",
     location: "Moldova",
     url: "https://eu4moldova.eu/en/eu4innovation-east",
     budget: "Pana la EUR 250,000 per grant",
     organizer: "Delegatia UE in Moldova",
     priority: 9,
-    tags: ["ACTIV ACUM", "Lansat 29 Ian 2026"],
+    tags: ["ACTIV ACUM", "Lansat 29 Ian 2026", "Parteneriatul Estic"],
     notes: null,
     lunaAplicare: "Februarie 2026",
   },
@@ -902,7 +902,7 @@ export default function AplicareProgramePage() {
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#DC2626", letterSpacing: 4, fontWeight: 700 }}>R IF C</div>
               <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0 }}>Aplicare Programe</h1>
               <p style={{ fontSize: 12, color: "#4B5563", marginTop: 2, fontWeight: 500 }}>
-                {totalPrograms} programe &middot; {aplicateCount} aplicate
+                {totalPrograms} programe &middot; {aplicateCount} aplicate &middot; Strategie: Prezinta &rarr; Publica &rarr; Premiaza
               </p>
             </div>
           </div>
