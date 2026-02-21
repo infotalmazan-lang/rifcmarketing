@@ -28,15 +28,31 @@ import {
   ChevronUp,
   Star,
   Tag,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Send,
+  Bell,
+  BarChart3,
+  Edit3,
+  Trash2,
+  ArrowUpRight,
+  CircleDot,
+  MessageSquare,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
-   R IF C — Aplicare Programe
-   7 tabs: ALL | Conferinte Academice | Granturi | Competitii cu Premii | Forumuri | Premii | Oportunitati
-   Password: APLICARE2026
+   R IF C — Aplicare Programe v2
+   31 pre-populated programs across 6 categories
+   Status: Aplicat | Nerelevant | Dupa lansare
+   Tracking: mesaj trimis, reminder, monitoring
+   Filter: APLICATE
    ═══════════════════════════════════════════════════════════ */
 
 // ── Types ──────────────────────────────────────────────────
+type CategoryKey = "conferinte" | "granturi" | "competitii" | "forumuri" | "premii" | "oportunitati";
+type AppStatus = "nesetat" | "aplicat" | "nerelevant" | "dupa_lansare";
+
 interface Program {
   id: string;
   title: string;
@@ -47,13 +63,19 @@ interface Program {
   url: string | null;
   budget: string | null;
   organizer: string | null;
-  status: "open" | "closed" | "upcoming";
+  priority: number; // 1-10
   tags: string[];
   notes: string | null;
   created_at: string;
+  // new fields
+  appStatus: AppStatus;
+  lunaAplicare: string | null; // e.g. "Martie 2026"
+  mesajTrimis: string | null;
+  mesajData: string | null;
+  reminder: string | null; // date ISO
+  reminderNote: string | null;
+  monitoring: string | null; // free text notes
 }
-
-type CategoryKey = "conferinte" | "granturi" | "competitii" | "forumuri" | "premii" | "oportunitati";
 
 interface CategoryDef {
   key: CategoryKey;
@@ -79,491 +101,460 @@ const TABS: { key: TabKey; label: string }[] = [
   ...CATEGORIES.map((c) => ({ key: c.key as TabKey, label: c.label })),
 ];
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  open: { bg: "#f0fdf4", text: "#16a34a", label: "Deschis" },
-  closed: { bg: "#fef2f2", text: "#dc2626", label: "Inchis" },
-  upcoming: { bg: "#eff6ff", text: "#2563eb", label: "In curand" },
+const APP_STATUS_CONFIG: Record<AppStatus, { bg: string; text: string; label: string; border: string }> = {
+  nesetat: { bg: "#F3F4F6", text: "#6B7280", label: "Nesetat", border: "#E5E7EB" },
+  aplicat: { bg: "#DCFCE7", text: "#16A34A", label: "Aplicat", border: "#86EFAC" },
+  nerelevant: { bg: "#F3F4F6", text: "#9CA3AF", label: "Nerelevant", border: "#D1D5DB" },
+  dupa_lansare: { bg: "#FEF3C7", text: "#D97706", label: "Dupa lansare", border: "#FCD34D" },
 };
 
 const ACCESS_CODE = "APLICARE2026";
 const STORAGE_KEY = "rifc-aplicare-access";
-const DATA_KEY = "rifc-aplicare-programs";
+const DATA_KEY = "rifc-aplicare-programs-v2";
 
-// ── Styles ─────────────────────────────────────────────────
-const S: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#FAFAFA",
-    fontFamily: "'Inter', sans-serif",
+// ── Seed Data ─────────────────────────────────────────────
+const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "mesajTrimis" | "mesajData" | "reminder" | "reminderNote" | "monitoring">[] = [
+  // ── Conferinte Academice (6) ──
+  {
+    title: "EMAC Fall Conference 2026",
+    category: "conferinte",
+    description: "Tinteste cercetatorii din societatile in tranzitie (Moldova se califica). Accepta lucrari in diverse stadii de dezvoltare. Cel mai potrivit forum european pentru profilul RIFC.",
+    deadline: "30 Aprilie 2026",
+    location: "Germania (Universitatea din Bremen)",
+    url: "https://www.uni-bremen.de/en/markstones/emac-fall-conference-2026",
+    budget: "Best Paper Award + Membership EMAC 2027 (~EUR 300-450)",
+    organizer: "EMAC",
+    priority: 10,
+    tags: ["PRIORITATE MAXIMA", "DESCHIS", "Pre-publicare eligibil"],
+    notes: null,
+    lunaAplicare: "Aprilie 2026",
   },
-  // Access gate
-  accessOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 9999,
+  {
+    title: "CBIM International Conference 2026",
+    category: "conferinte",
+    description: "Accepta abstracte (nu lucrari complete). RIFC pozitionat ca instrument de diagnostic pentru campanii B2B.",
+    deadline: "16 Martie 2026",
+    location: "Spania (Universidade de Vigo, Galicia)",
+    url: "https://cbim2026.com/Home/en/",
+    budget: "Publicare in Journal of Business & Industrial Marketing",
+    organizer: "CBIM",
+    priority: 8,
+    tags: ["URGENT", "Pre-publicare"],
+    notes: null,
+    lunaAplicare: "Martie 2026",
   },
-  accessCard: {
-    background: "#fff",
-    borderRadius: 16,
-    padding: "48px 40px",
-    maxWidth: 400,
-    width: "100%",
-    textAlign: "center" as const,
-    boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+  {
+    title: "ACR Annual Conference 2026",
+    category: "conferinte",
+    description: "Track explicit 'Working Papers' ca sesiuni poster. Prestigiu ridicat in comportamentul consumatorului.",
+    deadline: "Estimat Martie-Aprilie 2026",
+    location: "SUA (Chicago, Palmer House Hilton)",
+    url: "https://acrwebsite.org/events/acr26/",
+    budget: "Cost: ~$350-550",
+    organizer: "ACR",
+    priority: 7,
+    tags: ["Working Papers", "24-27 Sep 2026"],
+    notes: null,
+    lunaAplicare: "Aprilie 2026",
   },
-  accessLogo: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 14,
-    color: "#DC2626",
-    letterSpacing: 4,
-    fontWeight: 700,
-    marginBottom: 8,
+  {
+    title: "SMA Annual Conference 2026",
+    category: "conferinte",
+    description: "Accepta abstracte scurte, manuscrise in lucru si manuscrise finalizate. Journal asociat: Journal of Marketing Theory and Practice.",
+    deadline: "Estimat Iunie-August 2026",
+    location: "SUA",
+    url: "https://www.societyformarketingadvances.org/sma-conference",
+    budget: "Cost: ~$300-500 inclusiv membership",
+    organizer: "SMA",
+    priority: 7,
+    tags: ["NOV 2026", "Pre-publicare"],
+    notes: null,
+    lunaAplicare: "Iulie 2026",
   },
-  accessTitle: {
-    fontSize: 22,
-    fontWeight: 800,
-    color: "#111827",
-    marginBottom: 8,
+  {
+    title: "ASEM Simpozionul Tinerilor Cercetatori — Ed. XXVI",
+    category: "conferinte",
+    description: "Simpozion national moldovenesc pentru tineri cercetatori. Prima oportunitate de prezentare publica RIFC cu risc zero.",
+    deadline: "24-25 Aprilie 2026",
+    location: "Moldova (ASEM, Chisinau)",
+    url: "https://ase.md/simpozionul-stiintific-international-al-tinerilor-cercetatori",
+    budget: "ZERO cost",
+    organizer: "ASEM",
+    priority: 8,
+    tags: ["LOCAL MOLDOVA", "RO/EN/FR/DE/RU"],
+    notes: null,
+    lunaAplicare: "Aprilie 2026",
   },
-  accessSubtitle: {
-    fontSize: 13,
-    color: "#6B7280",
-    marginBottom: 28,
+  {
+    title: "MBD 2026 — Marketing and Business Development",
+    category: "conferinte",
+    description: "Lucrari publicate in Emerging Trends in Marketing and Management. Teme: marketing research, AI in marketing, antreprenoriat.",
+    deadline: "21-23 Iunie 2026",
+    location: "Romania (Predeal, ASE Bucuresti)",
+    url: "https://www.mk.ase.ro/mbd/",
+    budget: "Indexare DOAJ, RePEC, EBSCO, Google Scholar",
+    organizer: "Facultatea de Marketing, ASE Bucuresti",
+    priority: 9,
+    tags: ["VENUE REGIONAL IDEAL", "Pre-publicare", "RO/EN"],
+    notes: null,
+    lunaAplicare: "Mai 2026",
   },
-  accessInput: {
-    width: "100%",
-    padding: "14px 16px",
-    fontSize: 15,
-    border: "2px solid #E5E7EB",
-    borderRadius: 10,
-    outline: "none",
-    fontFamily: "'JetBrains Mono', monospace",
-    letterSpacing: 2,
-    textAlign: "center" as const,
-    marginBottom: 16,
-    transition: "border-color 0.2s",
+  // ── Granturi UE (7) ──
+  {
+    title: "Horizon Europe WIDERA Twinning 2026",
+    category: "granturi",
+    description: "Finanteaza networking, capacity building, staff exchange si pana la 30% activitati de cercetare. CEA MAI VALOROASA OPORTUNITATE DIN LISTA.",
+    deadline: "9 Aprilie 2026 (17:00 Bruxelles)",
+    location: "UE — Parteneri: UTM/USM + min. 2 institutii UE top",
+    url: "https://rea.ec.europa.eu/funding-and-grants/horizon-europe-widening-participation",
+    budget: "EUR 800,000 — EUR 1,500,000 per proiect",
+    organizer: "Comisia Europeana / REA",
+    priority: 10,
+    tags: ["CEA MAI MARE VALOARE", "Pre-publicare ideal"],
+    notes: null,
+    lunaAplicare: "Aprilie 2026",
   },
-  accessBtn: {
-    width: "100%",
-    padding: "14px 24px",
-    fontSize: 14,
-    fontWeight: 700,
-    color: "#fff",
-    background: "linear-gradient(135deg, #DC2626, #B91C1C)",
-    border: "none",
-    borderRadius: 10,
-    cursor: "pointer",
-    letterSpacing: 1,
-    transition: "all 0.2s",
+  {
+    title: "Erasmus+ KA2 Cooperation Partnerships",
+    category: "granturi",
+    description: "Poate finanta RIFC ca metodologie educationala pentru studentii de marketing. UTM/USM + 2 universitati UE. Moldova pe deplin eligibila.",
+    deadline: "5 Martie 2026 (12:00 CET)",
+    location: "UE — Min. 3 organizatii din 3 tari",
+    url: "https://erasmus-plus.ec.europa.eu/",
+    budget: "EUR 120,000 — EUR 400,000 per proiect",
+    organizer: "Erasmus+",
+    priority: 9,
+    tags: ["URGENT"],
+    notes: null,
+    lunaAplicare: "Martie 2026",
   },
-  accessError: {
-    fontSize: 13,
-    color: "#DC2626",
-    marginTop: 12,
-    fontWeight: 600,
+  {
+    title: "Erasmus+ Small-Scale Partnerships",
+    category: "granturi",
+    description: "Bariera minima de intrare — excelent pentru aplicanti UE pentru prima data. Parteneriat cu o universitate romaneasca pentru pilot RIFC.",
+    deadline: "5 Martie 2026 (prima runda)",
+    location: "UE — Doar 2 organizatii din 2 tari",
+    url: "https://erasmus-plus.ec.europa.eu/",
+    budget: "EUR 30,000 sau EUR 60,000",
+    organizer: "Erasmus+",
+    priority: 9,
+    tags: ["URGENT", "Prima aplicare UE"],
+    notes: null,
+    lunaAplicare: "Martie 2026",
   },
-  // Header
-  header: {
-    padding: "28px 36px 0",
-    borderBottom: "1px solid #E5E7EB",
-    background: "rgba(255,255,255,0.95)",
-    backdropFilter: "blur(20px)",
-    position: "sticky" as const,
-    top: 0,
-    zIndex: 50,
+  {
+    title: "MSCA Postdoctoral Fellowships 2026",
+    category: "granturi",
+    description: "Cercetator propune propriul proiect la o institutie gazda UE. Ideal pentru dezvoltarea si validarea RIFC la o universitate prestigioasa.",
+    deadline: "9 Septembrie 2026",
+    location: "UE — Orice nationalitate",
+    url: "https://marie-sklodowska-curie-actions.ec.europa.eu/actions/postdoctoral-fellowships",
+    budget: "~EUR 7,500/luna pentru 1-2 ani (~EUR 180K total)",
+    organizer: "MSCA / Comisia Europeana",
+    priority: 8,
+    tags: ["SEP 2026", "Pre-publicare"],
+    notes: null,
+    lunaAplicare: "Septembrie 2026",
   },
-  headerTop: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
+  {
+    title: "COST Action Open Call 2026",
+    category: "granturi",
+    description: "Propune o actiune de networking pe 4 ani: 'Innovation in Marketing Measurement Methodology'. Cercetator ar conduce intreaga retea europeana.",
+    deadline: "Estimat Octombrie 2026",
+    location: "UE — Min. 7 tari, Moldova ITC eligibila",
+    url: "https://www.cost.eu/funding/open-call-a-simple-one-step-application-process/",
+    budget: "~EUR 575,000 total peste 4 ani",
+    organizer: "COST Association",
+    priority: 8,
+    tags: ["OCT 2026"],
+    notes: null,
+    lunaAplicare: "Octombrie 2026",
   },
-  headerLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: 16,
+  {
+    title: "ERC Starting Grant 2027",
+    category: "granturi",
+    description: "Institutia gazda trebuie sa fie in UE/Tara Asociata (Moldova se califica). ERC finanteaza explicit ideile revolutionare. ~15% rata de succes.",
+    deadline: "Estimat Octombrie 2026 (pentru 2027)",
+    location: "UE — PhD + 2-7 ani post-doctorat",
+    url: "https://erc.europa.eu/apply-grant/starting-grant",
+    budget: "Pana la EUR 1,500,000 (+EUR 1M suplimentar)",
+    organizer: "ERC / Comisia Europeana",
+    priority: 7,
+    tags: ["2027"],
+    notes: null,
+    lunaAplicare: "Octombrie 2026",
   },
-  logo: {
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: 11,
-    color: "#DC2626",
-    letterSpacing: 4,
-    fontWeight: 700,
+  {
+    title: "EU4Innovation East — Specific Moldova",
+    category: "granturi",
+    description: "Finanteaza incubare, accelerare, hackathoane, mentoring. CONTINUUM GRUP SRL poate aplica pentru integrarea Protocolului RIFC in programe de accelerare startup.",
+    deadline: "Activ acum — pana la EUR 250,000 per grant",
+    location: "Moldova",
+    url: "https://eu4moldova.eu/en/eu4innovation-east",
+    budget: "Pana la EUR 250,000 per grant",
+    organizer: "Delegatia UE in Moldova",
+    priority: 9,
+    tags: ["ACTIV ACUM", "Lansat 29 Ian 2026"],
+    notes: null,
+    lunaAplicare: "Februarie 2026",
   },
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: 800,
-    color: "#111827",
-    margin: 0,
+  // ── Competitii cu Premii (5) ──
+  {
+    title: "Romania Startup Awards 2026",
+    category: "competitii",
+    description: "Categorii: 'Best Startup in Moldova' si 'Best Innovator per Industry'. CONTINUUM GRUP SRL aplica direct.",
+    deadline: "25 Februarie 2026",
+    location: "Romania (Gala 12 Martie 2026, Bucuresti)",
+    url: "https://www.romania-insider.com/registrations-romania-startup-awards-2026",
+    budget: "Premiu + vizibilitate",
+    organizer: "Romania Startup Awards",
+    priority: 10,
+    tags: ["5 ZILE — APLICATI AZI!", "Gala 12 Mar"],
+    notes: null,
+    lunaAplicare: "Februarie 2026",
   },
-  pageSubtitle: {
-    fontSize: 12,
-    color: "#6B7280",
-    marginTop: 2,
+  {
+    title: "Startup Moldova Summit 2026",
+    category: "competitii",
+    description: "Gazduieste semifinalele regionale Startup World Cup Moldova — castigatorul concureaza pentru $1M in San Francisco. 40+ investitori prezenti.",
+    deadline: "22 Aprilie 2026",
+    location: "Moldova (Chisinau)",
+    url: "https://www.startupmoldova.digital/",
+    budget: "Potential: $1,000,000 (Startup World Cup SF)",
+    organizer: "Startup Moldova",
+    priority: 8,
+    tags: ["APR 2026", "Startup World Cup"],
+    notes: null,
+    lunaAplicare: "Aprilie 2026",
   },
-  headerRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
+  {
+    title: "How to Web Startup Spotlight",
+    category: "competitii",
+    description: "Cea mai importanta conferinta tech/startup din CEE. Accesibila geografic din Moldova.",
+    deadline: "Aplicatii vara 2026",
+    location: "Romania (Bucuresti, 6-8 Oct 2026)",
+    url: "https://www.howtoweb.co/",
+    budget: "Premiu anterior: EUR 880,000 (2023)",
+    organizer: "How to Web",
+    priority: 8,
+    tags: ["OCT 2026", "CEE"],
+    notes: null,
+    lunaAplicare: "Iunie 2026",
   },
-  addBtn: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "10px 18px",
-    fontSize: 12,
-    fontWeight: 700,
-    color: "#fff",
-    background: "linear-gradient(135deg, #DC2626, #B91C1C)",
-    border: "none",
-    borderRadius: 10,
-    cursor: "pointer",
-    letterSpacing: 0.5,
-    transition: "all 0.2s",
+  {
+    title: "EFMD Case Writing Competition",
+    category: "competitii",
+    description: "Scrie un studiu de caz didactic despre implementarea Protocolului RIFC. Categorii includ marketing si antreprenoriat. Publicat de The Case Centre.",
+    deadline: "Toamna (monitor site)",
+    location: "Belgium / International",
+    url: "https://www.efmdglobal.org/efmd-awards/case-writing-competition/",
+    budget: "EUR 2,000 per caz castigator",
+    organizer: "EFMD",
+    priority: 6,
+    tags: ["TOAMNA", "Pre-publicare"],
+    notes: null,
+    lunaAplicare: "Octombrie 2026",
   },
-  searchWrap: {
-    position: "relative" as const,
-    display: "flex",
-    alignItems: "center",
+  {
+    title: "MIT Solve Global Challenges",
+    category: "competitii",
+    description: "Track 'Economic Prosperity' se potriveste unui instrument SaaS de diagnostic ce ajuta IMM-urile sa imbunatateasca eficienta marketingului.",
+    deadline: "Anual Septembrie-Noiembrie",
+    location: "SUA / Global",
+    url: "https://solve.mit.edu/challenges",
+    budget: "Media: $40,000 per echipa selectata",
+    organizer: "MIT",
+    priority: 6,
+    tags: ["SEP-NOV", "Economic Prosperity"],
+    notes: null,
+    lunaAplicare: "Septembrie 2026",
   },
-  searchInput: {
-    padding: "9px 14px 9px 36px",
-    fontSize: 13,
-    border: "1px solid #E5E7EB",
-    borderRadius: 8,
-    outline: "none",
-    width: 240,
-    background: "#F9FAFB",
-    transition: "all 0.2s",
+  // ── Forumuri & Speaker (4) ──
+  {
+    title: "DMEXCO 2026",
+    category: "forumuri",
+    description: "Cel mai important eveniment de marketing digital din Europa. Call for Speakers invita explicit 'cercetatori' si cauta teme 'Marketing Measurement'.",
+    deadline: "Aplicatii continue (raspuns in 4 sapt.)",
+    location: "Germania (Koln, 23-24 Sep 2026)",
+    url: "https://go.dmexco.com/call-for-speaker_dmexco2026",
+    budget: "Speaker cost: GRATUIT | 40,000+ participanti",
+    organizer: "DMEXCO",
+    priority: 9,
+    tags: ["DESCHIS ACUM", "1,000+ speakers"],
+    notes: null,
+    lunaAplicare: "Martie 2026",
   },
-  searchIcon: {
-    position: "absolute" as const,
-    left: 12,
-    color: "#9CA3AF",
-    pointerEvents: "none" as const,
+  {
+    title: "Content Marketing World 2026",
+    category: "forumuri",
+    description: "Acces gratuit pentru speakers. Parte din ecosistemul LIONS. Audienta de content marketeri nord-americani.",
+    deadline: "15 Martie 2026",
+    location: "SUA (Denver, Colorado, 5-7 Oct 2026)",
+    url: "https://www.contentmarketingworld.com/speaker-submissions/",
+    budget: "Speaker: GRATUIT | 3,000+ participanti",
+    organizer: "Content Marketing Institute",
+    priority: 7,
+    tags: ["MAR 2026"],
+    notes: null,
+    lunaAplicare: "Martie 2026",
   },
-  // Tabs
-  tabsRow: {
-    display: "flex",
-    gap: 0,
-    overflowX: "auto" as const,
+  {
+    title: "TEDx Chisinau",
+    category: "forumuri",
+    description: "Formula RIFC ca 'an idea worth spreading' — de ce esueaza campaniile de marketing si ecuatia de diagnostic — concept TEDx perfect. Video YouTube durabil.",
+    deadline: "Contactati organizatorii direct",
+    location: "Moldova (Chisinau)",
+    url: "https://www.ted.com/tedx/events/11196",
+    budget: "GRATUIT | 200-500 participanti",
+    organizer: "TEDx",
+    priority: 9,
+    tags: ["LOCAL", "YouTube durabil"],
+    notes: null,
+    lunaAplicare: "Martie 2026",
   },
-  tab: {
-    padding: "12px 18px",
-    fontSize: 12,
-    fontWeight: 600,
-    color: "#6B7280",
-    background: "none",
-    border: "none",
-    borderBottom: "2px solid transparent",
-    cursor: "pointer",
-    transition: "all 0.2s",
-    whiteSpace: "nowrap" as const,
-    letterSpacing: 0.3,
+  {
+    title: "GPeC Summit",
+    category: "forumuri",
+    description: "Cel mai important eveniment e-commerce/digital marketing din CEE. Accepta speakers cu cercetare in marketing.",
+    deadline: "De doua ori pe an (Mai si Octombrie)",
+    location: "Romania (Bucuresti)",
+    url: "https://www.gpec.ro/en/",
+    budget: "Comunitate 30,000+ | Fost speakers: Dan Ariely, Mark Schaefer",
+    organizer: "GPeC",
+    priority: 8,
+    tags: ["CEE", "Mai/Oct"],
+    notes: null,
+    lunaAplicare: "Aprilie 2026",
   },
-  tabActive: {
-    color: "#DC2626",
-    borderBottomColor: "#DC2626",
+  // ── Premii Academice (4) ──
+  {
+    title: "Emerald Literati Awards",
+    category: "premii",
+    description: "Necesita publicare intr-un jurnal Emerald mai intai. Premiul este automat dupa publicare.",
+    deadline: "Post-publicare",
+    location: "UK / International",
+    url: "https://www.emeraldgrouppublishing.com/our-awards/emerald-literati-awards",
+    budget: "Outstanding Paper Award + Open Access status",
+    organizer: "Emerald Publishing",
+    priority: 6,
+    tags: ["POST-PUBLICARE", "European J. of Marketing"],
+    notes: null,
+    lunaAplicare: null,
   },
-  tabCount: {
-    fontSize: 10,
-    fontWeight: 700,
-    padding: "2px 6px",
-    borderRadius: 10,
-    background: "#F3F4F6",
-    color: "#6B7280",
-    marginLeft: 6,
+  {
+    title: "Academy of Marketing Teaching Excellence Awards",
+    category: "premii",
+    description: "RIFC ca instrument didactic inovativ se potriveste 'Innovation in marketing curriculum'. Instrumentele didactice se califica fara articol publicat.",
+    deadline: "Monitor site",
+    location: "UK",
+    url: "https://academyofmarketing.org/teaching-excellence-awards/",
+    budget: "GBP 500 + lectura inaugurala invitata",
+    organizer: "Academy of Marketing UK",
+    priority: 7,
+    tags: ["Innovation in curriculum", "Teaching tools"],
+    notes: null,
+    lunaAplicare: null,
   },
-  tabCountActive: {
-    background: "#FEE2E2",
-    color: "#DC2626",
+  {
+    title: "MSI Young Scholars Program",
+    category: "premii",
+    description: "Invitatie la conferinta exclusiva Young Scholars gazduita la sediul Meta NYC.",
+    deadline: "De obicei se deschide spre sfarsitul anului",
+    location: "SUA (Meta NYC)",
+    url: "https://www.msi.org/research/msi-young-scholars/",
+    budget: "Recunoastere + Conferinta Young Scholars la Meta",
+    organizer: "Marketing Science Institute",
+    priority: 7,
+    tags: ["FINAL AN", "3-7 ani post-doctorat"],
+    notes: null,
+    lunaAplicare: "Noiembrie 2026",
   },
-  // Content
-  content: {
-    padding: "28px 36px 80px",
-    maxWidth: 1200,
+  {
+    title: "Thinkers50 Radar 2027",
+    category: "premii",
+    description: "Selectat pe baza diversitatii, calitatii ideilor, impactului potential. Joc pe termen lung cu valoare imensa de vizibilitate globala.",
+    deadline: "Nominalizari tot anul, ciclu tinta 2027",
+    location: "Global",
+    url: "https://thinkers50.com/radar-2026/",
+    budget: "Top 30 ganditori globali emergenti in management",
+    organizer: "Thinkers50",
+    priority: 7,
+    tags: ["2027", "Top 30 global"],
+    notes: null,
+    lunaAplicare: null,
   },
-  // Stats bar
-  statsBar: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-    gap: 12,
-    marginBottom: 24,
+  // ── Oportunitati Moldova & Romania (5) ──
+  {
+    title: "ANCD-UEFISCDI Granturi Bilaterale Moldova-Romania",
+    category: "oportunitati",
+    description: "Cel mai important instrument bilateral pentru RIFC. Parteneriat UTM + ASE Bucuresti.",
+    deadline: "Monitor ANCD",
+    location: "Moldova + Romania",
+    url: "https://cercetari.utm.md/concursul-proiectelor-bilaterale-moldo-romane",
+    budget: "Pana la 750,000 RON (~EUR 150,000) / 24 luni",
+    organizer: "ANCD + UEFISCDI",
+    priority: 9,
+    tags: ["CEA MAI IMPORTANTA BILATERALA", "Pre-publicare"],
+    notes: null,
+    lunaAplicare: null,
   },
-  statCard: {
-    background: "#fff",
-    border: "1px solid #E5E7EB",
-    borderRadius: 12,
-    padding: "16px 18px",
-    textAlign: "center" as const,
+  {
+    title: "ANCD Concurs Tineri Cercetatori",
+    category: "oportunitati",
+    description: "Echipe de 4+ tineri cercetatori inclusiv studenti. Afiliere la organizatie publica de cercetare. Cauta modele, teorii si metode originale.",
+    deadline: "Estimat Februarie-Martie 2027",
+    location: "Moldova",
+    url: "https://ancd.gov.md/",
+    budget: "Pana la 600,000 MDL (~EUR 30,000) / 2 ani",
+    organizer: "ANCD",
+    priority: 7,
+    tags: ["2027", "Min. 4 cercetatori sub 40 ani"],
+    notes: null,
+    lunaAplicare: null,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 800,
-    fontFamily: "'JetBrains Mono', monospace",
-    color: "#111827",
+  {
+    title: "ODA Moldova Digital Innovation Grants",
+    category: "oportunitati",
+    description: "Finantare nerambursabila pentru inovare digitala. CONTINUUM GRUP SRL dezvoltand RIFC ca produs digital de diagnostic este eligibil.",
+    deadline: "Continuu",
+    location: "Moldova",
+    url: "https://www.oda.md/en/grants/start-uri-tehnologice-en",
+    budget: "Pana la 500,000 MDL (~EUR 25,000)",
+    organizer: "ODA Moldova + EU4SMEs",
+    priority: 8,
+    tags: ["ACTIV CONTINUU", "Co-finantat UE"],
+    notes: null,
+    lunaAplicare: null,
   },
-  statLabel: {
-    fontSize: 10,
-    fontWeight: 600,
-    color: "#9CA3AF",
-    letterSpacing: 1,
-    textTransform: "uppercase" as const,
-    marginTop: 4,
+  {
+    title: "Moldova Innovation Technology Park (MITP) — Statut Rezident",
+    category: "oportunitati",
+    description: "Daca CONTINUUM GRUP SRL genereaza 70%+ venituri din activitati R&D/software, se califica. RIFC ca instrument SaaS face compania eligibila.",
+    deadline: "Oricand (procesare <72 ore, gratuit)",
+    location: "Moldova",
+    url: "https://mitp.md/",
+    budget: "7% impozit flat pe cifra de afaceri — acopera TOATE taxele",
+    organizer: "MITP",
+    priority: 8,
+    tags: ["ORICAND", "7% flat tax"],
+    notes: null,
+    lunaAplicare: null,
   },
-  // Cards grid
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
-    gap: 16,
+  {
+    title: "Tekwill Center Programs",
+    category: "oportunitati",
+    description: "472+ echipe sustinute. Hub international pe campusul UTM. Acces excelent la ecosistem pentru incubarea RIFC ca produs digital.",
+    deadline: "Oricand",
+    location: "Moldova (Campus UTM — acces direct)",
+    url: "https://tekwill.md/",
+    budget: "Startup Academy (gratuit), Digital Upgrade, co-working",
+    organizer: "Tekwill",
+    priority: 7,
+    tags: ["CAMPUS UTM", "Gratuit"],
+    notes: null,
+    lunaAplicare: null,
   },
-  card: {
-    background: "#fff",
-    border: "1px solid #E5E7EB",
-    borderRadius: 14,
-    overflow: "hidden",
-    transition: "all 0.2s",
-    cursor: "pointer",
-    position: "relative" as const,
-  },
-  cardTop: {
-    height: 4,
-  },
-  cardBody: {
-    padding: "18px 20px",
-  },
-  cardHeader: {
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: "#111827",
-    lineHeight: 1.4,
-    flex: 1,
-  },
-  cardBadge: {
-    fontSize: 10,
-    fontWeight: 700,
-    padding: "4px 10px",
-    borderRadius: 10,
-    letterSpacing: 0.5,
-    flexShrink: 0,
-    marginLeft: 10,
-  },
-  cardDesc: {
-    fontSize: 13,
-    color: "#6B7280",
-    lineHeight: 1.6,
-    marginBottom: 14,
-    display: "-webkit-box",
-    WebkitLineClamp: 3,
-    WebkitBoxOrient: "vertical" as const,
-    overflow: "hidden",
-  },
-  cardMeta: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: 10,
-    fontSize: 11,
-    color: "#9CA3AF",
-  },
-  cardMetaItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-  },
-  cardTags: {
-    display: "flex",
-    flexWrap: "wrap" as const,
-    gap: 4,
-    marginTop: 12,
-  },
-  cardTag: {
-    fontSize: 10,
-    fontWeight: 600,
-    padding: "3px 8px",
-    borderRadius: 6,
-    background: "#F3F4F6",
-    color: "#6B7280",
-  },
-  cardActions: {
-    display: "flex",
-    gap: 6,
-    padding: "12px 20px",
-    borderTop: "1px solid #F3F4F6",
-  },
-  cardActionBtn: {
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "6px 12px",
-    borderRadius: 6,
-    border: "1px solid #E5E7EB",
-    background: "#fff",
-    color: "#374151",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    transition: "all 0.15s",
-  },
-  // Empty state
-  emptyState: {
-    textAlign: "center" as const,
-    padding: "80px 20px",
-    color: "#9CA3AF",
-  },
-  // Modal
-  modalOverlay: {
-    position: "fixed" as const,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: "rgba(0,0,0,0.4)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 9999,
-    padding: 20,
-  },
-  modal: {
-    background: "#fff",
-    borderRadius: 16,
-    maxWidth: 600,
-    width: "100%",
-    maxHeight: "90vh",
-    overflow: "auto",
-    boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-  },
-  modalHeader: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "20px 24px",
-    borderBottom: "1px solid #E5E7EB",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#111827",
-    margin: 0,
-  },
-  modalCloseBtn: {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "#9CA3AF",
-    padding: 4,
-  },
-  modalBody: {
-    padding: "20px 24px",
-  },
-  formField: {
-    marginBottom: 16,
-  },
-  formLabel: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#6B7280",
-    letterSpacing: 0.5,
-    textTransform: "uppercase" as const,
-    marginBottom: 6,
-    display: "block",
-  },
-  formInput: {
-    width: "100%",
-    padding: "10px 14px",
-    fontSize: 14,
-    border: "1px solid #E5E7EB",
-    borderRadius: 8,
-    outline: "none",
-    fontFamily: "'Inter', sans-serif",
-    transition: "border-color 0.2s",
-  },
-  formSelect: {
-    width: "100%",
-    padding: "10px 14px",
-    fontSize: 14,
-    border: "1px solid #E5E7EB",
-    borderRadius: 8,
-    outline: "none",
-    fontFamily: "'Inter', sans-serif",
-    background: "#fff",
-    cursor: "pointer",
-  },
-  formRow2: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 12,
-  },
-  modalFooter: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: 10,
-    padding: "16px 24px",
-    borderTop: "1px solid #E5E7EB",
-  },
-  btnCancel: {
-    padding: "10px 20px",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#6B7280",
-    background: "#F9FAFB",
-    border: "1px solid #E5E7EB",
-    borderRadius: 8,
-    cursor: "pointer",
-  },
-  btnSave: {
-    padding: "10px 20px",
-    fontSize: 13,
-    fontWeight: 700,
-    color: "#fff",
-    background: "linear-gradient(135deg, #DC2626, #B91C1C)",
-    border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
-    letterSpacing: 0.3,
-  },
-  btnDelete: {
-    padding: "10px 20px",
-    fontSize: 13,
-    fontWeight: 600,
-    color: "#DC2626",
-    background: "#FEF2F2",
-    border: "1px solid #FECACA",
-    borderRadius: 8,
-    cursor: "pointer",
-    marginRight: "auto",
-  },
-  // Detail modal
-  detailSection: {
-    marginBottom: 20,
-  },
-  detailLabel: {
-    fontSize: 10,
-    fontWeight: 700,
-    color: "#9CA3AF",
-    letterSpacing: 1,
-    textTransform: "uppercase" as const,
-    marginBottom: 6,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#374151",
-    lineHeight: 1.7,
-  },
-};
+];
 
 // ── Helpers ────────────────────────────────────────────────
 function generateId(): string {
@@ -577,14 +568,33 @@ function getCategoryDef(key: CategoryKey): CategoryDef {
 function loadPrograms(): Program[] {
   try {
     const raw = localStorage.getItem(DATA_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  // Seed with default data
+  const seeded: Program[] = SEED_PROGRAMS.map((s, i) => ({
+    ...s,
+    id: "seed-" + (i + 1).toString().padStart(2, "0"),
+    created_at: new Date(2026, 1, 20, 10, i).toISOString(),
+    appStatus: "nesetat" as AppStatus,
+    mesajTrimis: null,
+    mesajData: null,
+    reminder: null,
+    reminderNote: null,
+    monitoring: null,
+  }));
+  localStorage.setItem(DATA_KEY, JSON.stringify(seeded));
+  return seeded;
 }
 
 function savePrograms(programs: Program[]): void {
   localStorage.setItem(DATA_KEY, JSON.stringify(programs));
+}
+
+function priorityColor(p: number): string {
+  if (p >= 9) return "#DC2626";
+  if (p >= 7) return "#D97706";
+  if (p >= 5) return "#2563EB";
+  return "#6B7280";
 }
 
 // ── Component ──────────────────────────────────────────────
@@ -596,26 +606,22 @@ export default function AplicareProgramePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [filterAplicate, setFilterAplicate] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [viewingProgram, setViewingProgram] = useState<Program | null>(null);
   const [formData, setFormData] = useState<Partial<Program>>({});
   const [tagsInput, setTagsInput] = useState("");
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
-  // Check access on mount
   useEffect(() => {
     const granted = localStorage.getItem(STORAGE_KEY);
-    if (granted === "granted") {
-      setHasAccess(true);
-    }
+    if (granted === "granted") setHasAccess(true);
   }, []);
 
-  // Load data on access
   useEffect(() => {
-    if (hasAccess) {
-      setPrograms(loadPrograms());
-    }
+    if (hasAccess) setPrograms(loadPrograms());
   }, [hasAccess]);
 
   const validateAccess = useCallback(() => {
@@ -629,8 +635,19 @@ export default function AplicareProgramePage() {
     }
   }, [accessInput]);
 
+  // Update program helper
+  const updateProgram = (id: string, changes: Partial<Program>) => {
+    const updated = programs.map((p) => (p.id === id ? { ...p, ...changes } : p));
+    setPrograms(updated);
+    savePrograms(updated);
+    if (viewingProgram && viewingProgram.id === id) {
+      setViewingProgram({ ...viewingProgram, ...changes });
+    }
+  };
+
   // Filter programs
   const filtered = programs.filter((p) => {
+    if (filterAplicate && p.appStatus !== "aplicat") return false;
     if (activeTab !== "all" && p.category !== activeTab) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -646,33 +663,15 @@ export default function AplicareProgramePage() {
 
   // Stats
   const totalPrograms = programs.length;
-  const openPrograms = programs.filter((p) => p.status === "open").length;
+  const aplicateCount = programs.filter((p) => p.appStatus === "aplicat").length;
   const categoryCounts: Record<string, number> = {};
   CATEGORIES.forEach((c) => {
     categoryCounts[c.key] = programs.filter((p) => p.category === c.key).length;
   });
 
-  // Add/Edit modal
-  const openAddModal = (category?: CategoryKey) => {
-    setFormData({ category: category || "conferinte", status: "open", tags: [] });
-    setTagsInput("");
-    setEditingProgram(null);
-    setShowAddModal(true);
-  };
-
-  const openEditModal = (program: Program) => {
-    setFormData({ ...program });
-    setTagsInput(program.tags.join(", "));
-    setEditingProgram(program);
-    setShowAddModal(true);
-  };
-
+  // Save from edit modal
   const saveProgram = () => {
-    const tags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-
+    const tags = tagsInput.split(",").map((t) => t.trim()).filter((t) => t.length > 0);
     if (editingProgram) {
       const updated = programs.map((p) =>
         p.id === editingProgram.id ? { ...p, ...formData, tags } : p
@@ -690,10 +689,17 @@ export default function AplicareProgramePage() {
         url: formData.url || null,
         budget: formData.budget || null,
         organizer: formData.organizer || null,
-        status: (formData.status as "open" | "closed" | "upcoming") || "open",
+        priority: formData.priority || 5,
         tags,
         notes: formData.notes || null,
         created_at: new Date().toISOString(),
+        appStatus: (formData.appStatus as AppStatus) || "nesetat",
+        lunaAplicare: formData.lunaAplicare || null,
+        mesajTrimis: formData.mesajTrimis || null,
+        mesajData: formData.mesajData || null,
+        reminder: formData.reminder || null,
+        reminderNote: formData.reminderNote || null,
+        monitoring: formData.monitoring || null,
       };
       const updated = [...programs, newProgram];
       setPrograms(updated);
@@ -713,27 +719,58 @@ export default function AplicareProgramePage() {
     setEditingProgram(null);
   };
 
+  const openAddModal = (category?: CategoryKey) => {
+    setFormData({ category: category || "conferinte", appStatus: "nesetat", priority: 5, tags: [] });
+    setTagsInput("");
+    setEditingProgram(null);
+    setShowAddModal(true);
+  };
+
+  const openEditModal = (program: Program) => {
+    setFormData({ ...program });
+    setTagsInput(program.tags.join(", "));
+    setEditingProgram(program);
+    setShowAddModal(true);
+  };
+
   // ── Access Gate ──────────────────────────────────────────
   if (!hasAccess) {
     return (
-      <div style={S.accessOverlay}>
-        <div style={S.accessCard}>
-          <div style={S.accessLogo}>R IF C</div>
-          <h2 style={S.accessTitle}>Aplicare Programe</h2>
-          <p style={S.accessSubtitle}>Introduceti codul de acces pentru a continua</p>
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
+      }}>
+        <div style={{
+          background: "#fff", borderRadius: 16, padding: "48px 40px",
+          maxWidth: 400, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+        }}>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "#DC2626", letterSpacing: 4, fontWeight: 700, marginBottom: 8 }}>R IF C</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", marginBottom: 8 }}>Aplicare Programe</h2>
+          <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 28 }}>Introduceti codul de acces pentru a continua</p>
           <input
             type="password"
-            style={S.accessInput}
+            style={{
+              width: "100%", padding: "14px 16px", fontSize: 15,
+              border: "2px solid #E5E7EB", borderRadius: 10, outline: "none",
+              fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2,
+              textAlign: "center", marginBottom: 16,
+            }}
             value={accessInput}
             onChange={(e) => setAccessInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && validateAccess()}
             placeholder="Cod de acces"
             autoFocus
           />
-          <button style={S.accessBtn} onClick={validateAccess}>
-            ACCES
-          </button>
-          {accessError && <p style={S.accessError}>{accessError}</p>}
+          <button
+            style={{
+              width: "100%", padding: "14px 24px", fontSize: 14, fontWeight: 700,
+              color: "#fff", background: "linear-gradient(135deg, #DC2626, #B91C1C)",
+              border: "none", borderRadius: 10, cursor: "pointer", letterSpacing: 1,
+            }}
+            onClick={validateAccess}
+          >ACCES</button>
+          {accessError && <p style={{ fontSize: 13, color: "#DC2626", marginTop: 12, fontWeight: 600 }}>{accessError}</p>}
         </div>
       </div>
     );
@@ -741,49 +778,94 @@ export default function AplicareProgramePage() {
 
   // ── Main UI ──────────────────────────────────────────────
   return (
-    <div style={S.page}>
+    <div style={{ minHeight: "100vh", background: "#FAFAFA", fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
-      <div style={S.header}>
-        <div style={S.headerTop}>
-          <div style={S.headerLeft}>
+      <div style={{
+        padding: "20px 28px 0", borderBottom: "1px solid #E5E7EB",
+        background: "rgba(255,255,255,0.95)", backdropFilter: "blur(20px)",
+        position: "sticky", top: 0, zIndex: 50,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div>
-              <div style={S.logo}>R IF C</div>
-              <h1 style={S.pageTitle}>Aplicare Programe</h1>
-              <p style={S.pageSubtitle}>
-                {totalPrograms} programe &middot; {openPrograms} deschise
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#DC2626", letterSpacing: 4, fontWeight: 700 }}>R IF C</div>
+              <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0 }}>Aplicare Programe</h1>
+              <p style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
+                {totalPrograms} programe &middot; {aplicateCount} aplicate
               </p>
             </div>
           </div>
-          <div style={S.headerRight}>
-            <div style={S.searchWrap}>
-              <Search size={14} style={S.searchIcon} />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {/* Search */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <Search size={14} style={{ position: "absolute", left: 10, color: "#9CA3AF", pointerEvents: "none" }} />
               <input
                 type="text"
-                style={S.searchInput}
+                style={{
+                  padding: "8px 12px 8px 32px", fontSize: 13,
+                  border: "1px solid #E5E7EB", borderRadius: 8, outline: "none",
+                  width: 200, background: "#F9FAFB",
+                }}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cauta programe..."
               />
             </div>
-            <button style={S.addBtn} onClick={() => openAddModal()}>
-              <Plus size={14} />
-              <span>ADAUGA</span>
+            {/* APLICATE filter */}
+            <button
+              onClick={() => setFilterAplicate(!filterAplicate)}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "8px 14px", fontSize: 11, fontWeight: 700,
+                color: filterAplicate ? "#fff" : "#16A34A",
+                background: filterAplicate ? "linear-gradient(135deg, #16A34A, #15803D)" : "#DCFCE7",
+                border: filterAplicate ? "none" : "1px solid #86EFAC",
+                borderRadius: 8, cursor: "pointer", letterSpacing: 0.5,
+                transition: "all 0.2s",
+              }}
+            >
+              <CheckCircle size={13} />
+              APLICATE ({aplicateCount})
+            </button>
+            {/* Add button */}
+            <button
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "8px 14px", fontSize: 11, fontWeight: 700,
+                color: "#fff", background: "linear-gradient(135deg, #DC2626, #B91C1C)",
+                border: "none", borderRadius: 8, cursor: "pointer", letterSpacing: 0.5,
+              }}
+              onClick={() => openAddModal()}
+            >
+              <Plus size={13} />
+              ADAUGA
             </button>
           </div>
         </div>
         {/* Tabs */}
-        <div style={S.tabsRow}>
+        <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
           {TABS.map((t) => {
             const count = t.key === "all" ? totalPrograms : categoryCounts[t.key] || 0;
             const isActive = activeTab === t.key;
             return (
               <button
                 key={t.key}
-                style={{ ...S.tab, ...(isActive ? S.tabActive : {}) }}
+                style={{
+                  padding: "10px 14px", fontSize: 11, fontWeight: 600,
+                  color: isActive ? "#DC2626" : "#6B7280",
+                  background: "none", border: "none",
+                  borderBottom: isActive ? "2px solid #DC2626" : "2px solid transparent",
+                  cursor: "pointer", whiteSpace: "nowrap", letterSpacing: 0.3,
+                }}
                 onClick={() => setActiveTab(t.key)}
               >
                 {t.label}
-                <span style={{ ...S.tabCount, ...(isActive ? S.tabCountActive : {}) }}>{count}</span>
+                <span style={{
+                  fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 10,
+                  background: isActive ? "#FEE2E2" : "#F3F4F6",
+                  color: isActive ? "#DC2626" : "#6B7280",
+                  marginLeft: 5,
+                }}>{count}</span>
               </button>
             );
           })}
@@ -791,23 +873,27 @@ export default function AplicareProgramePage() {
       </div>
 
       {/* Content */}
-      <div style={S.content}>
-        {/* Stats */}
-        <div style={S.statsBar}>
+      <div style={{ padding: "20px 28px 80px", maxWidth: 1300 }}>
+        {/* Stats bar */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 20 }}>
           {CATEGORIES.map((cat) => {
             const count = categoryCounts[cat.key] || 0;
             const Icon = cat.icon;
             return (
               <div
                 key={cat.key}
-                style={{ ...S.statCard, borderTop: `3px solid ${cat.color}`, cursor: "pointer" }}
+                style={{
+                  background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10,
+                  padding: "12px 14px", textAlign: "center", cursor: "pointer",
+                  borderTop: `3px solid ${cat.color}`,
+                }}
                 onClick={() => setActiveTab(cat.key)}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 6 }}>
-                  <Icon size={16} style={{ color: cat.color }} />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 4 }}>
+                  <Icon size={14} style={{ color: cat.color }} />
                 </div>
-                <div style={S.statValue}>{count}</div>
-                <div style={S.statLabel}>{cat.label}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: "#111827" }}>{count}</div>
+                <div style={{ fontSize: 9, fontWeight: 600, color: "#9CA3AF", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>{cat.label}</div>
               </div>
             );
           })}
@@ -815,71 +901,257 @@ export default function AplicareProgramePage() {
 
         {/* Cards */}
         {filtered.length === 0 ? (
-          <div style={S.emptyState}>
-            <Briefcase size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
-            <p style={{ fontSize: 15, color: "#6B7280", marginBottom: 8 }}>
-              {search ? "Niciun program gasit pentru cautarea ta." : "Niciun program in aceasta categorie."}
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#9CA3AF" }}>
+            <Briefcase size={40} style={{ opacity: 0.3, marginBottom: 10 }} />
+            <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 8 }}>
+              {search ? "Niciun program gasit." : filterAplicate ? "Niciun program marcat ca aplicat." : "Niciun program in aceasta categorie."}
             </p>
-            <button style={S.addBtn} onClick={() => openAddModal(activeTab !== "all" ? (activeTab as CategoryKey) : undefined)}>
-              <Plus size={14} />
-              <span>Adauga program</span>
-            </button>
           </div>
         ) : (
-          <div style={S.grid}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 14 }}>
             {filtered
-              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .sort((a, b) => b.priority - a.priority)
               .map((program) => {
                 const cat = getCategoryDef(program.category);
-                const status = STATUS_COLORS[program.status] || STATUS_COLORS.open;
+                const status = APP_STATUS_CONFIG[program.appStatus];
                 const Icon = cat.icon;
+                const isExpanded = expandedCard === program.id;
                 return (
                   <div
                     key={program.id}
-                    style={S.card}
-                    onClick={() => setViewingProgram(program)}
+                    style={{
+                      background: "#fff", border: `1px solid ${program.appStatus === "aplicat" ? "#86EFAC" : program.appStatus === "nerelevant" ? "#D1D5DB" : "#E5E7EB"}`,
+                      borderRadius: 12, overflow: "hidden",
+                      opacity: program.appStatus === "nerelevant" ? 0.6 : 1,
+                      transition: "all 0.2s",
+                    }}
                   >
-                    <div style={{ ...S.cardTop, background: cat.gradient }} />
-                    <div style={S.cardBody}>
-                      <div style={S.cardHeader}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-                          <Icon size={16} style={{ color: cat.color, flexShrink: 0 }} />
-                          <span style={S.cardTitle}>{program.title}</span>
+                    {/* Color bar top */}
+                    <div style={{ height: 3, background: cat.gradient }} />
+                    <div style={{ padding: "14px 16px" }}>
+                      {/* Header row */}
+                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 }}>
+                          <Icon size={15} style={{ color: cat.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>{program.title}</span>
                         </div>
-                        <span style={{ ...S.cardBadge, background: status.bg, color: status.text }}>
-                          {status.label}
+                        {/* Priority badge */}
+                        <div style={{
+                          fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6,
+                          background: `${priorityColor(program.priority)}14`,
+                          color: priorityColor(program.priority),
+                          flexShrink: 0, fontFamily: "'JetBrains Mono', monospace",
+                        }}>
+                          {program.priority}/10
+                        </div>
+                      </div>
+
+                      {/* Status + Luna de aplicare row */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                        {/* Status dropdown */}
+                        <select
+                          value={program.appStatus}
+                          onChange={(e) => { e.stopPropagation(); updateProgram(program.id, { appStatus: e.target.value as AppStatus }); }}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            fontSize: 10, fontWeight: 700, padding: "3px 6px", borderRadius: 6,
+                            background: status.bg, color: status.text, border: `1px solid ${status.border}`,
+                            cursor: "pointer", outline: "none", appearance: "auto",
+                          }}
+                        >
+                          <option value="nesetat">Nesetat</option>
+                          <option value="aplicat">Aplicat</option>
+                          <option value="nerelevant">Nerelevant</option>
+                          <option value="dupa_lansare">Dupa lansare</option>
+                        </select>
+                        {/* Luna de aplicare */}
+                        {program.lunaAplicare && (
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
+                            background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE",
+                            display: "flex", alignItems: "center", gap: 3,
+                          }}>
+                            <Calendar size={10} /> {program.lunaAplicare}
+                          </span>
+                        )}
+                        {/* Category badge */}
+                        <span style={{
+                          fontSize: 9, fontWeight: 600, padding: "3px 7px", borderRadius: 6,
+                          background: `${cat.color}10`, color: cat.color,
+                        }}>
+                          {cat.label}
                         </span>
                       </div>
-                      {program.description && (
-                        <p style={S.cardDesc}>{program.description}</p>
-                      )}
-                      <div style={S.cardMeta}>
+
+                      {/* Description */}
+                      <p style={{
+                        fontSize: 12, color: "#6B7280", lineHeight: 1.5, marginBottom: 10,
+                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
+                      }}>{program.description}</p>
+
+                      {/* Meta info */}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>
                         {program.deadline && (
-                          <span style={S.cardMetaItem}>
-                            <Calendar size={12} /> {program.deadline}
+                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <Clock size={10} /> {program.deadline}
                           </span>
                         )}
                         {program.location && (
-                          <span style={S.cardMetaItem}>
-                            <MapPin size={12} /> {program.location}
+                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <MapPin size={10} /> {program.location}
                           </span>
                         )}
                         {program.budget && (
-                          <span style={S.cardMetaItem}>
-                            <DollarSign size={12} /> {program.budget}
-                          </span>
-                        )}
-                        {program.organizer && (
-                          <span style={S.cardMetaItem}>
-                            <Users size={12} /> {program.organizer}
+                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                            <DollarSign size={10} /> {program.budget}
                           </span>
                         )}
                       </div>
+
+                      {/* Tags */}
                       {program.tags.length > 0 && (
-                        <div style={S.cardTags}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 8 }}>
                           {program.tags.map((tag, i) => (
-                            <span key={i} style={S.cardTag}>{tag}</span>
+                            <span key={i} style={{
+                              fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
+                              background: "#F3F4F6", color: "#6B7280",
+                            }}>{tag}</span>
                           ))}
+                        </div>
+                      )}
+
+                      {/* Action buttons row */}
+                      <div style={{ display: "flex", gap: 4, borderTop: "1px solid #F3F4F6", paddingTop: 10, flexWrap: "wrap" }}>
+                        <button
+                          onClick={() => setExpandedCard(isExpanded ? null : program.id)}
+                          style={{
+                            fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
+                            border: "1px solid #E5E7EB", background: isExpanded ? "#F3F4F6" : "#fff",
+                            color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
+                          }}
+                        >
+                          {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                          Tracking
+                        </button>
+                        {program.url && (
+                          <a
+                            href={program.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
+                              border: "1px solid #BFDBFE", background: "#EFF6FF",
+                              color: "#2563EB", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
+                              textDecoration: "none",
+                            }}
+                          >
+                            <ExternalLink size={10} /> Link
+                          </a>
+                        )}
+                        <button
+                          onClick={() => { setViewingProgram(program); }}
+                          style={{
+                            fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
+                            border: "1px solid #E5E7EB", background: "#fff",
+                            color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
+                          }}
+                        >
+                          <Eye size={10} /> Detalii
+                        </button>
+                        <button
+                          onClick={() => openEditModal(program)}
+                          style={{
+                            fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
+                            border: "1px solid #E5E7EB", background: "#fff",
+                            color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
+                          }}
+                        >
+                          <Edit3 size={10} /> Edit
+                        </button>
+                      </div>
+
+                      {/* ══ Expanded Tracking Area ══ */}
+                      {isExpanded && (
+                        <div style={{
+                          marginTop: 10, padding: 12, background: "#F9FAFB", borderRadius: 8,
+                          border: "1px solid #E5E7EB",
+                        }}>
+                          {/* Mesaj Trimis */}
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                              <Send size={10} /> Mesaj Trimis
+                            </div>
+                            <textarea
+                              value={program.mesajTrimis || ""}
+                              onChange={(e) => updateProgram(program.id, { mesajTrimis: e.target.value })}
+                              placeholder="Scrie mesajul trimis / email / aplicatie..."
+                              style={{
+                                width: "100%", padding: "6px 8px", fontSize: 11, border: "1px solid #E5E7EB",
+                                borderRadius: 6, outline: "none", fontFamily: "'Inter', sans-serif",
+                                minHeight: 50, resize: "vertical", background: "#fff",
+                              }}
+                            />
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                              <span style={{ fontSize: 9, color: "#9CA3AF" }}>Data trimitere:</span>
+                              <input
+                                type="text"
+                                value={program.mesajData || ""}
+                                onChange={(e) => updateProgram(program.id, { mesajData: e.target.value })}
+                                placeholder="ex: 20 Feb 2026"
+                                style={{
+                                  padding: "3px 6px", fontSize: 10, border: "1px solid #E5E7EB",
+                                  borderRadius: 4, outline: "none", width: 120, background: "#fff",
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Reminder */}
+                          <div style={{ marginBottom: 10 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                              <Bell size={10} /> Reminder — Cind de revenit
+                            </div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <input
+                                type="text"
+                                value={program.reminder || ""}
+                                onChange={(e) => updateProgram(program.id, { reminder: e.target.value })}
+                                placeholder="ex: 15 Mar 2026"
+                                style={{
+                                  padding: "5px 8px", fontSize: 11, border: "1px solid #E5E7EB",
+                                  borderRadius: 6, outline: "none", width: 120, background: "#fff",
+                                }}
+                              />
+                              <input
+                                type="text"
+                                value={program.reminderNote || ""}
+                                onChange={(e) => updateProgram(program.id, { reminderNote: e.target.value })}
+                                placeholder="Nota reminder..."
+                                style={{
+                                  padding: "5px 8px", fontSize: 11, border: "1px solid #E5E7EB",
+                                  borderRadius: 6, outline: "none", flex: 1, background: "#fff",
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Monitoring */}
+                          <div>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                              <BarChart3 size={10} /> Monitorizare
+                            </div>
+                            <textarea
+                              value={program.monitoring || ""}
+                              onChange={(e) => updateProgram(program.id, { monitoring: e.target.value })}
+                              placeholder="Note de monitorizare, raspunsuri primite, status aplicare..."
+                              style={{
+                                width: "100%", padding: "6px 8px", fontSize: 11, border: "1px solid #E5E7EB",
+                                borderRadius: 6, outline: "none", fontFamily: "'Inter', sans-serif",
+                                minHeight: 50, resize: "vertical", background: "#fff",
+                              }}
+                            />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -893,111 +1165,177 @@ export default function AplicareProgramePage() {
       {/* ═══ View Program Modal ═══ */}
       {viewingProgram && !showAddModal && (() => {
         const cat = getCategoryDef(viewingProgram.category);
-        const status = STATUS_COLORS[viewingProgram.status] || STATUS_COLORS.open;
+        const status = APP_STATUS_CONFIG[viewingProgram.appStatus];
         const Icon = cat.icon;
         return (
-          <div style={S.modalOverlay} onClick={() => setViewingProgram(null)}>
-            <div style={S.modal} onClick={(e) => e.stopPropagation()}>
-              <div style={{ ...S.modalHeader, borderTop: `4px solid ${cat.color}`, borderRadius: "16px 16px 0 0" }}>
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center",
+            justifyContent: "center", zIndex: 9999, padding: 20,
+          }} onClick={() => setViewingProgram(null)}>
+            <div style={{
+              background: "#fff", borderRadius: 16, maxWidth: 640, width: "100%",
+              maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+            }} onClick={(e) => e.stopPropagation()}>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "18px 22px", borderBottom: "1px solid #E5E7EB",
+                borderTop: `4px solid ${cat.color}`, borderRadius: "16px 16px 0 0",
+              }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Icon size={20} style={{ color: cat.color }} />
-                  <h3 style={S.modalTitle}>{viewingProgram.title}</h3>
+                  <Icon size={18} style={{ color: cat.color }} />
+                  <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>{viewingProgram.title}</h3>
                 </div>
-                <button style={S.modalCloseBtn} onClick={() => setViewingProgram(null)}>
+                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 4 }} onClick={() => setViewingProgram(null)}>
                   <X size={18} />
                 </button>
               </div>
-              <div style={S.modalBody}>
-                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-                  <span style={{ ...S.cardBadge, background: status.bg, color: status.text }}>{status.label}</span>
-                  <span style={{ ...S.cardBadge, background: `${cat.color}14`, color: cat.color }}>{cat.label}</span>
+              <div style={{ padding: "18px 22px" }}>
+                <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: status.bg, color: status.text, border: `1px solid ${status.border}` }}>
+                    {status.label}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: `${cat.color}14`, color: cat.color }}>
+                    {cat.label}
+                  </span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 8,
+                    background: `${priorityColor(viewingProgram.priority)}14`, color: priorityColor(viewingProgram.priority),
+                    fontFamily: "'JetBrains Mono', monospace",
+                  }}>
+                    Prioritate: {viewingProgram.priority}/10
+                  </span>
+                  {viewingProgram.lunaAplicare && (
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", gap: 4 }}>
+                      <Calendar size={11} /> {viewingProgram.lunaAplicare}
+                    </span>
+                  )}
                 </div>
 
                 {viewingProgram.description && (
-                  <div style={S.detailSection}>
-                    <div style={S.detailLabel}>Descriere</div>
-                    <p style={S.detailText}>{viewingProgram.description}</p>
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Descriere</div>
+                    <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{viewingProgram.description}</p>
                   </div>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                   {viewingProgram.deadline && (
                     <div>
-                      <div style={S.detailLabel}>Deadline</div>
-                      <div style={{ ...S.detailText, display: "flex", alignItems: "center", gap: 6 }}>
-                        <Calendar size={14} style={{ color: "#6B7280" }} /> {viewingProgram.deadline}
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
+                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
+                        <Calendar size={13} style={{ color: "#6B7280" }} /> {viewingProgram.deadline}
                       </div>
                     </div>
                   )}
                   {viewingProgram.location && (
                     <div>
-                      <div style={S.detailLabel}>Locatie</div>
-                      <div style={{ ...S.detailText, display: "flex", alignItems: "center", gap: 6 }}>
-                        <MapPin size={14} style={{ color: "#6B7280" }} /> {viewingProgram.location}
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
+                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
+                        <MapPin size={13} style={{ color: "#6B7280" }} /> {viewingProgram.location}
                       </div>
                     </div>
                   )}
                   {viewingProgram.budget && (
                     <div>
-                      <div style={S.detailLabel}>Buget / Valoare</div>
-                      <div style={{ ...S.detailText, display: "flex", alignItems: "center", gap: 6 }}>
-                        <DollarSign size={14} style={{ color: "#6B7280" }} /> {viewingProgram.budget}
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
+                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
+                        <DollarSign size={13} style={{ color: "#6B7280" }} /> {viewingProgram.budget}
                       </div>
                     </div>
                   )}
                   {viewingProgram.organizer && (
                     <div>
-                      <div style={S.detailLabel}>Organizator</div>
-                      <div style={{ ...S.detailText, display: "flex", alignItems: "center", gap: 6 }}>
-                        <Users size={14} style={{ color: "#6B7280" }} /> {viewingProgram.organizer}
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
+                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
+                        <Users size={13} style={{ color: "#6B7280" }} /> {viewingProgram.organizer}
                       </div>
                     </div>
                   )}
                 </div>
 
                 {viewingProgram.url && (
-                  <div style={S.detailSection}>
-                    <div style={S.detailLabel}>Link</div>
-                    <a href={viewingProgram.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: "#2563EB", display: "flex", alignItems: "center", gap: 6 }}>
-                      <ExternalLink size={14} /> {viewingProgram.url}
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Link</div>
+                    <a href={viewingProgram.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563EB", display: "flex", alignItems: "center", gap: 5, wordBreak: "break-all" }}>
+                      <ExternalLink size={13} /> {viewingProgram.url}
                     </a>
                   </div>
                 )}
 
-                {viewingProgram.notes && (
-                  <div style={S.detailSection}>
-                    <div style={S.detailLabel}>Note</div>
-                    <p style={{ ...S.detailText, whiteSpace: "pre-wrap" }}>{viewingProgram.notes}</p>
+                {/* Tracking section in detail modal */}
+                <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: 14, marginTop: 14 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#111827", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
+                    <BarChart3 size={14} /> Zona de Tracking
                   </div>
-                )}
+                  {viewingProgram.mesajTrimis && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Mesaj Trimis {viewingProgram.mesajData ? `(${viewingProgram.mesajData})` : ""}</div>
+                      <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#F9FAFB", padding: 8, borderRadius: 6, border: "1px solid #E5E7EB" }}>
+                        {viewingProgram.mesajTrimis}
+                      </p>
+                    </div>
+                  )}
+                  {viewingProgram.reminder && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Reminder: {viewingProgram.reminder}</div>
+                      {viewingProgram.reminderNote && (
+                        <p style={{ fontSize: 12, color: "#374151", background: "#FFFBEB", padding: 8, borderRadius: 6, border: "1px solid #FCD34D" }}>
+                          {viewingProgram.reminderNote}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {viewingProgram.monitoring && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Monitorizare</div>
+                      <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#F0FDF4", padding: 8, borderRadius: 6, border: "1px solid #86EFAC" }}>
+                        {viewingProgram.monitoring}
+                      </p>
+                    </div>
+                  )}
+                  {!viewingProgram.mesajTrimis && !viewingProgram.reminder && !viewingProgram.monitoring && (
+                    <p style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>Niciun tracking adaugat inca. Foloseste butonul "Tracking" de pe cartonas.</p>
+                  )}
+                </div>
 
                 {viewingProgram.tags.length > 0 && (
-                  <div style={S.detailSection}>
-                    <div style={S.detailLabel}>Tags</div>
-                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Tags</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                       {viewingProgram.tags.map((tag, i) => (
-                        <span key={i} style={{ ...S.cardTag, fontSize: 12, padding: "4px 12px" }}>{tag}</span>
+                        <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6, background: "#F3F4F6", color: "#6B7280" }}>{tag}</span>
                       ))}
                     </div>
                   </div>
                 )}
+
+                {viewingProgram.notes && (
+                  <div style={{ marginTop: 14 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Note</div>
+                    <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{viewingProgram.notes}</p>
+                  </div>
+                )}
               </div>
-              <div style={S.modalFooter}>
-                <button style={S.btnDelete} onClick={() => deleteProgram(viewingProgram.id)}>
-                  Sterge
-                </button>
-                <button style={S.btnCancel} onClick={() => setViewingProgram(null)}>
-                  Inchide
-                </button>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "14px 22px", borderTop: "1px solid #E5E7EB" }}>
                 <button
-                  style={S.btnSave}
-                  onClick={() => {
-                    setViewingProgram(null);
-                    openEditModal(viewingProgram);
+                  style={{
+                    padding: "8px 16px", fontSize: 12, fontWeight: 600, color: "#DC2626",
+                    background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, cursor: "pointer", marginRight: "auto",
                   }}
-                >
-                  Editeaza
-                </button>
+                  onClick={() => deleteProgram(viewingProgram.id)}
+                >Sterge</button>
+                <button
+                  style={{ padding: "8px 16px", fontSize: 12, fontWeight: 600, color: "#6B7280", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 8, cursor: "pointer" }}
+                  onClick={() => setViewingProgram(null)}
+                >Inchide</button>
+                <button
+                  style={{
+                    padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#fff",
+                    background: "linear-gradient(135deg, #DC2626, #B91C1C)", border: "none", borderRadius: 8, cursor: "pointer",
+                  }}
+                  onClick={() => { setViewingProgram(null); openEditModal(viewingProgram); }}
+                >Editeaza</button>
               </div>
             </div>
           </div>
@@ -1006,21 +1344,31 @@ export default function AplicareProgramePage() {
 
       {/* ═══ Add/Edit Modal ═══ */}
       {showAddModal && (
-        <div style={S.modalOverlay} onClick={() => setShowAddModal(false)}>
-          <div style={S.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={S.modalHeader}>
-              <h3 style={S.modalTitle}>
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center",
+          justifyContent: "center", zIndex: 9999, padding: 20,
+        }} onClick={() => setShowAddModal(false)}>
+          <div style={{
+            background: "#fff", borderRadius: 16, maxWidth: 600, width: "100%",
+            maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "18px 22px", borderBottom: "1px solid #E5E7EB",
+            }}>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>
                 {editingProgram ? "Editeaza program" : "Adauga program nou"}
               </h3>
-              <button style={S.modalCloseBtn} onClick={() => setShowAddModal(false)}>
+              <button style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 4 }} onClick={() => setShowAddModal(false)}>
                 <X size={18} />
               </button>
             </div>
-            <div style={S.modalBody}>
-              <div style={S.formField}>
-                <label style={S.formLabel}>Titlu *</label>
+            <div style={{ padding: "18px 22px" }}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Titlu *</label>
                 <input
-                  style={S.formInput}
+                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif" }}
                   value={formData.title || ""}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Numele programului"
@@ -1028,78 +1376,88 @@ export default function AplicareProgramePage() {
                 />
               </div>
 
-              <div style={S.formRow2}>
-                <div style={S.formField}>
-                  <label style={S.formLabel}>Categorie</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Categorie</label>
                   <select
-                    style={S.formSelect}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", background: "#fff", cursor: "pointer" }}
                     value={formData.category || "conferinte"}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as CategoryKey })}
                   >
-                    {CATEGORIES.map((c) => (
-                      <option key={c.key} value={c.key}>{c.label}</option>
-                    ))}
+                    {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
                   </select>
                 </div>
-                <div style={S.formField}>
-                  <label style={S.formLabel}>Status</label>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Status</label>
                   <select
-                    style={S.formSelect}
-                    value={formData.status || "open"}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as "open" | "closed" | "upcoming" })}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", background: "#fff", cursor: "pointer" }}
+                    value={formData.appStatus || "nesetat"}
+                    onChange={(e) => setFormData({ ...formData, appStatus: e.target.value as AppStatus })}
                   >
-                    <option value="open">Deschis</option>
-                    <option value="upcoming">In curand</option>
-                    <option value="closed">Inchis</option>
+                    <option value="nesetat">Nesetat</option>
+                    <option value="aplicat">Aplicat</option>
+                    <option value="nerelevant">Nerelevant</option>
+                    <option value="dupa_lansare">Dupa lansare</option>
                   </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Prioritate (1-10)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    value={formData.priority || 5}
+                    onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })}
+                  />
                 </div>
               </div>
 
-              <div style={S.formField}>
-                <label style={S.formLabel}>Descriere</label>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Descriere</label>
                 <textarea
-                  style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }}
+                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif", minHeight: 80, resize: "vertical" }}
                   value={formData.description || ""}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descriere detaliata a programului"
+                  placeholder="Descriere detaliata"
                 />
               </div>
 
-              <div style={S.formRow2}>
-                <div style={S.formField}>
-                  <label style={S.formLabel}>Deadline</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Deadline</label>
                   <input
-                    style={S.formInput}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
                     value={formData.deadline || ""}
                     onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
                     placeholder="Ex: 15 Martie 2026"
                   />
                 </div>
-                <div style={S.formField}>
-                  <label style={S.formLabel}>Locatie</label>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Luna de aplicare</label>
                   <input
-                    style={S.formInput}
-                    value={formData.location || ""}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Ex: Online / Berlin, Germania"
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    value={formData.lunaAplicare || ""}
+                    onChange={(e) => setFormData({ ...formData, lunaAplicare: e.target.value })}
+                    placeholder="Ex: Martie 2026"
                   />
                 </div>
               </div>
 
-              <div style={S.formRow2}>
-                <div style={S.formField}>
-                  <label style={S.formLabel}>Buget / Valoare</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Locatie</label>
                   <input
-                    style={S.formInput}
-                    value={formData.budget || ""}
-                    onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                    placeholder="Ex: 5000 EUR"
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    value={formData.location || ""}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    placeholder="Ex: Online / Berlin"
                   />
                 </div>
-                <div style={S.formField}>
-                  <label style={S.formLabel}>Organizator</label>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Organizator</label>
                   <input
-                    style={S.formInput}
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
                     value={formData.organizer || ""}
                     onChange={(e) => setFormData({ ...formData, organizer: e.target.value })}
                     placeholder="Ex: European Commission"
@@ -1107,52 +1465,67 @@ export default function AplicareProgramePage() {
                 </div>
               </div>
 
-              <div style={S.formField}>
-                <label style={S.formLabel}>URL</label>
-                <input
-                  style={S.formInput}
-                  value={formData.url || ""}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  placeholder="https://..."
-                />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Buget / Valoare</label>
+                  <input
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    value={formData.budget || ""}
+                    onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+                    placeholder="Ex: EUR 5,000"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>URL</label>
+                  <input
+                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    value={formData.url || ""}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    placeholder="https://..."
+                  />
+                </div>
               </div>
 
-              <div style={S.formField}>
-                <label style={S.formLabel}>Tags (separate cu virgula)</label>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Tags (separate cu virgula)</label>
                 <input
-                  style={S.formInput}
+                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
                   placeholder="Ex: marketing, digital, EU"
                 />
               </div>
 
-              <div style={S.formField}>
-                <label style={S.formLabel}>Note</label>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Note</label>
                 <textarea
-                  style={{ ...S.formInput, minHeight: 80, resize: "vertical" as const }}
+                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif", minHeight: 60, resize: "vertical" }}
                   value={formData.notes || ""}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Note interne..."
                 />
               </div>
             </div>
-            <div style={S.modalFooter}>
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "14px 22px", borderTop: "1px solid #E5E7EB" }}>
               {editingProgram && (
-                <button style={S.btnDelete} onClick={() => deleteProgram(editingProgram.id)}>
-                  Sterge
-                </button>
+                <button
+                  style={{ padding: "8px 16px", fontSize: 12, fontWeight: 600, color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, cursor: "pointer", marginRight: "auto" }}
+                  onClick={() => deleteProgram(editingProgram.id)}
+                >Sterge</button>
               )}
-              <button style={S.btnCancel} onClick={() => setShowAddModal(false)}>
-                Anuleaza
-              </button>
               <button
-                style={{ ...S.btnSave, opacity: !formData.title ? 0.5 : 1 }}
+                style={{ padding: "8px 16px", fontSize: 12, fontWeight: 600, color: "#6B7280", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 8, cursor: "pointer" }}
+                onClick={() => setShowAddModal(false)}
+              >Anuleaza</button>
+              <button
+                style={{
+                  padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#fff",
+                  background: "linear-gradient(135deg, #DC2626, #B91C1C)", border: "none", borderRadius: 8, cursor: "pointer",
+                  opacity: !formData.title ? 0.5 : 1,
+                }}
                 onClick={saveProgram}
                 disabled={!formData.title}
-              >
-                {editingProgram ? "Salveaza" : "Adauga"}
-              </button>
+              >{editingProgram ? "Salveaza" : "Adauga"}</button>
             </div>
           </div>
         </div>
