@@ -664,6 +664,23 @@ function priorityColor(p: number): string {
   return "#6B7280";
 }
 
+function extractCountry(location: string | null): string {
+  if (!location) return "";
+  // Take part before " (" or " —" or " /"
+  let c = location.split("(")[0].split("—")[0].split("/")[0].trim();
+  // Normalize
+  if (c === "UE") return "UE";
+  if (c.startsWith("Moldova")) return "Moldova";
+  if (c.startsWith("Romania")) return "Romania";
+  if (c.startsWith("Germania")) return "Germania";
+  if (c.startsWith("Spania")) return "Spania";
+  if (c.startsWith("SUA")) return "SUA";
+  if (c.startsWith("UK")) return "UK";
+  if (c.startsWith("Belgium")) return "Belgium";
+  if (c.startsWith("Global")) return "Global";
+  return c || "";
+}
+
 // ── Component ──────────────────────────────────────────────
 export default function AplicareProgramePage() {
   const [hasAccess, setHasAccess] = useState(false);
@@ -674,6 +691,7 @@ export default function AplicareProgramePage() {
   const [search, setSearch] = useState("");
   const [programs, setPrograms] = useState<Program[]>([]);
   const [filterAplicate, setFilterAplicate] = useState(false);
+  const [filterCountry, setFilterCountry] = useState("toate");
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
@@ -738,10 +756,14 @@ export default function AplicareProgramePage() {
     updateProgram(programId, { blocks: (prog.blocks || []).filter((b) => b.id !== blockIdToDelete) });
   };
 
+  // Country list from all programs
+  const countryList = Array.from(new Set(programs.map((p) => extractCountry(p.location)).filter((c) => c.length > 0))).sort();
+
   // Filter programs
   const filtered = programs.filter((p) => {
     if (filterAplicate && p.appStatus !== "aplicat") return false;
     if (activeTab !== "all" && p.category !== activeTab) return false;
+    if (filterCountry !== "toate" && extractCountry(p.location) !== filterCountry) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -898,6 +920,28 @@ export default function AplicareProgramePage() {
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cauta programe..."
               />
+            </div>
+            {/* Country filter */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <MapPin size={13} style={{ position: "absolute", left: 9, color: "#7C3AED", pointerEvents: "none" }} />
+              <select
+                value={filterCountry}
+                onChange={(e) => setFilterCountry(e.target.value)}
+                style={{
+                  padding: "8px 10px 8px 28px", fontSize: 12, fontWeight: 600,
+                  border: filterCountry !== "toate" ? "2px solid #7C3AED" : "1px solid #D1D5DB",
+                  borderRadius: 8, outline: "none", cursor: "pointer",
+                  background: filterCountry !== "toate" ? "#F5F3FF" : "#fff",
+                  color: filterCountry !== "toate" ? "#7C3AED" : "#374151",
+                  appearance: "none", paddingRight: 28, minWidth: 110,
+                }}
+              >
+                <option value="toate">Toate</option>
+                {countryList.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <ChevronDown size={12} style={{ position: "absolute", right: 8, color: "#6B7280", pointerEvents: "none" }} />
             </div>
             <button
               onClick={() => setFilterAplicate(!filterAplicate)}
