@@ -1284,7 +1284,7 @@ export default function AplicareProgramePage() {
   const autoBlock = (opp: AutoOpportunity) => {
     // Block the source domain
     const newBlocked = [...blockedSources, opp.source].filter(Boolean);
-    saveBlockedSources([...new Set(newBlocked)]);
+    saveBlockedSources(Array.from(new Set(newBlocked)));
     // Remove all results from that source
     const updatedAuto = autoResults.map((r) =>
       r.source === opp.source ? { ...r, status: "blocked" as const } : r
