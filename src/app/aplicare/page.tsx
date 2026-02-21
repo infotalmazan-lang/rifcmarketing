@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Search,
-  Filter,
   Plus,
   X,
   ExternalLink,
@@ -14,44 +13,48 @@ import {
   Award,
   BookOpen,
   Users,
-  Globe,
   Lightbulb,
   Trophy,
-  GraduationCap,
   Mic2,
-  Gift,
   Briefcase,
-  Lock,
   Eye,
-  EyeOff,
   ChevronDown,
   ChevronUp,
-  Star,
   Tag,
   CheckCircle,
-  XCircle,
-  AlertCircle,
   Send,
   Bell,
   BarChart3,
   Edit3,
   Trash2,
-  ArrowUpRight,
-  CircleDot,
+  Image,
+  Link2,
+  FileText,
+  Phone,
+  Mail,
+  ClipboardCheck,
   MessageSquare,
+  PlusCircle,
+  type LucideIcon,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════
-   R IF C — Aplicare Programe v2
-   31 pre-populated programs across 6 categories
-   Status: Aplicat | Nerelevant | Dupa lansare
-   Tracking: mesaj trimis, reminder, monitoring
-   Filter: APLICATE
+   R IF C — Aplicare Programe v3
+   Activity blocks system — jurnal de activitate per program
    ═══════════════════════════════════════════════════════════ */
 
 // ── Types ──────────────────────────────────────────────────
 type CategoryKey = "conferinte" | "granturi" | "competitii" | "forumuri" | "premii" | "oportunitati";
 type AppStatus = "nesetat" | "aplicat" | "nerelevant" | "dupa_lansare";
+type BlockType = "email" | "aplicare" | "poza" | "link" | "reminder" | "nota" | "telefon" | "document";
+
+interface ActivityBlock {
+  id: string;
+  type: BlockType;
+  date: string;
+  content: string;
+  created_at: string;
+}
 
 interface Program {
   id: string;
@@ -63,27 +66,50 @@ interface Program {
   url: string | null;
   budget: string | null;
   organizer: string | null;
-  priority: number; // 1-10
+  priority: number;
   tags: string[];
   notes: string | null;
   created_at: string;
-  // new fields
   appStatus: AppStatus;
-  lunaAplicare: string | null; // e.g. "Martie 2026"
-  mesajTrimis: string | null;
-  mesajData: string | null;
-  reminder: string | null; // date ISO
-  reminderNote: string | null;
-  monitoring: string | null; // free text notes
+  lunaAplicare: string | null;
+  // v3: activity blocks replace old mesaj/reminder/monitoring
+  blocks: ActivityBlock[];
+  // keep legacy for migration
+  mesajTrimis?: string | null;
+  mesajData?: string | null;
+  reminder?: string | null;
+  reminderNote?: string | null;
+  monitoring?: string | null;
 }
 
 interface CategoryDef {
   key: CategoryKey;
   label: string;
-  icon: typeof BookOpen;
+  icon: LucideIcon;
   color: string;
   gradient: string;
 }
+
+interface BlockTypeDef {
+  type: BlockType;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+  bg: string;
+  border: string;
+  placeholder: string;
+}
+
+const BLOCK_TYPES: BlockTypeDef[] = [
+  { type: "email", label: "Email Trimis", icon: Mail, color: "#2563EB", bg: "#EFF6FF", border: "#BFDBFE", placeholder: "Subiect, destinatar, continut email..." },
+  { type: "aplicare", label: "Aplicare Depusa", icon: ClipboardCheck, color: "#059669", bg: "#F0FDF4", border: "#86EFAC", placeholder: "Detalii aplicare, numar referinta, documente..." },
+  { type: "poza", label: "Poza / Screenshot", icon: Image, color: "#D97706", bg: "#FFFBEB", border: "#FCD34D", placeholder: "Descriere imagine, URL imagine, ce arata..." },
+  { type: "link", label: "Link Salvat", icon: Link2, color: "#7C3AED", bg: "#F5F3FF", border: "#C4B5FD", placeholder: "URL si descriere link important..." },
+  { type: "reminder", label: "Reminder", icon: Bell, color: "#DC2626", bg: "#FEF2F2", border: "#FECACA", placeholder: "Ce trebuie facut, data limita..." },
+  { type: "nota", label: "Nota", icon: FileText, color: "#374151", bg: "#F9FAFB", border: "#D1D5DB", placeholder: "Notite, observatii, idei..." },
+  { type: "telefon", label: "Apel Telefonic", icon: Phone, color: "#0891B2", bg: "#ECFEFF", border: "#A5F3FC", placeholder: "Cu cine, ce s-a discutat, rezultat..." },
+  { type: "document", label: "Document", icon: FileText, color: "#4338CA", bg: "#EEF2FF", border: "#C7D2FE", placeholder: "Tip document, continut, unde se afla..." },
+];
 
 const CATEGORIES: CategoryDef[] = [
   { key: "conferinte", label: "Conferinte Academice", icon: Mic2, color: "#2563EB", gradient: "linear-gradient(135deg, #2563EB, #1D4ED8)" },
@@ -102,7 +128,7 @@ const TABS: { key: TabKey; label: string }[] = [
 ];
 
 const APP_STATUS_CONFIG: Record<AppStatus, { bg: string; text: string; label: string; border: string }> = {
-  nesetat: { bg: "#F3F4F6", text: "#6B7280", label: "Nesetat", border: "#E5E7EB" },
+  nesetat: { bg: "#F3F4F6", text: "#6B7280", label: "Nesetat", border: "#D1D5DB" },
   aplicat: { bg: "#DCFCE7", text: "#16A34A", label: "Aplicat", border: "#86EFAC" },
   nerelevant: { bg: "#F3F4F6", text: "#9CA3AF", label: "Nerelevant", border: "#D1D5DB" },
   dupa_lansare: { bg: "#FEF3C7", text: "#D97706", label: "Dupa lansare", border: "#FCD34D" },
@@ -110,10 +136,11 @@ const APP_STATUS_CONFIG: Record<AppStatus, { bg: string; text: string; label: st
 
 const ACCESS_CODE = "APLICARE2026";
 const STORAGE_KEY = "rifc-aplicare-access";
-const DATA_KEY = "rifc-aplicare-programs-v2";
+const DATA_KEY = "rifc-aplicare-programs-v3";
+const OLD_DATA_KEY = "rifc-aplicare-programs-v2";
 
 // ── Seed Data ─────────────────────────────────────────────
-const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "mesajTrimis" | "mesajData" | "reminder" | "reminderNote" | "monitoring">[] = [
+const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "blocks" | "mesajTrimis" | "mesajData" | "reminder" | "reminderNote" | "monitoring">[] = [
   // ── Conferinte Academice (6) ──
   {
     title: "EMAC Fall Conference 2026",
@@ -561,8 +588,46 @@ function generateId(): string {
   return "ap-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
+function blockId(): string {
+  return "bl-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
 function getCategoryDef(key: CategoryKey): CategoryDef {
   return CATEGORIES.find((c) => c.key === key) || CATEGORIES[0];
+}
+
+function getBlockDef(type: BlockType): BlockTypeDef {
+  return BLOCK_TYPES.find((b) => b.type === type) || BLOCK_TYPES[5]; // default nota
+}
+
+function todayStr(): string {
+  const d = new Date();
+  const months = ["Ian", "Feb", "Mar", "Apr", "Mai", "Iun", "Iul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function migrateFromV2(): Program[] | null {
+  try {
+    const raw = localStorage.getItem(OLD_DATA_KEY);
+    if (!raw) return null;
+    const old = JSON.parse(raw) as Program[];
+    // Migrate: convert old mesaj/reminder/monitoring to blocks
+    return old.map((p) => {
+      const blocks: ActivityBlock[] = [];
+      if (p.mesajTrimis) {
+        blocks.push({ id: blockId(), type: "email", date: p.mesajData || todayStr(), content: p.mesajTrimis, created_at: new Date().toISOString() });
+      }
+      if (p.reminder || p.reminderNote) {
+        blocks.push({ id: blockId(), type: "reminder", date: p.reminder || todayStr(), content: p.reminderNote || p.reminder || "", created_at: new Date().toISOString() });
+      }
+      if (p.monitoring) {
+        blocks.push({ id: blockId(), type: "nota", date: todayStr(), content: p.monitoring, created_at: new Date().toISOString() });
+      }
+      return { ...p, blocks };
+    });
+  } catch {
+    return null;
+  }
 }
 
 function loadPrograms(): Program[] {
@@ -570,17 +635,19 @@ function loadPrograms(): Program[] {
     const raw = localStorage.getItem(DATA_KEY);
     if (raw) return JSON.parse(raw);
   } catch {}
-  // Seed with default data
+  // Try migrate from v2
+  const migrated = migrateFromV2();
+  if (migrated) {
+    localStorage.setItem(DATA_KEY, JSON.stringify(migrated));
+    return migrated;
+  }
+  // Seed
   const seeded: Program[] = SEED_PROGRAMS.map((s, i) => ({
     ...s,
     id: "seed-" + (i + 1).toString().padStart(2, "0"),
     created_at: new Date(2026, 1, 20, 10, i).toISOString(),
     appStatus: "nesetat" as AppStatus,
-    mesajTrimis: null,
-    mesajData: null,
-    reminder: null,
-    reminderNote: null,
-    monitoring: null,
+    blocks: [],
   }));
   localStorage.setItem(DATA_KEY, JSON.stringify(seeded));
   return seeded;
@@ -610,10 +677,15 @@ export default function AplicareProgramePage() {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
-  const [viewingProgram, setViewingProgram] = useState<Program | null>(null);
   const [formData, setFormData] = useState<Partial<Program>>({});
   const [tagsInput, setTagsInput] = useState("");
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+  // Block adding state
+  const [showBlockPicker, setShowBlockPicker] = useState(false);
+  const [newBlockType, setNewBlockType] = useState<BlockType | null>(null);
+  const [newBlockDate, setNewBlockDate] = useState(todayStr());
+  const [newBlockContent, setNewBlockContent] = useState("");
 
   useEffect(() => {
     const granted = localStorage.getItem(STORAGE_KEY);
@@ -635,14 +707,35 @@ export default function AplicareProgramePage() {
     }
   }, [accessInput]);
 
-  // Update program helper
   const updateProgram = (id: string, changes: Partial<Program>) => {
     const updated = programs.map((p) => (p.id === id ? { ...p, ...changes } : p));
     setPrograms(updated);
     savePrograms(updated);
-    if (viewingProgram && viewingProgram.id === id) {
-      setViewingProgram({ ...viewingProgram, ...changes });
-    }
+  };
+
+  // Block operations
+  const addBlock = (programId: string) => {
+    if (!newBlockType || !newBlockContent.trim()) return;
+    const block: ActivityBlock = {
+      id: blockId(),
+      type: newBlockType,
+      date: newBlockDate || todayStr(),
+      content: newBlockContent.trim(),
+      created_at: new Date().toISOString(),
+    };
+    const prog = programs.find((p) => p.id === programId);
+    if (!prog) return;
+    updateProgram(programId, { blocks: [...(prog.blocks || []), block] });
+    setNewBlockType(null);
+    setNewBlockContent("");
+    setNewBlockDate(todayStr());
+    setShowBlockPicker(false);
+  };
+
+  const deleteBlock = (programId: string, blockIdToDelete: string) => {
+    const prog = programs.find((p) => p.id === programId);
+    if (!prog) return;
+    updateProgram(programId, { blocks: (prog.blocks || []).filter((b) => b.id !== blockIdToDelete) });
   };
 
   // Filter programs
@@ -695,11 +788,7 @@ export default function AplicareProgramePage() {
         created_at: new Date().toISOString(),
         appStatus: (formData.appStatus as AppStatus) || "nesetat",
         lunaAplicare: formData.lunaAplicare || null,
-        mesajTrimis: formData.mesajTrimis || null,
-        mesajData: formData.mesajData || null,
-        reminder: formData.reminder || null,
-        reminderNote: formData.reminderNote || null,
-        monitoring: formData.monitoring || null,
+        blocks: [],
       };
       const updated = [...programs, newProgram];
       setPrograms(updated);
@@ -715,8 +804,8 @@ export default function AplicareProgramePage() {
     setPrograms(updated);
     savePrograms(updated);
     setShowAddModal(false);
-    setViewingProgram(null);
     setEditingProgram(null);
+    if (expandedCard === id) setExpandedCard(null);
   };
 
   const openAddModal = (category?: CategoryKey) => {
@@ -747,12 +836,12 @@ export default function AplicareProgramePage() {
         }}>
           <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "#DC2626", letterSpacing: 4, fontWeight: 700, marginBottom: 8 }}>R IF C</div>
           <h2 style={{ fontSize: 22, fontWeight: 800, color: "#111827", marginBottom: 8 }}>Aplicare Programe</h2>
-          <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 28 }}>Introduceti codul de acces pentru a continua</p>
+          <p style={{ fontSize: 13, color: "#4B5563", marginBottom: 28 }}>Introduceti codul de acces pentru a continua</p>
           <input
             type="password"
             style={{
-              width: "100%", padding: "14px 16px", fontSize: 15,
-              border: "2px solid #E5E7EB", borderRadius: 10, outline: "none",
+              width: "100%", padding: "14px 16px", fontSize: 15, color: "#111827",
+              border: "2px solid #D1D5DB", borderRadius: 10, outline: "none",
               fontFamily: "'JetBrains Mono', monospace", letterSpacing: 2,
               textAlign: "center", marginBottom: 16,
             }}
@@ -796,22 +885,20 @@ export default function AplicareProgramePage() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            {/* Search */}
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
               <Search size={14} style={{ position: "absolute", left: 10, color: "#6B7280", pointerEvents: "none" }} />
               <input
                 type="text"
                 style={{
-                  padding: "8px 12px 8px 32px", fontSize: 13,
+                  padding: "8px 12px 8px 32px", fontSize: 13, color: "#111827",
                   border: "1px solid #D1D5DB", borderRadius: 8, outline: "none",
-                  width: 200, background: "#fff", color: "#111827",
+                  width: 200, background: "#fff",
                 }}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cauta programe..."
               />
             </div>
-            {/* APLICATE filter */}
             <button
               onClick={() => setFilterAplicate(!filterAplicate)}
               style={{
@@ -827,7 +914,6 @@ export default function AplicareProgramePage() {
               <CheckCircle size={13} />
               APLICATE ({aplicateCount})
             </button>
-            {/* Add button */}
             <button
               style={{
                 display: "flex", alignItems: "center", gap: 5,
@@ -852,7 +938,7 @@ export default function AplicareProgramePage() {
                 key={t.key}
                 style={{
                   padding: "10px 14px", fontSize: 11, fontWeight: 600,
-                  color: isActive ? "#DC2626" : "#6B7280",
+                  color: isActive ? "#DC2626" : "#4B5563",
                   background: "none", border: "none",
                   borderBottom: isActive ? "2px solid #DC2626" : "2px solid transparent",
                   cursor: "pointer", whiteSpace: "nowrap", letterSpacing: 0.3,
@@ -863,7 +949,7 @@ export default function AplicareProgramePage() {
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 10,
                   background: isActive ? "#FEE2E2" : "#F3F4F6",
-                  color: isActive ? "#DC2626" : "#6B7280",
+                  color: isActive ? "#DC2626" : "#4B5563",
                   marginLeft: 5,
                 }}>{count}</span>
               </button>
@@ -889,11 +975,9 @@ export default function AplicareProgramePage() {
                 }}
                 onClick={() => setActiveTab(cat.key)}
               >
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 4 }}>
-                  <Icon size={14} style={{ color: cat.color }} />
-                </div>
+                <Icon size={14} style={{ color: cat.color, marginBottom: 4 }} />
                 <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: "#111827" }}>{count}</div>
-                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>{cat.label}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#4B5563", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>{cat.label}</div>
               </div>
             );
           })}
@@ -901,15 +985,15 @@ export default function AplicareProgramePage() {
 
         {/* Cards */}
         {filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#9CA3AF" }}>
+          <div style={{ textAlign: "center", padding: "60px 20px", color: "#6B7280" }}>
             <Briefcase size={40} style={{ opacity: 0.3, marginBottom: 10 }} />
-            <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 8 }}>
+            <p style={{ fontSize: 14, color: "#4B5563", marginBottom: 8 }}>
               {search ? "Niciun program gasit." : filterAplicate ? "Niciun program marcat ca aplicat." : "Niciun program in aceasta categorie."}
             </p>
           </div>
         ) : (
           <>
-            {/* ── Mini tabs row (other cards when one is expanded) ── */}
+            {/* ── Mini tabs row ── */}
             {expandedCard && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                 {filtered.sort((a, b) => b.priority - a.priority).map((program) => {
@@ -920,7 +1004,7 @@ export default function AplicareProgramePage() {
                   return (
                     <button
                       key={program.id}
-                      onClick={() => setExpandedCard(program.id)}
+                      onClick={() => { setExpandedCard(program.id); setShowBlockPicker(false); setNewBlockType(null); }}
                       style={{
                         display: "flex", alignItems: "center", gap: 5,
                         padding: "6px 12px", fontSize: 11, fontWeight: isActive ? 700 : 500,
@@ -952,7 +1036,7 @@ export default function AplicareProgramePage() {
                   );
                 })}
                 <button
-                  onClick={() => setExpandedCard(null)}
+                  onClick={() => { setExpandedCard(null); setShowBlockPicker(false); setNewBlockType(null); }}
                   style={{
                     display: "flex", alignItems: "center", gap: 4,
                     padding: "6px 12px", fontSize: 11, fontWeight: 600,
@@ -972,9 +1056,11 @@ export default function AplicareProgramePage() {
               const cat = getCategoryDef(program.category);
               const status = APP_STATUS_CONFIG[program.appStatus];
               const Icon = cat.icon;
+              const blocks = program.blocks || [];
+
               return (
                 <div style={{
-                  background: "#fff", border: `2px solid ${cat.color}40`, borderRadius: 14,
+                  background: "#fff", border: `2px solid ${cat.color}30`, borderRadius: 14,
                   overflow: "hidden", marginBottom: 20,
                 }}>
                   {/* Color bar */}
@@ -982,8 +1068,8 @@ export default function AplicareProgramePage() {
 
                   {/* Header */}
                   <div style={{ padding: "18px 24px", borderBottom: "1px solid #E5E7EB" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-                      <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 280 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                           <Icon size={20} style={{ color: cat.color }} />
                           <h2 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0, lineHeight: 1.3 }}>{program.title}</h2>
@@ -994,12 +1080,12 @@ export default function AplicareProgramePage() {
                             fontFamily: "'JetBrains Mono', monospace",
                           }}>{program.priority}/10</div>
                         </div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
                           <select
                             value={program.appStatus}
                             onChange={(e) => updateProgram(program.id, { appStatus: e.target.value as AppStatus })}
                             style={{
-                              fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6,
+                              fontSize: 12, fontWeight: 700, padding: "5px 10px", borderRadius: 6,
                               background: status.bg, color: status.text, border: `1px solid ${status.border}`,
                               cursor: "pointer", outline: "none",
                             }}
@@ -1011,44 +1097,57 @@ export default function AplicareProgramePage() {
                           </select>
                           {program.lunaAplicare && (
                             <span style={{
-                              fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
+                              fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
                               background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE",
                               display: "flex", alignItems: "center", gap: 4,
                             }}>
-                              <Calendar size={11} /> {program.lunaAplicare}
+                              <Calendar size={12} /> {program.lunaAplicare}
                             </span>
                           )}
                           <span style={{ fontSize: 10, fontWeight: 600, padding: "4px 8px", borderRadius: 6, background: `${cat.color}10`, color: cat.color }}>
                             {cat.label}
                           </span>
-                          {program.tags.map((tag, i) => (
-                            <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 5, background: "#F3F4F6", color: "#6B7280" }}>{tag}</span>
-                          ))}
                         </div>
+                        {/* Tags — subtle */}
+                        {program.tags.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+                            {program.tags.map((tag, i) => (
+                              <span key={i} style={{ fontSize: 9, fontWeight: 500, padding: "2px 7px", borderRadius: 4, background: "#F3F4F6", color: "#9CA3AF", letterSpacing: 0.3 }}>{tag}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      {/* Action buttons row */}
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0, flexWrap: "wrap" }}>
                         {program.url && (
                           <a href={program.url} target="_blank" rel="noreferrer" style={{
-                            fontSize: 11, fontWeight: 600, padding: "7px 14px", borderRadius: 8,
-                            border: "1px solid #BFDBFE", background: "#EFF6FF",
-                            color: "#2563EB", display: "flex", alignItems: "center", gap: 4, textDecoration: "none",
+                            fontSize: 11, fontWeight: 700, padding: "8px 14px", borderRadius: 8,
+                            background: "#2563EB", color: "#fff",
+                            display: "flex", alignItems: "center", gap: 5, textDecoration: "none",
                           }}>
-                            <ExternalLink size={12} /> Deschide Link
+                            <ExternalLink size={13} /> Link
                           </a>
                         )}
                         <button onClick={() => openEditModal(program)} style={{
-                          fontSize: 11, fontWeight: 600, padding: "7px 14px", borderRadius: 8,
-                          border: "1px solid #E5E7EB", background: "#fff", color: "#374151", cursor: "pointer",
-                          display: "flex", alignItems: "center", gap: 4,
+                          fontSize: 11, fontWeight: 700, padding: "8px 14px", borderRadius: 8,
+                          border: "1px solid #D1D5DB", background: "#fff", color: "#374151", cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 5,
                         }}>
-                          <Edit3 size={12} /> Edit
+                          <Edit3 size={13} /> Edit
+                        </button>
+                        <button onClick={() => { setExpandedCard(null); setShowBlockPicker(false); setNewBlockType(null); }} style={{
+                          fontSize: 11, fontWeight: 700, padding: "8px 14px", borderRadius: 8,
+                          border: "1px solid #D1D5DB", background: "#F9FAFB", color: "#6B7280", cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 5,
+                        }}>
+                          <X size={13} /> Inchide
                         </button>
                       </div>
                     </div>
                   </div>
 
                   {/* Body: 2-column layout */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 350 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 300 }}>
                     {/* Left: Info */}
                     <div style={{ padding: "20px 24px", borderRight: "1px solid #E5E7EB" }}>
                       <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, borderBottom: "2px solid #E5E7EB", paddingBottom: 10 }}>
@@ -1057,34 +1156,34 @@ export default function AplicareProgramePage() {
 
                       <p style={{ fontSize: 14, color: "#1F2937", lineHeight: 1.7, marginBottom: 16 }}>{program.description}</p>
 
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
                         {program.deadline && (
-                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
+                          <div style={{ background: "#fff", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
                             <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
                               <Clock size={13} style={{ color: "#DC2626" }} /> {program.deadline}
                             </div>
                           </div>
                         )}
                         {program.location && (
-                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
+                          <div style={{ background: "#fff", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#7C3AED", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
                             <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
                               <MapPin size={13} style={{ color: "#7C3AED" }} /> {program.location}
                             </div>
                           </div>
                         )}
                         {program.budget && (
-                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
+                          <div style={{ background: "#fff", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#059669", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
                             <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
                               <DollarSign size={13} style={{ color: "#059669" }} /> {program.budget}
                             </div>
                           </div>
                         )}
                         {program.organizer && (
-                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
+                          <div style={{ background: "#fff", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
                             <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
                               <Users size={13} style={{ color: "#2563EB" }} /> {program.organizer}
                             </div>
@@ -1100,93 +1199,158 @@ export default function AplicareProgramePage() {
                       )}
                     </div>
 
-                    {/* Right: Tracking workspace */}
+                    {/* Right: Activity Blocks */}
                     <div style={{ padding: "20px 24px", background: "#FAFBFC" }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 6, borderBottom: "2px solid #E5E7EB", paddingBottom: 10 }}>
-                        <BarChart3 size={14} /> Zona de Lucru & Tracking
-                      </div>
-
-                      {/* Mesaj Trimis */}
-                      <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: "#111827", marginBottom: 6, display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                          <Send size={12} style={{ color: "#2563EB" }} /> Mesaj Trimis
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, borderBottom: "2px solid #E5E7EB", paddingBottom: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", letterSpacing: 0.8, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 6 }}>
+                          <BarChart3 size={14} /> Jurnal Activitate
+                          {blocks.length > 0 && (
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#EFF6FF", color: "#2563EB" }}>{blocks.length}</span>
+                          )}
                         </div>
-                        <textarea
-                          value={program.mesajTrimis || ""}
-                          onChange={(e) => updateProgram(program.id, { mesajTrimis: e.target.value })}
-                          placeholder="ORCID: 0009-0000-3832-8392&#10;info.talmazan@gmail.com&#10;https://www.instagram.com/talmazan.md/"
+                        <button
+                          onClick={() => { setShowBlockPicker(!showBlockPicker); setNewBlockType(null); setNewBlockContent(""); }}
                           style={{
-                            width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid #D1D5DB",
-                            borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif",
-                            minHeight: 80, resize: "vertical", background: "#fff", lineHeight: 1.6,
-                            color: "#111827",
+                            display: "flex", alignItems: "center", gap: 4,
+                            padding: "6px 12px", fontSize: 11, fontWeight: 700,
+                            color: "#fff", background: "linear-gradient(135deg, #059669, #047857)",
+                            border: "none", borderRadius: 6, cursor: "pointer",
                           }}
-                        />
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                          <span style={{ fontSize: 11, color: "#374151", fontWeight: 600 }}>Data trimitere:</span>
-                          <input
-                            type="text"
-                            value={program.mesajData || ""}
-                            onChange={(e) => updateProgram(program.id, { mesajData: e.target.value })}
-                            placeholder="ex: 20 Feb 2026"
-                            style={{
-                              padding: "6px 10px", fontSize: 12, border: "1px solid #D1D5DB",
-                              borderRadius: 6, outline: "none", width: 160, background: "#fff", color: "#111827",
-                            }}
-                          />
-                        </div>
+                        >
+                          <PlusCircle size={13} /> Adauga Bloc
+                        </button>
                       </div>
 
-                      {/* Reminder */}
-                      <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: "#111827", marginBottom: 6, display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                          <Bell size={12} style={{ color: "#D97706" }} /> Reminder — Cind de revenit
+                      {/* Block type picker */}
+                      {showBlockPicker && !newBlockType && (
+                        <div style={{
+                          display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 16,
+                          padding: 12, background: "#fff", borderRadius: 10, border: "1px solid #D1D5DB",
+                        }}>
+                          <div style={{ gridColumn: "1 / -1", fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Alege tipul blocului:</div>
+                          {BLOCK_TYPES.map((bt) => {
+                            const BIcon = bt.icon;
+                            return (
+                              <button
+                                key={bt.type}
+                                onClick={() => { setNewBlockType(bt.type); setNewBlockDate(todayStr()); }}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 6,
+                                  padding: "8px 10px", fontSize: 11, fontWeight: 600,
+                                  color: bt.color, background: bt.bg, border: `1px solid ${bt.border}`,
+                                  borderRadius: 8, cursor: "pointer", textAlign: "left",
+                                }}
+                              >
+                                <BIcon size={14} /> {bt.label}
+                              </button>
+                            );
+                          })}
                         </div>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <input
-                            type="text"
-                            value={program.reminder || ""}
-                            onChange={(e) => updateProgram(program.id, { reminder: e.target.value })}
-                            placeholder="ex: 15 Mar 2026"
-                            style={{
-                              padding: "8px 12px", fontSize: 13, border: "1px solid #D1D5DB",
-                              borderRadius: 8, outline: "none", width: 160, background: "#fff", color: "#111827",
-                            }}
-                          />
-                          <input
-                            type="text"
-                            value={program.reminderNote || ""}
-                            onChange={(e) => updateProgram(program.id, { reminderNote: e.target.value })}
-                            placeholder="Nota reminder..."
-                            style={{
-                              padding: "8px 12px", fontSize: 13, border: "1px solid #D1D5DB",
-                              borderRadius: 8, outline: "none", flex: 1, background: "#fff", color: "#111827",
-                            }}
-                          />
-                        </div>
-                        {program.reminder && (
-                          <div style={{ marginTop: 6, padding: "6px 10px", background: "#FFFBEB", borderRadius: 6, border: "1px solid #FCD34D", fontSize: 11, color: "#92400E", display: "flex", alignItems: "center", gap: 4 }}>
-                            <Bell size={10} /> Revino pe: <strong>{program.reminder}</strong> {program.reminderNote ? `— ${program.reminderNote}` : ""}
+                      )}
+
+                      {/* New block form */}
+                      {newBlockType && (() => {
+                        const bt = getBlockDef(newBlockType);
+                        const BIcon = bt.icon;
+                        return (
+                          <div style={{
+                            marginBottom: 16, padding: 14, background: bt.bg,
+                            borderRadius: 10, border: `2px solid ${bt.border}`,
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                              <BIcon size={16} style={{ color: bt.color }} />
+                              <span style={{ fontSize: 12, fontWeight: 700, color: bt.color }}>{bt.label}</span>
+                              <button onClick={() => { setNewBlockType(null); setNewBlockContent(""); }} style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 2 }}>
+                                <X size={14} />
+                              </button>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <Calendar size={12} style={{ color: "#6B7280" }} />
+                                <input
+                                  type="text"
+                                  value={newBlockDate}
+                                  onChange={(e) => setNewBlockDate(e.target.value)}
+                                  style={{
+                                    padding: "6px 10px", fontSize: 12, border: `1px solid ${bt.border}`,
+                                    borderRadius: 6, outline: "none", width: 130, background: "#fff", color: "#111827", fontWeight: 600,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                            <textarea
+                              value={newBlockContent}
+                              onChange={(e) => setNewBlockContent(e.target.value)}
+                              placeholder={bt.placeholder}
+                              autoFocus
+                              style={{
+                                width: "100%", padding: "10px 12px", fontSize: 13, border: `1px solid ${bt.border}`,
+                                borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif",
+                                minHeight: 70, resize: "vertical", background: "#fff", lineHeight: 1.6, color: "#111827",
+                              }}
+                            />
+                            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                              <button
+                                onClick={() => addBlock(program.id)}
+                                disabled={!newBlockContent.trim()}
+                                style={{
+                                  padding: "7px 16px", fontSize: 11, fontWeight: 700,
+                                  color: "#fff", background: bt.color,
+                                  border: "none", borderRadius: 6, cursor: "pointer",
+                                  opacity: !newBlockContent.trim() ? 0.5 : 1,
+                                }}
+                              >Salveaza</button>
+                              <button
+                                onClick={() => { setNewBlockType(null); setNewBlockContent(""); }}
+                                style={{
+                                  padding: "7px 16px", fontSize: 11, fontWeight: 600,
+                                  color: "#6B7280", background: "#fff",
+                                  border: "1px solid #D1D5DB", borderRadius: 6, cursor: "pointer",
+                                }}
+                              >Anuleaza</button>
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        );
+                      })()}
 
-                      {/* Monitoring */}
-                      <div>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: "#111827", marginBottom: 6, display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                          <BarChart3 size={12} style={{ color: "#059669" }} /> Monitorizare
+                      {/* Existing blocks */}
+                      {blocks.length === 0 && !showBlockPicker && (
+                        <div style={{ textAlign: "center", padding: "30px 16px", color: "#9CA3AF" }}>
+                          <MessageSquare size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
+                          <p style={{ fontSize: 12, color: "#6B7280" }}>Niciun bloc adaugat. Apasa &quot;Adauga Bloc&quot; pentru a incepe jurnalul de activitate.</p>
                         </div>
-                        <textarea
-                          value={program.monitoring || ""}
-                          onChange={(e) => updateProgram(program.id, { monitoring: e.target.value })}
-                          placeholder="Note de monitorizare, raspunsuri primite, status aplicare..."
-                          style={{
-                            width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid #D1D5DB",
-                            borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif",
-                            minHeight: 80, resize: "vertical", background: "#fff", lineHeight: 1.6,
-                            color: "#111827",
-                          }}
-                        />
+                      )}
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {blocks.slice().reverse().map((block) => {
+                          const bt = getBlockDef(block.type);
+                          const BIcon = bt.icon;
+                          return (
+                            <div key={block.id} style={{
+                              padding: "12px 14px", background: "#fff",
+                              borderRadius: 10, border: `1px solid ${bt.border}`,
+                              borderLeft: `4px solid ${bt.color}`,
+                            }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                  <BIcon size={14} style={{ color: bt.color }} />
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: bt.color }}>{bt.label}</span>
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280", display: "flex", alignItems: "center", gap: 3 }}>
+                                    <Calendar size={10} /> {block.date}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => deleteBlock(program.id, block.id)}
+                                  style={{ background: "none", border: "none", cursor: "pointer", color: "#D1D5DB", padding: 2 }}
+                                  title="Sterge bloc"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                              <p style={{ fontSize: 13, color: "#1F2937", lineHeight: 1.6, whiteSpace: "pre-wrap", margin: 0 }}>{block.content}</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1194,7 +1358,7 @@ export default function AplicareProgramePage() {
               );
             })()}
 
-            {/* ── Grid of cards (shown when nothing expanded, or hidden when expanded) ── */}
+            {/* ── Grid of cards ── */}
             {!expandedCard && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 14 }}>
                 {filtered
@@ -1203,10 +1367,11 @@ export default function AplicareProgramePage() {
                     const cat = getCategoryDef(program.category);
                     const status = APP_STATUS_CONFIG[program.appStatus];
                     const Icon = cat.icon;
+                    const blockCount = (program.blocks || []).length;
                     return (
                       <div
                         key={program.id}
-                        onClick={() => setExpandedCard(program.id)}
+                        onClick={() => { setExpandedCard(program.id); setShowBlockPicker(false); setNewBlockType(null); }}
                         style={{
                           background: "#fff", border: `1px solid ${program.appStatus === "aplicat" ? "#86EFAC" : program.appStatus === "nerelevant" ? "#D1D5DB" : "#E5E7EB"}`,
                           borderRadius: 12, overflow: "hidden",
@@ -1214,10 +1379,9 @@ export default function AplicareProgramePage() {
                           transition: "all 0.2s", cursor: "pointer",
                         }}
                       >
-                        {/* Color bar top */}
                         <div style={{ height: 3, background: cat.gradient }} />
                         <div style={{ padding: "14px 16px" }}>
-                          {/* Header row */}
+                          {/* Header */}
                           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 }}>
                               <Icon size={15} style={{ color: cat.color, flexShrink: 0 }} />
@@ -1233,7 +1397,7 @@ export default function AplicareProgramePage() {
                             </div>
                           </div>
 
-                          {/* Status + Luna de aplicare row */}
+                          {/* Status row */}
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                             <span style={{
                               fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
@@ -1261,7 +1425,7 @@ export default function AplicareProgramePage() {
                             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
                           }}>{program.description}</p>
 
-                          {/* Meta info */}
+                          {/* Meta */}
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10, color: "#6B7280", marginBottom: 8 }}>
                             {program.deadline && (
                               <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -1273,31 +1437,26 @@ export default function AplicareProgramePage() {
                                 <MapPin size={10} /> {program.location}
                               </span>
                             )}
-                            {program.budget && (
-                              <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                                <DollarSign size={10} /> {program.budget}
-                              </span>
-                            )}
                           </div>
 
-                          {/* Tags */}
+                          {/* Tags — subtle */}
                           {program.tags.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 8 }}>
                               {program.tags.map((tag, i) => (
                                 <span key={i} style={{
-                                  fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
-                                  background: "#F3F4F6", color: "#6B7280",
+                                  fontSize: 9, fontWeight: 500, padding: "2px 6px", borderRadius: 4,
+                                  background: "#F9FAFB", color: "#9CA3AF", border: "1px solid #F3F4F6",
                                 }}>{tag}</span>
                               ))}
                             </div>
                           )}
 
-                          {/* Tracking indicator */}
-                          {(program.mesajTrimis || program.reminder || program.monitoring) && (
+                          {/* Block count indicator */}
+                          {blockCount > 0 && (
                             <div style={{ display: "flex", gap: 4, paddingTop: 8, borderTop: "1px solid #F3F4F6" }}>
-                              {program.mesajTrimis && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", gap: 2 }}><Send size={8} /> Mesaj</span>}
-                              {program.reminder && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#FFFBEB", color: "#D97706", display: "flex", alignItems: "center", gap: 2 }}><Bell size={8} /> {program.reminder}</span>}
-                              {program.monitoring && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#F0FDF4", color: "#059669", display: "flex", alignItems: "center", gap: 2 }}><BarChart3 size={8} /> Monitorizat</span>}
+                              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", gap: 3 }}>
+                                <BarChart3 size={10} /> {blockCount} {blockCount === 1 ? "bloc" : "blocuri"}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -1309,186 +1468,6 @@ export default function AplicareProgramePage() {
           </>
         )}
       </div>
-
-      {/* ═══ View Program Modal ═══ */}
-      {viewingProgram && !showAddModal && (() => {
-        const cat = getCategoryDef(viewingProgram.category);
-        const status = APP_STATUS_CONFIG[viewingProgram.appStatus];
-        const Icon = cat.icon;
-        return (
-          <div style={{
-            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-            background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center",
-            justifyContent: "center", zIndex: 9999, padding: 20,
-          }} onClick={() => setViewingProgram(null)}>
-            <div style={{
-              background: "#fff", borderRadius: 16, maxWidth: 640, width: "100%",
-              maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-            }} onClick={(e) => e.stopPropagation()}>
-              <div style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                padding: "18px 22px", borderBottom: "1px solid #E5E7EB",
-                borderTop: `4px solid ${cat.color}`, borderRadius: "16px 16px 0 0",
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <Icon size={18} style={{ color: cat.color }} />
-                  <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>{viewingProgram.title}</h3>
-                </div>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 4 }} onClick={() => setViewingProgram(null)}>
-                  <X size={18} />
-                </button>
-              </div>
-              <div style={{ padding: "18px 22px" }}>
-                <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 8, background: status.bg, color: status.text, border: `1px solid ${status.border}` }}>
-                    {status.label}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: `${cat.color}14`, color: cat.color }}>
-                    {cat.label}
-                  </span>
-                  <span style={{
-                    fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 8,
-                    background: `${priorityColor(viewingProgram.priority)}14`, color: priorityColor(viewingProgram.priority),
-                    fontFamily: "'JetBrains Mono', monospace",
-                  }}>
-                    Prioritate: {viewingProgram.priority}/10
-                  </span>
-                  {viewingProgram.lunaAplicare && (
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 8, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", gap: 4 }}>
-                      <Calendar size={11} /> {viewingProgram.lunaAplicare}
-                    </span>
-                  )}
-                </div>
-
-                {viewingProgram.description && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Descriere</div>
-                    <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{viewingProgram.description}</p>
-                  </div>
-                )}
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
-                  {viewingProgram.deadline && (
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
-                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
-                        <Calendar size={13} style={{ color: "#6B7280" }} /> {viewingProgram.deadline}
-                      </div>
-                    </div>
-                  )}
-                  {viewingProgram.location && (
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
-                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
-                        <MapPin size={13} style={{ color: "#6B7280" }} /> {viewingProgram.location}
-                      </div>
-                    </div>
-                  )}
-                  {viewingProgram.budget && (
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
-                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
-                        <DollarSign size={13} style={{ color: "#6B7280" }} /> {viewingProgram.budget}
-                      </div>
-                    </div>
-                  )}
-                  {viewingProgram.organizer && (
-                    <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
-                      <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
-                        <Users size={13} style={{ color: "#6B7280" }} /> {viewingProgram.organizer}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {viewingProgram.url && (
-                  <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Link</div>
-                    <a href={viewingProgram.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563EB", display: "flex", alignItems: "center", gap: 5, wordBreak: "break-all" }}>
-                      <ExternalLink size={13} /> {viewingProgram.url}
-                    </a>
-                  </div>
-                )}
-
-                {/* Tracking section in detail modal */}
-                <div style={{ borderTop: "1px solid #E5E7EB", paddingTop: 14, marginTop: 14 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "#111827", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-                    <BarChart3 size={14} /> Zona de Tracking
-                  </div>
-                  {viewingProgram.mesajTrimis && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Mesaj Trimis {viewingProgram.mesajData ? `(${viewingProgram.mesajData})` : ""}</div>
-                      <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#F9FAFB", padding: 8, borderRadius: 6, border: "1px solid #E5E7EB" }}>
-                        {viewingProgram.mesajTrimis}
-                      </p>
-                    </div>
-                  )}
-                  {viewingProgram.reminder && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Reminder: {viewingProgram.reminder}</div>
-                      {viewingProgram.reminderNote && (
-                        <p style={{ fontSize: 12, color: "#374151", background: "#FFFBEB", padding: 8, borderRadius: 6, border: "1px solid #FCD34D" }}>
-                          {viewingProgram.reminderNote}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {viewingProgram.monitoring && (
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Monitorizare</div>
-                      <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#F0FDF4", padding: 8, borderRadius: 6, border: "1px solid #86EFAC" }}>
-                        {viewingProgram.monitoring}
-                      </p>
-                    </div>
-                  )}
-                  {!viewingProgram.mesajTrimis && !viewingProgram.reminder && !viewingProgram.monitoring && (
-                    <p style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Niciun tracking adaugat inca. Foloseste butonul &quot;Tracking&quot; de pe cartonas.</p>
-                  )}
-                </div>
-
-                {viewingProgram.tags.length > 0 && (
-                  <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Tags</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                      {viewingProgram.tags.map((tag, i) => (
-                        <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6, background: "#F3F4F6", color: "#6B7280" }}>{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {viewingProgram.notes && (
-                  <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Note</div>
-                    <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{viewingProgram.notes}</p>
-                  </div>
-                )}
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, padding: "14px 22px", borderTop: "1px solid #E5E7EB" }}>
-                <button
-                  style={{
-                    padding: "8px 16px", fontSize: 12, fontWeight: 600, color: "#DC2626",
-                    background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 8, cursor: "pointer", marginRight: "auto",
-                  }}
-                  onClick={() => deleteProgram(viewingProgram.id)}
-                >Sterge</button>
-                <button
-                  style={{ padding: "8px 16px", fontSize: 12, fontWeight: 600, color: "#6B7280", background: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: 8, cursor: "pointer" }}
-                  onClick={() => setViewingProgram(null)}
-                >Inchide</button>
-                <button
-                  style={{
-                    padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#fff",
-                    background: "linear-gradient(135deg, #DC2626, #B91C1C)", border: "none", borderRadius: 8, cursor: "pointer",
-                  }}
-                  onClick={() => { setViewingProgram(null); openEditModal(viewingProgram); }}
-                >Editeaza</button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* ═══ Add/Edit Modal ═══ */}
       {showAddModal && (
@@ -1508,7 +1487,7 @@ export default function AplicareProgramePage() {
               <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>
                 {editingProgram ? "Editeaza program" : "Adauga program nou"}
               </h3>
-              <button style={{ background: "none", border: "none", cursor: "pointer", color: "#9CA3AF", padding: 4 }} onClick={() => setShowAddModal(false)}>
+              <button style={{ background: "none", border: "none", cursor: "pointer", color: "#6B7280", padding: 4 }} onClick={() => setShowAddModal(false)}>
                 <X size={18} />
               </button>
             </div>
