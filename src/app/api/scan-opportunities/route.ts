@@ -101,6 +101,9 @@ Return a JSON array of opportunities. Each opportunity must have:
 - Do NOT invent fake URLs - if unsure about URL, use the organization's main website
 - Sort by relevanceScore descending
 - Current date context: February 2026
+- ALL text fields (title, description, relevanceReason) MUST be in ROMANIAN (limba romana)
+- Titles should be clear and descriptive in Romanian
+- Description should explain what the opportunity is and why it matters, in Romanian
 
 RESPOND WITH ONLY THE JSON ARRAY, no markdown, no code blocks.`;
 
@@ -117,7 +120,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { blockedSources = [], existingTitles = [], customQuery = "" } = body;
+    const { blockedSources = [], existingTitles = [], customQuery = "", rules = {} } = body;
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey || apiKey === "sk-ant-YOUR_KEY_HERE") {
@@ -129,8 +132,34 @@ export async function POST(request: Request) {
 
     const anthropic = new Anthropic({ apiKey });
 
-    // Build user message with context
+    // Build user message with context, incorporating user-defined rules
     let userMessage = "Search for current academic and professional opportunities for a marketing researcher in Moldova. Focus on opportunities available NOW or in the near future (2026).\n\n";
+
+    // Apply user-customized rules
+    if (rules.keywords) {
+      userMessage += `PRIORITY KEYWORDS: ${rules.keywords}\n\n`;
+    }
+    if (rules.excludeKeywords) {
+      userMessage += `EXCLUDE: ${rules.excludeKeywords}\n\n`;
+    }
+    if (rules.languages) {
+      userMessage += `LANGUAGES: ${rules.languages}\n\n`;
+    }
+    if (rules.budgetPersonal) {
+      userMessage += `PERSONAL BUDGET RANGE: ${rules.budgetPersonal}\n\n`;
+    }
+    if (rules.geography) {
+      userMessage += `GEOGRAPHIC PRIORITY: ${rules.geography}\n\n`;
+    }
+    if (rules.eligibility) {
+      userMessage += `SPECIAL ELIGIBILITY: ${rules.eligibility}\n\n`;
+    }
+    if (rules.stage) {
+      userMessage += `ACCEPTED RESEARCH STAGES: ${rules.stage}\n\n`;
+    }
+    if (rules.customNotes) {
+      userMessage += `ADDITIONAL RULES: ${rules.customNotes}\n\n`;
+    }
 
     if (customQuery) {
       userMessage += `ADDITIONAL FOCUS: ${customQuery}\n\n`;

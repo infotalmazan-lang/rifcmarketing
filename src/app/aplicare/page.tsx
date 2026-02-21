@@ -172,6 +172,18 @@ const STORAGE_KEY = "rifc-aplicare-access";
 const DATA_KEY = "rifc-aplicare-programs-v3";
 const AUTOEVENT_KEY = "rifc-autoevent-results";
 const BLOCKED_SOURCES_KEY = "rifc-blocked-sources";
+const AUTOEVENT_RULES_KEY = "rifc-autoevent-rules";
+
+const DEFAULT_RULES = {
+  keywords: "marketing measurement, campaign diagnostics, marketing ROI, marketing effectiveness, advertising failure, marketing framework, marketing audit, AI in marketing, psychometric validation, scale development, factor analysis, marketing SaaS, MarTech",
+  excludeKeywords: "PhD-only, post-doc >7 ani, non-marketing, doar ONG, doar cetateni UE",
+  languages: "RO, EN, FR, DE, RU",
+  budgetPersonal: "0-5000 EUR",
+  geography: "Moldova, Romania, UE, Global",
+  eligibility: "EU Widening, Eastern Partnership, ITC country, Associated Country",
+  stage: "working paper, abstract, extended abstract, pre-publication, pre-registered, early-stage",
+  customNotes: "",
+};
 const OLD_DATA_KEY = "rifc-aplicare-programs-v2";
 
 // ── Seed Data ─────────────────────────────────────────────
@@ -1042,6 +1054,8 @@ export default function AplicareProgramePage() {
   const [autoLastScan, setAutoLastScan] = useState("");
   const [blockedSources, setBlockedSources] = useState<string[]>([]);
   const [autoSearchQuery, setAutoSearchQuery] = useState("");
+  const [autoRules, setAutoRules] = useState(DEFAULT_RULES);
+  const [editingRules, setEditingRules] = useState(false);
 
   useEffect(() => {
     const granted = localStorage.getItem(STORAGE_KEY);
@@ -1063,6 +1077,10 @@ export default function AplicareProgramePage() {
       try {
         const blocked = localStorage.getItem(BLOCKED_SOURCES_KEY);
         if (blocked) setBlockedSources(JSON.parse(blocked));
+      } catch {}
+      try {
+        const rules = localStorage.getItem(AUTOEVENT_RULES_KEY);
+        if (rules) setAutoRules({ ...DEFAULT_RULES, ...JSON.parse(rules) });
       } catch {}
     }
   }, [hasAccess]);
@@ -1223,6 +1241,7 @@ export default function AplicareProgramePage() {
           blockedSources,
           existingTitles,
           customQuery: autoSearchQuery,
+          rules: autoRules,
         }),
       });
       const data = await resp.json();
@@ -1501,8 +1520,255 @@ export default function AplicareProgramePage() {
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: "20px 28px 80px", maxWidth: 1300 }}>
+      {/* ═══ AUTOEVENT Page View ═══ */}
+      {showAutoEvent && (
+        <div style={{ padding: "20px 28px 80px", maxWidth: 1300 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20, alignItems: "start" }}>
+            {/* Left: Results */}
+            <div>
+              {/* Scan bar */}
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+                <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+                  <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#6B7280" }} />
+                  <input type="text" value={autoSearchQuery} onChange={(e) => setAutoSearchQuery(e.target.value)}
+                    placeholder="Focus cautare: ex. 'COST Actions 2026', 'jurnale marketing'..."
+                    style={{ width: "100%", padding: "10px 12px 10px 32px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", background: "#fff", color: "#111827" }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !autoScanning) runAutoScan(); }}
+                  />
+                </div>
+                <button onClick={runAutoScan} disabled={autoScanning}
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 22px", fontSize: 12, fontWeight: 700, color: "#fff", background: autoScanning ? "#9CA3AF" : "linear-gradient(135deg, #D97706, #B45309)", border: "none", borderRadius: 8, cursor: autoScanning ? "not-allowed" : "pointer", letterSpacing: 0.5, whiteSpace: "nowrap" }}>
+                  {autoScanning ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={14} />}
+                  {autoScanning ? "SCANARE..." : "SCANARE"}
+                </button>
+                <button onClick={() => setShowAutoEvent(false)}
+                  style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 14px", fontSize: 11, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 8, cursor: "pointer" }}>
+                  <X size={12} /> Inapoi
+                </button>
+              </div>
+
+              {/* Stats bar */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#92400E", display: "flex", alignItems: "center", gap: 4 }}>
+                  <Zap size={12} /> {autoResults.filter((r) => r.status === "new").length} noi
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#16A34A" }}>{autoResults.filter((r) => r.status === "added").length} adaugate</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF" }}>{autoResults.filter((r) => r.status === "dismissed").length} ignorate</span>
+                {blockedSources.length > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#DC2626", display: "flex", alignItems: "center", gap: 3 }}>
+                    <Ban size={10} /> {blockedSources.length} surse blocate
+                  </span>
+                )}
+                {autoLastScan && (
+                  <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: "auto" }}>
+                    Ultima scanare: {new Date(autoLastScan).toLocaleString("ro-RO")}
+                  </span>
+                )}
+              </div>
+
+              {/* Error */}
+              {autoError && (
+                <div style={{ padding: "10px 14px", background: "#FEF2F2", color: "#DC2626", fontSize: 12, fontWeight: 600, borderRadius: 8, marginBottom: 12 }}>
+                  {autoError}
+                </div>
+              )}
+
+              {/* Scanning indicator */}
+              {autoScanning && (
+                <div style={{ textAlign: "center", padding: "40px 20px", background: "#fff", borderRadius: 12, border: "1px solid #FCD34D", marginBottom: 12 }}>
+                  <Loader2 size={32} style={{ color: "#D97706", animation: "spin 1s linear infinite", marginBottom: 12 }} />
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#92400E" }}>AI scaneaza oportunitati...</p>
+                  <p style={{ fontSize: 11, color: "#B45309" }}>Analizam conferinte, granturi, jurnale, retele academice</p>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {autoResults.filter((r) => r.status === "new").length === 0 && !autoScanning && (
+                <div style={{ textAlign: "center", padding: "40px 20px", background: "#fff", borderRadius: 12, border: "1px solid #E5E7EB" }}>
+                  <Zap size={36} style={{ opacity: 0.2, marginBottom: 12, color: "#D97706" }} />
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#6B7280", marginBottom: 4 }}>
+                    {autoResults.length === 0 ? "Nicio scanare efectuata" : "Toate oportunitatile au fost procesate"}
+                  </p>
+                  <p style={{ fontSize: 12, color: "#9CA3AF" }}>Apasa SCANARE pentru a gasi oportunitati noi</p>
+                </div>
+              )}
+
+              {/* Results grid */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {autoResults
+                  .filter((r) => r.status === "new")
+                  .sort((a, b) => b.relevanceScore - a.relevanceScore)
+                  .map((opp) => {
+                    const cat = getCategoryDef(opp.category as CategoryKey);
+                    const CatIcon = cat.icon;
+                    return (
+                      <div key={opp.id} style={{ border: `1px solid ${cat.color}30`, borderRadius: 12, overflow: "hidden", background: "#fff" }}>
+                        <div style={{ height: 3, background: cat.gradient }} />
+                        <div style={{ padding: "14px 16px" }}>
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 }}>
+                              <CatIcon size={15} style={{ color: cat.color, flexShrink: 0 }} />
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>{opp.title}</span>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                              <Star size={12} style={{ color: "#D97706", fill: "#D97706" }} />
+                              <span style={{ fontSize: 12, fontWeight: 800, color: "#D97706", fontFamily: "'JetBrains Mono', monospace" }}>{opp.relevanceScore}/10</span>
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 5, background: `${cat.color}14`, color: cat.color }}>{cat.label}</span>
+                            {opp.deadline && <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: "#FEF2F2", color: "#DC2626", display: "flex", alignItems: "center", gap: 3 }}><Clock size={9} /> {opp.deadline}</span>}
+                            {opp.location && <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: "#F5F3FF", color: "#7C3AED", display: "flex", alignItems: "center", gap: 3 }}><MapPin size={9} /> {opp.location}</span>}
+                            {opp.budget && <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: "#F0FDF4", color: "#059669", display: "flex", alignItems: "center", gap: 3 }}><DollarSign size={9} /> {opp.budget}</span>}
+                            {opp.source && <span style={{ fontSize: 9, fontWeight: 500, padding: "2px 7px", borderRadius: 5, background: "#F9FAFB", color: "#6B7280" }}>{opp.source}</span>}
+                          </div>
+                          <p style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5, marginBottom: 6 }}>{opp.description}</p>
+                          <p style={{ fontSize: 11, color: "#059669", fontWeight: 500, fontStyle: "italic", marginBottom: 10, display: "flex", alignItems: "flex-start", gap: 4 }}>
+                            <ArrowRight size={11} style={{ flexShrink: 0, marginTop: 2 }} /> {opp.relevanceReason}
+                          </p>
+                          {opp.url && (
+                            <div style={{ marginBottom: 10 }}>
+                              <a href={opp.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: "#2563EB", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
+                                <ExternalLink size={10} /> {opp.url.length > 60 ? opp.url.slice(0, 60) + "..." : opp.url}
+                              </a>
+                            </div>
+                          )}
+                          {opp.tags.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 10 }}>
+                              {opp.tags.map((tag, i) => <span key={i} style={{ fontSize: 9, fontWeight: 500, padding: "2px 6px", borderRadius: 4, background: "#F9FAFB", color: "#9CA3AF", border: "1px solid #F3F4F6" }}>{tag}</span>)}
+                            </div>
+                          )}
+                          <div style={{ display: "flex", gap: 6, paddingTop: 10, borderTop: "1px solid #F3F4F6" }}>
+                            <button onClick={() => autoAddToPrograms(opp)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", fontSize: 11, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg, #16A34A, #15803D)", border: "none", borderRadius: 6, cursor: "pointer" }}>
+                              <CheckCircle size={12} /> Adauga
+                            </button>
+                            <button onClick={() => autoDismiss(opp.id)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", fontSize: 11, fontWeight: 600, color: "#6B7280", background: "#F3F4F6", border: "1px solid #E5E7EB", borderRadius: 6, cursor: "pointer" }}>
+                              <X size={12} /> Irelevant
+                            </button>
+                            <button onClick={() => autoBlock(opp)} title={`Blocheaza sursa: ${opp.source}`} style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", fontSize: 11, fontWeight: 600, color: "#DC2626", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 6, cursor: "pointer" }}>
+                              <Ban size={12} /> Blocheaza
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Processed history */}
+              {autoResults.filter((r) => r.status !== "new").length > 0 && (
+                <div style={{ marginTop: 16, padding: "14px 16px", background: "#fff", borderRadius: 10, border: "1px solid #E5E7EB" }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", marginBottom: 8 }}>
+                    Istoric: {autoResults.filter((r) => r.status === "added").length} adaugate, {autoResults.filter((r) => r.status === "dismissed").length} ignorate, {autoResults.filter((r) => r.status === "blocked").length} blocate
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {autoResults.filter((r) => r.status !== "new").map((opp) => (
+                      <span key={opp.id} style={{ fontSize: 10, padding: "3px 8px", borderRadius: 5, background: opp.status === "added" ? "#DCFCE7" : opp.status === "blocked" ? "#FEF2F2" : "#F3F4F6", color: opp.status === "added" ? "#16A34A" : opp.status === "blocked" ? "#DC2626" : "#9CA3AF", fontWeight: 500, textDecoration: opp.status === "dismissed" ? "line-through" : "none" }}>
+                        {opp.title}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Rules Card */}
+            <div style={{ position: "sticky", top: 80 }}>
+              <div style={{ background: "#fff", border: "2px solid #FCD34D", borderRadius: 12, overflow: "hidden" }}>
+                <div style={{ padding: "12px 16px", background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <BookOpen size={14} style={{ color: "#92400E" }} />
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#92400E" }}>Reguli cautare</span>
+                  </div>
+                  <button onClick={() => setEditingRules(!editingRules)} style={{ fontSize: 10, fontWeight: 600, color: "#D97706", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+                    {editingRules ? "Inchide" : "Editeaza"}
+                  </button>
+                </div>
+                <div style={{ padding: "12px 16px" }}>
+                  {editingRules ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      {([
+                        { key: "keywords", label: "Cuvinte cheie prioritare", rows: 3 },
+                        { key: "excludeKeywords", label: "Exclude (ce NU cautam)", rows: 2 },
+                        { key: "geography", label: "Geografie prioritara", rows: 1 },
+                        { key: "eligibility", label: "Eligibilitate speciala", rows: 1 },
+                        { key: "languages", label: "Limbi acceptate", rows: 1 },
+                        { key: "budgetPersonal", label: "Buget personal", rows: 1 },
+                        { key: "stage", label: "Stadii cercetare acceptate", rows: 1 },
+                        { key: "customNotes", label: "Note/reguli suplimentare", rows: 2 },
+                      ] as { key: keyof typeof DEFAULT_RULES; label: string; rows: number }[]).map((field) => (
+                        <div key={field.key}>
+                          <label style={{ fontSize: 10, fontWeight: 700, color: "#374151", letterSpacing: 0.3, textTransform: "uppercase", display: "block", marginBottom: 3 }}>{field.label}</label>
+                          <textarea
+                            value={autoRules[field.key]}
+                            onChange={(e) => setAutoRules({ ...autoRules, [field.key]: e.target.value })}
+                            rows={field.rows}
+                            style={{ width: "100%", padding: "6px 8px", fontSize: 11, border: "1px solid #D1D5DB", borderRadius: 6, outline: "none", resize: "vertical", fontFamily: "'Inter', sans-serif", color: "#111827", lineHeight: 1.5 }}
+                          />
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          localStorage.setItem(AUTOEVENT_RULES_KEY, JSON.stringify(autoRules));
+                          setEditingRules(false);
+                        }}
+                        style={{ padding: "8px 14px", fontSize: 11, fontWeight: 700, color: "#fff", background: "linear-gradient(135deg, #D97706, #B45309)", border: "none", borderRadius: 6, cursor: "pointer" }}
+                      >
+                        Salveaza reguli
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {([
+                        { label: "Cuvinte cheie", value: autoRules.keywords, color: "#2563EB" },
+                        { label: "Exclude", value: autoRules.excludeKeywords, color: "#DC2626" },
+                        { label: "Geografie", value: autoRules.geography, color: "#7C3AED" },
+                        { label: "Eligibilitate", value: autoRules.eligibility, color: "#059669" },
+                        { label: "Limbi", value: autoRules.languages, color: "#0891B2" },
+                        { label: "Buget", value: autoRules.budgetPersonal, color: "#D97706" },
+                        { label: "Stadii", value: autoRules.stage, color: "#4338CA" },
+                      ]).filter((r) => r.value).map((rule, i) => (
+                        <div key={i}>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: rule.color, letterSpacing: 0.3, textTransform: "uppercase" }}>{rule.label}</span>
+                          <p style={{ fontSize: 10, color: "#4B5563", margin: "2px 0 0", lineHeight: 1.4 }}>{rule.value}</p>
+                        </div>
+                      ))}
+                      {autoRules.customNotes && (
+                        <div>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: "#92400E", letterSpacing: 0.3, textTransform: "uppercase" }}>Note suplimentare</span>
+                          <p style={{ fontSize: 10, color: "#4B5563", margin: "2px 0 0", lineHeight: 1.4 }}>{autoRules.customNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Blocked sources card */}
+              {blockedSources.length > 0 && (
+                <div style={{ marginTop: 12, background: "#fff", border: "1px solid #FECACA", borderRadius: 10, padding: "12px 16px" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                    <Ban size={10} /> Surse blocate ({blockedSources.length})
+                  </p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {blockedSources.map((src, i) => (
+                      <span key={i} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#FEF2F2", color: "#DC2626", display: "flex", alignItems: "center", gap: 3, fontWeight: 500 }}>
+                        {src}
+                        <button onClick={() => saveBlockedSources(blockedSources.filter((s) => s !== src))} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", padding: 0, display: "flex" }}>
+                          <X size={8} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Content — Main programs view */}
+      {!showAutoEvent && <div style={{ padding: "20px 28px 80px", maxWidth: 1300 }}>
         {/* Stats bar */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 20 }}>
           {CATEGORIES.map((cat) => {
@@ -2050,292 +2316,7 @@ export default function AplicareProgramePage() {
             )}
           </>
         )}
-      </div>
-
-      {/* ═══ AUTOEVENT Modal ═══ */}
-      {showAutoEvent && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center",
-          justifyContent: "center", zIndex: 9999, padding: 20,
-        }} onClick={() => setShowAutoEvent(false)}>
-          <div style={{
-            background: "#fff", borderRadius: 16, maxWidth: 800, width: "100%",
-            maxHeight: "90vh", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-            display: "flex", flexDirection: "column",
-          }} onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div style={{
-              padding: "18px 22px", borderBottom: "2px solid #FCD34D",
-              background: "linear-gradient(135deg, #FFFBEB, #FEF3C7)",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Zap size={20} style={{ color: "#D97706" }} />
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 800, color: "#92400E", margin: 0 }}>AUTOEVENT Scanner</h3>
-                  <p style={{ fontSize: 10, color: "#B45309", margin: 0 }}>
-                    {autoLastScan ? `Ultima scanare: ${new Date(autoLastScan).toLocaleString("ro-RO")}` : "Nicio scanare efectuata"}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setShowAutoEvent(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#92400E", padding: 4 }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Search + Scan bar */}
-            <div style={{ padding: "14px 22px", borderBottom: "1px solid #E5E7EB", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
-                <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#6B7280" }} />
-                <input
-                  type="text"
-                  value={autoSearchQuery}
-                  onChange={(e) => setAutoSearchQuery(e.target.value)}
-                  placeholder="Focus cautare: ex. 'COST Actions 2026', 'marketing journals'..."
-                  style={{
-                    width: "100%", padding: "9px 12px 9px 32px", fontSize: 12,
-                    border: "1px solid #D1D5DB", borderRadius: 8, outline: "none",
-                    background: "#fff", color: "#111827",
-                  }}
-                  onKeyDown={(e) => { if (e.key === "Enter" && !autoScanning) runAutoScan(); }}
-                />
-              </div>
-              <button
-                onClick={runAutoScan}
-                disabled={autoScanning}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "9px 20px", fontSize: 12, fontWeight: 700,
-                  color: "#fff", background: autoScanning ? "#9CA3AF" : "linear-gradient(135deg, #D97706, #B45309)",
-                  border: "none", borderRadius: 8, cursor: autoScanning ? "not-allowed" : "pointer",
-                  letterSpacing: 0.5, transition: "all 0.2s", whiteSpace: "nowrap",
-                }}
-              >
-                {autoScanning ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Sparkles size={14} />}
-                {autoScanning ? "SCANARE..." : "SEARCH"}
-              </button>
-              {blockedSources.length > 0 && (
-                <span style={{ fontSize: 10, color: "#6B7280", display: "flex", alignItems: "center", gap: 3 }}>
-                  <Ban size={10} /> {blockedSources.length} surse blocate
-                </span>
-              )}
-            </div>
-
-            {/* Error */}
-            {autoError && (
-              <div style={{ padding: "10px 22px", background: "#FEF2F2", color: "#DC2626", fontSize: 12, fontWeight: 600 }}>
-                {autoError}
-              </div>
-            )}
-
-            {/* Results */}
-            <div style={{ flex: 1, overflow: "auto", padding: "14px 22px" }}>
-              {autoResults.filter((r) => r.status === "new").length === 0 && !autoScanning && (
-                <div style={{ textAlign: "center", padding: "40px 20px", color: "#9CA3AF" }}>
-                  <Zap size={36} style={{ opacity: 0.2, marginBottom: 12 }} />
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "#6B7280", marginBottom: 4 }}>
-                    {autoResults.length === 0 ? "Nicio scanare efectuata" : "Toate oportunitatile au fost procesate"}
-                  </p>
-                  <p style={{ fontSize: 12, color: "#9CA3AF" }}>
-                    Apasa SEARCH pentru a gasi oportunitati noi
-                  </p>
-                </div>
-              )}
-
-              {autoScanning && (
-                <div style={{ textAlign: "center", padding: "40px 20px" }}>
-                  <Loader2 size={32} style={{ color: "#D97706", animation: "spin 1s linear infinite", marginBottom: 12 }} />
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#92400E" }}>AI scaneaza oportunitati...</p>
-                  <p style={{ fontSize: 11, color: "#B45309" }}>Analizam conferinte, granturi, jurnale, retele academice</p>
-                </div>
-              )}
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {autoResults
-                  .filter((r) => r.status === "new")
-                  .sort((a, b) => b.relevanceScore - a.relevanceScore)
-                  .map((opp) => {
-                    const cat = getCategoryDef(opp.category as CategoryKey);
-                    const CatIcon = cat.icon;
-                    return (
-                      <div key={opp.id} style={{
-                        border: `1px solid ${cat.color}30`, borderRadius: 12,
-                        overflow: "hidden", background: "#fff",
-                        transition: "all 0.2s",
-                      }}>
-                        <div style={{ height: 3, background: cat.gradient }} />
-                        <div style={{ padding: "14px 16px" }}>
-                          {/* Title row */}
-                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 }}>
-                              <CatIcon size={15} style={{ color: cat.color, flexShrink: 0 }} />
-                              <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>{opp.title}</span>
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                              <Star size={12} style={{ color: "#D97706", fill: "#D97706" }} />
-                              <span style={{ fontSize: 12, fontWeight: 800, color: "#D97706", fontFamily: "'JetBrains Mono', monospace" }}>
-                                {opp.relevanceScore}/10
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Category + meta */}
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
-                            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 5, background: `${cat.color}14`, color: cat.color }}>
-                              {cat.label}
-                            </span>
-                            {opp.deadline && (
-                              <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: "#FEF2F2", color: "#DC2626", display: "flex", alignItems: "center", gap: 3 }}>
-                                <Clock size={9} /> {opp.deadline}
-                              </span>
-                            )}
-                            {opp.location && (
-                              <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: "#F5F3FF", color: "#7C3AED", display: "flex", alignItems: "center", gap: 3 }}>
-                                <MapPin size={9} /> {opp.location}
-                              </span>
-                            )}
-                            {opp.budget && (
-                              <span style={{ fontSize: 9, fontWeight: 600, padding: "2px 7px", borderRadius: 5, background: "#F0FDF4", color: "#059669", display: "flex", alignItems: "center", gap: 3 }}>
-                                <DollarSign size={9} /> {opp.budget}
-                              </span>
-                            )}
-                            {opp.source && (
-                              <span style={{ fontSize: 9, fontWeight: 500, padding: "2px 7px", borderRadius: 5, background: "#F9FAFB", color: "#6B7280" }}>
-                                {opp.source}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Description */}
-                          <p style={{ fontSize: 12, color: "#4B5563", lineHeight: 1.5, marginBottom: 6 }}>{opp.description}</p>
-
-                          {/* Relevance reason */}
-                          <p style={{ fontSize: 11, color: "#059669", fontWeight: 500, fontStyle: "italic", marginBottom: 10, display: "flex", alignItems: "flex-start", gap: 4 }}>
-                            <ArrowRight size={11} style={{ flexShrink: 0, marginTop: 2 }} />
-                            {opp.relevanceReason}
-                          </p>
-
-                          {/* URL preview */}
-                          {opp.url && (
-                            <div style={{ marginBottom: 10 }}>
-                              <a href={opp.url} target="_blank" rel="noopener noreferrer" style={{
-                                fontSize: 11, color: "#2563EB", textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
-                                fontWeight: 500,
-                              }} onClick={(e) => e.stopPropagation()}>
-                                <ExternalLink size={10} /> {opp.url.length > 60 ? opp.url.slice(0, 60) + "..." : opp.url}
-                              </a>
-                            </div>
-                          )}
-
-                          {/* Tags */}
-                          {opp.tags.length > 0 && (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 10 }}>
-                              {opp.tags.map((tag, i) => (
-                                <span key={i} style={{ fontSize: 9, fontWeight: 500, padding: "2px 6px", borderRadius: 4, background: "#F9FAFB", color: "#9CA3AF", border: "1px solid #F3F4F6" }}>{tag}</span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Actions */}
-                          <div style={{ display: "flex", gap: 6, paddingTop: 10, borderTop: "1px solid #F3F4F6" }}>
-                            <button
-                              onClick={() => autoAddToPrograms(opp)}
-                              style={{
-                                display: "flex", alignItems: "center", gap: 5,
-                                padding: "7px 14px", fontSize: 11, fontWeight: 700,
-                                color: "#fff", background: "linear-gradient(135deg, #16A34A, #15803D)",
-                                border: "none", borderRadius: 6, cursor: "pointer",
-                              }}
-                            >
-                              <CheckCircle size={12} /> Adauga
-                            </button>
-                            <button
-                              onClick={() => autoDismiss(opp.id)}
-                              style={{
-                                display: "flex", alignItems: "center", gap: 5,
-                                padding: "7px 14px", fontSize: 11, fontWeight: 600,
-                                color: "#6B7280", background: "#F3F4F6",
-                                border: "1px solid #E5E7EB", borderRadius: 6, cursor: "pointer",
-                              }}
-                            >
-                              <X size={12} /> Irelevant
-                            </button>
-                            <button
-                              onClick={() => autoBlock(opp)}
-                              style={{
-                                display: "flex", alignItems: "center", gap: 5,
-                                padding: "7px 14px", fontSize: 11, fontWeight: 600,
-                                color: "#DC2626", background: "#FEF2F2",
-                                border: "1px solid #FECACA", borderRadius: 6, cursor: "pointer",
-                              }}
-                              title={`Blocheaza sursa: ${opp.source}`}
-                            >
-                              <Ban size={12} /> Blocheaza sursa
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-
-              {/* Already processed items (collapsed) */}
-              {autoResults.filter((r) => r.status !== "new").length > 0 && (
-                <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #E5E7EB" }}>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", marginBottom: 8 }}>
-                    Procesate anterior: {autoResults.filter((r) => r.status === "added").length} adaugate,{" "}
-                    {autoResults.filter((r) => r.status === "dismissed").length} ignorate,{" "}
-                    {autoResults.filter((r) => r.status === "blocked").length} blocate
-                  </p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                    {autoResults.filter((r) => r.status !== "new").map((opp) => (
-                      <span key={opp.id} style={{
-                        fontSize: 10, padding: "3px 8px", borderRadius: 5,
-                        background: opp.status === "added" ? "#DCFCE7" : opp.status === "blocked" ? "#FEF2F2" : "#F3F4F6",
-                        color: opp.status === "added" ? "#16A34A" : opp.status === "blocked" ? "#DC2626" : "#9CA3AF",
-                        fontWeight: 500, textDecoration: opp.status === "dismissed" ? "line-through" : "none",
-                      }}>
-                        {opp.title}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Blocked sources management */}
-              {blockedSources.length > 0 && (
-                <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #E5E7EB" }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
-                    <Ban size={11} /> Surse blocate ({blockedSources.length})
-                  </p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                    {blockedSources.map((src, i) => (
-                      <span key={i} style={{
-                        fontSize: 10, padding: "3px 8px", borderRadius: 5,
-                        background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA",
-                        display: "flex", alignItems: "center", gap: 4, fontWeight: 500,
-                      }}>
-                        {src}
-                        <button
-                          onClick={() => {
-                            const updated = blockedSources.filter((s) => s !== src);
-                            saveBlockedSources(updated);
-                          }}
-                          style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", padding: 0, display: "flex" }}
-                          title="Deblocheaza sursa"
-                        >
-                          <X size={10} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      </div>}
 
       {/* ═══ Add/Edit Modal ═══ */}
       {showAddModal && (
