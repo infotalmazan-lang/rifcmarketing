@@ -899,7 +899,7 @@ export default function AplicareProgramePage() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#DC2626", letterSpacing: 4, fontWeight: 700 }}>R IF C</div>
+              <a href="https://www.rifcmarketing.com/articolstiintific" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#DC2626", letterSpacing: 4, fontWeight: 700, textDecoration: "none", cursor: "pointer" }}>R IF C</a>
               <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0 }}>Aplicare Programe</h1>
               <p style={{ fontSize: 12, color: "#4B5563", marginTop: 2, fontWeight: 500 }}>
                 {totalPrograms} programe &middot; {aplicateCount} aplicate &middot; Strategie: Prezinta &rarr; Publica &rarr; Premiaza
