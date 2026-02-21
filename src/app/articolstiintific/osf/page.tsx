@@ -507,9 +507,11 @@ export default function ArticolOSFPage() {
   const firedScrollRef = useRef<Set<number>>(new Set());
   const firedTimeRef = useRef<Set<number>>(new Set());
   const startTimeRef = useRef<number>(Date.now());
+  const paperRef = useRef<HTMLDivElement>(null);
 
   const [lang, setLang] = useState<Lang>("ro");
   const [blocks, setBlocks] = useState<Record<string, Block[]>>({});
+  const [copyFeedback, setCopyFeedback] = useState(false);
 
   /* ── Init lang from localStorage (client only) ── */
   useEffect(() => {
@@ -774,6 +776,56 @@ export default function ArticolOSFPage() {
   const totalWordCount = sectionsData.reduce((sum, sd) => sum + sd.totalWords, 0);
   const progressPct = Math.min(Math.round((totalWordCount / 12000) * 100), 100);
 
+  /* ── Copy article text ── */
+  const handleCopy = useCallback(() => {
+    if (!paperRef.current) return;
+    const text = paperRef.current.innerText || paperRef.current.textContent || "";
+    navigator.clipboard.writeText(text).then(() => {
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    }).catch(() => {
+      // Fallback for older browsers
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;left:-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    });
+  }, []);
+
+  /* ── Download as PDF (print) ── */
+  const handleDownloadPDF = useCallback(() => {
+    if (!paperRef.current) return;
+    const content = paperRef.current.innerHTML;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head>
+      <meta charset="UTF-8">
+      <title>RIFC - Articol Stiintific</title>
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+      <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, sans-serif; color: #111827; line-height: 1.6; padding: 40px 50px; max-width: 800px; margin: 0 auto; }
+        h2 { font-size: 22px; font-weight: 800; text-align: center; margin-bottom: 16px; }
+        h3 { font-size: 16px; font-weight: 700; margin: 24px 0 8px; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px; }
+        h4 { font-size: 14px; font-weight: 600; margin: 16px 0 6px; }
+        p { font-size: 13px; line-height: 1.7; margin-bottom: 8px; }
+        a { color: #2563EB; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+        th, td { border: 1px solid #D1D5DB; padding: 6px 10px; text-align: left; }
+        th { background: #F3F4F6; font-weight: 600; }
+        img { max-width: 100%; }
+        @media print { body { padding: 20px; } @page { margin: 1.5cm; size: A4; } }
+      </style>
+    </head><body>${content}</body></html>`);
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 500);
+  }, []);
+
   /* ── Render ── */
   return (
     <div style={S.page}>
@@ -822,11 +874,56 @@ export default function ArticolOSFPage() {
             </button>
           ))}
         </div>
+
+        {/* Download PDF button */}
+        <button
+          onClick={handleDownloadPDF}
+          title={lang === "ro" ? "Descarcă PDF" : lang === "en" ? "Download PDF" : "Скачать PDF"}
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            padding: "7px 12px", border: "1px solid #E5E7EB", borderRadius: 8,
+            background: "#fff", color: "#374151", fontSize: 11, fontWeight: 600,
+            cursor: "pointer", fontFamily: "'Inter', sans-serif",
+            transition: "all 0.15s", whiteSpace: "nowrap" as const,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "#F3F4F6"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          PDF
+        </button>
+
+        {/* Copy all text button */}
+        <button
+          onClick={handleCopy}
+          title={lang === "ro" ? "Copiază tot articolul" : lang === "en" ? "Copy full article" : "Копировать всю статью"}
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            padding: "7px 12px", border: "1px solid #E5E7EB", borderRadius: 8,
+            background: copyFeedback ? "#DCFCE7" : "#fff",
+            color: copyFeedback ? "#16A34A" : "#374151",
+            fontSize: 11, fontWeight: 600, cursor: "pointer",
+            fontFamily: "'Inter', sans-serif",
+            transition: "all 0.15s", whiteSpace: "nowrap" as const,
+          }}
+          onMouseEnter={(e) => { if (!copyFeedback) e.currentTarget.style.background = "#F3F4F6"; }}
+          onMouseLeave={(e) => { if (!copyFeedback) e.currentTarget.style.background = "#fff"; }}
+        >
+          {copyFeedback ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          )}
+          {copyFeedback
+            ? (lang === "ro" ? "Copiat!" : lang === "en" ? "Copied!" : "Скопировано!")
+            : "Copy"
+          }
+        </button>
       </div>
 
       {/* ═══ PAPER BODY ═══ */}
       <div style={S.paper}>
-        <div style={S.paperInner}>
+        <div ref={paperRef} style={S.paperInner}>
           {/* Manuscript label */}
           <div style={S.manuscriptLabel}>
             {lang === "ro" ? "MANUSCRIS" : lang === "en" ? "MANUSCRIPT" : "РУКОПИСЬ"}
