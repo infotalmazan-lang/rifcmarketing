@@ -338,7 +338,7 @@ const ROADMAP_HTML = `<!DOCTYPE html>
 <div id="app">
   <div class="sidebar">
     <div class="sb-header">
-      <a href="https://www.rifcmarketing.com/articolstiintific" target="_blank" rel="noopener noreferrer" class="sb-logo-row" style="text-decoration:none;color:inherit;cursor:pointer;">
+      <a href="https://www.rifcmarketing.com" target="_blank" rel="noopener noreferrer" class="sb-logo-row" style="text-decoration:none;color:inherit;cursor:pointer;">
         <img src="/images/rifc-logo-black.png" alt="R IF C" />
         <div>
           <div class="sb-title">Articol Științific</div>
