@@ -1247,6 +1247,15 @@ export default function AplicareProgramePage() {
     }
   };
 
+  // Auto-scan when AUTOEVENT modal opens and no new results exist
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (showAutoEvent && !autoScanning && autoResults.filter((r) => r.status === "new").length === 0) {
+      runAutoScan();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAutoEvent]);
+
   const autoAddToPrograms = (opp: AutoOpportunity) => {
     const validCategories: CategoryKey[] = ["conferinte","granturi","competitii","forumuri","premii","oportunitati","publicatii","parteneriate","acceleratoare","retele"];
     const cat = validCategories.includes(opp.category as CategoryKey) ? opp.category as CategoryKey : "oportunitati";
