@@ -790,7 +790,7 @@ export default function AplicareProgramePage() {
             <div>
               <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#DC2626", letterSpacing: 4, fontWeight: 700 }}>R IF C</div>
               <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0 }}>Aplicare Programe</h1>
-              <p style={{ fontSize: 11, color: "#6B7280", marginTop: 2 }}>
+              <p style={{ fontSize: 12, color: "#4B5563", marginTop: 2, fontWeight: 500 }}>
                 {totalPrograms} programe &middot; {aplicateCount} aplicate
               </p>
             </div>
@@ -798,13 +798,13 @@ export default function AplicareProgramePage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             {/* Search */}
             <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <Search size={14} style={{ position: "absolute", left: 10, color: "#9CA3AF", pointerEvents: "none" }} />
+              <Search size={14} style={{ position: "absolute", left: 10, color: "#6B7280", pointerEvents: "none" }} />
               <input
                 type="text"
                 style={{
                   padding: "8px 12px 8px 32px", fontSize: 13,
-                  border: "1px solid #E5E7EB", borderRadius: 8, outline: "none",
-                  width: 200, background: "#F9FAFB",
+                  border: "1px solid #D1D5DB", borderRadius: 8, outline: "none",
+                  width: 200, background: "#fff", color: "#111827",
                 }}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -893,7 +893,7 @@ export default function AplicareProgramePage() {
                   <Icon size={14} style={{ color: cat.color }} />
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: "#111827" }}>{count}</div>
-                <div style={{ fontSize: 9, fontWeight: 600, color: "#9CA3AF", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>{cat.label}</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 2 }}>{cat.label}</div>
               </div>
             );
           })}
@@ -1051,42 +1051,42 @@ export default function AplicareProgramePage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 350 }}>
                     {/* Left: Info */}
                     <div style={{ padding: "20px 24px", borderRight: "1px solid #E5E7EB" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#111827", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                        <BookOpen size={13} /> Informatii Program
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, borderBottom: "2px solid #E5E7EB", paddingBottom: 10 }}>
+                        <BookOpen size={14} /> Informatii Program
                       </div>
 
-                      <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, marginBottom: 16 }}>{program.description}</p>
+                      <p style={{ fontSize: 14, color: "#1F2937", lineHeight: 1.7, marginBottom: 16 }}>{program.description}</p>
 
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
                         {program.deadline && (
-                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
-                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
-                              <Clock size={12} style={{ color: "#DC2626" }} /> {program.deadline}
+                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
+                            <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
+                              <Clock size={13} style={{ color: "#DC2626" }} /> {program.deadline}
                             </div>
                           </div>
                         )}
                         {program.location && (
-                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
-                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
-                              <MapPin size={12} style={{ color: "#7C3AED" }} /> {program.location}
+                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
+                            <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
+                              <MapPin size={13} style={{ color: "#7C3AED" }} /> {program.location}
                             </div>
                           </div>
                         )}
                         {program.budget && (
-                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
-                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
-                              <DollarSign size={12} style={{ color: "#059669" }} /> {program.budget}
+                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
+                            <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
+                              <DollarSign size={13} style={{ color: "#059669" }} /> {program.budget}
                             </div>
                           </div>
                         )}
                         {program.organizer && (
-                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
-                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
-                              <Users size={12} style={{ color: "#2563EB" }} /> {program.organizer}
+                          <div style={{ background: "#FFF", padding: "12px 14px", borderRadius: 8, border: "1px solid #D1D5DB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
+                            <div style={{ fontSize: 13, color: "#111827", display: "flex", alignItems: "center", gap: 4, fontWeight: 700 }}>
+                              <Users size={13} style={{ color: "#2563EB" }} /> {program.organizer}
                             </div>
                           </div>
                         )}
@@ -1094,43 +1094,44 @@ export default function AplicareProgramePage() {
 
                       {program.notes && (
                         <div>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Note</div>
-                          <p style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{program.notes}</p>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 }}>Note</div>
+                          <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{program.notes}</p>
                         </div>
                       )}
                     </div>
 
                     {/* Right: Tracking workspace */}
                     <div style={{ padding: "20px 24px", background: "#FAFBFC" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#111827", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
-                        <BarChart3 size={13} /> Zona de Lucru & Tracking
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#111827", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 6, borderBottom: "2px solid #E5E7EB", paddingBottom: 10 }}>
+                        <BarChart3 size={14} /> Zona de Lucru & Tracking
                       </div>
 
                       {/* Mesaj Trimis */}
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-                          <Send size={12} style={{ color: "#2563EB" }} /> Mesaj Trimis / Aplicatie
+                        <div style={{ fontSize: 11, fontWeight: 800, color: "#111827", marginBottom: 6, display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                          <Send size={12} style={{ color: "#2563EB" }} /> Mesaj Trimis
                         </div>
                         <textarea
                           value={program.mesajTrimis || ""}
                           onChange={(e) => updateProgram(program.id, { mesajTrimis: e.target.value })}
-                          placeholder="Scrie mesajul trimis, emailul, sau detalii aplicatie..."
+                          placeholder="ORCID: 0009-0000-3832-8392&#10;info.talmazan@gmail.com&#10;https://www.instagram.com/talmazan.md/"
                           style={{
-                            width: "100%", padding: "10px 12px", fontSize: 12, border: "1px solid #E5E7EB",
+                            width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid #D1D5DB",
                             borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif",
                             minHeight: 80, resize: "vertical", background: "#fff", lineHeight: 1.6,
+                            color: "#111827",
                           }}
                         />
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
-                          <span style={{ fontSize: 10, color: "#6B7280", fontWeight: 600 }}>Data trimitere:</span>
+                          <span style={{ fontSize: 11, color: "#374151", fontWeight: 600 }}>Data trimitere:</span>
                           <input
                             type="text"
                             value={program.mesajData || ""}
                             onChange={(e) => updateProgram(program.id, { mesajData: e.target.value })}
                             placeholder="ex: 20 Feb 2026"
                             style={{
-                              padding: "5px 10px", fontSize: 11, border: "1px solid #E5E7EB",
-                              borderRadius: 6, outline: "none", width: 140, background: "#fff",
+                              padding: "6px 10px", fontSize: 12, border: "1px solid #D1D5DB",
+                              borderRadius: 6, outline: "none", width: 160, background: "#fff", color: "#111827",
                             }}
                           />
                         </div>
@@ -1138,28 +1139,28 @@ export default function AplicareProgramePage() {
 
                       {/* Reminder */}
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-                          <Bell size={12} style={{ color: "#D97706" }} /> Reminder — Cand de revenit
+                        <div style={{ fontSize: 11, fontWeight: 800, color: "#111827", marginBottom: 6, display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                          <Bell size={12} style={{ color: "#D97706" }} /> Reminder — Cind de revenit
                         </div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <input
                             type="text"
                             value={program.reminder || ""}
                             onChange={(e) => updateProgram(program.id, { reminder: e.target.value })}
-                            placeholder="Data: 15 Mar 2026"
+                            placeholder="ex: 15 Mar 2026"
                             style={{
-                              padding: "8px 12px", fontSize: 12, border: "1px solid #E5E7EB",
-                              borderRadius: 8, outline: "none", width: 150, background: "#fff",
+                              padding: "8px 12px", fontSize: 13, border: "1px solid #D1D5DB",
+                              borderRadius: 8, outline: "none", width: 160, background: "#fff", color: "#111827",
                             }}
                           />
                           <input
                             type="text"
                             value={program.reminderNote || ""}
                             onChange={(e) => updateProgram(program.id, { reminderNote: e.target.value })}
-                            placeholder="Nota: ce trebuie facut..."
+                            placeholder="Nota reminder..."
                             style={{
-                              padding: "8px 12px", fontSize: 12, border: "1px solid #E5E7EB",
-                              borderRadius: 8, outline: "none", flex: 1, background: "#fff",
+                              padding: "8px 12px", fontSize: 13, border: "1px solid #D1D5DB",
+                              borderRadius: 8, outline: "none", flex: 1, background: "#fff", color: "#111827",
                             }}
                           />
                         </div>
@@ -1172,17 +1173,18 @@ export default function AplicareProgramePage() {
 
                       {/* Monitoring */}
                       <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
-                          <BarChart3 size={12} style={{ color: "#059669" }} /> Monitorizare & Rezultate
+                        <div style={{ fontSize: 11, fontWeight: 800, color: "#111827", marginBottom: 6, display: "flex", alignItems: "center", gap: 5, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                          <BarChart3 size={12} style={{ color: "#059669" }} /> Monitorizare
                         </div>
                         <textarea
                           value={program.monitoring || ""}
                           onChange={(e) => updateProgram(program.id, { monitoring: e.target.value })}
-                          placeholder="Note de monitorizare: raspunsuri primite, status curent, pasi urmatori, rezultat final..."
+                          placeholder="Note de monitorizare, raspunsuri primite, status aplicare..."
                           style={{
-                            width: "100%", padding: "10px 12px", fontSize: 12, border: "1px solid #E5E7EB",
+                            width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid #D1D5DB",
                             borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif",
                             minHeight: 80, resize: "vertical", background: "#fff", lineHeight: 1.6,
+                            color: "#111827",
                           }}
                         />
                       </div>
@@ -1255,12 +1257,12 @@ export default function AplicareProgramePage() {
 
                           {/* Description */}
                           <p style={{
-                            fontSize: 12, color: "#6B7280", lineHeight: 1.5, marginBottom: 10,
+                            fontSize: 12, color: "#4B5563", lineHeight: 1.5, marginBottom: 10,
                             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
                           }}>{program.description}</p>
 
                           {/* Meta info */}
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10, color: "#6B7280", marginBottom: 8 }}>
                             {program.deadline && (
                               <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
                                 <Clock size={10} /> {program.deadline}
@@ -1360,7 +1362,7 @@ export default function AplicareProgramePage() {
 
                 {viewingProgram.description && (
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Descriere</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Descriere</div>
                     <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{viewingProgram.description}</p>
                   </div>
                 )}
@@ -1368,7 +1370,7 @@ export default function AplicareProgramePage() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                   {viewingProgram.deadline && (
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
                       <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
                         <Calendar size={13} style={{ color: "#6B7280" }} /> {viewingProgram.deadline}
                       </div>
@@ -1376,7 +1378,7 @@ export default function AplicareProgramePage() {
                   )}
                   {viewingProgram.location && (
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
                       <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
                         <MapPin size={13} style={{ color: "#6B7280" }} /> {viewingProgram.location}
                       </div>
@@ -1384,7 +1386,7 @@ export default function AplicareProgramePage() {
                   )}
                   {viewingProgram.budget && (
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
                       <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
                         <DollarSign size={13} style={{ color: "#6B7280" }} /> {viewingProgram.budget}
                       </div>
@@ -1392,7 +1394,7 @@ export default function AplicareProgramePage() {
                   )}
                   {viewingProgram.organizer && (
                     <div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
                       <div style={{ fontSize: 13, color: "#374151", display: "flex", alignItems: "center", gap: 5 }}>
                         <Users size={13} style={{ color: "#6B7280" }} /> {viewingProgram.organizer}
                       </div>
@@ -1402,7 +1404,7 @@ export default function AplicareProgramePage() {
 
                 {viewingProgram.url && (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Link</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Link</div>
                     <a href={viewingProgram.url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "#2563EB", display: "flex", alignItems: "center", gap: 5, wordBreak: "break-all" }}>
                       <ExternalLink size={13} /> {viewingProgram.url}
                     </a>
@@ -1416,7 +1418,7 @@ export default function AplicareProgramePage() {
                   </div>
                   {viewingProgram.mesajTrimis && (
                     <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Mesaj Trimis {viewingProgram.mesajData ? `(${viewingProgram.mesajData})` : ""}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Mesaj Trimis {viewingProgram.mesajData ? `(${viewingProgram.mesajData})` : ""}</div>
                       <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#F9FAFB", padding: 8, borderRadius: 6, border: "1px solid #E5E7EB" }}>
                         {viewingProgram.mesajTrimis}
                       </p>
@@ -1424,7 +1426,7 @@ export default function AplicareProgramePage() {
                   )}
                   {viewingProgram.reminder && (
                     <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Reminder: {viewingProgram.reminder}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Reminder: {viewingProgram.reminder}</div>
                       {viewingProgram.reminderNote && (
                         <p style={{ fontSize: 12, color: "#374151", background: "#FFFBEB", padding: 8, borderRadius: 6, border: "1px solid #FCD34D" }}>
                           {viewingProgram.reminderNote}
@@ -1434,20 +1436,20 @@ export default function AplicareProgramePage() {
                   )}
                   {viewingProgram.monitoring && (
                     <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Monitorizare</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 3 }}>Monitorizare</div>
                       <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, whiteSpace: "pre-wrap", background: "#F0FDF4", padding: 8, borderRadius: 6, border: "1px solid #86EFAC" }}>
                         {viewingProgram.monitoring}
                       </p>
                     </div>
                   )}
                   {!viewingProgram.mesajTrimis && !viewingProgram.reminder && !viewingProgram.monitoring && (
-                    <p style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>Niciun tracking adaugat inca. Foloseste butonul "Tracking" de pe cartonas.</p>
+                    <p style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Niciun tracking adaugat inca. Foloseste butonul &quot;Tracking&quot; de pe cartonas.</p>
                   )}
                 </div>
 
                 {viewingProgram.tags.length > 0 && (
                   <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Tags</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Tags</div>
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                       {viewingProgram.tags.map((tag, i) => (
                         <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6, background: "#F3F4F6", color: "#6B7280" }}>{tag}</span>
@@ -1458,7 +1460,7 @@ export default function AplicareProgramePage() {
 
                 {viewingProgram.notes && (
                   <div style={{ marginTop: 14 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Note</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Note</div>
                     <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{viewingProgram.notes}</p>
                   </div>
                 )}
@@ -1512,9 +1514,9 @@ export default function AplicareProgramePage() {
             </div>
             <div style={{ padding: "18px 22px" }}>
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Titlu *</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Titlu *</label>
                 <input
-                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif" }}
+                  style={{ width: "100%", padding: "10px 14px", fontSize: 14, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif", color: "#111827" }}
                   value={formData.title || ""}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   placeholder="Numele programului"
@@ -1524,9 +1526,9 @@ export default function AplicareProgramePage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Categorie</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Categorie</label>
                   <select
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", background: "#fff", cursor: "pointer" }}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", background: "#fff", cursor: "pointer", color: "#111827" }}
                     value={formData.category || "conferinte"}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as CategoryKey })}
                   >
@@ -1534,9 +1536,9 @@ export default function AplicareProgramePage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Status</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Status</label>
                   <select
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", background: "#fff", cursor: "pointer" }}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", background: "#fff", cursor: "pointer", color: "#111827" }}
                     value={formData.appStatus || "nesetat"}
                     onChange={(e) => setFormData({ ...formData, appStatus: e.target.value as AppStatus })}
                   >
@@ -1547,12 +1549,12 @@ export default function AplicareProgramePage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Prioritate (1-10)</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Prioritate (1-10)</label>
                   <input
                     type="number"
                     min={1}
                     max={10}
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    style={{ width: "100%", padding: "10px 12px", fontSize: 14, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827", fontWeight: 600 }}
                     value={formData.priority || 5}
                     onChange={(e) => setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })}
                   />
@@ -1560,9 +1562,9 @@ export default function AplicareProgramePage() {
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Descriere</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Descriere</label>
                 <textarea
-                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif", minHeight: 80, resize: "vertical" }}
+                  style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif", minHeight: 80, resize: "vertical", color: "#111827", lineHeight: 1.6 }}
                   value={formData.description || ""}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Descriere detaliata"
@@ -1571,18 +1573,18 @@ export default function AplicareProgramePage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Deadline</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#DC2626", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Deadline</label>
                   <input
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827" }}
                     value={formData.deadline || ""}
                     onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
                     placeholder="Ex: 15 Martie 2026"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Luna de aplicare</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#2563EB", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Luna de aplicare</label>
                   <input
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827" }}
                     value={formData.lunaAplicare || ""}
                     onChange={(e) => setFormData({ ...formData, lunaAplicare: e.target.value })}
                     placeholder="Ex: Martie 2026"
@@ -1592,18 +1594,18 @@ export default function AplicareProgramePage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Locatie</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Locatie</label>
                   <input
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827" }}
                     value={formData.location || ""}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     placeholder="Ex: Online / Berlin"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Organizator</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Organizator</label>
                   <input
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827" }}
                     value={formData.organizer || ""}
                     onChange={(e) => setFormData({ ...formData, organizer: e.target.value })}
                     placeholder="Ex: European Commission"
@@ -1613,18 +1615,18 @@ export default function AplicareProgramePage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Buget / Valoare</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Buget / Valoare</label>
                   <input
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827" }}
                     value={formData.budget || ""}
                     onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
                     placeholder="Ex: EUR 5,000"
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>URL</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>URL</label>
                   <input
-                    style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                    style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827" }}
                     value={formData.url || ""}
                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                     placeholder="https://..."
@@ -1633,9 +1635,9 @@ export default function AplicareProgramePage() {
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Tags (separate cu virgula)</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Tags (separate cu virgula)</label>
                 <input
-                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none" }}
+                  style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", color: "#111827" }}
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
                   placeholder="Ex: marketing, digital, EU"
@@ -1643,9 +1645,9 @@ export default function AplicareProgramePage() {
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Note</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: "#374151", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 5, display: "block" }}>Note</label>
                 <textarea
-                  style={{ width: "100%", padding: "9px 12px", fontSize: 13, border: "1px solid #E5E7EB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif", minHeight: 60, resize: "vertical" }}
+                  style={{ width: "100%", padding: "10px 14px", fontSize: 13, border: "1px solid #D1D5DB", borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif", minHeight: 60, resize: "vertical", color: "#111827", lineHeight: 1.6 }}
                   value={formData.notes || ""}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Note interne..."
