@@ -908,257 +908,403 @@ export default function AplicareProgramePage() {
             </p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 14 }}>
-            {filtered
-              .sort((a, b) => b.priority - a.priority)
-              .map((program) => {
-                const cat = getCategoryDef(program.category);
-                const status = APP_STATUS_CONFIG[program.appStatus];
-                const Icon = cat.icon;
-                const isExpanded = expandedCard === program.id;
-                return (
-                  <div
-                    key={program.id}
-                    style={{
-                      background: "#fff", border: `1px solid ${program.appStatus === "aplicat" ? "#86EFAC" : program.appStatus === "nerelevant" ? "#D1D5DB" : "#E5E7EB"}`,
-                      borderRadius: 12, overflow: "hidden",
-                      opacity: program.appStatus === "nerelevant" ? 0.6 : 1,
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {/* Color bar top */}
-                    <div style={{ height: 3, background: cat.gradient }} />
-                    <div style={{ padding: "14px 16px" }}>
-                      {/* Header row */}
-                      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 }}>
-                          <Icon size={15} style={{ color: cat.color, flexShrink: 0 }} />
-                          <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>{program.title}</span>
-                        </div>
-                        {/* Priority badge */}
-                        <div style={{
-                          fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6,
-                          background: `${priorityColor(program.priority)}14`,
-                          color: priorityColor(program.priority),
-                          flexShrink: 0, fontFamily: "'JetBrains Mono', monospace",
-                        }}>
-                          {program.priority}/10
-                        </div>
-                      </div>
-
-                      {/* Status + Luna de aplicare row */}
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                        {/* Status dropdown */}
-                        <select
-                          value={program.appStatus}
-                          onChange={(e) => { e.stopPropagation(); updateProgram(program.id, { appStatus: e.target.value as AppStatus }); }}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            fontSize: 10, fontWeight: 700, padding: "3px 6px", borderRadius: 6,
-                            background: status.bg, color: status.text, border: `1px solid ${status.border}`,
-                            cursor: "pointer", outline: "none", appearance: "auto",
-                          }}
-                        >
-                          <option value="nesetat">Nesetat</option>
-                          <option value="aplicat">Aplicat</option>
-                          <option value="nerelevant">Nerelevant</option>
-                          <option value="dupa_lansare">Dupa lansare</option>
-                        </select>
-                        {/* Luna de aplicare */}
-                        {program.lunaAplicare && (
-                          <span style={{
-                            fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
-                            background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE",
-                            display: "flex", alignItems: "center", gap: 3,
-                          }}>
-                            <Calendar size={10} /> {program.lunaAplicare}
-                          </span>
-                        )}
-                        {/* Category badge */}
+          <>
+            {/* ── Mini tabs row (other cards when one is expanded) ── */}
+            {expandedCard && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+                {filtered.sort((a, b) => b.priority - a.priority).map((program) => {
+                  const cat = getCategoryDef(program.category);
+                  const Icon = cat.icon;
+                  const isActive = expandedCard === program.id;
+                  const st = APP_STATUS_CONFIG[program.appStatus];
+                  return (
+                    <button
+                      key={program.id}
+                      onClick={() => setExpandedCard(program.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 5,
+                        padding: "6px 12px", fontSize: 11, fontWeight: isActive ? 700 : 500,
+                        color: isActive ? "#fff" : "#374151",
+                        background: isActive ? cat.gradient : "#fff",
+                        border: isActive ? "none" : `1px solid ${st.border}`,
+                        borderRadius: 8, cursor: "pointer",
+                        transition: "all 0.15s",
+                        opacity: program.appStatus === "nerelevant" && !isActive ? 0.5 : 1,
+                        maxWidth: isActive ? "none" : 220,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Icon size={12} style={{ color: isActive ? "#fff" : cat.color, flexShrink: 0 }} />
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{program.title}</span>
+                      <span style={{
+                        fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 4,
+                        background: isActive ? "rgba(255,255,255,0.25)" : `${priorityColor(program.priority)}14`,
+                        color: isActive ? "#fff" : priorityColor(program.priority),
+                        flexShrink: 0, fontFamily: "'JetBrains Mono', monospace",
+                      }}>{program.priority}</span>
+                      {program.appStatus !== "nesetat" && (
                         <span style={{
-                          fontSize: 9, fontWeight: 600, padding: "3px 7px", borderRadius: 6,
-                          background: `${cat.color}10`, color: cat.color,
-                        }}>
-                          {cat.label}
-                        </span>
-                      </div>
-
-                      {/* Description */}
-                      <p style={{
-                        fontSize: 12, color: "#6B7280", lineHeight: 1.5, marginBottom: 10,
-                        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
-                      }}>{program.description}</p>
-
-                      {/* Meta info */}
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>
-                        {program.deadline && (
-                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <Clock size={10} /> {program.deadline}
-                          </span>
-                        )}
-                        {program.location && (
-                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <MapPin size={10} /> {program.location}
-                          </span>
-                        )}
-                        {program.budget && (
-                          <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <DollarSign size={10} /> {program.budget}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Tags */}
-                      {program.tags.length > 0 && (
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 8 }}>
-                          {program.tags.map((tag, i) => (
-                            <span key={i} style={{
-                              fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
-                              background: "#F3F4F6", color: "#6B7280",
-                            }}>{tag}</span>
-                          ))}
-                        </div>
+                          width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                          background: program.appStatus === "aplicat" ? "#16A34A" : program.appStatus === "nerelevant" ? "#9CA3AF" : "#D97706",
+                        }} />
                       )}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setExpandedCard(null)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "6px 12px", fontSize: 11, fontWeight: 600,
+                    color: "#6B7280", background: "#F3F4F6",
+                    border: "1px solid #E5E7EB", borderRadius: 8, cursor: "pointer",
+                  }}
+                >
+                  <X size={11} /> Inchide
+                </button>
+              </div>
+            )}
 
-                      {/* Action buttons row */}
-                      <div style={{ display: "flex", gap: 4, borderTop: "1px solid #F3F4F6", paddingTop: 10, flexWrap: "wrap" }}>
-                        <button
-                          onClick={() => setExpandedCard(isExpanded ? null : program.id)}
-                          style={{
-                            fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
-                            border: "1px solid #E5E7EB", background: isExpanded ? "#F3F4F6" : "#fff",
-                            color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
-                          }}
-                        >
-                          {isExpanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                          Tracking
-                        </button>
-                        {program.url && (
-                          <a
-                            href={program.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            onClick={(e) => e.stopPropagation()}
+            {/* ── Expanded card workspace ── */}
+            {expandedCard && (() => {
+              const program = filtered.find((p) => p.id === expandedCard) || programs.find((p) => p.id === expandedCard);
+              if (!program) return null;
+              const cat = getCategoryDef(program.category);
+              const status = APP_STATUS_CONFIG[program.appStatus];
+              const Icon = cat.icon;
+              return (
+                <div style={{
+                  background: "#fff", border: `2px solid ${cat.color}40`, borderRadius: 14,
+                  overflow: "hidden", marginBottom: 20,
+                }}>
+                  {/* Color bar */}
+                  <div style={{ height: 4, background: cat.gradient }} />
+
+                  {/* Header */}
+                  <div style={{ padding: "18px 24px", borderBottom: "1px solid #E5E7EB" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                          <Icon size={20} style={{ color: cat.color }} />
+                          <h2 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0, lineHeight: 1.3 }}>{program.title}</h2>
+                          <div style={{
+                            fontSize: 12, fontWeight: 800, padding: "3px 10px", borderRadius: 6,
+                            background: `${priorityColor(program.priority)}14`,
+                            color: priorityColor(program.priority),
+                            fontFamily: "'JetBrains Mono', monospace",
+                          }}>{program.priority}/10</div>
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          <select
+                            value={program.appStatus}
+                            onChange={(e) => updateProgram(program.id, { appStatus: e.target.value as AppStatus })}
                             style={{
-                              fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
-                              border: "1px solid #BFDBFE", background: "#EFF6FF",
-                              color: "#2563EB", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
-                              textDecoration: "none",
+                              fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6,
+                              background: status.bg, color: status.text, border: `1px solid ${status.border}`,
+                              cursor: "pointer", outline: "none",
                             }}
                           >
-                            <ExternalLink size={10} /> Link
+                            <option value="nesetat">Nesetat</option>
+                            <option value="aplicat">Aplicat</option>
+                            <option value="nerelevant">Nerelevant</option>
+                            <option value="dupa_lansare">Dupa lansare</option>
+                          </select>
+                          {program.lunaAplicare && (
+                            <span style={{
+                              fontSize: 11, fontWeight: 600, padding: "4px 10px", borderRadius: 6,
+                              background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE",
+                              display: "flex", alignItems: "center", gap: 4,
+                            }}>
+                              <Calendar size={11} /> {program.lunaAplicare}
+                            </span>
+                          )}
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: "4px 8px", borderRadius: 6, background: `${cat.color}10`, color: cat.color }}>
+                            {cat.label}
+                          </span>
+                          {program.tags.map((tag, i) => (
+                            <span key={i} style={{ fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 5, background: "#F3F4F6", color: "#6B7280" }}>{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                        {program.url && (
+                          <a href={program.url} target="_blank" rel="noreferrer" style={{
+                            fontSize: 11, fontWeight: 600, padding: "7px 14px", borderRadius: 8,
+                            border: "1px solid #BFDBFE", background: "#EFF6FF",
+                            color: "#2563EB", display: "flex", alignItems: "center", gap: 4, textDecoration: "none",
+                          }}>
+                            <ExternalLink size={12} /> Deschide Link
                           </a>
                         )}
-                        <button
-                          onClick={() => { setViewingProgram(program); }}
-                          style={{
-                            fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
-                            border: "1px solid #E5E7EB", background: "#fff",
-                            color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
-                          }}
-                        >
-                          <Eye size={10} /> Detalii
-                        </button>
-                        <button
-                          onClick={() => openEditModal(program)}
-                          style={{
-                            fontSize: 10, fontWeight: 600, padding: "5px 10px", borderRadius: 6,
-                            border: "1px solid #E5E7EB", background: "#fff",
-                            color: "#374151", cursor: "pointer", display: "flex", alignItems: "center", gap: 3,
-                          }}
-                        >
-                          <Edit3 size={10} /> Edit
+                        <button onClick={() => openEditModal(program)} style={{
+                          fontSize: 11, fontWeight: 600, padding: "7px 14px", borderRadius: 8,
+                          border: "1px solid #E5E7EB", background: "#fff", color: "#374151", cursor: "pointer",
+                          display: "flex", alignItems: "center", gap: 4,
+                        }}>
+                          <Edit3 size={12} /> Edit
                         </button>
                       </div>
+                    </div>
+                  </div>
 
-                      {/* ══ Expanded Tracking Area ══ */}
-                      {isExpanded && (
-                        <div style={{
-                          marginTop: 10, padding: 12, background: "#F9FAFB", borderRadius: 8,
-                          border: "1px solid #E5E7EB",
-                        }}>
-                          {/* Mesaj Trimis */}
-                          <div style={{ marginBottom: 10 }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                              <Send size={10} /> Mesaj Trimis
-                            </div>
-                            <textarea
-                              value={program.mesajTrimis || ""}
-                              onChange={(e) => updateProgram(program.id, { mesajTrimis: e.target.value })}
-                              placeholder="Scrie mesajul trimis / email / aplicatie..."
-                              style={{
-                                width: "100%", padding: "6px 8px", fontSize: 11, border: "1px solid #E5E7EB",
-                                borderRadius: 6, outline: "none", fontFamily: "'Inter', sans-serif",
-                                minHeight: 50, resize: "vertical", background: "#fff",
-                              }}
-                            />
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
-                              <span style={{ fontSize: 9, color: "#9CA3AF" }}>Data trimitere:</span>
-                              <input
-                                type="text"
-                                value={program.mesajData || ""}
-                                onChange={(e) => updateProgram(program.id, { mesajData: e.target.value })}
-                                placeholder="ex: 20 Feb 2026"
-                                style={{
-                                  padding: "3px 6px", fontSize: 10, border: "1px solid #E5E7EB",
-                                  borderRadius: 4, outline: "none", width: 120, background: "#fff",
-                                }}
-                              />
+                  {/* Body: 2-column layout */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", minHeight: 350 }}>
+                    {/* Left: Info */}
+                    <div style={{ padding: "20px 24px", borderRight: "1px solid #E5E7EB" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#111827", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                        <BookOpen size={13} /> Informatii Program
+                      </div>
+
+                      <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, marginBottom: 16 }}>{program.description}</p>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                        {program.deadline && (
+                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Deadline</div>
+                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                              <Clock size={12} style={{ color: "#DC2626" }} /> {program.deadline}
                             </div>
                           </div>
-
-                          {/* Reminder */}
-                          <div style={{ marginBottom: 10 }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                              <Bell size={10} /> Reminder — Cind de revenit
-                            </div>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              <input
-                                type="text"
-                                value={program.reminder || ""}
-                                onChange={(e) => updateProgram(program.id, { reminder: e.target.value })}
-                                placeholder="ex: 15 Mar 2026"
-                                style={{
-                                  padding: "5px 8px", fontSize: 11, border: "1px solid #E5E7EB",
-                                  borderRadius: 6, outline: "none", width: 120, background: "#fff",
-                                }}
-                              />
-                              <input
-                                type="text"
-                                value={program.reminderNote || ""}
-                                onChange={(e) => updateProgram(program.id, { reminderNote: e.target.value })}
-                                placeholder="Nota reminder..."
-                                style={{
-                                  padding: "5px 8px", fontSize: 11, border: "1px solid #E5E7EB",
-                                  borderRadius: 6, outline: "none", flex: 1, background: "#fff",
-                                }}
-                              />
+                        )}
+                        {program.location && (
+                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Locatie</div>
+                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                              <MapPin size={12} style={{ color: "#7C3AED" }} /> {program.location}
                             </div>
                           </div>
-
-                          {/* Monitoring */}
-                          <div>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
-                              <BarChart3 size={10} /> Monitorizare
+                        )}
+                        {program.budget && (
+                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Buget / Valoare</div>
+                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                              <DollarSign size={12} style={{ color: "#059669" }} /> {program.budget}
                             </div>
-                            <textarea
-                              value={program.monitoring || ""}
-                              onChange={(e) => updateProgram(program.id, { monitoring: e.target.value })}
-                              placeholder="Note de monitorizare, raspunsuri primite, status aplicare..."
-                              style={{
-                                width: "100%", padding: "6px 8px", fontSize: 11, border: "1px solid #E5E7EB",
-                                borderRadius: 6, outline: "none", fontFamily: "'Inter', sans-serif",
-                                minHeight: 50, resize: "vertical", background: "#fff",
-                              }}
-                            />
                           </div>
+                        )}
+                        {program.organizer && (
+                          <div style={{ background: "#F9FAFB", padding: "10px 12px", borderRadius: 8, border: "1px solid #E5E7EB" }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Organizator</div>
+                            <div style={{ fontSize: 12, color: "#374151", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+                              <Users size={12} style={{ color: "#2563EB" }} /> {program.organizer}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {program.notes && (
+                        <div>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 4 }}>Note</div>
+                          <p style={{ fontSize: 12, color: "#6B7280", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{program.notes}</p>
                         </div>
                       )}
                     </div>
+
+                    {/* Right: Tracking workspace */}
+                    <div style={{ padding: "20px 24px", background: "#FAFBFC" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#111827", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
+                        <BarChart3 size={13} /> Zona de Lucru & Tracking
+                      </div>
+
+                      {/* Mesaj Trimis */}
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                          <Send size={12} style={{ color: "#2563EB" }} /> Mesaj Trimis / Aplicatie
+                        </div>
+                        <textarea
+                          value={program.mesajTrimis || ""}
+                          onChange={(e) => updateProgram(program.id, { mesajTrimis: e.target.value })}
+                          placeholder="Scrie mesajul trimis, emailul, sau detalii aplicatie..."
+                          style={{
+                            width: "100%", padding: "10px 12px", fontSize: 12, border: "1px solid #E5E7EB",
+                            borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif",
+                            minHeight: 80, resize: "vertical", background: "#fff", lineHeight: 1.6,
+                          }}
+                        />
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+                          <span style={{ fontSize: 10, color: "#6B7280", fontWeight: 600 }}>Data trimitere:</span>
+                          <input
+                            type="text"
+                            value={program.mesajData || ""}
+                            onChange={(e) => updateProgram(program.id, { mesajData: e.target.value })}
+                            placeholder="ex: 20 Feb 2026"
+                            style={{
+                              padding: "5px 10px", fontSize: 11, border: "1px solid #E5E7EB",
+                              borderRadius: 6, outline: "none", width: 140, background: "#fff",
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Reminder */}
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                          <Bell size={12} style={{ color: "#D97706" }} /> Reminder — Cand de revenit
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <input
+                            type="text"
+                            value={program.reminder || ""}
+                            onChange={(e) => updateProgram(program.id, { reminder: e.target.value })}
+                            placeholder="Data: 15 Mar 2026"
+                            style={{
+                              padding: "8px 12px", fontSize: 12, border: "1px solid #E5E7EB",
+                              borderRadius: 8, outline: "none", width: 150, background: "#fff",
+                            }}
+                          />
+                          <input
+                            type="text"
+                            value={program.reminderNote || ""}
+                            onChange={(e) => updateProgram(program.id, { reminderNote: e.target.value })}
+                            placeholder="Nota: ce trebuie facut..."
+                            style={{
+                              padding: "8px 12px", fontSize: 12, border: "1px solid #E5E7EB",
+                              borderRadius: 8, outline: "none", flex: 1, background: "#fff",
+                            }}
+                          />
+                        </div>
+                        {program.reminder && (
+                          <div style={{ marginTop: 6, padding: "6px 10px", background: "#FFFBEB", borderRadius: 6, border: "1px solid #FCD34D", fontSize: 11, color: "#92400E", display: "flex", alignItems: "center", gap: 4 }}>
+                            <Bell size={10} /> Revino pe: <strong>{program.reminder}</strong> {program.reminderNote ? `— ${program.reminderNote}` : ""}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Monitoring */}
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginBottom: 6, display: "flex", alignItems: "center", gap: 5 }}>
+                          <BarChart3 size={12} style={{ color: "#059669" }} /> Monitorizare & Rezultate
+                        </div>
+                        <textarea
+                          value={program.monitoring || ""}
+                          onChange={(e) => updateProgram(program.id, { monitoring: e.target.value })}
+                          placeholder="Note de monitorizare: raspunsuri primite, status curent, pasi urmatori, rezultat final..."
+                          style={{
+                            width: "100%", padding: "10px 12px", fontSize: 12, border: "1px solid #E5E7EB",
+                            borderRadius: 8, outline: "none", fontFamily: "'Inter', sans-serif",
+                            minHeight: 80, resize: "vertical", background: "#fff", lineHeight: 1.6,
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                );
-              })}
-          </div>
+                </div>
+              );
+            })()}
+
+            {/* ── Grid of cards (shown when nothing expanded, or hidden when expanded) ── */}
+            {!expandedCard && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 14 }}>
+                {filtered
+                  .sort((a, b) => b.priority - a.priority)
+                  .map((program) => {
+                    const cat = getCategoryDef(program.category);
+                    const status = APP_STATUS_CONFIG[program.appStatus];
+                    const Icon = cat.icon;
+                    return (
+                      <div
+                        key={program.id}
+                        onClick={() => setExpandedCard(program.id)}
+                        style={{
+                          background: "#fff", border: `1px solid ${program.appStatus === "aplicat" ? "#86EFAC" : program.appStatus === "nerelevant" ? "#D1D5DB" : "#E5E7EB"}`,
+                          borderRadius: 12, overflow: "hidden",
+                          opacity: program.appStatus === "nerelevant" ? 0.6 : 1,
+                          transition: "all 0.2s", cursor: "pointer",
+                        }}
+                      >
+                        {/* Color bar top */}
+                        <div style={{ height: 3, background: cat.gradient }} />
+                        <div style={{ padding: "14px 16px" }}>
+                          {/* Header row */}
+                          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 8, gap: 8 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, flex: 1, minWidth: 0 }}>
+                              <Icon size={15} style={{ color: cat.color, flexShrink: 0 }} />
+                              <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", lineHeight: 1.3 }}>{program.title}</span>
+                            </div>
+                            <div style={{
+                              fontSize: 10, fontWeight: 800, padding: "3px 8px", borderRadius: 6,
+                              background: `${priorityColor(program.priority)}14`,
+                              color: priorityColor(program.priority),
+                              flexShrink: 0, fontFamily: "'JetBrains Mono', monospace",
+                            }}>
+                              {program.priority}/10
+                            </div>
+                          </div>
+
+                          {/* Status + Luna de aplicare row */}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                            <span style={{
+                              fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                              background: status.bg, color: status.text, border: `1px solid ${status.border}`,
+                            }}>
+                              {status.label}
+                            </span>
+                            {program.lunaAplicare && (
+                              <span style={{
+                                fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 6,
+                                background: "#EFF6FF", color: "#2563EB", border: "1px solid #BFDBFE",
+                                display: "flex", alignItems: "center", gap: 3,
+                              }}>
+                                <Calendar size={10} /> {program.lunaAplicare}
+                              </span>
+                            )}
+                            <span style={{ fontSize: 9, fontWeight: 600, padding: "3px 7px", borderRadius: 6, background: `${cat.color}10`, color: cat.color }}>
+                              {cat.label}
+                            </span>
+                          </div>
+
+                          {/* Description */}
+                          <p style={{
+                            fontSize: 12, color: "#6B7280", lineHeight: 1.5, marginBottom: 10,
+                            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden",
+                          }}>{program.description}</p>
+
+                          {/* Meta info */}
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>
+                            {program.deadline && (
+                              <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                <Clock size={10} /> {program.deadline}
+                              </span>
+                            )}
+                            {program.location && (
+                              <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                <MapPin size={10} /> {program.location}
+                              </span>
+                            )}
+                            {program.budget && (
+                              <span style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                                <DollarSign size={10} /> {program.budget}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Tags */}
+                          {program.tags.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 8 }}>
+                              {program.tags.map((tag, i) => (
+                                <span key={i} style={{
+                                  fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 4,
+                                  background: "#F3F4F6", color: "#6B7280",
+                                }}>{tag}</span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Tracking indicator */}
+                          {(program.mesajTrimis || program.reminder || program.monitoring) && (
+                            <div style={{ display: "flex", gap: 4, paddingTop: 8, borderTop: "1px solid #F3F4F6" }}>
+                              {program.mesajTrimis && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", gap: 2 }}><Send size={8} /> Mesaj</span>}
+                              {program.reminder && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#FFFBEB", color: "#D97706", display: "flex", alignItems: "center", gap: 2 }}><Bell size={8} /> {program.reminder}</span>}
+                              {program.monitoring && <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#F0FDF4", color: "#059669", display: "flex", alignItems: "center", gap: 2 }}><BarChart3 size={8} /> Monitorizat</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
