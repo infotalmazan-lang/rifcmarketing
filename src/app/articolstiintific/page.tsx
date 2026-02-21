@@ -381,6 +381,10 @@ const ROADMAP_HTML = `<!DOCTYPE html>
         FORCE SYNC
       </button>
       <div class="sb-sync-status" id="sync-status"></div>
+      <button class="sb-btn amber" id="btn-aplicare" onclick="navigateTo('aplicare')" style="margin-top:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/><path d="m9 9.5 2 2 4-4"/></svg>
+        APLICARE PROGRAME
+      </button>
     </div>
     <div class="sb-nav" id="stages-nav"></div>
   </div>
@@ -396,6 +400,7 @@ const ROADMAP_HTML = `<!DOCTYPE html>
     </div>
     <div class="page-view" id="view-articol"><div class="iframe-container"><iframe id="iframe-articol" src="about:blank" title="Articol OSF"></iframe></div></div>
     <div class="page-view" id="view-sondaj"><div class="iframe-container"><iframe id="iframe-sondaj" src="about:blank" title="Sondaj Admin"></iframe></div></div>
+    <div class="page-view" id="view-aplicare"><div class="iframe-container"><iframe id="iframe-aplicare" src="about:blank" title="Aplicare Programe"></iframe></div></div>
     <div class="page-view" id="view-stage"><div class="stage-view" id="stage-content"></div></div>
     <div class="page-view" id="view-task"><div class="task-view" id="task-content"></div></div>
   </div>
@@ -1916,16 +1921,18 @@ const ROADMAP_SCRIPT = `
     var target = document.getElementById("view-" + view);
     if (target) target.classList.add("active");
     updateButtons();
-    if (view === "articol" || view === "sondaj") loadIframeIfNeeded(view);
+    if (view === "articol" || view === "sondaj" || view === "aplicare") loadIframeIfNeeded(view);
   }
   function updateButtons() {
-    var a = document.getElementById("btn-articol"); var s = document.getElementById("btn-sondaj");
+    var a = document.getElementById("btn-articol"); var s = document.getElementById("btn-sondaj"); var ap = document.getElementById("btn-aplicare");
     if (a) a.classList.toggle("active", currentView === "articol");
     if (s) s.classList.toggle("active", currentView === "sondaj");
+    if (ap) ap.classList.toggle("active", currentView === "aplicare");
   }
   function loadIframeIfNeeded(view) {
     if (view === "articol") { var f = document.getElementById("iframe-articol"); if (f && (!f.src || f.src === "about:blank" || f.src.indexOf("/osf") === -1)) f.src = "/articolstiintific/osf"; }
     else if (view === "sondaj") { var f2 = document.getElementById("iframe-sondaj"); if (f2 && (!f2.src || f2.src === "about:blank" || f2.src.indexOf("/sondaj") === -1)) f2.src = "/articolstiintific/sondaj"; }
+    else if (view === "aplicare") { var f3 = document.getElementById("iframe-aplicare"); if (f3 && (!f3.src || f3.src === "about:blank" || f3.src.indexOf("/aplicare") === -1)) f3.src = "/aplicare"; }
   }
 
   window.navigateTo = function(view) {
@@ -1933,7 +1940,7 @@ const ROADMAP_SCRIPT = `
   };
   function updateParentUrl(view) {
     try { var p = window.parent || window; var base = "/articolstiintific";
-      var path = view === "articol" ? base + "/osf" : view === "sondaj" ? base + "/sondaj" : base;
+      var path = view === "articol" ? base + "/osf" : view === "sondaj" ? base + "/sondaj" : view === "aplicare" ? base + "/aplicare" : base;
       if (p.history && p.history.pushState) p.history.pushState({view: view}, "", path);
     } catch(e) {}
   }
@@ -1941,6 +1948,7 @@ const ROADMAP_SCRIPT = `
     try { var pp = ""; try { pp = window.parent.location.pathname; } catch(e) { pp = window.location.pathname; }
       if (pp.indexOf("/osf") !== -1) currentView = "articol";
       else if (pp.indexOf("/sondaj") !== -1) currentView = "sondaj";
+      else if (pp.indexOf("/aplicare") !== -1) currentView = "aplicare";
       else currentView = "overview";
       showView(currentView);
     } catch(e) {}
