@@ -79,18 +79,18 @@ ${RESEARCHER_PROFILE}
 ## OUTPUT FORMAT
 Return a JSON array of opportunities. Each opportunity must have:
 {
-  "title": "Short descriptive title",
-  "category": "one of the 10 category keys above",
-  "description": "2-3 sentence description of the opportunity",
-  "deadline": "Deadline date or null if ongoing/unknown",
-  "location": "City, Country or Online",
-  "url": "Direct URL to the opportunity page",
-  "organizer": "Organization name",
-  "budget": "Prize/funding amount or null",
+  "title": "Titlu scurt descriptiv IN ROMANA",
+  "category": "one of the 10 category keys above (keep in English)",
+  "description": "2-3 propozitii IN ROMANA care descriu oportunitatea",
+  "deadline": "Data limita sau null daca e continua/necunoscuta",
+  "location": "Oras, Tara sau Online",
+  "url": "URL direct catre pagina oportunitatii",
+  "organizer": "Numele organizatiei",
+  "budget": "Suma premiu/finantare sau null",
   "tags": ["tag1", "tag2", "tag3"],
   "relevanceScore": 1-10,
-  "relevanceReason": "Why this matches the researcher profile",
-  "source": "Domain name of the source (e.g. emac.org)"
+  "relevanceReason": "De ce se potriveste cu profilul cercetatorului, IN ROMANA",
+  "source": "Domeniul sursei (ex. emac.org)"
 }
 
 ## IMPORTANT RULES:
@@ -101,9 +101,13 @@ Return a JSON array of opportunities. Each opportunity must have:
 - Do NOT invent fake URLs - if unsure about URL, use the organization's main website
 - Sort by relevanceScore descending
 - Current date context: February 2026
-- ALL text fields (title, description, relevanceReason) MUST be in ROMANIAN (limba romana)
-- Titles should be clear and descriptive in Romanian
-- Description should explain what the opportunity is and why it matters, in Romanian
+
+## CRITICAL LANGUAGE RULE:
+TOATE campurile text (title, description, relevanceReason) TREBUIE scrise OBLIGATORIU in LIMBA ROMANA.
+Nu folosi engleza pentru aceste campuri. Scrie natural in romana, cu diacritice optionale.
+Exemplu title: "Conferinta EMAC 2026 — Sesiune speciala metode de cercetare in marketing"
+Exemplu description: "Conferinta anuala a Academiei Europene de Marketing, cu sesiune dedicata cercetatorilor early-career. Se accepta working papers si abstracte extinse pe teme de measurement si diagnosticare marketing."
+Exemplu relevanceReason: "Se potriveste perfect pentru prezentarea framework-ului RIFC ca working paper, locatie accesibila din Moldova"
 
 RESPOND WITH ONLY THE JSON ARRAY, no markdown, no code blocks.`;
 
@@ -133,7 +137,7 @@ export async function POST(request: Request) {
     const anthropic = new Anthropic({ apiKey });
 
     // Build user message with context, incorporating user-defined rules
-    let userMessage = "Search for current academic and professional opportunities for a marketing researcher in Moldova. Focus on opportunities available NOW or in the near future (2026).\n\n";
+    let userMessage = "Search for current academic and professional opportunities for a marketing researcher in Moldova. Focus on opportunities available NOW or in the near future (2026).\n\nREMEMBER: All title, description, and relevanceReason fields MUST be written in ROMANIAN language.\n\n";
 
     // Apply user-customized rules
     if (rules.keywords) {

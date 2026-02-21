@@ -1490,34 +1490,43 @@ export default function AplicareProgramePage() {
             </button>
           </div>
         </div>
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
-          {TABS.map((t) => {
-            const count = t.key === "all" ? totalPrograms : categoryCounts[t.key] || 0;
-            const isActive = activeTab === t.key;
-            return (
-              <button
-                key={t.key}
-                style={{
-                  padding: "10px 14px", fontSize: 11, fontWeight: 600,
-                  color: isActive ? "#DC2626" : "#4B5563",
-                  background: "none", border: "none",
-                  borderBottom: isActive ? "2px solid #DC2626" : "2px solid transparent",
-                  cursor: "pointer", whiteSpace: "nowrap", letterSpacing: 0.3,
-                }}
-                onClick={() => setActiveTab(t.key)}
-              >
-                {t.label}
-                <span style={{
-                  fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 10,
-                  background: isActive ? "#FEE2E2" : "#F3F4F6",
-                  color: isActive ? "#DC2626" : "#4B5563",
-                  marginLeft: 5,
-                }}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* Tabs — hidden on AUTOEVENT page */}
+        {!showAutoEvent && (
+          <div style={{ display: "flex", gap: 0, overflowX: "auto" }}>
+            {TABS.map((t) => {
+              const count = t.key === "all" ? totalPrograms : categoryCounts[t.key] || 0;
+              const isActive = activeTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  style={{
+                    padding: "10px 14px", fontSize: 11, fontWeight: 600,
+                    color: isActive ? "#DC2626" : "#4B5563",
+                    background: "none", border: "none",
+                    borderBottom: isActive ? "2px solid #DC2626" : "2px solid transparent",
+                    cursor: "pointer", whiteSpace: "nowrap", letterSpacing: 0.3,
+                  }}
+                  onClick={() => setActiveTab(t.key)}
+                >
+                  {t.label}
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: "2px 5px", borderRadius: 10,
+                    background: isActive ? "#FEE2E2" : "#F3F4F6",
+                    color: isActive ? "#DC2626" : "#4B5563",
+                    marginLeft: 5,
+                  }}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {showAutoEvent && (
+          <div style={{ padding: "8px 0", borderTop: "2px solid #FCD34D" }}>
+            <span style={{ fontSize: 12, fontWeight: 800, color: "#92400E", display: "flex", alignItems: "center", gap: 6 }}>
+              <Zap size={14} style={{ color: "#D97706" }} /> AUTOEVENT Scanner — Cautare automata oportunitati
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ═══ AUTOEVENT Page View ═══ */}
