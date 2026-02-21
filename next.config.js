@@ -14,6 +14,14 @@ const nextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/articolstiintific/aplicare',
+        destination: '/aplicare',
+      },
+    ];
+  },
   async redirects() {
     return [
       // rifc.md redirect handled at DNS/Vercel level
