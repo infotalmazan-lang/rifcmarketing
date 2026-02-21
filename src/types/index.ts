@@ -53,6 +53,21 @@ export interface AuditRecommendation {
   impact: string;
 }
 
+export interface SubfactorScore {
+  id: string;
+  score: number;
+  justification: string;
+  critical: boolean;
+}
+
+export interface BrandProfile {
+  name: string;
+  industry: string;
+  targetAudience: string;
+  tone: string;
+  uvp: string;
+}
+
 export interface AuditResult {
   r: number;
   i: number;
@@ -66,4 +81,8 @@ export interface AuditResult {
   clarityLevel: "critical" | "noise" | "medium" | "supreme";
   recommendations: AuditRecommendation[];
   summary: string;
+  subfactors?: SubfactorScore[];
+  objective?: string;
+  brandContext?: BrandProfile;
+  ctaSuggestion?: string;
 }

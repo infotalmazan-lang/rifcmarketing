@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "@/lib/i18n";
-import type { AuditResult } from "@/types";
+import type { AuditResult, BrandProfile } from "@/types";
 import AuditResultDisplay from "./AuditResult";
+import ObjectiveSelector from "./ObjectiveSelector";
+import BrandContext from "./BrandContext";
 import {
   FileText,
   Globe,
@@ -86,6 +88,8 @@ export default function AuditForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfPageCount, setPdfPageCount] = useState(0);
+  const [objective, setObjective] = useState("");
+  const [brandProfile, setBrandProfile] = useState<BrandProfile>({ name: "", industry: "", targetAudience: "", tone: "", uvp: "" });
   const [channel, setChannel] = useState("");
   const [channelOpen, setChannelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -248,6 +252,7 @@ export default function AuditForm() {
     setLoading(true);
 
     try {
+      const hasBrand = brandProfile.name || brandProfile.industry || brandProfile.targetAudience || brandProfile.tone || brandProfile.uvp;
       const response = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -257,6 +262,8 @@ export default function AuditForm() {
           channel: channel || undefined,
           language: locale,
           ...(images ? { images } : {}),
+          ...(objective ? { objective } : {}),
+          ...(hasBrand ? { brandProfile } : {}),
         }),
       });
 
@@ -306,6 +313,8 @@ export default function AuditForm() {
     imageFile,
     pdfFile,
     channel,
+    objective,
+    brandProfile,
     locale,
     t.audit,
   ]);
@@ -349,6 +358,12 @@ export default function AuditForm() {
 
   return (
     <div className="space-y-8">
+      {/* Objective selector + Brand context */}
+      <div className="space-y-0">
+        <ObjectiveSelector value={objective} onChange={setObjective} />
+        <BrandContext value={brandProfile} onChange={setBrandProfile} />
+      </div>
+
       {/* V2 Tab switcher — pill style */}
       <div className="flex gap-2 p-1 bg-[rgba(255,255,255,0.02)] border border-border-light rounded-2xl overflow-x-auto">
         {TABS.map(({ type: tab, icon: Icon, labelKey }) => (

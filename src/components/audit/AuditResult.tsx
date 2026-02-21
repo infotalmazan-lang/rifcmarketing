@@ -30,6 +30,8 @@ import {
   getScoreColor,
   getScoreZone,
 } from "@/components/ui/V2Elements";
+import SubfactorBreakdown from "./SubfactorBreakdown";
+import { Layers } from "lucide-react";
 
 interface Props {
   result: AuditResult;
@@ -40,7 +42,7 @@ interface Props {
   onReset: () => void;
 }
 
-type ResultTab = "audit" | "recommendations";
+type ResultTab = "audit" | "recommendations" | "subfactors";
 
 export default function AuditResultDisplay({
   result,
@@ -198,6 +200,9 @@ export default function AuditResultDisplay({
         {[
           { key: "audit" as const, icon: ClipboardList, label: t.audit.tabAudit },
           { key: "recommendations" as const, icon: Lightbulb, label: t.audit.tabRecommendations },
+          ...(result.subfactors && result.subfactors.length > 0
+            ? [{ key: "subfactors" as const, icon: Layers, label: t.audit.tabSubfactors }]
+            : []),
         ].map(({ key, icon: Icon, label }) => (
           <button
             key={key}
@@ -459,6 +464,55 @@ export default function AuditResultDisplay({
         {/* Analyzed input preview */}
         <InputPreview />
       </div>
+
+      {/* ===== TAB: SUBFACTORS ===== */}
+      {result.subfactors && result.subfactors.length > 0 && (
+        <div className={`space-y-6 ${activeTab === "subfactors" ? "block" : "hidden"}`}>
+          {/* Score summary compact */}
+          <div className="border border-border-light rounded-sm p-5 bg-surface-card relative overflow-hidden">
+            <WatermarkNumber
+              value={result.c}
+              color={scoreColor}
+              size="sm"
+              className="-top-[10px] -right-[10px]"
+            />
+            <div className="flex items-center justify-between flex-wrap gap-4 relative z-[1]">
+              <FormulaDisplay
+                r={result.r}
+                i={result.i}
+                f={result.f}
+                c={result.c}
+                cColor={scoreColor}
+              />
+              <StampBadge
+                text={gatePass ? range?.status || result.clarityLevel : t.calculator.criticalFailure}
+                color={scoreColor}
+              />
+            </div>
+          </div>
+
+          {/* Subfactor breakdown */}
+          <SubfactorBreakdown subfactors={result.subfactors} />
+
+          {/* CTA Suggestion */}
+          {result.ctaSuggestion && (
+            <GradientBorderBlock
+              gradientFrom="#059669"
+              gradientTo="#059669"
+              bgTint="transparent"
+              headerLabel={t.audit.ctaSuggestionLabel}
+              headerColor="#059669"
+            >
+              <p className="font-body text-[13px] leading-[1.7] text-text-secondary">
+                {result.ctaSuggestion}
+              </p>
+            </GradientBorderBlock>
+          )}
+
+          {/* Analyzed input preview */}
+          <InputPreview />
+        </div>
+      )}
 
       {/* ===== FOOTER: Common to both tabs ===== */}
 

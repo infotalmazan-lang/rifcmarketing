@@ -1105,6 +1105,25 @@ export interface Dictionary {
     previewPages: string;
     removeFile: string;
     channels: { value: string; label: string }[];
+    tabSubfactors: string;
+    objectiveLabel: string;
+    objectiveNone: string;
+    objectiveDesc: string;
+    brandProfileLabel: string;
+    brandProfileToggle: string;
+    brandNameLabel: string;
+    brandNamePlaceholder: string;
+    brandIndustryLabel: string;
+    brandIndustryPlaceholder: string;
+    brandAudienceLabel: string;
+    brandAudiencePlaceholder: string;
+    brandToneLabel: string;
+    brandTonePlaceholder: string;
+    brandUvpLabel: string;
+    brandUvpPlaceholder: string;
+    ctaSuggestionLabel: string;
+    subfactorCriticalLabel: string;
+    objectives: Record<string, { name: string; desc: string }>;
   };
   wizard: {
     // Loading
