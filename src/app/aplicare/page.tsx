@@ -35,6 +35,10 @@ import {
   ClipboardCheck,
   MessageSquare,
   PlusCircle,
+  BookMarked,
+  Handshake,
+  Rocket,
+  Globe2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,8 +48,8 @@ import {
    ═══════════════════════════════════════════════════════════ */
 
 // ── Types ──────────────────────────────────────────────────
-type CategoryKey = "conferinte" | "granturi" | "competitii" | "forumuri" | "premii" | "oportunitati";
-type AppStatus = "nesetat" | "aplicat" | "nerelevant" | "dupa_lansare";
+type CategoryKey = "conferinte" | "granturi" | "competitii" | "forumuri" | "premii" | "oportunitati" | "publicatii" | "parteneriate" | "acceleratoare" | "retele";
+type AppStatus = "nesetat" | "aplicat" | "in_lucru" | "nerelevant" | "dupa_lansare";
 type BlockType = "email" | "aplicare" | "poza" | "link" | "reminder" | "nota" | "telefon" | "document";
 
 interface ActivityBlock {
@@ -118,6 +122,10 @@ const CATEGORIES: CategoryDef[] = [
   { key: "forumuri", label: "Forumuri", icon: Users, color: "#7C3AED", gradient: "linear-gradient(135deg, #7C3AED, #6D28D9)" },
   { key: "premii", label: "Premii", icon: Award, color: "#DC2626", gradient: "linear-gradient(135deg, #DC2626, #B91C1C)" },
   { key: "oportunitati", label: "Oportunitati", icon: Lightbulb, color: "#0891B2", gradient: "linear-gradient(135deg, #0891B2, #0E7490)" },
+  { key: "publicatii", label: "Publicatii", icon: BookMarked, color: "#4338CA", gradient: "linear-gradient(135deg, #4338CA, #3730A3)" },
+  { key: "parteneriate", label: "Parteneriate", icon: Handshake, color: "#0D9488", gradient: "linear-gradient(135deg, #0D9488, #0F766E)" },
+  { key: "acceleratoare", label: "Acceleratoare", icon: Rocket, color: "#E11D48", gradient: "linear-gradient(135deg, #E11D48, #BE123C)" },
+  { key: "retele", label: "Retele Academice", icon: Globe2, color: "#7C3AED", gradient: "linear-gradient(135deg, #7C3AED, #6D28D9)" },
 ];
 
 type TabKey = "all" | CategoryKey;
@@ -130,6 +138,7 @@ const TABS: { key: TabKey; label: string }[] = [
 const APP_STATUS_CONFIG: Record<AppStatus, { bg: string; text: string; label: string; border: string }> = {
   nesetat: { bg: "#F3F4F6", text: "#6B7280", label: "Nesetat", border: "#D1D5DB" },
   aplicat: { bg: "#DCFCE7", text: "#16A34A", label: "Aplicat", border: "#86EFAC" },
+  in_lucru: { bg: "#DBEAFE", text: "#2563EB", label: "In lucru", border: "#93C5FD" },
   nerelevant: { bg: "#F3F4F6", text: "#9CA3AF", label: "Nerelevant", border: "#D1D5DB" },
   dupa_lansare: { bg: "#FEF3C7", text: "#D97706", label: "Dupa lansare", border: "#FCD34D" },
 };
@@ -581,6 +590,276 @@ const SEED_PROGRAMS: Omit<Program, "id" | "created_at" | "appStatus" | "blocks" 
     notes: null,
     lunaAplicare: null,
   },
+  // ── Publicatii Academice (5) ──
+  {
+    title: "Journal of Business & Industrial Marketing (JBIM)",
+    category: "publicatii",
+    description: "Jurnal Emerald de top pentru marketing B2B. Accepta studii de caz si frameworks de diagnostic. RIFC se potriveste perfect ca instrument de evaluare campanii B2B. Impact Factor ~3.6.",
+    deadline: "Continuu (rolling submissions)",
+    location: "UK / International",
+    url: "https://www.emeraldgrouppublishing.com/journal/jbim",
+    budget: "Open Access: ~GBP 2,950 | Subscription: gratuit",
+    organizer: "Emerald Publishing",
+    priority: 8,
+    tags: ["Scopus", "SSCI", "Q1-Q2"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  {
+    title: "European Journal of Marketing (EJM)",
+    category: "publicatii",
+    description: "Jurnal european de top in marketing. Publicatii cu impact ridicat. Special issues frecvente pe teme de marketing measurement si effectiveness.",
+    deadline: "Continuu",
+    location: "UK / International",
+    url: "https://www.emeraldgrouppublishing.com/journal/ejm",
+    budget: "Open Access: ~GBP 3,200 | Subscription: gratuit",
+    organizer: "Emerald Publishing",
+    priority: 7,
+    tags: ["Scopus", "SSCI", "Impact Factor ~4.0"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  {
+    title: "Journal of Marketing Theory and Practice (JMTP)",
+    category: "publicatii",
+    description: "Jurnal asociat SMA (Society for Marketing Advances). Pune accent pe teoria aplicabila in practica — potrivit pentru RIFC ca framework cu aplicabilitate directa in business.",
+    deadline: "Continuu",
+    location: "SUA / International",
+    url: "https://www.tandfonline.com/toc/mmtp20/current",
+    budget: "Open Access: ~USD 3,200",
+    organizer: "Taylor & Francis / SMA",
+    priority: 7,
+    tags: ["Scopus", "Practice-oriented"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  {
+    title: "Emerging Trends in Marketing and Management (ETMM)",
+    category: "publicatii",
+    description: "Jurnal asociat conferintei MBD 2026 (ASE Bucuresti). Indexat DOAJ, RePEC, EBSCO, Google Scholar. Ideal pentru prima publicare RIFC in context regional.",
+    deadline: "Dupa MBD 2026 (Iunie 2026)",
+    location: "Romania",
+    url: "https://www.mk.ase.ro/mbd/",
+    budget: "Gratuit (prin conferinta MBD)",
+    organizer: "Facultatea de Marketing, ASE Bucuresti",
+    priority: 9,
+    tags: ["DOAJ", "RePEC", "EBSCO", "Regional"],
+    notes: "Strategie: prezinta la MBD Iunie 2026, publica in ETMM post-conferinta.",
+    lunaAplicare: "Iunie 2026",
+  },
+  {
+    title: "International Journal of Research in Marketing (IJRM)",
+    category: "publicatii",
+    description: "Jurnalul oficial EMAC. Prestigiu ridicat in cercetarea de marketing europeana. Publicatii pe marketing measurement si metodologie. Impact Factor ~5.0.",
+    deadline: "Continuu",
+    location: "UE / International",
+    url: "https://www.sciencedirect.com/journal/international-journal-of-research-in-marketing",
+    budget: "Open Access: ~EUR 3,600",
+    organizer: "EMAC / Elsevier",
+    priority: 7,
+    tags: ["SSCI", "Q1", "EMAC Journal"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  // ── Parteneriate (5) ──
+  {
+    title: "UTM — Universitatea Tehnica a Moldovei",
+    category: "parteneriate",
+    description: "Universitate gazda primara. Baza institutionala pentru aplicari granturi UE (Horizon, Erasmus+, COST). Acces la laboratoare, studenti, si statut de cercetator afiliat.",
+    deadline: null,
+    location: "Moldova (Chisinau)",
+    url: "https://utm.md/",
+    budget: "Afiliere institutionala",
+    organizer: "UTM",
+    priority: 10,
+    tags: ["BAZA INSTITUTIONALA", "Widening"],
+    notes: "Partener principal pentru toate aplicarile UE. Coordonator institutional.",
+    lunaAplicare: null,
+  },
+  {
+    title: "USM — Universitatea de Stat din Moldova",
+    category: "parteneriate",
+    description: "A doua universitate partenera din Moldova. Facultatea de Stiinte Economice — potential co-aplicant pentru granturi bilaterale si Erasmus+.",
+    deadline: null,
+    location: "Moldova (Chisinau)",
+    url: "https://usm.md/",
+    budget: "Afiliere academica",
+    organizer: "USM",
+    priority: 8,
+    tags: ["Co-aplicant", "Facultatea Economie"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  {
+    title: "ASE Bucuresti — Academia de Studii Economice",
+    category: "parteneriate",
+    description: "Partener cheie din Romania. Facultatea de Marketing organizeaza MBD 2026. Ideal pentru granturi bilaterale ANCD-UEFISCDI, Erasmus+ KA2 si co-autorat.",
+    deadline: null,
+    location: "Romania (Bucuresti)",
+    url: "https://www.ase.ro/",
+    budget: "Parteneriat bilateral Moldova-Romania",
+    organizer: "ASE Bucuresti",
+    priority: 9,
+    tags: ["MBD 2026", "Bilateral", "Co-autorat"],
+    notes: "Contact: Facultatea de Marketing — coordoneaza conferinta MBD 2026.",
+    lunaAplicare: null,
+  },
+  {
+    title: "ASEM — Academia de Studii Economice din Moldova",
+    category: "parteneriate",
+    description: "Gazda simpozionului tinerilor cercetatori. Potential partener pentru proiecte educationale si co-publicatii in marketing.",
+    deadline: null,
+    location: "Moldova (Chisinau)",
+    url: "https://ase.md/",
+    budget: "Parteneriat academic",
+    organizer: "ASEM",
+    priority: 7,
+    tags: ["Simpozion", "Tineri Cercetatori"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  {
+    title: "Partener UE — Universitate Top (de identificat)",
+    category: "parteneriate",
+    description: "Necesar minim 2 institutii UE pentru Horizon WIDERA Twinning si Erasmus+ KA2. Cautare activa: universitati din Germania, Olanda, Belgia cu departament de marketing research.",
+    deadline: "Inainte de 9 Aprilie 2026 (WIDERA deadline)",
+    location: "UE",
+    url: null,
+    budget: "Partener consortium UE",
+    organizer: "De identificat",
+    priority: 10,
+    tags: ["URGENT", "WIDERA", "Erasmus+"],
+    notes: "Criterii cautare: departament Marketing, experienta Widening/Twinning, interes in marketing measurement/diagnostic tools.",
+    lunaAplicare: "Martie 2026",
+  },
+  // ── Acceleratoare (4) ──
+  {
+    title: "Tekwill Startup Academy",
+    category: "acceleratoare",
+    description: "Program de accelerare gratuit pentru startup-uri tech din Moldova. 12 saptamani intensiv. CONTINUUM GRUP SRL cu RIFC ca produs SaaS de diagnostic se califica.",
+    deadline: "Cohorte periodice (monitor site)",
+    location: "Moldova (Campus UTM)",
+    url: "https://tekwill.md/startup-academy/",
+    budget: "GRATUIT — include mentoring, co-working, networking",
+    organizer: "Tekwill",
+    priority: 8,
+    tags: ["GRATUIT", "12 saptamani", "Campus UTM"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  {
+    title: "MITP — Statut Rezident IT Park",
+    category: "acceleratoare",
+    description: "Statut fiscal preferential pentru companii tech din Moldova. 7% impozit flat pe cifra de afaceri acopera TOATE taxele. RIFC ca instrument SaaS face compania eligibila.",
+    deadline: "Oricand (procesare <72 ore, gratuit)",
+    location: "Moldova",
+    url: "https://mitp.md/",
+    budget: "7% flat tax — cea mai avantajoasa fiscalitate din Europa",
+    organizer: "Moldova IT Park",
+    priority: 9,
+    tags: ["ORICAND", "7% flat tax", "72 ore"],
+    notes: "Conditie: 70%+ venituri din activitati R&D/software/IT. RIFC SaaS se califica.",
+    lunaAplicare: null,
+  },
+  {
+    title: "EU4Innovation — Program de Accelerare",
+    category: "acceleratoare",
+    description: "Componenta de accelerare din EU4Innovation East. Finantare + mentoring + acces la piata UE. Moldova eligible prin Parteneriatul Estic.",
+    deadline: "Activ acum",
+    location: "Moldova",
+    url: "https://eu4moldova.eu/en/eu4innovation-east",
+    budget: "Pana la EUR 50,000 per startup (componenta accelerare)",
+    organizer: "Delegatia UE in Moldova",
+    priority: 8,
+    tags: ["ACTIV ACUM", "Parteneriatul Estic"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  {
+    title: "EIT Digital Accelerator",
+    category: "acceleratoare",
+    description: "Program european de accelerare pentru scale-up tech. Acces la 40+ hub-uri in Europa. RIFC ca produs digital de diagnostic marketing se califica. Moldova eligibila ca tara asociata.",
+    deadline: "Cohorte anuale (monitor site)",
+    location: "UE / International",
+    url: "https://www.eitdigital.eu/accelerator/",
+    budget: "Acces piata UE + investitii + mentoring",
+    organizer: "EIT Digital (European Institute of Innovation & Technology)",
+    priority: 7,
+    tags: ["Scale-up", "40+ hub-uri", "UE"],
+    notes: null,
+    lunaAplicare: null,
+  },
+  // ── Retele Academice (5) ──
+  {
+    title: "EMAC — European Marketing Academy",
+    category: "retele",
+    description: "Cea mai importanta retea academica de marketing din Europa. Membership ofera acces la conferinte, jurnale (IJRM), networking cu cercetatori europeni si premii Best Paper.",
+    deadline: "Membership anual",
+    location: "UE / International",
+    url: "https://www.emac-online.org/",
+    budget: "Membership: ~EUR 150-300/an (reduced pentru Eastern Europe)",
+    organizer: "EMAC",
+    priority: 9,
+    tags: ["ESENTIAL", "Conferinte", "IJRM"],
+    notes: "Membership include: acces EMAC Fall Conference, EMAC Annual, IJRM discounts, networking directory.",
+    lunaAplicare: null,
+  },
+  {
+    title: "COST Association — Networking",
+    category: "retele",
+    description: "Reteaua COST conecteaza cercetatori din 40+ tari europene. Moldova ca tara ITC (Inclusiveness Target Country) beneficiaza de finantare preferentiala pentru participare la reuniuni.",
+    deadline: "Continuu — se aplica la COST Actions existente",
+    location: "UE — 40+ tari",
+    url: "https://www.cost.eu/",
+    budget: "Travel grants pentru ITC: pana la EUR 1,500 per reuniune",
+    organizer: "COST Association",
+    priority: 8,
+    tags: ["ITC Moldova", "Travel grants", "40+ tari"],
+    notes: "Pasi: 1) Identifica COST Actions in marketing/social sciences, 2) Aplica ca MC Member sau Substitute, 3) Participa la Working Groups.",
+    lunaAplicare: null,
+  },
+  {
+    title: "MSI — Marketing Science Institute",
+    category: "retele",
+    description: "Reteaua de top globala pentru cercetare in marketing. Defineste prioritatile de cercetare ale industriei. Young Scholars Program ofera acces la conferinta exclusiva.",
+    deadline: "Membership institutional + individual aplicatii",
+    location: "SUA / Global",
+    url: "https://www.msi.org/",
+    budget: "Membership institutional: ~USD 5,000/an",
+    organizer: "Marketing Science Institute",
+    priority: 7,
+    tags: ["Top global", "Research priorities", "Young Scholars"],
+    notes: "Target: Young Scholars Program — invitatie la conferinta Meta NYC. Necesita recomandare.",
+    lunaAplicare: null,
+  },
+  {
+    title: "Academy of Marketing UK",
+    category: "retele",
+    description: "Organizatia profesionala pentru cercetatori si educatori in marketing din UK. Ofera Teaching Excellence Awards si acces la conferinte. RIFC ca instrument didactic este eligibil.",
+    deadline: "Membership anual",
+    location: "UK",
+    url: "https://www.academyofmarketing.org/",
+    budget: "Membership: ~GBP 75-150/an",
+    organizer: "Academy of Marketing",
+    priority: 7,
+    tags: ["Teaching Excellence", "UK", "Conferinte"],
+    notes: "Relevant pentru: Teaching Excellence Awards (RIFC ca instrument didactic inovativ).",
+    lunaAplicare: null,
+  },
+  {
+    title: "AMA — American Marketing Association",
+    category: "retele",
+    description: "Cea mai mare organizatie de marketing din lume. 30,000+ membri. Acces la Journal of Marketing, Journal of Marketing Research, conferinte anuale si retea globala.",
+    deadline: "Membership anual",
+    location: "SUA / Global",
+    url: "https://www.ama.org/",
+    budget: "Membership academic: ~USD 200/an",
+    organizer: "AMA",
+    priority: 7,
+    tags: ["30,000+ membri", "Journal of Marketing", "Global"],
+    notes: "Beneficii: acces jurnale, conferinte, networking, career resources. Doctoral SIG relevant pentru early career.",
+    lunaAplicare: null,
+  },
 ];
 
 // ── Helpers ────────────────────────────────────────────────
@@ -631,17 +910,40 @@ function migrateFromV2(): Program[] | null {
 }
 
 function loadPrograms(): Program[] {
+  let existing: Program[] | null = null;
   try {
     const raw = localStorage.getItem(DATA_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) existing = JSON.parse(raw);
   } catch {}
   // Try migrate from v2
-  const migrated = migrateFromV2();
-  if (migrated) {
-    localStorage.setItem(DATA_KEY, JSON.stringify(migrated));
-    return migrated;
+  if (!existing) {
+    const migrated = migrateFromV2();
+    if (migrated) {
+      existing = migrated;
+    }
   }
-  // Seed
+  if (existing) {
+    // Smart merge: add seed programs for new categories that don't exist yet
+    const existingCategories = new Set(existing.map((p) => p.category));
+    const newCategorySeeds = SEED_PROGRAMS.filter((s) => !existingCategories.has(s.category));
+    if (newCategorySeeds.length > 0) {
+      const maxSeedNum = existing.reduce((max, p) => {
+        const m = p.id.match(/^seed-(\d+)$/);
+        return m ? Math.max(max, parseInt(m[1])) : max;
+      }, 0);
+      const newPrograms: Program[] = newCategorySeeds.map((s, i) => ({
+        ...s,
+        id: "seed-" + (maxSeedNum + i + 1).toString().padStart(2, "0"),
+        created_at: new Date(2026, 1, 21, 10, i).toISOString(),
+        appStatus: "nesetat" as AppStatus,
+        blocks: [],
+      }));
+      existing = [...existing, ...newPrograms];
+    }
+    localStorage.setItem(DATA_KEY, JSON.stringify(existing));
+    return existing;
+  }
+  // First time seed
   const seeded: Program[] = SEED_PROGRAMS.map((s, i) => ({
     ...s,
     id: "seed-" + (i + 1).toString().padStart(2, "0"),
@@ -691,6 +993,7 @@ export default function AplicareProgramePage() {
   const [search, setSearch] = useState("");
   const [programs, setPrograms] = useState<Program[]>([]);
   const [filterAplicate, setFilterAplicate] = useState(false);
+  const [filterInLucru, setFilterInLucru] = useState(false);
   const [filterCountry, setFilterCountry] = useState("toate");
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -762,6 +1065,7 @@ export default function AplicareProgramePage() {
   // Filter programs
   const filtered = programs.filter((p) => {
     if (filterAplicate && p.appStatus !== "aplicat") return false;
+    if (filterInLucru && p.appStatus !== "in_lucru") return false;
     if (activeTab !== "all" && p.category !== activeTab) return false;
     if (filterCountry !== "toate" && extractCountry(p.location) !== filterCountry) return false;
     if (search) {
@@ -779,6 +1083,7 @@ export default function AplicareProgramePage() {
   // Stats
   const totalPrograms = programs.length;
   const aplicateCount = programs.filter((p) => p.appStatus === "aplicat").length;
+  const inLucruCount = programs.filter((p) => p.appStatus === "in_lucru").length;
   const categoryCounts: Record<string, number> = {};
   CATEGORIES.forEach((c) => {
     categoryCounts[c.key] = programs.filter((p) => p.category === c.key).length;
@@ -890,6 +1195,7 @@ export default function AplicareProgramePage() {
   // ── Main UI ──────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100vh", background: "#FAFAFA", fontFamily: "'Inter', sans-serif" }}>
+      <style dangerouslySetInnerHTML={{ __html: `@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }` }} />
       {/* Header */}
       <div style={{
         padding: "20px 28px 0", borderBottom: "1px solid #E5E7EB",
@@ -902,7 +1208,7 @@ export default function AplicareProgramePage() {
               <a href="https://www.rifcmarketing.com/articolstiintific" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "#DC2626", letterSpacing: 4, fontWeight: 700, textDecoration: "none", cursor: "pointer" }}>R IF C</a>
               <h1 style={{ fontSize: 20, fontWeight: 800, color: "#111827", margin: 0 }}>Aplicare Programe</h1>
               <p style={{ fontSize: 12, color: "#4B5563", marginTop: 2, fontWeight: 500 }}>
-                {totalPrograms} programe &middot; {aplicateCount} aplicate &middot; Strategie: Prezinta &rarr; Publica &rarr; Premiaza
+                {totalPrograms} programe &middot; {aplicateCount} aplicate &middot; {inLucruCount} in lucru &middot; Prezinta &rarr; Publica &rarr; Premiaza
               </p>
             </div>
           </div>
@@ -944,7 +1250,7 @@ export default function AplicareProgramePage() {
               <ChevronDown size={12} style={{ position: "absolute", right: 8, color: "#6B7280", pointerEvents: "none" }} />
             </div>
             <button
-              onClick={() => setFilterAplicate(!filterAplicate)}
+              onClick={() => { setFilterAplicate(!filterAplicate); if (!filterAplicate) setFilterInLucru(false); }}
               style={{
                 display: "flex", alignItems: "center", gap: 5,
                 padding: "8px 14px", fontSize: 11, fontWeight: 700,
@@ -957,6 +1263,21 @@ export default function AplicareProgramePage() {
             >
               <CheckCircle size={13} />
               APLICATE ({aplicateCount})
+            </button>
+            <button
+              onClick={() => { setFilterInLucru(!filterInLucru); if (!filterInLucru) setFilterAplicate(false); }}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "8px 14px", fontSize: 11, fontWeight: 700,
+                color: filterInLucru ? "#fff" : "#2563EB",
+                background: filterInLucru ? "linear-gradient(135deg, #2563EB, #1D4ED8)" : "#DBEAFE",
+                border: filterInLucru ? "none" : "1px solid #93C5FD",
+                borderRadius: 8, cursor: "pointer", letterSpacing: 0.5,
+                transition: "all 0.2s",
+              }}
+            >
+              <Clock size={13} />
+              IN LUCRU ({inLucruCount})
             </button>
             <button
               style={{
@@ -1032,7 +1353,7 @@ export default function AplicareProgramePage() {
           <div style={{ textAlign: "center", padding: "60px 20px", color: "#6B7280" }}>
             <Briefcase size={40} style={{ opacity: 0.3, marginBottom: 10 }} />
             <p style={{ fontSize: 14, color: "#4B5563", marginBottom: 8 }}>
-              {search ? "Niciun program gasit." : filterAplicate ? "Niciun program marcat ca aplicat." : "Niciun program in aceasta categorie."}
+              {search ? "Niciun program gasit." : filterAplicate ? "Niciun program marcat ca aplicat." : filterInLucru ? "Niciun program marcat ca in lucru." : "Niciun program in aceasta categorie."}
             </p>
           </div>
         ) : (
@@ -1073,8 +1394,11 @@ export default function AplicareProgramePage() {
                       {program.appStatus !== "nesetat" && (
                         <span style={{
                           width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                          background: program.appStatus === "aplicat" ? "#16A34A" : program.appStatus === "nerelevant" ? "#9CA3AF" : "#D97706",
+                          background: program.appStatus === "aplicat" ? "#16A34A" : program.appStatus === "in_lucru" ? "#2563EB" : program.appStatus === "nerelevant" ? "#9CA3AF" : "#D97706",
                         }} />
+                      )}
+                      {(program.blocks || []).some((b) => b.type === "reminder") && (
+                        <Bell size={10} style={{ color: isActive ? "#FCA5A5" : "#DC2626", flexShrink: 0 }} />
                       )}
                     </button>
                   );
@@ -1136,6 +1460,7 @@ export default function AplicareProgramePage() {
                           >
                             <option value="nesetat">Nesetat</option>
                             <option value="aplicat">Aplicat</option>
+                            <option value="in_lucru">In lucru</option>
                             <option value="nerelevant">Nerelevant</option>
                             <option value="dupa_lansare">Dupa lansare</option>
                           </select>
@@ -1308,19 +1633,43 @@ export default function AplicareProgramePage() {
                                 <X size={14} />
                               </button>
                             </div>
-                            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                            <div style={{ display: "flex", gap: 8, marginBottom: 8, alignItems: "center" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <Calendar size={12} style={{ color: "#6B7280" }} />
-                                <input
-                                  type="text"
-                                  value={newBlockDate}
-                                  onChange={(e) => setNewBlockDate(e.target.value)}
-                                  style={{
-                                    padding: "6px 10px", fontSize: 12, border: `1px solid ${bt.border}`,
-                                    borderRadius: 6, outline: "none", width: 130, background: "#fff", color: "#111827", fontWeight: 600,
-                                  }}
-                                />
+                                <Calendar size={12} style={{ color: newBlockType === "reminder" ? "#DC2626" : "#6B7280" }} />
+                                {newBlockType === "reminder" ? (
+                                  <input
+                                    type="date"
+                                    value={(() => { try { const p = newBlockDate.split(" "); const m: Record<string,string> = {Ian:"01",Feb:"02",Mar:"03",Apr:"04",Mai:"05",Iun:"06",Iul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"}; if (p.length === 3 && m[p[1]]) return `${p[2]}-${m[p[1]]}-${p[0].padStart(2,"0")}`; return newBlockDate; } catch { return newBlockDate; } })()}
+                                    onChange={(e) => {
+                                      const d = new Date(e.target.value + "T12:00:00");
+                                      if (!isNaN(d.getTime())) {
+                                        const mo = ["Ian","Feb","Mar","Apr","Mai","Iun","Iul","Aug","Sep","Oct","Nov","Dec"];
+                                        setNewBlockDate(`${d.getDate()} ${mo[d.getMonth()]} ${d.getFullYear()}`);
+                                      }
+                                    }}
+                                    style={{
+                                      padding: "6px 10px", fontSize: 12, border: "2px solid #FECACA",
+                                      borderRadius: 6, outline: "none", width: 170, background: "#FEF2F2", color: "#DC2626", fontWeight: 700,
+                                      cursor: "pointer",
+                                    }}
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={newBlockDate}
+                                    onChange={(e) => setNewBlockDate(e.target.value)}
+                                    style={{
+                                      padding: "6px 10px", fontSize: 12, border: `1px solid ${bt.border}`,
+                                      borderRadius: 6, outline: "none", width: 130, background: "#fff", color: "#111827", fontWeight: 600,
+                                    }}
+                                  />
+                                )}
                               </div>
+                              {newBlockType === "reminder" && (
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#DC2626", display: "flex", alignItems: "center", gap: 3 }}>
+                                  <Bell size={10} /> Data notificare
+                                </span>
+                              )}
                             </div>
                             <textarea
                               value={newBlockContent}
@@ -1417,7 +1766,7 @@ export default function AplicareProgramePage() {
                         key={program.id}
                         onClick={() => { setExpandedCard(program.id); setShowBlockPicker(false); setNewBlockType(null); }}
                         style={{
-                          background: "#fff", border: `1px solid ${program.appStatus === "aplicat" ? "#86EFAC" : program.appStatus === "nerelevant" ? "#D1D5DB" : "#E5E7EB"}`,
+                          background: "#fff", border: `1px solid ${program.appStatus === "aplicat" ? "#86EFAC" : program.appStatus === "in_lucru" ? "#93C5FD" : program.appStatus === "nerelevant" ? "#D1D5DB" : "#E5E7EB"}`,
                           borderRadius: 12, overflow: "hidden",
                           opacity: program.appStatus === "nerelevant" ? 0.6 : 1,
                           transition: "all 0.2s", cursor: "pointer",
@@ -1495,12 +1844,24 @@ export default function AplicareProgramePage() {
                             </div>
                           )}
 
-                          {/* Block count indicator */}
-                          {blockCount > 0 && (
-                            <div style={{ display: "flex", gap: 4, paddingTop: 8, borderTop: "1px solid #F3F4F6" }}>
-                              <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", gap: 3 }}>
-                                <BarChart3 size={10} /> {blockCount} {blockCount === 1 ? "bloc" : "blocuri"}
-                              </span>
+                          {/* Block count + Reminder indicator */}
+                          {(blockCount > 0 || (program.blocks || []).some((b) => b.type === "reminder")) && (
+                            <div style={{ display: "flex", gap: 4, paddingTop: 8, borderTop: "1px solid #F3F4F6", flexWrap: "wrap" }}>
+                              {blockCount > 0 && (
+                                <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: "#EFF6FF", color: "#2563EB", display: "flex", alignItems: "center", gap: 3 }}>
+                                  <BarChart3 size={10} /> {blockCount} {blockCount === 1 ? "bloc" : "blocuri"}
+                                </span>
+                              )}
+                              {(program.blocks || []).some((b) => b.type === "reminder") && (
+                                <span style={{
+                                  fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                                  background: "#FEF2F2", color: "#DC2626", border: "1px solid #FECACA",
+                                  display: "flex", alignItems: "center", gap: 3,
+                                  animation: "pulse 2s infinite",
+                                }}>
+                                  <Bell size={10} style={{ color: "#DC2626" }} /> Reminder
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1567,6 +1928,7 @@ export default function AplicareProgramePage() {
                   >
                     <option value="nesetat">Nesetat</option>
                     <option value="aplicat">Aplicat</option>
+                    <option value="in_lucru">In lucru</option>
                     <option value="nerelevant">Nerelevant</option>
                     <option value="dupa_lansare">Dupa lansare</option>
                   </select>
