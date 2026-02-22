@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, X, Globe, Sparkles, ChevronDown, FileText, LayoutGrid } from "lucide-react";
+import { Menu, X, Globe, Sparkles, ChevronDown, FileText, LayoutGrid, PenTool } from "lucide-react";
 
 export default function Navbar() {
   const { locale, t, setLocale } = useTranslation();
@@ -20,6 +20,7 @@ export default function Navbar() {
   const isAuditPage = pathname === "/audit";
   const isWhitepaperPage = pathname === "/whitepaper" || pathname === "/resources";
   const isCalculatorPage = pathname === "/calculator";
+  const isCopywritePage = pathname === "/copywrite";
 
   /* ─── 3-way language toggle: RO → EN → RU → RO ─── */
   const toggleLocale = () => {
@@ -120,6 +121,16 @@ export default function Navbar() {
           }`}
         >
           <LayoutGrid size={12} /> Calculator
+        </Link>
+        <Link
+          href="/copywrite"
+          className={`flex items-center gap-1.5 font-mono text-[11px] tracking-[2px] uppercase px-3 py-1.5 rounded-sm transition-all duration-200 no-underline ${
+            isCopywritePage
+              ? "text-text-primary"
+              : "text-text-faint hover:text-text-secondary"
+          }`}
+        >
+          <PenTool size={12} /> Copywrite
         </Link>
       </div>
 
@@ -249,6 +260,15 @@ export default function Navbar() {
           onClick={() => setMenuOpen(false)}
         >
           <LayoutGrid size={12} /> Calculator
+        </Link>
+        <Link
+          href="/copywrite"
+          className={`font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm whitespace-nowrap no-underline flex items-center gap-2 ${
+            isCopywritePage ? "text-text-primary" : "text-text-faint"
+          }`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <PenTool size={12} /> Copywrite
         </Link>
         <Link
           href="/audit"
