@@ -17,13 +17,6 @@ const config: Config = {
           pink: "#EC4899",
           violet: "#6C3FA0",
         },
-        cwAgent: {
-          R: "#ef4444",
-          I: "#f97316",
-          F: "#a855f7",
-          C: "#22c55e",
-          CTA: "#3d6bff",
-        },
         surface: {
           bg: "#0a0a0f",
           card: "rgba(255,255,255,0.02)",
@@ -49,9 +42,6 @@ const config: Config = {
         heading: ["'Cormorant Garamond'", "Georgia", "serif"],
         body: ["'DM Sans'", "sans-serif"],
         mono: ["'JetBrains Mono'", "monospace"],
-        "cw-heading": ["'Syne'", "sans-serif"],
-        "cw-mono": ["'DM Mono'", "monospace"],
-        "cw-serif": ["'Instrument Serif'", "Georgia", "serif"],
       },
       keyframes: {
         fadeUp: {

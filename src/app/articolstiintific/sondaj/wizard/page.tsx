@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
+import { fbTrack, fbTrackCustom } from "@/components/FacebookPixel";
 
 /* ═══════════════════════════════════════════════════════════
    R IF C — Studiu de Perceptie Consumator
@@ -11,7 +12,8 @@ import type { Locale } from "@/lib/i18n";
    Mobile-first design (99% users on phone)
    ═══════════════════════════════════════════════════════════ */
 
-const LS_KEY = "rifc-survey-session";
+const LS_KEY_REAL = "rifc-survey-session";
+const LS_KEY_PREVIEW = "rifc-survey-preview";
 
 // ── Types ──────────────────────────────────────────────────
 interface Stimulus {
@@ -42,6 +44,66 @@ function trackEvent(eventName: string, params?: Record<string, string | number>)
   }
 }
 
+// ── Browser fingerprint for duplicate detection ────────────
+async function generateFingerprint(): Promise<string> {
+  try {
+    const components: string[] = [];
+    // Screen
+    components.push(`${screen.width}x${screen.height}x${screen.colorDepth}`);
+    // Timezone
+    components.push(Intl.DateTimeFormat().resolvedOptions().timeZone || "");
+    // Language
+    components.push(navigator.language || "");
+    components.push((navigator.languages || []).join(","));
+    // Platform
+    components.push(navigator.platform || "");
+    // Hardware concurrency
+    components.push(String(navigator.hardwareConcurrency || 0));
+    // Device memory (if available)
+    components.push(String((navigator as unknown as { deviceMemory?: number }).deviceMemory || 0));
+    // Touch support
+    components.push(String(navigator.maxTouchPoints || 0));
+    // Canvas fingerprint
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 200;
+      canvas.height = 50;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.textBaseline = "top";
+        ctx.font = "14px Arial";
+        ctx.fillStyle = "#f60";
+        ctx.fillRect(125, 1, 62, 20);
+        ctx.fillStyle = "#069";
+        ctx.fillText("RIFC fp", 2, 15);
+        ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+        ctx.fillText("RIFC fp", 4, 17);
+        components.push(canvas.toDataURL().slice(-50));
+      }
+    } catch { /* canvas blocked */ }
+    // WebGL renderer
+    try {
+      const gl = document.createElement("canvas").getContext("webgl");
+      if (gl) {
+        const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+        if (dbg) {
+          components.push(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "");
+        }
+      }
+    } catch { /* webgl blocked */ }
+
+    // Hash all components
+    const raw = components.join("|");
+    const encoder = new TextEncoder();
+    const data = encoder.encode(raw);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  } catch {
+    return "unknown";
+  }
+}
+
 const STEP_LABELS: Record<number, string> = {
   0: "welcome",
   1: "demographics_gender",
@@ -56,9 +118,10 @@ const STEP_LABELS: Record<number, string> = {
   10: "behavioral_device",
   11: "psychographic_ad_receptivity",
   12: "psychographic_visual_pref",
-  13: "psychographic_impulse",
+  13: "psychographic_marketing_expertise",
   14: "psychographic_irrelevance",
   15: "psychographic_attention",
+  16: "psychographic_irrelevance_tolerance",
 };
 
 function getStepLabel(stepNum: number, profileSteps: number, stepsPerStim: number, thankYou: number): string {
@@ -69,7 +132,7 @@ function getStepLabel(stepNum: number, profileSteps: number, stepsPerStim: numbe
     const stimOffset = stepNum - profileSteps;
     const stimIdx = Math.floor(stimOffset / stepsPerStim);
     const subStep = stimOffset % stepsPerStim;
-    const dims = ["r", "i", "f", "c", "cta"];
+    const dims = ["r", "i", "f", "c", "cta", "brand"];
     return `stimulus_${stimIdx + 1}_${dims[subStep] || "unknown"}`;
   }
   return `step_${stepNum}`;
@@ -133,6 +196,7 @@ const PROFILE_STEPS = [
   { id: "psych3", title: "Cat de mult esti de acord?" },
   { id: "psych4", title: "Cat de mult esti de acord?" },
   { id: "psych5", title: "Cat de mult esti de acord?" },
+  { id: "psych6", title: "Cat de mult esti de acord?" },
 ];
 
 // ── Countries list for autocomplete ──────────────────────
@@ -184,6 +248,8 @@ function StudiuWizardInner() {
   const searchParams = useSearchParams();
   const tag = searchParams.get("tag") || "";
   const forceReset = searchParams.get("reset") === "1";
+  const isPreview = searchParams.get("preview") === "1";
+  const LS_KEY = isPreview ? LS_KEY_PREVIEW : LS_KEY_REAL;
 
   const [session, setSession] = useState<SessionData | null>(null);
   const [step, setStep] = useState(-1); // -1=loading, 0=welcome, 1+=active steps
@@ -191,6 +257,9 @@ function StudiuWizardInner() {
   const [error, setError] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  // Pre-loaded stimuli (fetched on page load, before session creation)
+  const [preloadedStimuli, setPreloadedStimuli] = useState<Stimulus[] | null>(null);
+  const [startingSession, setStartingSession] = useState(false);
 
   // Profile data
   const [demographics, setDemographics] = useState({
@@ -213,14 +282,15 @@ function StudiuWizardInner() {
   const [psychographic, setPsychographic] = useState({
     adReceptivity: 0,
     visualPreference: 0,
-    impulseBuying: 0,
+    marketingExpertise: 0,
     irrelevanceAnnoyance: 0,
     attentionCapture: 0,
+    irrelevanceTolerance: 0,
   });
 
   // Stimulus evaluation
   const [stimulusScores, setStimulusScores] = useState<
-    Record<string, { r: number; i: number; f: number; c: number; cta: number }>
+    Record<string, { r: number; i: number; f: number; c: number; cta: number; brand: boolean | null }>
   >({});
   const [attentionAnswer, setAttentionAnswer] = useState<number | null>(null);
   const attentionTarget = useRef<number>(Math.floor(Math.random() * 10) + 1); // random 1-10, stable per session
@@ -232,9 +302,9 @@ function StudiuWizardInner() {
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
   // ── Computed step boundaries ────────────────────────────
-  const profileStepCount = PROFILE_STEPS.length; // 16 (0=welcome, 1-15=profile)
-  const numStimuli = session?.stimuli?.length || 8;
-  const stepsPerStimulus = 5; // R, I, F, C, CTA — each on its own page
+  const profileStepCount = PROFILE_STEPS.length; // 17 (0=welcome, 1-16=profile)
+  const numStimuli = session?.stimuli?.length || preloadedStimuli?.length || 8;
+  const stepsPerStimulus = 6; // R, I, F, C, CTA, BRAND — each on its own page
   const firstStimulusStep = profileStepCount; // 16
   const lastStimulusStep = firstStimulusStep + (numStimuli * stepsPerStimulus) - 1;
   const thankYouStep = lastStimulusStep + 1;
@@ -250,14 +320,16 @@ function StudiuWizardInner() {
   const stimDashIdx = step >= firstStimulusStep ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
   const currentDash = step <= 0 ? -1 : step >= thankYouStep ? totalDashes : step < firstStimulusStep ? step - 1 : profileDashCount + stimDashIdx;
 
-  // ── Init: load session or create new ────────────────────
+  // ── Init: load existing session OR just fetch stimuli (NO respondent creation) ──
   useEffect(() => {
     const init = async () => {
       // ?reset=1 forces a fresh session (useful after changing stimuli in DB)
-      if (forceReset) {
+      // Preview mode always starts fresh (no localStorage resume)
+      if (forceReset || isPreview) {
         localStorage.removeItem(LS_KEY);
       }
 
+      // Try to resume existing session from localStorage
       try {
         const saved = localStorage.getItem(LS_KEY);
         if (saved && !forceReset) {
@@ -271,23 +343,14 @@ function StudiuWizardInner() {
         }
       } catch { /* ignore */ }
 
+      // No existing session — just pre-load stimuli for the welcome screen
+      // Respondent entry will be created only when user clicks "Începe sondajul"
       try {
-        const res = await fetch("/api/survey/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...(tag ? { tag } : {}), locale }),
-        });
+        const res = await fetch("/api/survey/stimuli?shuffle=1");
         const data = await res.json();
-        if (data.success) {
-          const s: SessionData = {
-            sessionId: data.sessionId,
-            currentStep: 0,
-            stimuliOrder: data.stimuli.map((st: Stimulus) => st.id),
-            stimuli: data.stimuli,
-          };
-          localStorage.setItem(LS_KEY, JSON.stringify(s));
-          setSession(s);
-          setStep(0);
+        if (data.stimuli?.length > 0) {
+          setPreloadedStimuli(data.stimuli);
+          setStep(0); // Show welcome screen
         } else {
           setError(w.errorStart);
         }
@@ -296,7 +359,7 @@ function StudiuWizardInner() {
       }
     };
     init();
-  }, [tag, forceReset]);
+  }, [tag, forceReset, isPreview]);
 
   // ── Listen for postMessage from parent (admin preview) to jump to step ──
   useEffect(() => {
@@ -336,13 +399,37 @@ function StudiuWizardInner() {
 
   // ── Advance with transition ────────────────────────────
   const advanceTo = useCallback((nextStep: number) => {
-    // ── GA4 tracking ──
+    // ── Unified tracking: GA4 + Facebook Pixel + CAPI ──
     const label = getStepLabel(nextStep, profileStepCount, stepsPerStimulus, thankYouStep);
+
+    // Every step (GA4 + FB)
     trackEvent("wizard_step", { step_number: nextStep, step_label: label });
-    // Special milestone events
-    if (nextStep === 1) trackEvent("wizard_start");
-    if (nextStep === firstStimulusStep) trackEvent("profile_complete");
-    if (nextStep >= thankYouStep) trackEvent("survey_complete");
+    fbTrackCustom("WizardStep", { step_number: nextStep, step_label: label });
+
+    // Survey started tracking now happens in startSession() callback
+    // (no longer needed here since advanceTo(1) is called after session creation)
+
+    // Profile section completed — all demographic/behavioral/psychographic done
+    if (nextStep === firstStimulusStep) {
+      trackEvent("profile_complete");
+      fbTrackCustom("ProfileComplete", { content_name: "RIFC Profile", step: nextStep });
+    }
+
+    // Stimulus tracking — each new cartonas (first sub-step)
+    if (nextStep >= firstStimulusStep && nextStep <= lastStimulusStep) {
+      const stimIdx = Math.floor((nextStep - firstStimulusStep) / stepsPerStimulus);
+      const subStep = (nextStep - firstStimulusStep) % stepsPerStimulus;
+      if (subStep === 0) {
+        trackEvent("stimulus_view", { stimulus_index: stimIdx + 1, step: nextStep });
+        fbTrackCustom("StimulusView", { content_name: `Stimulus ${stimIdx + 1}`, step: nextStep, stimulus_index: stimIdx });
+      }
+    }
+
+    // Survey completed — main conversion event
+    if (nextStep >= thankYouStep) {
+      trackEvent("survey_complete");
+      fbTrack("CompleteRegistration", { content_name: "RIFC Survey Complete", status: "completed", value: 1, currency: "EUR" });
+    }
 
     setTransitioning(true);
     // Persist step to localStorage for resume
@@ -361,9 +448,53 @@ function StudiuWizardInner() {
     }, 200);
   }, [profileStepCount, stepsPerStimulus, thankYouStep, firstStimulusStep]);
 
+  // ── Create session (called only when user clicks "Începe sondajul") ──
+  const startSession = useCallback(async () => {
+    if (startingSession) return;
+    setStartingSession(true);
+    setError(null);
+
+    try {
+      const fingerprint = await generateFingerprint();
+      const stimuli = preloadedStimuli;
+
+      const res = await fetch("/api/survey/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...(tag ? { tag } : {}), locale, ...(isPreview ? { preview: true } : {}), fingerprint }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Use server-shuffled stimuli from start response (they may differ from preloaded)
+        const finalStimuli = data.stimuli?.length > 0 ? data.stimuli : stimuli;
+        const s: SessionData = {
+          sessionId: data.sessionId,
+          currentStep: 1, // Jump straight to step 1 (first question)
+          stimuliOrder: finalStimuli.map((st: Stimulus) => st.id),
+          stimuli: finalStimuli,
+        };
+        localStorage.setItem(LS_KEY, JSON.stringify(s));
+        setSession(s);
+        setPreloadedStimuli(null); // Clear preloaded, no longer needed
+
+        // Track survey start
+        trackEvent("wizard_start");
+        fbTrackCustom("SurveyStart", { content_name: "RIFC Survey", content_category: "survey" });
+
+        advanceTo(1);
+      } else {
+        setError(w.errorStart);
+      }
+    } catch {
+      setError(w.errorConnection);
+    } finally {
+      setStartingSession(false);
+    }
+  }, [startingSession, preloadedStimuli, tag, locale, isPreview, advanceTo, w]);
+
   // ── Save profile data to API (fire-and-forget for UX speed) ──
   const saveProfileToApi = useCallback(async (type: string, payload: Record<string, unknown>) => {
-    if (!session) return;
+    if (!session || isPreview) return;
     try {
       await fetch("/api/survey/step", {
         method: "PUT",
@@ -376,7 +507,7 @@ function StudiuWizardInner() {
         }),
       });
     } catch { /* silent — will re-save on next opportunity */ }
-  }, [session]);
+  }, [session, isPreview]);
 
   // ── Auto-advance for single-select profile steps ───────
   // Steps: 1=gender, 2=age, 3=country, 4=urbanRural, 5=income, 6=education,
@@ -407,15 +538,15 @@ function StudiuWizardInner() {
       }
     }
 
-    // Psychographic auto-advance steps: 11=adReceptivity, 12=visualPreference, 13=impulseBuying, 14=irrelevanceAnnoyance, 15=attentionCapture
-    const psychFieldMap: Record<number, string> = { 11: "adReceptivity", 12: "visualPreference", 13: "impulseBuying", 14: "irrelevanceAnnoyance", 15: "attentionCapture" };
+    // Psychographic auto-advance steps: 11=adReceptivity, 12=visualPreference, 13=marketingExpertise, 14=irrelevanceAnnoyance, 15=attentionCapture, 16=irrelevanceTolerance
+    const psychFieldMap: Record<number, string> = { 11: "adReceptivity", 12: "visualPreference", 13: "marketingExpertise", 14: "irrelevanceAnnoyance", 15: "attentionCapture", 16: "irrelevanceTolerance" };
     const psychKey = psychFieldMap[stepOffset];
     if (psychKey) {
       const numVal = parseInt(value, 10);
       const updatedPsychographic = { ...psychographic, [psychKey]: numVal };
       setPsychographic(updatedPsychographic);
-      // At step 15 (attentionCapture = last psychographic), save to API
-      if (stepOffset === 15) {
+      // At step 16 (irrelevanceTolerance = last psychographic), save to API
+      if (stepOffset === 16) {
         saveProfileToApi("psychographic", updatedPsychographic);
       }
     }
@@ -429,13 +560,14 @@ function StudiuWizardInner() {
     if (!session) return;
     const groupIdx = Math.floor((step - firstStimulusStep) / stepsPerStimulus);
     const stimId = session.stimuliOrder[groupIdx];
-    const prev = stimulusScores[stimId] || { r: 0, i: 0, f: 0, c: 0, cta: 0 };
+    const prev = stimulusScores[stimId] || { r: 0, i: 0, f: 0, c: 0, cta: 0, brand: null };
     const updated = { ...prev, [dimension]: value };
     setStimulusScores(s => ({ ...s, [stimId]: updated }));
 
-    // On last sub-step (CTA, dimension === "cta"), fire-and-forget save to API
+    // CTA is no longer the last sub-step — brand familiarity comes after
+    // API save moved to autoAdvanceBrand below
     if (dimension === "cta") {
-      // GA4: stimulus fully rated
+      // GA4: stimulus fully rated (scores done, brand question next)
       const stimName = session.stimuli[groupIdx]?.name || stimId;
       const stimType = session.stimuli[groupIdx]?.type || "unknown";
       trackEvent("stimulus_rated", {
@@ -448,15 +580,30 @@ function StudiuWizardInner() {
         c_score: updated.c,
         cta_score: updated.cta,
       });
+    }
 
-      const isAttentionGroup = groupIdx === Math.floor(numStimuli / 2);
-      const isLastStimulus = step === lastStimulusStep;
+    setTimeout(() => advanceTo(step + 1), 350);
+  }, [step, session, firstStimulusStep, stepsPerStimulus, stimulusScores, advanceTo]);
+
+  // ── Auto-advance for brand familiarity (last sub-step, Da/Nu) ──────
+  const autoAdvanceBrand = useCallback((familiar: boolean) => {
+    if (!session) return;
+    const groupIdx = Math.floor((step - firstStimulusStep) / stepsPerStimulus);
+    const stimId = session.stimuliOrder[groupIdx];
+    const prev = stimulusScores[stimId] || { r: 0, i: 0, f: 0, c: 0, cta: 0, brand: null };
+    const updated = { ...prev, brand: familiar };
+    setStimulusScores(s => ({ ...s, [stimId]: updated }));
+
+    // Brand is the last sub-step — fire API save
+    const isAttentionGroup = groupIdx === Math.floor(numStimuli / 2);
+    const isLastStimulus = step === lastStimulusStep;
+    if (!isPreview) {
       fetch("/api/survey/step", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: session.sessionId,
-          step: groupIdx + 4, // offset for API step tracking
+          step: groupIdx + 4,
           type: "stimulus",
           data: {
             stimulusId: stimId,
@@ -465,6 +612,7 @@ function StudiuWizardInner() {
             fScore: updated.f,
             cScore: updated.c,
             ctaScore: updated.cta,
+            brandFamiliar: familiar,
             timeSpentSeconds: timerRef.current,
             isLast: isLastStimulus,
             ...(isAttentionGroup ? { attentionCheckAnswer: attentionAnswer, attentionCheckPassed: attentionAnswer === attentionTarget.current } : {}),
@@ -511,8 +659,8 @@ function StudiuWizardInner() {
       };
     }
 
-    // Only call API if we have data to save
-    if (type) {
+    // Only call API if we have data to save (skip in preview mode)
+    if (type && !isPreview) {
       try {
         const res = await fetch("/api/survey/step", {
           method: "PUT",
@@ -554,7 +702,7 @@ function StudiuWizardInner() {
   // ── Styles ────────────────────────────────────────────────
   const bgColor = "#f5f0e8";
   const cardBg = "#ffffff";
-  const accentGreen = "#c8e64e";
+  const accentGreen = "#8B9A6B";
   const accentRed = "#DC2626";
   const textDark = "#1a1a1a";
   const textMuted = "#8a8a7a";
@@ -909,7 +1057,9 @@ function StudiuWizardInner() {
   };
 
   // ── Loading state ───────────────────────────────────────
-  if (step === -1 || !session) {
+  // Show loading only when still initializing (step=-1) or when past welcome but no session yet
+  // Welcome screen (step=0) can render with just preloadedStimuli, before session is created
+  if (step === -1 || (!session && step > 0) || (!session && !preloadedStimuli)) {
     return (
       <div style={S.page}>
         <div style={S.cardOuter}>
@@ -937,7 +1087,7 @@ function StudiuWizardInner() {
   }
 
   // ── Complete / Thank you state ──────────────────────────
-  if (step >= thankYouStep) {
+  if (step >= thankYouStep && session) {
     return (
       <div style={S.page}>
         <div style={S.cardOuter}>
@@ -956,7 +1106,7 @@ function StudiuWizardInner() {
               {w.thankYouTitle}
             </h2>
             <p style={{ color: textMuted, marginBottom: 24, fontSize: m ? 14 : 15, lineHeight: 1.6 }}>
-              {locale === "ro" ? `Ai evaluat ${session.stimuli.length} ` : locale === "ru" ? `Вы оценили ${session.stimuli.length} ` : `You evaluated ${session.stimuli.length} `}{w.thankYouEvaluated}
+              {locale === "ro" ? `Ai evaluat ${session!.stimuli.length} ` : locale === "ru" ? `Вы оценили ${session!.stimuli.length} ` : `You evaluated ${session!.stimuli.length} `}{w.thankYouEvaluated}
               {" "}{w.thankYouSuccess}
             </p>
             <div style={{
@@ -977,10 +1127,10 @@ function StudiuWizardInner() {
               <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1.5, color: textMuted, marginBottom: 10, textTransform: "uppercase" as const }}>
                 {w.thankYouProtocol}
               </p>
-              <h3 style={{ fontSize: m ? 16 : 18, fontWeight: 700, color: textDark, marginBottom: 4, lineHeight: 1.3 }}>
+              <h3 style={{ fontSize: m ? 16 : 18, fontWeight: 700, color: textDark, marginBottom: 8, lineHeight: 1.3, whiteSpace: "pre-line" as const }}>
                 {w.thankYouBookTitle}
               </h3>
-              <p style={{ fontSize: m ? 14 : 15, fontWeight: 600, color: accentRed, marginBottom: 16 }}>
+              <p style={{ fontSize: m ? 13 : 14, fontWeight: 500, color: textMuted, marginBottom: 16 }}>
                 {w.thankYouAuthor}
               </p>
               <a
@@ -1057,17 +1207,22 @@ function StudiuWizardInner() {
     );
   }
 
+  // ── Session type narrowing: at step 0 (welcome) session may be null,
+  //    but welcome is rendered below and doesn't use session.
+  //    For all code below that accesses session.stimuli, we need the non-null type. ──
+  const sessionSafe = session || { sessionId: "", currentStep: 0, stimuliOrder: [] as string[], stimuli: [] as Stimulus[] };
+
   // ── Get current stimulus ────────────────────────────────
   const currentStimGroupIdx = step >= firstStimulusStep && step <= lastStimulusStep
     ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
   const currentStimSubStep = step >= firstStimulusStep && step <= lastStimulusStep
-    ? (step - firstStimulusStep) % stepsPerStimulus : -1; // 0=R, 1=I, 2=F
-  const currentStim = currentStimGroupIdx >= 0 && currentStimGroupIdx < session.stimuli.length
-    ? session.stimuli[currentStimGroupIdx]
+    ? (step - firstStimulusStep) % stepsPerStimulus : -1; // 0=R, 1=I, 2=F, 3=C, 4=CTA, 5=BRAND
+  const currentStim = currentStimGroupIdx >= 0 && currentStimGroupIdx < sessionSafe.stimuli.length
+    ? sessionSafe.stimuli[currentStimGroupIdx]
     : null;
   const currentScores = currentStim
-    ? stimulusScores[currentStim.id] || { r: 0, i: 0, f: 0, c: 0, cta: 0 }
-    : { r: 0, i: 0, f: 0, c: 0, cta: 0 };
+    ? stimulusScores[currentStim.id] || { r: 0, i: 0, f: 0, c: 0, cta: 0, brand: null }
+    : { r: 0, i: 0, f: 0, c: 0, cta: 0, brand: null };
 
   // ── Should we show interstitial? Only when category TYPE changes ──
   const showInterstitialForGroup = (() => {
@@ -1077,25 +1232,23 @@ function StudiuWizardInner() {
     // First stimulus always gets interstitial
     if (currentStimGroupIdx === 0) return true;
     // Show only if type changed from previous stimulus
-    const prevStim = session.stimuli[currentStimGroupIdx - 1];
+    const prevStim = sessionSafe.stimuli[currentStimGroupIdx - 1];
     return !prevStim || prevStim.type !== currentStim.type;
   })();
 
   // ── Category grouping info (for interstitial) ──────────
-  const categoryStimCount = currentStim && session
-    ? session.stimuli.filter(s => s.type === currentStim.type).length : 0;
+  const categoryStimCount = currentStim
+    ? sessionSafe.stimuli.filter(s => s.type === currentStim.type).length : 0;
   // Unique categories in order of appearance (since stimuli are grouped by category)
-  const uniqueCategories = session
-    ? session.stimuli.reduce<string[]>((acc, s) => {
-        if (!acc.includes(s.type)) acc.push(s.type);
-        return acc;
-      }, [])
-    : [];
+  const uniqueCategories = sessionSafe.stimuli.reduce<string[]>((acc, s) => {
+    if (!acc.includes(s.type)) acc.push(s.type);
+    return acc;
+  }, []);
   const currentCategoryNum = currentStim ? uniqueCategories.indexOf(currentStim.type) + 1 : 0;
   const totalCategories = uniqueCategories.length;
   // Previous category label (for transition message)
-  const prevCategoryType = currentStimGroupIdx > 0 && session
-    ? session.stimuli[currentStimGroupIdx - 1]?.type : null;
+  const prevCategoryType = currentStimGroupIdx > 0
+    ? sessionSafe.stimuli[currentStimGroupIdx - 1]?.type : null;
 
   // ── Profile step question number ────────────────────────
   const profileQuestionNum = step >= 1 && step < profileStepCount ? step : 0;
@@ -1139,7 +1292,7 @@ function StudiuWizardInner() {
                   display: "flex", alignItems: "flex-start", gap: 10,
                   background: "#f0fdf4", border: "1px solid #bbf7d0",
                   borderRadius: 10, padding: m ? "10px 14px" : "12px 16px",
-                  marginBottom: 24, maxWidth: 340, textAlign: "left" as const,
+                  marginBottom: 8, maxWidth: 340, textAlign: "left" as const,
                 }}>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
@@ -1148,14 +1301,22 @@ function StudiuWizardInner() {
                     <strong>{w.welcomePrivacy}</strong>{w.welcomePrivacyBold}
                   </p>
                 </div>
+                {/* Cookie / fingerprint notice */}
+                <p style={{ fontSize: m ? 10 : 11, color: "#9CA3AF", lineHeight: 1.4, margin: 0, marginBottom: 24, maxWidth: 340, textAlign: "center" as const }}>
+                  {w.welcomeCookie}
+                </p>
 
                 <button
-                  style={S.btnStart}
-                  onClick={() => advanceTo(1)}
+                  style={{
+                    ...S.btnStart,
+                    ...(startingSession ? { opacity: 0.7, cursor: "wait" } : {}),
+                  }}
+                  onClick={() => startSession()}
                   onMouseDown={(e) => ((e.target as HTMLElement).style.transform = "scale(0.97)")}
                   onMouseUp={(e) => ((e.target as HTMLElement).style.transform = "scale(1)")}
+                  disabled={startingSession}
                 >
-                  {w.welcomeStart}
+                  {startingSession ? "..." : w.welcomeStart}
                 </button>
 
                 <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.7 }}>
@@ -1537,14 +1698,15 @@ function StudiuWizardInner() {
             </>
           )}
 
-          {/* ═══ Steps 11-15: Psychographic (5 separate Likert pages, auto-advance) ═══ */}
-          {step >= 11 && step <= 15 && (() => {
+          {/* ═══ Steps 11-16: Psychographic (6 separate Likert pages, auto-advance) ═══ */}
+          {step >= 11 && step <= 16 && (() => {
             const psychKeys = [
               "adReceptivity" as const,
               "visualPreference" as const,
-              "impulseBuying" as const,
+              "marketingExpertise" as const,
               "irrelevanceAnnoyance" as const,
               "attentionCapture" as const,
+              "irrelevanceTolerance" as const,
             ];
             const qIdx = step - 11;
             const qKey = psychKeys[qIdx];
@@ -1554,7 +1716,7 @@ function StudiuWizardInner() {
                 <div style={S.questionNum}>{w.questionLabel} {String(profileQuestionNum).padStart(2, "0")}</div>
                 <h2 style={{ ...S.questionTitle, fontSize: m ? 20 : 24, marginBottom: 8 }}>{w.psychTitle}</h2>
                 <p style={{ fontSize: m ? 11 : 12, color: textMuted, marginBottom: 6 }}>
-                  {w.questionLabel} {qIdx + 1} {w.psychQuestionOf} 5
+                  {w.questionLabel} {qIdx + 1} {w.psychQuestionOf} 6
                 </p>
                 <div style={{
                   fontSize: m ? 16 : 18, fontWeight: 600, color: textDark, lineHeight: 1.5,
@@ -1708,7 +1870,7 @@ function StudiuWizardInner() {
 
                   {isFirst && (
                     <p style={{ fontSize: 11, color: textMuted, marginTop: 20, opacity: 0.6 }}>
-                      {totalCategories} {w.categorySummary} &middot; {session.stimuli.length} {w.categoryMaterialPlural}
+                      {totalCategories} {w.categorySummary} &middot; {sessionSafe.stimuli.length} {w.categoryMaterialPlural}
                     </p>
                   )}
                 </div>
@@ -1716,7 +1878,7 @@ function StudiuWizardInner() {
             );
           })()}
 
-          {/* ═══ Stimulus evaluation steps (5 per stimulus: R, I, F, C, CTA) ═══ */}
+          {/* ═══ Stimulus evaluation steps (6 per stimulus: R, I, F, C, CTA, BRAND) ═══ */}
           {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && !showInterstitialForGroup && (() => {
             const dimensions: { key: "r" | "i" | "f" | "c" | "cta"; question: string; anchorLow: string; anchorHigh: string; color: string; shortLabel: string }[] = [
               {
@@ -1755,207 +1917,296 @@ function StudiuWizardInner() {
                 color: "#2563EB",
               },
             ];
-            const dim = dimensions[currentStimSubStep];
+            const isBrandStep = currentStimSubStep === 5;
+            const dim = !isBrandStep ? dimensions[currentStimSubStep] : null;
             const isAttentionGroup = currentStimGroupIdx === Math.floor(numStimuli / 2);
-            const showAttention = isAttentionGroup && currentStimSubStep === 4; // show on CTA step (last)
+            const showAttention = isAttentionGroup && currentStimSubStep === 4; // show on CTA step
+
+            // Extract brand name from stimulus name (everything before the " — " separator)
+            const brandName = currentStim.name.includes(" — ") ? currentStim.name.split(" — ")[0].trim() : currentStim.name;
 
             return (
               <>
                 {renderDashes()}
                 <div style={S.questionNum}>
-                  {w.materialNum} {currentStimGroupIdx + 1} / {session.stimuli.length}
+                  {w.materialNum} {currentStimGroupIdx + 1} / {sessionSafe.stimuli.length}
                 </div>
 
-                {/* Stimulus display */}
-                <div style={S.stimulusBox}>
-                  <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" as const }}>
-                    <span style={S.typeBadge}>{currentStim.type}</span>
-                    {currentStim.industry && (
-                      <span style={S.industryBadge}>{currentStim.industry}</span>
-                    )}
-                  </div>
-                  <h3 style={{ fontSize: m ? 14 : 16, color: textDark, marginBottom: 8, fontWeight: 600 }}>
-                    {currentStim.name}
-                  </h3>
-
-                  {currentStim.image_url && (
-                    <>
-                      <img src={currentStim.image_url} alt={currentStim.name}
-                        style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 180 : 300, objectFit: "cover" as const, cursor: "pointer" }}
-                        loading="lazy"
-                        onClick={() => setFullscreenImage(currentStim.image_url)} />
-                      {/* Expand button — separate solid button below image */}
-                      <button
-                        onClick={() => setFullscreenImage(currentStim.image_url)}
-                        style={{
-                          width: "100%", marginTop: 8,
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                          padding: "10px 0", fontSize: 13, fontWeight: 700,
-                          background: "#1a1a1a", color: "#fff",
-                          border: "none", borderRadius: 8, cursor: "pointer",
-                          letterSpacing: 0.3,
-                        }}
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
-                          <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
-                        </svg>
-                        {w.viewLarger}
-                      </button>
-                    </>
-                  )}
-
-                  {currentStim.video_url && extractYoutubeId(currentStim.video_url) && (
-                    <div style={{ position: "relative" as const, paddingBottom: m ? "50%" : "56.25%", height: 0, overflow: "hidden", borderRadius: 8, border: "1px solid #e5e1d9" }}>
-                      <iframe src={`https://www.youtube.com/embed/${extractYoutubeId(currentStim.video_url)}`}
-                        title={currentStim.name} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
-                        allowFullScreen style={{ position: "absolute" as const, top: 0, left: 0, width: "100%", height: "100%", border: "none" }} />
-                    </div>
-                  )}
-
-                  {currentStim.video_url && !extractYoutubeId(currentStim.video_url) && (
-                    <video src={currentStim.video_url} controls playsInline preload="metadata"
-                      style={{ width: "100%", maxHeight: m ? 180 : 300, borderRadius: 8, border: "1px solid #e5e1d9", background: "#000" }} />
-                  )}
-
-                  {currentStim.audio_url && (
-                    <div style={{ marginTop: 10, padding: m ? 10 : 14, background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 8 }}>
-                      <audio src={currentStim.audio_url} controls preload="metadata" style={{ width: "100%", borderRadius: 6 }} />
-                    </div>
-                  )}
-
-                  {currentStim.text_content && (
-                    <div style={{
-                      fontSize: 14, lineHeight: 1.7, color: textDark,
-                      background: !currentStim.image_url && !currentStim.video_url && !currentStim.audio_url ? "#fef3c7" : "#fff",
-                      border: `1px solid ${!currentStim.image_url && !currentStim.video_url && !currentStim.audio_url ? "#fcd34d" : "#e5e1d9"}`,
-                      borderRadius: 8, padding: m ? 12 : 16, whiteSpace: "pre-wrap" as const, marginTop: 10,
-                    }}>
-                      {currentStim.text_content}
-                    </div>
-                  )}
-
-                  {currentStim.pdf_url && (
-                    <a href={currentStim.pdf_url} target="_blank" rel="noopener noreferrer"
-                      style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: accentRed, border: `1px solid ${accentRed}`, borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
-                      {w.openPdf} &rarr;
-                    </a>
-                  )}
-
-                  {currentStim.site_url && (
-                    <a href={currentStim.site_url} target="_blank" rel="noopener noreferrer"
-                      style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "#2563EB", border: "1px solid #2563EB", borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
-                      {w.visitSite} &rarr;
-                    </a>
-                  )}
-
-                  {currentStim.description && (
-                    <p style={{ fontSize: 13, color: textMuted, marginTop: 12, lineHeight: 1.6 }}>
-                      {currentStim.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Current question */}
-                <div style={{ marginTop: m ? 4 : 8 }}>
-                  {/* Step indicator mini: R · I · F · C · CTA */}
-                  <div style={{ display: "flex", justifyContent: "center", gap: m ? 6 : 8, marginBottom: m ? 6 : 10 }}>
-                    {dimensions.map((d, idx) => {
-                      const isActive = idx === currentStimSubStep;
-                      const isDone = idx < currentStimSubStep;
-                      return (
+                {/* ── Brand familiarity card (substep 5) ── */}
+                {isBrandStep ? (
+                  <div style={{ textAlign: "center" as const, padding: m ? "20px 16px" : "32px 24px" }}>
+                    {/* Step indicator mini — all 5 scoring steps done + brand active */}
+                    <div style={{ display: "flex", justifyContent: "center", gap: m ? 6 : 8, marginBottom: m ? 16 : 24 }}>
+                      {dimensions.map((d) => (
                         <div key={d.key} style={{
-                          fontSize: isActive ? 12 : 10,
-                          fontWeight: 700,
-                          letterSpacing: 0.5,
-                          padding: isActive ? "4px 12px" : "4px 8px",
-                          borderRadius: 12,
-                          background: isActive ? d.color : isDone ? "#e5e1d9" : "transparent",
-                          color: isActive ? "#fff" : isDone ? "#888" : "#ccc",
-                          transition: "all 0.3s ease",
+                          fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+                          padding: "4px 8px", borderRadius: 12,
+                          background: "#e5e1d9", color: "#888",
                         }}>
                           {d.shortLabel}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Question text — colored border + flash animation on step change */}
-                  <div
-                    key={`q-${currentStimGroupIdx}-${currentStimSubStep}`}
-                    className="question-flash"
-                    style={{
-                      fontSize: m ? 13 : 15, fontWeight: 600, color: textDark, lineHeight: 1.4,
-                      marginBottom: m ? 10 : 12, padding: m ? "8px 12px" : "10px 16px",
-                      background: `${dim.color}08`, border: `2px solid ${dim.color}`, borderRadius: 10,
-                      textAlign: "center" as const,
-                      // @ts-expect-error CSS custom property
-                      "--flash-color": `${dim.color}40`,
-                    }}>
-                    {dim.question}
-                  </div>
-
-                  {/* 1-10 buttons — 2 rows of 5, well-spaced */}
-                  {[
-                    [1, 2, 3, 4, 5],
-                    [6, 7, 8, 9, 10],
-                  ].map((row, rowIdx) => (
-                    <div key={rowIdx} style={{
-                      display: "flex", gap: m ? 8 : 10, justifyContent: "center",
-                      marginBottom: rowIdx === 0 ? (m ? 8 : 10) : 0,
-                    }}>
-                      {row.map((v) => (
-                        <button
-                          key={v}
-                          style={{
-                            width: m ? 48 : 52, height: m ? 48 : 52, fontSize: m ? 16 : 18,
-                            fontWeight: 700, fontFamily: "Inter, sans-serif",
-                            background: currentScores[dim.key] === v ? dim.color : "#faf8f5",
-                            color: currentScores[dim.key] === v ? "#fff" : textDark,
-                            border: `2px solid ${currentScores[dim.key] === v ? dim.color : "#e5e1d9"}`,
-                            borderRadius: 10, cursor: "pointer",
-                            transition: "all 150ms ease",
-                          }}
-                          onClick={() => autoAdvanceStimulus(dim.key, v)}
-                        >
-                          {v}
-                        </button>
                       ))}
+                      <div style={{
+                        fontSize: 12, fontWeight: 700, letterSpacing: 0.5,
+                        padding: "4px 12px", borderRadius: 12,
+                        background: "#374151", color: "#fff",
+                      }}>
+                        {w.brandShortLabel || "?"}
+                      </div>
                     </div>
-                  ))}
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: m ? 9 : 10, color: textMuted, marginTop: 8, padding: "0 4px" }}>
-                    <span>1 = {dim.anchorLow}</span>
-                    <span>10 = {dim.anchorHigh}</span>
-                  </div>
-                </div>
 
-                {/* Attention check at midpoint — anti-robot verification */}
-                {showAttention && (
-                  <div style={{ marginTop: 16, padding: m ? 14 : 18, background: "#fefce8", border: "1px solid #fde047", borderRadius: 10 }}>
-                    <div style={{ fontSize: m ? 13 : 14, fontWeight: 700, color: "#854d0e", marginBottom: 8 }}>
-                      {w.attentionTitle}
+                    {/* Brand name title card */}
+                    <div style={{
+                      padding: m ? "24px 16px" : "32px 24px",
+                      background: "#faf8f5",
+                      border: "2px solid #e5e1d9",
+                      borderRadius: 12,
+                      marginBottom: m ? 16 : 24,
+                    }}>
+                      <div style={{ fontSize: m ? 24 : 32, fontWeight: 800, color: textDark, letterSpacing: -0.5, lineHeight: 1.2 }}>
+                        {brandName}
+                      </div>
                     </div>
-                    <p style={{ fontSize: m ? 12 : 13, color: textDark, marginBottom: 10, lineHeight: 1.5 }}>
-                      {w.attentionInstruction} <strong style={{ fontSize: m ? 18 : 22, color: "#b45309" }}>{attentionTarget.current}</strong>
+
+                    {/* Question */}
+                    <p style={{ fontSize: m ? 14 : 16, fontWeight: 600, color: textDark, marginBottom: m ? 16 : 24, lineHeight: 1.4 }}>
+                      {w.brandQuestion}
                     </p>
-                    <div style={{ display: "flex", gap: m ? 4 : 6, justifyContent: "center" }}>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
-                        <button key={v}
-                          style={{
-                            ...S.likertBtn,
-                            width: m ? 30 : 34, height: m ? 30 : 34, fontSize: m ? 12 : 13,
-                            ...(attentionAnswer === v ? { background: "#b45309", color: "#fff", borderColor: "#b45309" } : {}),
-                          }}
-                          onClick={() => setAttentionAnswer(v)}>{v}</button>
-                      ))}
+
+                    {/* Da / Nu buttons — white, equal, no color differentiation */}
+                    <div style={{ display: "flex", gap: m ? 12 : 16, justifyContent: "center" }}>
+                      <button
+                        style={{
+                          flex: 1, maxWidth: 160, padding: m ? "14px 0" : "16px 0",
+                          fontSize: m ? 16 : 18, fontWeight: 700, fontFamily: "Inter, sans-serif",
+                          background: "#fff", color: textDark,
+                          border: "2px solid #e5e1d9", borderRadius: 10,
+                          cursor: "pointer", transition: "all 150ms ease",
+                        }}
+                        onClick={() => autoAdvanceBrand(true)}
+                      >
+                        {w.brandYes}
+                      </button>
+                      <button
+                        style={{
+                          flex: 1, maxWidth: 160, padding: m ? "14px 0" : "16px 0",
+                          fontSize: m ? 16 : 18, fontWeight: 700, fontFamily: "Inter, sans-serif",
+                          background: "#fff", color: textDark,
+                          border: "2px solid #e5e1d9", borderRadius: 10,
+                          cursor: "pointer", transition: "all 150ms ease",
+                        }}
+                        onClick={() => autoAdvanceBrand(false)}
+                      >
+                        {w.brandNo}
+                      </button>
+                    </div>
+
+                    <div style={S.nav}>
+                      <button style={S.btnBack} onClick={goBack}>{w.back}</button>
+                      <div />
                     </div>
                   </div>
-                )}
+                ) : dim && (
+                  <>
+                    {/* Stimulus display */}
+                    <div style={S.stimulusBox}>
+                      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" as const }}>
+                        <span style={S.typeBadge}>{currentStim.type}</span>
+                        {currentStim.industry && (
+                          <span style={S.industryBadge}>{currentStim.industry}</span>
+                        )}
+                      </div>
+                      <h3 style={{ fontSize: m ? 14 : 16, color: textDark, marginBottom: 8, fontWeight: 600 }}>
+                        {currentStim.name}
+                      </h3>
 
-                <div style={S.nav}>
-                  <button style={S.btnBack} onClick={goBack}>{w.back}</button>
-                  <div />
-                </div>
+                      {currentStim.image_url && (
+                        <>
+                          <img src={currentStim.image_url} alt={currentStim.name}
+                            style={{ width: "100%", borderRadius: 8, border: "1px solid #e5e1d9", maxHeight: m ? 180 : 300, objectFit: "cover" as const, cursor: "pointer" }}
+                            loading="lazy"
+                            onClick={() => setFullscreenImage(currentStim.image_url)} />
+                          {/* Expand button — separate solid button below image */}
+                          <button
+                            onClick={() => setFullscreenImage(currentStim.image_url)}
+                            style={{
+                              width: "100%", marginTop: 8,
+                              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                              padding: "10px 0", fontSize: 13, fontWeight: 700,
+                              background: "#1a1a1a", color: "#fff",
+                              border: "none", borderRadius: 8, cursor: "pointer",
+                              letterSpacing: 0.3,
+                            }}
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" />
+                              <line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" />
+                            </svg>
+                            {w.viewLarger}
+                          </button>
+                        </>
+                      )}
+
+                      {currentStim.video_url && extractYoutubeId(currentStim.video_url) && (
+                        <div style={{ position: "relative" as const, paddingBottom: m ? "50%" : "56.25%", height: 0, overflow: "hidden", borderRadius: 8, border: "1px solid #e5e1d9" }}>
+                          <iframe src={`https://www.youtube.com/embed/${extractYoutubeId(currentStim.video_url)}`}
+                            title={currentStim.name} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
+                            allowFullScreen style={{ position: "absolute" as const, top: 0, left: 0, width: "100%", height: "100%", border: "none" }} />
+                        </div>
+                      )}
+
+                      {currentStim.video_url && !extractYoutubeId(currentStim.video_url) && (
+                        <video src={currentStim.video_url} controls playsInline preload="metadata"
+                          style={{ width: "100%", maxHeight: m ? 180 : 300, borderRadius: 8, border: "1px solid #e5e1d9", background: "#000" }} />
+                      )}
+
+                      {currentStim.audio_url && (
+                        <div style={{ marginTop: 10, padding: m ? 10 : 14, background: "#faf5ff", border: "1px solid #e9d5ff", borderRadius: 8 }}>
+                          <audio src={currentStim.audio_url} controls preload="metadata" style={{ width: "100%", borderRadius: 6 }} />
+                        </div>
+                      )}
+
+                      {currentStim.text_content && (
+                        <div style={{
+                          fontSize: 14, lineHeight: 1.7, color: textDark,
+                          background: !currentStim.image_url && !currentStim.video_url && !currentStim.audio_url ? "#fef3c7" : "#fff",
+                          border: `1px solid ${!currentStim.image_url && !currentStim.video_url && !currentStim.audio_url ? "#fcd34d" : "#e5e1d9"}`,
+                          borderRadius: 8, padding: m ? 12 : 16, whiteSpace: "pre-wrap" as const, marginTop: 10,
+                        }}>
+                          {currentStim.text_content}
+                        </div>
+                      )}
+
+                      {currentStim.pdf_url && (
+                        <a href={currentStim.pdf_url} target="_blank" rel="noopener noreferrer"
+                          style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: accentRed, border: `1px solid ${accentRed}`, borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
+                          {w.openPdf} &rarr;
+                        </a>
+                      )}
+
+                      {currentStim.site_url && (
+                        <a href={currentStim.site_url} target="_blank" rel="noopener noreferrer"
+                          style={{ display: "inline-block", padding: "10px 16px", fontSize: 13, fontWeight: 600, color: "#2563EB", border: "1px solid #2563EB", borderRadius: 8, textDecoration: "none", marginTop: 8 }}>
+                          {w.visitSite} &rarr;
+                        </a>
+                      )}
+
+                      {currentStim.description && (
+                        <p style={{ fontSize: 13, color: textMuted, marginTop: 12, lineHeight: 1.6 }}>
+                          {currentStim.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Current question */}
+                    <div style={{ marginTop: m ? 4 : 8 }}>
+                      {/* Step indicator mini: R · I · F · C · CTA · ? */}
+                      <div style={{ display: "flex", justifyContent: "center", gap: m ? 6 : 8, marginBottom: m ? 6 : 10 }}>
+                        {dimensions.map((d, idx) => {
+                          const isActive = idx === currentStimSubStep;
+                          const isDone = idx < currentStimSubStep;
+                          return (
+                            <div key={d.key} style={{
+                              fontSize: isActive ? 12 : 10,
+                              fontWeight: 700,
+                              letterSpacing: 0.5,
+                              padding: isActive ? "4px 12px" : "4px 8px",
+                              borderRadius: 12,
+                              background: isActive ? d.color : isDone ? "#e5e1d9" : "transparent",
+                              color: isActive ? "#fff" : isDone ? "#888" : "#ccc",
+                              transition: "all 0.3s ease",
+                            }}>
+                              {d.shortLabel}
+                            </div>
+                          );
+                        })}
+                        <div style={{
+                          fontSize: 10, fontWeight: 700, letterSpacing: 0.5,
+                          padding: "4px 8px", borderRadius: 12,
+                          background: "transparent", color: "#ccc",
+                        }}>
+                          {w.brandShortLabel || "?"}
+                        </div>
+                      </div>
+
+                      {/* Question text — colored border + flash animation on step change */}
+                      <div
+                        key={`q-${currentStimGroupIdx}-${currentStimSubStep}`}
+                        className="question-flash"
+                        style={{
+                          fontSize: m ? 13 : 15, fontWeight: 600, color: textDark, lineHeight: 1.4,
+                          marginBottom: m ? 10 : 12, padding: m ? "8px 12px" : "10px 16px",
+                          background: `${dim.color}08`, border: `2px solid ${dim.color}`, borderRadius: 10,
+                          textAlign: "center" as const,
+                          // @ts-expect-error CSS custom property
+                          "--flash-color": `${dim.color}40`,
+                        }}>
+                        {dim.question}
+                      </div>
+
+                      {/* 1-10 buttons — 2 rows of 5, well-spaced */}
+                      {[
+                        [1, 2, 3, 4, 5],
+                        [6, 7, 8, 9, 10],
+                      ].map((row, rowIdx) => (
+                        <div key={rowIdx} style={{
+                          display: "flex", gap: m ? 8 : 10, justifyContent: "center",
+                          marginBottom: rowIdx === 0 ? (m ? 8 : 10) : 0,
+                        }}>
+                          {row.map((v) => (
+                            <button
+                              key={v}
+                              style={{
+                                width: m ? 48 : 52, height: m ? 48 : 52, fontSize: m ? 16 : 18,
+                                fontWeight: 700, fontFamily: "Inter, sans-serif",
+                                background: currentScores[dim.key] === v ? dim.color : "#faf8f5",
+                                color: currentScores[dim.key] === v ? "#fff" : textDark,
+                                border: `2px solid ${currentScores[dim.key] === v ? dim.color : "#e5e1d9"}`,
+                                borderRadius: 10, cursor: "pointer",
+                                transition: "all 150ms ease",
+                              }}
+                              onClick={() => autoAdvanceStimulus(dim.key, v)}
+                            >
+                              {v}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: m ? 9 : 10, color: textMuted, marginTop: 8, padding: "0 4px" }}>
+                        <span>1 = {dim.anchorLow}</span>
+                        <span>10 = {dim.anchorHigh}</span>
+                      </div>
+                    </div>
+
+                    {/* Attention check at midpoint — anti-robot verification */}
+                    {showAttention && (
+                      <div style={{ marginTop: 16, padding: m ? 14 : 18, background: "#fefce8", border: "1px solid #fde047", borderRadius: 10 }}>
+                        <div style={{ fontSize: m ? 13 : 14, fontWeight: 700, color: "#854d0e", marginBottom: 8 }}>
+                          {w.attentionTitle}
+                        </div>
+                        <p style={{ fontSize: m ? 12 : 13, color: textDark, marginBottom: 10, lineHeight: 1.5 }}>
+                          {w.attentionInstruction} <strong style={{ fontSize: m ? 18 : 22, color: "#b45309" }}>{attentionTarget.current}</strong>
+                        </p>
+                        <div style={{ display: "flex", gap: m ? 4 : 6, justifyContent: "center" }}>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(v => (
+                            <button key={v}
+                              style={{
+                                ...S.likertBtn,
+                                width: m ? 30 : 34, height: m ? 30 : 34, fontSize: m ? 12 : 13,
+                                ...(attentionAnswer === v ? { background: "#b45309", color: "#fff", borderColor: "#b45309" } : {}),
+                              }}
+                              onClick={() => setAttentionAnswer(v)}>{v}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={S.nav}>
+                      <button style={S.btnBack} onClick={goBack}>{w.back}</button>
+                      <div />
+                    </div>
+                  </>
+                )}
               </>
             );
           })()}
@@ -2055,8 +2306,8 @@ function StudiuWizardInner() {
 
         /* Focus styles */
         input[type="text"]:focus {
-          border-color: #c8e64e !important;
-          box-shadow: 0 0 0 3px rgba(200, 230, 78, 0.2);
+          border-color: #8B9A6B !important;
+          box-shadow: 0 0 0 3px rgba(139, 154, 107, 0.25);
         }
       `}</style>
     </div>

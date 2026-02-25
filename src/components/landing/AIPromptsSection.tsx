@@ -381,50 +381,7 @@ export default function AIPromptsSection() {
         })}
       </div>
 
-      {/* ════════════════════════════════════════════════════
-          PUNCT 6 — Prompts vs AI Audit
-          ════════════════════════════════════════════════════ */}
-      <div className="max-w-3xl mx-auto mb-16">
-        <h4 className="font-mono text-[12px] md:text-[13px] tracking-[3px] uppercase text-text-muted text-center mb-8">
-          {ai.vsTitle}
-        </h4>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Prompts column */}
-          <GradientBorderBlock gradientFrom="#2563EB" gradientTo="#2563EB40" bgTint="transparent">
-            <h5 className="font-mono text-[12px] tracking-[2px] uppercase text-rifc-blue mb-4">
-              {ai.vsPromptsTitle}
-            </h5>
-            <ul className="space-y-2">
-              {ai.vsPromptsBullets.map((b, i) => (
-                <li key={i} className="flex items-start gap-2 font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.6]">
-                  <span className="text-rifc-blue mt-1 shrink-0">&#8226;</span>
-                  {b}
-                </li>
-              ))}
-            </ul>
-          </GradientBorderBlock>
-
-          {/* AI Audit column */}
-          <GradientBorderBlock gradientFrom="#DC2626" gradientTo="#DC262640" bgTint="transparent">
-            <h5 className="font-mono text-[12px] tracking-[2px] uppercase text-rifc-red mb-4">
-              {ai.vsAuditTitle}
-            </h5>
-            <ul className="space-y-2">
-              {ai.vsAuditBullets.map((b, i) => (
-                <li key={i} className="flex items-start gap-2 font-body text-[13px] md:text-[14px] text-text-secondary leading-[1.6]">
-                  <span className="text-rifc-red mt-1 shrink-0">&#8226;</span>
-                  {b}
-                </li>
-              ))}
-            </ul>
-          </GradientBorderBlock>
-        </div>
-
-        <p className="text-center font-body text-[13px] md:text-[14px] italic text-text-muted mt-6 leading-[1.6]">
-          {ai.vsRecommendation}
-        </p>
-      </div>
+      {/* PUNCT 6 — Prompts vs AI Audit — REMOVED (AI Audit feature excluded) */}
 
       {/* ════════════════════════════════════════════════════
           PUNCT 7 — Pro Tip

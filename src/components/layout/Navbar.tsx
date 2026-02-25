@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "@/lib/i18n";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Menu, X, Globe, Sparkles, ChevronDown, FileText, LayoutGrid, PenTool } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, FileText, ExternalLink } from "lucide-react";
 
 export default function Navbar() {
   const { locale, t, setLocale } = useTranslation();
@@ -17,10 +17,7 @@ export default function Navbar() {
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLandingPage = pathname === "/";
-  const isAuditPage = pathname === "/audit";
   const isWhitepaperPage = pathname === "/whitepaper" || pathname === "/resources";
-  const isCalculatorPage = pathname === "/calculator";
-  const isCopywritePage = pathname === "/copywrite";
 
   /* ─── 3-way language toggle: RO → EN → RU → RO ─── */
   const toggleLocale = () => {
@@ -112,40 +109,18 @@ export default function Navbar() {
         >
           <FileText size={12} /> White Paper
         </Link>
-        <Link
-          href="/calculator"
-          className={`flex items-center gap-1.5 font-mono text-[11px] tracking-[2px] uppercase px-3 py-1.5 rounded-sm transition-all duration-200 no-underline ${
-            isCalculatorPage
-              ? "text-text-primary"
-              : "text-text-faint hover:text-text-secondary"
-          }`}
-        >
-          <LayoutGrid size={12} /> Calculator
-        </Link>
-        <Link
-          href="/copywrite"
-          className={`flex items-center gap-1.5 font-mono text-[11px] tracking-[2px] uppercase px-3 py-1.5 rounded-sm transition-all duration-200 no-underline ${
-            isCopywritePage
-              ? "text-text-primary"
-              : "text-text-faint hover:text-text-secondary"
-          }`}
-        >
-          <PenTool size={12} /> Copywrite
-        </Link>
       </div>
 
       <div className="flex items-center gap-3">
-        {/* AI Audit link — CTA style */}
-        <Link
-          href="/audit"
-          className={`hidden md:flex items-center gap-2 font-mono text-[11px] tracking-[2px] uppercase px-4 py-2 rounded-sm border transition-all duration-300 no-underline ${
-            isAuditPage
-              ? "text-rifc-red bg-[rgba(220,38,38,0.1)] border-rifc-red/50"
-              : "text-rifc-red/80 border-rifc-red/30 hover:text-rifc-red hover:border-rifc-red/60 hover:bg-[rgba(220,38,38,0.05)]"
-          }`}
+        {/* RIFC.AI external link — CTA style */}
+        <a
+          href="https://rifc.ai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden md:flex items-center gap-2 font-mono text-[11px] tracking-[2px] uppercase px-4 py-2 rounded-sm border transition-all duration-300 no-underline text-rifc-red/80 border-rifc-red/30 hover:text-rifc-red hover:border-rifc-red/60 hover:bg-[rgba(220,38,38,0.05)]"
         >
-          <Sparkles size={13} /> AI Audit
-        </Link>
+          <ExternalLink size={13} /> RIFC.AI
+        </a>
 
         {/* Language toggle */}
         <button
@@ -252,35 +227,15 @@ export default function Navbar() {
         >
           <FileText size={12} /> White Paper
         </Link>
-        <Link
-          href="/calculator"
-          className={`font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm whitespace-nowrap no-underline flex items-center gap-2 ${
-            isCalculatorPage ? "text-text-primary" : "text-text-faint"
-          }`}
+        <a
+          href="https://rifc.ai"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm border transition-all duration-300 whitespace-nowrap no-underline flex items-center gap-2 mb-2 text-rifc-red/80 border-rifc-red/30 hover:text-rifc-red hover:border-rifc-red/60"
           onClick={() => setMenuOpen(false)}
         >
-          <LayoutGrid size={12} /> Calculator
-        </Link>
-        <Link
-          href="/copywrite"
-          className={`font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm whitespace-nowrap no-underline flex items-center gap-2 ${
-            isCopywritePage ? "text-text-primary" : "text-text-faint"
-          }`}
-          onClick={() => setMenuOpen(false)}
-        >
-          <PenTool size={12} /> Copywrite
-        </Link>
-        <Link
-          href="/audit"
-          className={`font-mono text-[11px] font-normal tracking-[2px] uppercase cursor-pointer px-3 py-2.5 rounded-sm border transition-all duration-300 whitespace-nowrap no-underline flex items-center gap-2 mb-2 ${
-            isAuditPage
-              ? "text-rifc-red bg-[rgba(220,38,38,0.1)] border-rifc-red/50"
-              : "text-rifc-red/80 border-rifc-red/30 hover:text-rifc-red hover:border-rifc-red/60"
-          }`}
-          onClick={() => setMenuOpen(false)}
-        >
-          <Sparkles size={12} /> AI Audit
-        </Link>
+          <ExternalLink size={12} /> RIFC.AI
+        </a>
 
         {isLandingPage &&
           t.nav.sections.map((s) =>

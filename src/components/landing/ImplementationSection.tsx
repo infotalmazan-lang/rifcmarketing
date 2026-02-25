@@ -380,21 +380,16 @@ export default function ImplementationSection() {
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Link
-            href={t.implementation.toolStackFreeLink}
-            className="flex items-center gap-2 border border-border-light rounded-sm p-3 bg-[rgba(5,150,105,0.04)] hover:border-rifc-green/40 transition-colors no-underline"
-          >
-            <div className="w-2 h-2 rounded-full bg-rifc-green shrink-0" />
-            <span className="font-body text-[12px] text-rifc-green">{t.implementation.toolStackFree}</span>
-          </Link>
-          <Link
-            href={t.implementation.toolStackPremiumLink}
-            className="flex items-center gap-2 border border-border-light rounded-sm p-3 bg-[rgba(220,38,38,0.04)] hover:border-rifc-red/40 transition-colors no-underline"
+        <div className="flex justify-center">
+          <a
+            href="https://rifc.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 border border-border-light rounded-sm p-3 px-6 bg-[rgba(220,38,38,0.04)] hover:border-rifc-red/40 transition-colors no-underline"
           >
             <div className="w-2 h-2 rounded-full bg-rifc-red shrink-0" />
             <span className="font-body text-[12px] text-rifc-red">{t.implementation.toolStackPremium}</span>
-          </Link>
+          </a>
         </div>
       </div>
 

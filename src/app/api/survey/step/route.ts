@@ -57,25 +57,33 @@ export async function PUT(request: Request) {
         })
         .eq("id", respondentId);
     } else if (type === "stimulus") {
-      // Upsert stimulus response (5 dimensions: R, I, F, C, CTA)
-      const { error: upsertError } = await supabase
+      // Upsert stimulus response (5 dimensions: R, I, F, C, CTA + brand familiarity)
+      const upsertData: Record<string, unknown> = {
+        respondent_id: respondentId,
+        stimulus_id: data.stimulusId,
+        r_score: data.rScore,
+        i_score: data.iScore,
+        f_score: data.fScore,
+        c_score: data.cScore || null,
+        cta_score: data.ctaScore || null,
+        time_spent_seconds: data.timeSpentSeconds || 0,
+      };
+      if (data.brandFamiliar !== undefined) {
+        upsertData.brand_familiar = data.brandFamiliar;
+      }
+
+      let { error: upsertError } = await supabase
         .from("survey_responses")
-        .upsert(
-          {
-            respondent_id: respondentId,
-            stimulus_id: data.stimulusId,
-            r_score: data.rScore,
-            i_score: data.iScore,
-            f_score: data.fScore,
-            c_score: data.cScore || null,
-            cta_score: data.ctaScore || null,
-            time_spent_seconds: data.timeSpentSeconds || 0,
-          },
-          { onConflict: "respondent_id,stimulus_id" }
-        );
+        .upsert(upsertData, { onConflict: "respondent_id,stimulus_id" });
+
+      // Fallback: if brand_familiar column doesn't exist yet, retry without it
+      if (upsertError && upsertError.message?.includes("brand_familiar")) {
+        delete upsertData.brand_familiar;
+        const retry = await supabase.from("survey_responses").upsert(upsertData, { onConflict: "respondent_id,stimulus_id" });
+        upsertError = retry.error;
+      }
 
       if (upsertError) {
-        console.error("Failed to save response:", upsertError);
         return NextResponse.json(
           { error: "Failed to save response" },
           { status: 500 }

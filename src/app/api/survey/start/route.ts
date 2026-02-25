@@ -45,12 +45,16 @@ export async function POST(request: Request) {
     const ua = request.headers.get("user-agent") || "";
     const deviceType = detectDevice(ua);
 
-    // Parse optional distribution tag + locale from body
+    // Parse optional distribution tag + locale + fingerprint from body
     let distributionId: string | null = null;
     let locale: string = "ro";
+    let isPreview = false;
+    let fingerprint: string | null = null;
     try {
       const body = await request.json();
       if (body?.locale) locale = String(body.locale).slice(0, 5);
+      if (body?.preview) isPreview = true;
+      if (body?.fingerprint) fingerprint = String(body.fingerprint).slice(0, 64);
       if (body?.tag) {
         const { data: dist } = await supabase
           .from("survey_distributions")
@@ -63,30 +67,39 @@ export async function POST(request: Request) {
       // No body or invalid JSON — that's fine, tag is optional
     }
 
-    // Randomly assign variant group A/B/C
-    const variantGroups = ["A", "B", "C"];
-    const variantGroup = variantGroups[Math.floor(Math.random() * 3)];
-
-    // Create respondent
-    const { error: respError } = await supabase
-      .from("survey_respondents")
-      .insert({
+    // In preview mode, skip respondent creation — just return stimuli
+    if (!isPreview) {
+      // Create respondent (ip_address may not exist if migration 016 not run yet)
+      const insertData: Record<string, unknown> = {
         session_id: sessionId,
         step_completed: 0,
         ip_hash: ipHash,
+        ip_address: ip,
         user_agent: ua.slice(0, 255),
         device_type: deviceType,
-        variant_group: variantGroup,
         locale,
+        ...(fingerprint ? { browser_fingerprint: fingerprint } : {}),
         ...(distributionId ? { distribution_id: distributionId } : {}),
-      });
+      };
 
-    if (respError) {
-      console.error("Failed to create respondent:", respError);
-      return NextResponse.json(
-        { error: "Failed to start survey" },
-        { status: 500 }
-      );
+      let { error: respError } = await supabase
+        .from("survey_respondents")
+        .insert(insertData);
+
+      // Fallback: if new columns don't exist yet, retry without them
+      if (respError && (respError.message?.includes("ip_address") || respError.message?.includes("browser_fingerprint"))) {
+        delete insertData.ip_address;
+        delete insertData.browser_fingerprint;
+        const retry = await supabase.from("survey_respondents").insert(insertData);
+        respError = retry.error;
+      }
+
+      if (respError) {
+        return NextResponse.json(
+          { error: "Failed to start survey" },
+          { status: 500 }
+        );
+      }
     }
 
     // Fetch active stimuli
@@ -97,7 +110,6 @@ export async function POST(request: Request) {
       .order("display_order");
 
     if (stimError) {
-      console.error("Failed to fetch stimuli:", stimError);
       return NextResponse.json(
         { error: "Failed to load stimuli" },
         { status: 500 }

@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { ALL_SUBFACTORS, R_SUBFACTORS, I_SUBFACTORS, F_SUBFACTORS, C_SUBFACTORS } from "@/lib/constants/subfactors";
-import { OBJECTIVE_MAP } from "@/lib/constants/objectives";
-import type { BrandProfile } from "@/types";
 
 // Allow longer processing for images/PDFs
 export const maxDuration = 60;
@@ -154,93 +151,54 @@ async function extractYoutubeTranscript(url: string): Promise<string> {
   return fullText.slice(0, 4000);
 }
 
-/* ─── System Prompt Builder ────────────────────────────────── */
+/* ─── System Prompt ───────────────────────────────────────── */
 
-function buildSubfactorList(variable: string, factors: readonly { id: string; name: string; critical: boolean }[]): string {
-  return factors.map(sf => `  - ${sf.id}: ${sf.name}${sf.critical ? " [CRITICAL]" : ""}`).join("\n");
-}
-
-function buildSystemPrompt(objectiveId?: string, brand?: BrandProfile): string {
-  const objective = objectiveId ? OBJECTIVE_MAP.get(objectiveId) : null;
-
-  let prompt = `You are an R IF C Marketing expert consultant. R IF C is a marketing diagnostic framework created by Dumitru Talmazan.
+const RIFC_SYSTEM_PROMPT = `You are an R IF C Marketing expert consultant. R IF C is a marketing diagnostic framework created by Dumitru Talmazan.
 
 ## The R IF C Equation
 R + (I × F) = C
 
 Where:
 - **R (Relevance)** — Score 1-10. Is this message reaching the RIGHT audience at the RIGHT time?
+  Sub-factors: Target Precision, Timing, Context Fit, Pain Point Alignment, Channel Match
   RULE: If R < 3, the entire message fails regardless of other scores (Relevance Gate = Critical Failure)
+
 - **I (Interest)** — Score 1-10. Does the message create genuine curiosity and desire to learn more?
+  Sub-factors: Unique Value Proposition, Emotional Trigger, Specificity, Benefit Clarity, Urgency/Scarcity
+
 - **F (Form)** — Score 1-10. Is the message presented in the optimal format for its channel?
-  RULE: F is a MULTIPLIER — it amplifies or kills Interest. Zero Rule: if F=0 or I=0, then I×F=0.
+  Sub-factors: Visual Hierarchy, Readability, Platform Optimization, CTA Clarity, Mobile Responsiveness
+  RULE: F is a MULTIPLIER — it amplifies or kills Interest
+
 - **C (Clarity)** — The output score (0-110). The ultimate measure of message effectiveness.
 
-## 35 Sub-factors (score each 1-10)
-You MUST score EVERY sub-factor individually. Sub-factors marked [CRITICAL] carry extra weight — a low score on a critical sub-factor drags the entire variable down.
-
-### R — Relevance (7 sub-factors)
-${buildSubfactorList("R", R_SUBFACTORS)}
-
-### I — Interest (10 sub-factors)
-${buildSubfactorList("I", I_SUBFACTORS)}
-
-### F — Form (11 sub-factors)
-${buildSubfactorList("F", F_SUBFACTORS)}
-
-### C — Clarity (7 sub-factors — diagnostic tests, not inputs)
-${buildSubfactorList("C", C_SUBFACTORS)}
-NOTE: C sub-factors are verification tests. They measure whether R, I, F converge into a clear message.
-
 ## Clarity Levels
-- 0-20: Critical Failure — 100% budget burned
-- 21-50: Noise — CPL 5-10x above average, negative ROI
-- 51-80: Medium — Functional but uncompetitive
-- 81-110: Supreme — Cult brand zone, maximum ROI
+- 0-20: Critical Failure (Total Confusion) — 100% budget burned
+- 21-50: Noise (Background Noise) — CPL 5-10x above average, negative ROI
+- 51-80: Medium (Medium Clarity) — Functional but uncompetitive
+- 81-110: Supreme (Supreme Clarity) — Cult brand zone, maximum ROI
 
 ## Failure Archetypes
-1. **Invisible Phantom** (R < 3): Perfect execution, wrong audience.
-2. **Aesthetic Noise** (I low, F high): Beautiful but empty.
-3. **Buried Diamond** (I high, F low): Great value, terrible packaging.`;
-
-  if (objective) {
-    prompt += `
-
-## Active Objective: ${objectiveId}
-Weight adjustments: R×${objective.weights.R}, I×${objective.weights.I}, F×${objective.weights.F}
-When scoring, give extra attention to sub-factors that align with this objective.
-KPIs to consider: ${objective.kpis.join(", ")}`;
-  }
-
-  if (brand) {
-    prompt += `
-
-## Brand Context (Layer 3)
-- Brand: ${brand.name}
-- Industry: ${brand.industry}
-- Target Audience: ${brand.targetAudience}
-- Tone: ${brand.tone}
-- UVP: ${brand.uvp}
-Use this brand context when evaluating relevance, interest alignment, and tone consistency.`;
-  }
-
-  prompt += `
+1. **Invisible Phantom** (R = 0-2): Perfect execution, wrong audience. Like a 5-star restaurant in the desert.
+2. **Aesthetic Noise** (I low, F high): Beautiful but empty. High engagement, zero purchase intent.
+3. **Buried Diamond** (I high, F low): Great value, terrible packaging. Content gold buried in bad format.
 
 ## Visual Content Analysis
 When analyzing images, screenshots, or PDF pages:
 - Read ALL visible text (headlines, body copy, CTAs, captions, fine print)
-- Evaluate visual hierarchy, layout, color usage for F sub-factors
-- Assess target audience alignment from visual cues for R sub-factors
-- Judge value proposition clarity from both text and visuals for I sub-factors
+- Evaluate visual hierarchy, layout, color usage, and design quality for F score
+- Assess target audience alignment from visual cues for R score
+- Judge the clarity of the value proposition from both text and visuals for I score
+- Consider the overall user experience and message clarity for C calculation
 
 ## Your Task
-Analyze the marketing message/content provided. Score ALL 35 sub-factors individually. Be specific, data-driven, and actionable.
+Analyze the marketing message/content provided. Be specific, data-driven, and actionable.
 
 RESPOND IN STRICT JSON FORMAT (no markdown, no code blocks, just raw JSON):
 {
-  "r": <number 1-10 — weighted average of R sub-factors>,
-  "i": <number 1-10 — weighted average of I sub-factors>,
-  "f": <number 1-10 — weighted average of F sub-factors>,
+  "r": <number 1-10>,
+  "i": <number 1-10>,
+  "f": <number 1-10>,
   "c": <number — calculated as r + (i * f)>,
   "rJustification": "<1-2 sentences explaining R score>",
   "iJustification": "<1-2 sentences explaining I score>",
@@ -251,20 +209,10 @@ RESPOND IN STRICT JSON FORMAT (no markdown, no code blocks, just raw JSON):
   "recommendations": [
     { "variable": "R" | "I" | "F", "action": "<specific actionable recommendation>", "impact": "<expected improvement>" }
   ],
-  "summary": "<1 sentence summary of what was analyzed>",
-  "subfactors": [
-    { "id": "R1", "score": <1-10>, "justification": "<1 sentence>" },
-    { "id": "R2", "score": <1-10>, "justification": "<1 sentence>" },
-    ... (all ${ALL_SUBFACTORS.length} sub-factors)
-  ],
-  "ctaSuggestion": "<specific CTA recommendation for the analyzed content>"
+  "summary": "<1 sentence summary of what was analyzed>"
 }
 
-Provide exactly 3-5 recommendations, prioritized by impact. Be specific — no generic advice.
-Score ALL ${ALL_SUBFACTORS.length} sub-factors in the "subfactors" array. Do NOT skip any.`;
-
-  return prompt;
-}
+Provide exactly 3-5 recommendations, prioritized by impact. Be specific — no generic advice.`;
 
 /* ─── Types ───────────────────────────────────────────────── */
 
@@ -276,8 +224,6 @@ interface AuditRequestBody {
   channel?: string;
   language?: "ro" | "en";
   images?: { base64: string; mediaType: string }[];
-  objective?: string;
-  brandProfile?: BrandProfile;
 }
 
 /* ─── POST Handler ────────────────────────────────────────── */
@@ -294,7 +240,7 @@ export async function POST(request: Request) {
     }
 
     const body = (await request.json()) as AuditRequestBody;
-    const { type, content, channel, language, images, objective, brandProfile } = body;
+    const { type, content, channel, language, images } = body;
 
     // Validate type
     const validTypes: AuditType[] = ["text", "url", "youtube", "image", "pdf"];
@@ -439,18 +385,16 @@ export async function POST(request: Request) {
       claudeMessages = [{ role: "user", content: contentBlocks }];
     }
 
-    // Build dynamic system prompt with subfactors + optional objective/brand
-    const systemPrompt = buildSystemPrompt(objective, brandProfile);
-
+    // Add language instruction to system prompt
     const langInstruction =
       language === "ro"
-        ? "\n\nIMPORTANT: Respond with ALL text fields (justifications, diagnosis, recommendations, summary, subfactor justifications, ctaSuggestion) in Romanian (limba română)."
-        : "\n\nIMPORTANT: Respond with ALL text fields (justifications, diagnosis, recommendations, summary, subfactor justifications, ctaSuggestion) in English.";
+        ? "\n\nIMPORTANT: Respond with ALL text fields (rJustification, iJustification, fJustification, diagnosis, recommendations actions/impacts, summary) in Romanian (limba română)."
+        : "\n\nIMPORTANT: Respond with ALL text fields (rJustification, iJustification, fJustification, diagnosis, recommendations actions/impacts, summary) in English.";
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
-      system: systemPrompt + langInstruction,
+      max_tokens: 1024,
+      system: RIFC_SYSTEM_PROMPT + langInstruction,
       messages: claudeMessages,
     });
 
@@ -496,18 +440,6 @@ export async function POST(request: Request) {
     else if (c <= 80) clarityLevel = "medium";
     else clarityLevel = "supreme";
 
-    // Parse and validate subfactor scores
-    const rawSubfactors = Array.isArray(auditResult.subfactors) ? auditResult.subfactors : [];
-    const subfactors = ALL_SUBFACTORS.map((sf) => {
-      const found = rawSubfactors.find((rs: { id: string; score?: number; justification?: string }) => rs.id === sf.id);
-      return {
-        id: sf.id,
-        score: found ? Math.min(10, Math.max(1, Math.round(found.score || 5))) : 5,
-        justification: found?.justification || "",
-        critical: sf.critical,
-      };
-    });
-
     return NextResponse.json({
       success: true,
       result: {
@@ -523,15 +455,9 @@ export async function POST(request: Request) {
         clarityLevel,
         recommendations: (auditResult.recommendations || []).slice(0, 5),
         summary: auditResult.summary || "",
-        subfactors,
-        objective: objective || undefined,
-        brandContext: brandProfile || undefined,
-        ctaSuggestion: auditResult.ctaSuggestion || "",
       },
     });
   } catch (error) {
-    console.error("Audit API error:", error);
-
     if (error instanceof Anthropic.APIError) {
       if (error.status === 401) {
         return NextResponse.json(

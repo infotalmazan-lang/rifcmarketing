@@ -1105,25 +1105,6 @@ export interface Dictionary {
     previewPages: string;
     removeFile: string;
     channels: { value: string; label: string }[];
-    tabSubfactors: string;
-    objectiveLabel: string;
-    objectiveNone: string;
-    objectiveDesc: string;
-    brandProfileLabel: string;
-    brandProfileToggle: string;
-    brandNameLabel: string;
-    brandNamePlaceholder: string;
-    brandIndustryLabel: string;
-    brandIndustryPlaceholder: string;
-    brandAudienceLabel: string;
-    brandAudiencePlaceholder: string;
-    brandToneLabel: string;
-    brandTonePlaceholder: string;
-    brandUvpLabel: string;
-    brandUvpPlaceholder: string;
-    ctaSuggestionLabel: string;
-    subfactorCriticalLabel: string;
-    objectives: Record<string, { name: string; desc: string }>;
   };
   wizard: {
     // Loading
@@ -1142,6 +1123,7 @@ export interface Dictionary {
     welcomeAnonymousBold: string;
     welcomePrivacy: string;
     welcomePrivacyBold: string;
+    welcomeCookie: string;
     welcomeStart: string;
     welcomeMaterials: string;
     welcomeLang: string;
@@ -1250,6 +1232,11 @@ export interface Dictionary {
     ctaQuestion: string;
     ctaLow: string;
     ctaHigh: string;
+    // Brand familiarity
+    brandQuestion: string;
+    brandYes: string;
+    brandNo: string;
+    brandShortLabel: string;
     // Media buttons
     viewLarger: string;
     openPdf: string;
