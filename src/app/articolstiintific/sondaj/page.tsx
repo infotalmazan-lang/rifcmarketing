@@ -1,0 +1,3797 @@
+"use client";
+
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import {
+  Settings,
+  Eye,
+  EyeOff,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Pencil,
+  Plus,
+  X,
+  Check,
+  ClipboardList,
+  BarChart3,
+  Share2,
+  PlayCircle,
+  Image,
+  Video,
+  FileText,
+  Link,
+  Globe,
+  Music,
+  Upload,
+  Loader2,
+  Copy,
+  QrCode,
+  Users,
+  ExternalLink,
+  UserCheck,
+  Bot,
+  LayoutGrid,
+  RotateCcw,
+  Play,
+  UserCircle,
+  MapPin,
+  Wallet,
+  GraduationCap,
+  ShoppingCart,
+  Monitor,
+  Clock,
+  Brain,
+  Target,
+  Sparkles,
+  Heart,
+  AlertCircle,
+  Zap,
+  ChevronRight,
+  ImageIcon,
+  PartyPopper,
+} from "lucide-react";
+import * as tus from "tus-js-client";
+
+/* ═══════════════════════════════════════════════════════════
+   R IF C — Studiu Admin — Structura Sondaj
+   6 tabs: SONDAJ | REZULTATE | DISTRIBUTIE | PANEL EXPERTI | AI BENCHMARK | PREVIEW
+   ═══════════════════════════════════════════════════════════ */
+
+// ── Types ──────────────────────────────────────────────────
+interface Category {
+  id: string;
+  type: string;
+  label: string;
+  short_code: string;
+  color: string;
+  display_order: number;
+  is_visible: boolean;
+  max_materials: number;
+}
+
+interface Stimulus {
+  id: string;
+  name: string;
+  type: string;
+  industry: string | null;
+  description: string | null;
+  image_url: string | null;
+  video_url: string | null;
+  audio_url: string | null;
+  text_content: string | null;
+  pdf_url: string | null;
+  site_url: string | null;
+  display_order: number;
+  is_active: boolean;
+  variant_label: string | null;
+  execution_quality: string | null;
+}
+
+interface ExpertEvaluation {
+  id: string;
+  stimulus_id: string;
+  expert_name: string;
+  expert_role: string | null;
+  r_score: number;
+  i_score: number;
+  f_score: number;
+  c_computed: number;
+  r_justification: string | null;
+  i_justification: string | null;
+  f_justification: string | null;
+  notes: string | null;
+  evaluated_at: string;
+}
+
+interface AiEvaluation {
+  id: string;
+  stimulus_id: string;
+  model_name: string;
+  r_score: number;
+  i_score: number;
+  f_score: number;
+  c_computed: number;
+  justification: Record<string, string>;
+  prompt_version: string;
+  evaluated_at: string;
+}
+
+interface Distribution {
+  id: string;
+  name: string;
+  description: string;
+  tag: string;
+  estimated_completions: number;
+  completions: number;
+  started: number;
+  created_at: string;
+}
+
+type TabKey = "cartonase" | "rezultate" | "distributie" | "experti" | "ai" | "preview";
+
+const TABS: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
+  { key: "cartonase", label: "CARTONASE", icon: LayoutGrid },
+  { key: "rezultate", label: "REZULTATE", icon: BarChart3 },
+  { key: "distributie", label: "DISTRIBUTIE", icon: Share2 },
+  { key: "experti", label: "PANEL EXPERTI", icon: UserCheck },
+  { key: "ai", label: "AI BENCHMARK", icon: Bot },
+  { key: "preview", label: "PREVIEW", icon: PlayCircle },
+];
+
+const INDUSTRIES = [
+  // Tech & Digital
+  "SaaS / Software",
+  "IT Services / Web Development",
+  "FinTech / Plati Digitale",
+  "EdTech / Platforme Educationale",
+  "HealthTech / Telemedicina",
+  "AI / Machine Learning",
+  "Cybersecurity",
+  "Cloud / Infrastructure",
+  "Gaming / Entertainment Digital",
+  "Telecom / Internet",
+  "Mobile Apps",
+  // E-commerce & Retail
+  "E-commerce (general)",
+  "Retail (magazine fizice)",
+  "Marketplace / Platforme",
+  "D2C (Direct to Consumer)",
+  "Dropshipping",
+  // Finance, Insurance & Real Estate
+  "Banci / Servicii Financiare",
+  "Asigurari",
+  "Investitii / Trading / Bursa",
+  "Crypto / Blockchain / Web3",
+  "Contabilitate / Audit / Fiscalitate",
+  "Imobiliare / Dezvoltare",
+  "Constructii / Renovari",
+  "Arhitectura / Design Interior",
+  // Healthcare & Medical
+  "Medicina Generala / Clinici",
+  "Stomatologie / Dental",
+  "Chirurgie Estetica / Plastica",
+  "Oftalmologie / Optica",
+  "Dermatologie",
+  "Ortopedie / Recuperare",
+  "Pediatrie",
+  "Psihologie / Psihoterapie",
+  "Farma / Parafarmaceutice",
+  "Laboratoare / Analize Medicale",
+  "Echipamente Medicale",
+  "Medicina Veterinara",
+  // Wellness, Beauty & Fitness
+  "Wellness / Spa",
+  "Fitness / Sali de Sport",
+  "Yoga / Pilates / Mindfulness",
+  "Beauty / Cosmetice",
+  "Salon Infrumusetare / Coafor",
+  "Nutritie / Dietetica",
+  "Suplimente Alimentare",
+  // Food & Beverage
+  "Food & Beverage (producator)",
+  "Restaurante / Cafenele",
+  "Fast Food / Street Food",
+  "Catering / Evenimente Culinare",
+  "Cofetarie / Patiserie",
+  "Bauturi / Vinuri / Craft Beer",
+  "FMCG (bunuri de consum rapid)",
+  "Organic / Bio / Vegan",
+  "Livrare Mancare / Delivery",
+  // Education & Training
+  "Educatie (general)",
+  "Universitati / Scoli",
+  "Cursuri Online / E-learning",
+  "Coaching / Dezvoltare Personala",
+  "Training Profesional / Corporate",
+  "Limbi Straine / Traduceri",
+  "After School / Gradinite",
+  // Professional & Business Services
+  "Consultanta Business / Management",
+  "Consultanta IT",
+  "Marketing / Agentie Publicitate",
+  "PR / Comunicare",
+  "Legal / Avocatura / Notariat",
+  "HR / Recrutare / Staffing",
+  "Outsourcing / BPO",
+  "Cleaning / Servicii Curatenie",
+  // Media, Creative & Entertainment
+  "Media / Presa / Publicatii",
+  "Publicitate / Branding / Design",
+  "Fotografie / Videografie",
+  "Film / Video Production",
+  "Muzica / DJ / Entertainment",
+  "Evenimente / Organizare",
+  "Podcast / Content Creation",
+  "Influencer Marketing",
+  // Travel, Hospitality & Lifestyle
+  "Turism / Agentii de Turism",
+  "Hoteluri / Pensiuni / Airbnb",
+  "Fashion / Imbracaminte / Accesorii",
+  "Luxury / Premium / Bijuterii",
+  "Sport / Outdoor / Echipamente",
+  "Auto (dealership / rent-a-car)",
+  "Animale de Companie / Pet Shop",
+  // Industry, Manufacturing & Agriculture
+  "Automotive (productie / piese)",
+  "Manufacturing / Productie Industriala",
+  "Energie / Utilities / Solar",
+  "Agricultura / Ferme / Agribusiness",
+  "Logistica / Transport / Curierat",
+  "Materiale de Constructii",
+  "Ambalaje / Packaging",
+  // B2B
+  "B2B Services (general)",
+  "B2B SaaS",
+  "B2B Marketing / Lead Gen",
+  // Non-profit, Government & Social
+  "ONG / Non-profit / Fundatii",
+  "Guvern / Administratie Publica",
+  "Sanatate Publica / Campanii Sociale",
+  "Mediu / Ecologie / Sustenabilitate",
+  // Other
+  "Altele",
+] as const;
+
+const EXECUTION_QUALITIES = [
+  { value: "strong", label: "Puternic", color: "#059669" },
+  { value: "moderate", label: "Moderat", color: "#D97706" },
+  { value: "weak", label: "Slab", color: "#DC2626" },
+] as const;
+
+const VARIANT_LABELS = ["A", "B", "C"] as const;
+
+const AI_MODELS = ["Claude", "Gemini", "GPT"] as const;
+
+// ── Empty stimulus template ─────────────────────────────────
+const emptyStimulus = (type: string, order: number): Partial<Stimulus> => ({
+  name: "",
+  type,
+  industry: "",
+  description: "",
+  image_url: "",
+  video_url: "",
+  audio_url: "",
+  text_content: "",
+  pdf_url: "",
+  site_url: "",
+  display_order: order,
+  variant_label: null,
+  execution_quality: null,
+});
+
+// ── IndustryPicker — searchable dropdown ────────────────────
+function IndustryPicker({ value, onChange, style }: { value: string; onChange: (v: string) => void; style?: React.CSSProperties }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = INDUSTRIES.filter(ind =>
+    ind.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div ref={ref} style={{ position: "relative", ...style }}>
+      <input
+        type="text"
+        style={{
+          width: "100%", padding: "8px 12px", fontSize: 13, border: "1.5px solid #d1d5db",
+          borderRadius: 8, background: "#fff", color: "#1a1a1a", outline: "none",
+          boxSizing: "border-box" as const,
+        }}
+        placeholder="Cauta industrie..."
+        value={open ? search : (value || "")}
+        onFocus={() => { setOpen(true); setSearch(""); }}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+      {value && !open && (
+        <button
+          onClick={() => { onChange(""); setSearch(""); setOpen(true); }}
+          style={{
+            position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)",
+            background: "none", border: "none", cursor: "pointer", color: "#9ca3af",
+            fontSize: 16, lineHeight: 1, padding: 2,
+          }}
+          title="Sterge"
+        >
+          ×
+        </button>
+      )}
+      {open && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 999,
+          maxHeight: 240, overflowY: "auto", border: "1.5px solid #d1d5db",
+          borderTop: "none", borderRadius: "0 0 8px 8px", background: "#fff",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+        }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: "10px 14px", fontSize: 13, color: "#9ca3af" }}>
+              Nicio industrie gasita
+            </div>
+          ) : (
+            filtered.map(ind => (
+              <div
+                key={ind}
+                style={{
+                  padding: "8px 14px", fontSize: 13, cursor: "pointer",
+                  background: value === ind ? "#f0fdf4" : "transparent",
+                  color: "#1a1a1a", borderBottom: "1px solid #f3f4f6",
+                  transition: "background 0.1s",
+                }}
+                onMouseDown={() => { onChange(ind); setSearch(""); setOpen(false); }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = value === ind ? "#dcfce7" : "#f9fafb")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = value === ind ? "#f0fdf4" : "transparent")}
+              >
+                {ind}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────
+export default function StudiuAdminPage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("rezultate");
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [stimuli, setStimuli] = useState<Stimulus[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // UI state
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editCatLabel, setEditCatLabel] = useState("");
+  const [editCatColor, setEditCatColor] = useState("");
+  const [editingStimId, setEditingStimId] = useState<string | null>(null);
+  const [editStimData, setEditStimData] = useState<Partial<Stimulus>>({});
+  const [addingToType, setAddingToType] = useState<string | null>(null);
+  const [newStimData, setNewStimData] = useState<Partial<Stimulus>>({});
+  const [saving, setSaving] = useState(false);
+  const [activeMatIdx, setActiveMatIdx] = useState(0); // active material tab index
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+
+  // Distribution state
+  const [distributions, setDistributions] = useState<Distribution[]>([]);
+  const [distLoading, setDistLoading] = useState(false);
+  const [showAddDist, setShowAddDist] = useState(false);
+  const [newDistName, setNewDistName] = useState("");
+  const [newDistDesc, setNewDistDesc] = useState("");
+  const [newDistTag, setNewDistTag] = useState("");
+  const [newDistEstimate, setNewDistEstimate] = useState("");
+  const [distSaving, setDistSaving] = useState(false);
+  const [distError, setDistError] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showQr, setShowQr] = useState<string | null>(null);
+
+  // Results state
+  interface StimulusResult {
+    id: string;
+    name: string;
+    type: string;
+    industry: string;
+    variant_label: string | null;
+    execution_quality: string | null;
+    response_count: number;
+    avg_r: number;
+    avg_i: number;
+    avg_f: number;
+    avg_c: number;
+    sd_c: number;
+    avg_c_score: number;
+    avg_cta: number;
+    avg_time: number;
+  }
+  interface BreakdownData {
+    demographics: Record<string, Record<string, number>>;
+    behavioral: Record<string, Record<string, number>>;
+    psychographicAvg: Record<string, number>;
+    respondentCount: number;
+    completedCount: number;
+    completionRate: number;
+    localeCounts?: Record<string, number>;
+  }
+  interface CategoryBreakdown extends BreakdownData {
+    responseCount: number;
+  }
+  interface ResultsData {
+    totalRespondents: number;
+    completedRespondents: number;
+    completionRate: number;
+    totalResponses: number;
+    stimuliResults: StimulusResult[];
+    aiEvaluations: unknown[];
+    demographics: Record<string, Record<string, number>>;
+    behavioral: Record<string, Record<string, number>>;
+    psychographicAvg: Record<string, number>;
+    localeCounts?: Record<string, number>;
+    perCategoryBreakdowns?: Record<string, CategoryBreakdown>;
+    perStimulusBreakdowns?: Record<string, BreakdownData>;
+  }
+  const [results, setResults] = useState<ResultsData | null>(null);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsSegment, setResultsSegment] = useState<string>("general");
+  const [resultsSubTab, setResultsSubTab] = useState<"scoruri" | "profil" | "psihografic">("scoruri");
+  const [resultsCatFilter, setResultsCatFilter] = useState<string | null>(null);
+  const [expandedStimulusId, setExpandedStimulusId] = useState<string | null>(null);
+  const [tooltipCol, setTooltipCol] = useState<string | null>(null);
+  const [tooltipStat, setTooltipStat] = useState<string | null>(null);
+
+  // Log panel state
+  const [showLog, setShowLog] = useState(false);
+  const [logData, setLogData] = useState<any[]>([]);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logDateFrom, setLogDateFrom] = useState("");
+  const [logDateTo, setLogDateTo] = useState("");
+  const [logSelected, setLogSelected] = useState<Set<string>>(new Set());
+
+  const fetchLog = useCallback(async () => {
+    setLogLoading(true);
+    try {
+      const res = await fetch("/api/survey/log");
+      const json = await res.json();
+      if (json.ok) setLogData(json.logs);
+    } catch { /* ignore */ }
+    setLogLoading(false);
+  }, []);
+
+  const deleteLogEntries = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch("/api/survey/log", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const json = await res.json();
+      if (json.ok) {
+        setLogData((prev) => prev.filter((l) => !ids.includes(l.id)));
+        setLogSelected((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
+      }
+    } catch { /* ignore */ }
+  };
+
+  // Expert panel state
+  const [expertEvals, setExpertEvals] = useState<ExpertEvaluation[]>([]);
+  const [expertLoading, setExpertLoading] = useState(false);
+  const [showAddExpert, setShowAddExpert] = useState(false);
+  const [expertForm, setExpertForm] = useState({ stimulus_id: "", expert_name: "", expert_role: "", r_score: 5, i_score: 5, f_score: 5, r_justification: "", i_justification: "", f_justification: "", notes: "" });
+  const [expertSaving, setExpertSaving] = useState(false);
+
+  // AI benchmark state
+  const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAddAi, setShowAddAi] = useState(false);
+  const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
+  const [aiSaving, setAiSaving] = useState(false);
+
+  // ── Upload helper: XHR PUT for <50MB, tus resumable for >=50MB ──
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+  const SMALL_FILE_LIMIT = 50 * 1024 * 1024; // 50MB — Supabase standard upload limit
+
+  const uploadFile = async (file: File, fieldKey: string): Promise<string | null> => {
+    setUploading((prev) => ({ ...prev, [fieldKey]: true }));
+    setUploadProgress((prev) => ({ ...prev, [fieldKey]: 0 }));
+    const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+    setUploadStatus(`Se pregateste: ${file.name} (${sizeMB} MB, ${file.type})...`);
+    try {
+      // Step 1: Get upload config from our API
+      const configRes = await fetch("/api/upload/signed-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, contentType: file.type }),
+      });
+      const config = await configRes.json();
+      if (!config.path) {
+        const errMsg = `Eroare configurare: ${config.error || "raspuns invalid de la server"}`;
+        console.error(errMsg, config);
+        setUploadStatus(errMsg);
+        return null;
+      }
+
+      // Step 2: Choose upload method based on file size
+      if (file.size < SMALL_FILE_LIMIT) {
+        // Small files: XHR PUT to signed URL
+        setUploadStatus(`Se incarca ${file.name} (${sizeMB} MB)...`);
+        return await new Promise<string | null>((resolve) => {
+          const xhr = new XMLHttpRequest();
+          xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+              const pct = Math.round((e.loaded / e.total) * 100);
+              setUploadProgress((prev) => ({ ...prev, [fieldKey]: pct }));
+              setUploadStatus(`Se incarca: ${pct}% (${(e.loaded / 1024 / 1024).toFixed(1)} / ${sizeMB} MB)`);
+            }
+          });
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
+              setUploadStatus(`Upload complet: ${file.name}`);
+              resolve(config.publicUrl);
+            } else {
+              const errMsg = `Upload EROARE (${xhr.status}): ${xhr.responseText}`;
+              console.error(errMsg);
+              setUploadStatus(errMsg);
+              resolve(null);
+            }
+          });
+          xhr.addEventListener("error", () => { setUploadStatus("Upload EROARE: conexiune esuata"); resolve(null); });
+          xhr.addEventListener("timeout", () => { setUploadStatus("Upload EROARE: timeout depasit"); resolve(null); });
+          xhr.open("PUT", config.signedUrl);
+          xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+          xhr.timeout = 600000;
+          xhr.send(file);
+        });
+      } else {
+        // Large files (>=50MB): tus resumable upload in 6MB chunks
+        setUploadStatus(`Se incarca ${file.name} (${sizeMB} MB) — mod resumable...`);
+        return await new Promise<string | null>((resolve) => {
+          const upload = new tus.Upload(file, {
+            endpoint: config.tusEndpoint,
+            retryDelays: [0, 1000, 3000, 5000, 10000],
+            chunkSize: 6 * 1024 * 1024,
+            headers: {
+              authorization: `Bearer ${config.anonKey}`,
+              apikey: config.anonKey,
+              "x-upsert": "true",
+            },
+            uploadDataDuringCreation: true,
+            removeFingerprintOnSuccess: true,
+            metadata: {
+              bucketName: config.bucketId,
+              objectName: config.objectPath,
+              contentType: config.contentType,
+              cacheControl: "3600",
+            },
+            onError: (err) => {
+              const errMsg = `Upload EROARE: ${err.message || err}`;
+              console.error("Tus upload error:", err);
+              setUploadStatus(errMsg);
+              setUploading((prev) => ({ ...prev, [fieldKey]: false }));
+              resolve(null);
+            },
+            onProgress: (bytesUploaded, bytesTotal) => {
+              const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+              setUploadProgress((prev) => ({ ...prev, [fieldKey]: pct }));
+              setUploadStatus(`Se incarca: ${pct}% (${(bytesUploaded / 1024 / 1024).toFixed(1)} / ${(bytesTotal / 1024 / 1024).toFixed(1)} MB)`);
+            },
+            onSuccess: () => {
+              setUploadProgress((prev) => ({ ...prev, [fieldKey]: 100 }));
+              setUploadStatus(`Upload complet: ${file.name}`);
+              resolve(config.publicUrl);
+            },
+          });
+          upload.findPreviousUploads().then((prev) => {
+            if (prev.length > 0) {
+              setUploadStatus("Se reia uploadul anterior...");
+              upload.resumeFromPreviousUpload(prev[0]);
+            }
+            upload.start();
+          });
+        });
+      }
+    } catch (err) {
+      const errMsg = `Upload EROARE: ${err instanceof Error ? err.message : String(err)}`;
+      console.error("Upload failed:", err);
+      setUploadStatus(errMsg);
+      return null;
+    } finally {
+      setUploading((prev) => ({ ...prev, [fieldKey]: false }));
+    }
+  };
+
+  // ── Fetch data ─────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [catRes, stimRes] = await Promise.all([
+        fetch("/api/survey/categories"),
+        fetch("/api/survey/stimuli?all=true"),
+      ]);
+      const catData = await catRes.json();
+      const stimData = await stimRes.json();
+
+      if (catData.categories) setCategories(catData.categories);
+      if (stimData.stimuli) setStimuli(stimData.stimuli);
+    } catch {
+      setError("Eroare la incarcarea datelor.");
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // ── Distribution data ──────────────────────────────────
+  const fetchDistributions = useCallback(async () => {
+    setDistLoading(true);
+    try {
+      const res = await fetch("/api/survey/distributions");
+      const data = await res.json();
+      if (data.success) setDistributions(data.distributions);
+    } catch { /* ignore */ }
+    setDistLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "distributie" || activeTab === "rezultate") fetchDistributions();
+  }, [activeTab, fetchDistributions]);
+
+  // ── Results data ───────────────────────────────────────
+  const fetchResults = useCallback(async (segmentId: string) => {
+    setResultsLoading(true);
+    try {
+      const url = segmentId === "general"
+        ? "/api/survey/results"
+        : `/api/survey/results?distribution_id=${segmentId}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setResults(data);
+    } catch { /* ignore */ }
+    setResultsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "rezultate") fetchResults(resultsSegment);
+  }, [activeTab, resultsSegment, fetchResults]);
+
+  // ── Expert evaluations data ──────────────────────────────
+  const fetchExpertEvals = useCallback(async () => {
+    setExpertLoading(true);
+    try {
+      const res = await fetch("/api/survey/expert-evaluations");
+      const data = await res.json();
+      if (data.success) setExpertEvals(data.evaluations);
+    } catch { /* ignore */ }
+    setExpertLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "experti") fetchExpertEvals();
+  }, [activeTab, fetchExpertEvals]);
+
+  const addExpertEval = async () => {
+    if (!expertForm.stimulus_id || !expertForm.expert_name) return;
+    setExpertSaving(true);
+    try {
+      const res = await fetch("/api/survey/expert-evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(expertForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddExpert(false);
+        setExpertForm({ stimulus_id: "", expert_name: "", expert_role: "", r_score: 5, i_score: 5, f_score: 5, r_justification: "", i_justification: "", f_justification: "", notes: "" });
+        fetchExpertEvals();
+      }
+    } catch { /* ignore */ }
+    setExpertSaving(false);
+  };
+
+  const deleteExpertEval = async (id: string) => {
+    if (!confirm("Stergi aceasta evaluare?")) return;
+    await fetch(`/api/survey/expert-evaluations?id=${id}`, { method: "DELETE" });
+    fetchExpertEvals();
+  };
+
+  // ── AI evaluations data ──────────────────────────────────
+  const fetchAiEvals = useCallback(async () => {
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/survey/ai-evaluations");
+      const data = await res.json();
+      if (data.success) setAiEvals(data.evaluations);
+    } catch { /* ignore */ }
+    setAiLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "ai") fetchAiEvals();
+  }, [activeTab, fetchAiEvals]);
+
+  const addAiEval = async () => {
+    if (!aiForm.stimulus_id || !aiForm.model_name) return;
+    setAiSaving(true);
+    try {
+      const res = await fetch("/api/survey/ai-evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...aiForm,
+          justification: aiForm.justification ? { text: aiForm.justification } : {},
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddAi(false);
+        setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
+        fetchAiEvals();
+      }
+    } catch { /* ignore */ }
+    setAiSaving(false);
+  };
+
+  const deleteAiEval = async (id: string) => {
+    if (!confirm("Stergi aceasta evaluare AI?")) return;
+    await fetch(`/api/survey/ai-evaluations?id=${id}`, { method: "DELETE" });
+    fetchAiEvals();
+  };
+
+  const baseUrl = typeof window !== "undefined"
+    ? window.location.origin
+    : "https://rifcmarketing.com";
+
+  const getDistLink = (tag: string) => `${baseUrl}/articolstiintific/sondaj/wizard?tag=${tag}`;
+
+  const addDistribution = async () => {
+    if (!newDistName.trim() || !newDistTag.trim()) {
+      setDistError("Numele si tag-ul sunt obligatorii.");
+      return;
+    }
+    setDistSaving(true);
+    setDistError(null);
+    try {
+      const res = await fetch("/api/survey/distributions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newDistName.trim(),
+          description: newDistDesc.trim(),
+          tag: newDistTag.trim(),
+          estimated_completions: parseInt(newDistEstimate) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNewDistName("");
+        setNewDistDesc("");
+        setNewDistTag("");
+        setNewDistEstimate("");
+        setShowAddDist(false);
+        fetchDistributions();
+      } else {
+        setDistError(data.error || "Eroare la salvare.");
+      }
+    } catch {
+      setDistError("Eroare de conexiune.");
+    }
+    setDistSaving(false);
+  };
+
+  const deleteDistribution = async (id: string) => {
+    if (!confirm("Sigur stergi aceasta distributie? Datele respondentilor se pastreaza.")) return;
+    await fetch(`/api/survey/distributions?id=${id}`, { method: "DELETE" });
+    fetchDistributions();
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch { /* ignore */ }
+  };
+
+  // ── Helpers ────────────────────────────────────────────
+  const getStimuliForType = (type: string) =>
+    stimuli.filter((s) => s.type === type && s.is_active);
+
+  const totalMaterials = stimuli.filter((s) => s.is_active).length;
+  const visibleCategories = categories.filter((c) => c.is_visible).length;
+
+  // ── Category actions ───────────────────────────────────
+  const toggleVisibility = async (cat: Category) => {
+    const res = await fetch("/api/survey/categories", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: cat.id, is_visible: !cat.is_visible }),
+    });
+    if ((await res.json()).success) {
+      setCategories((prev) =>
+        prev.map((c) => (c.id === cat.id ? { ...c, is_visible: !c.is_visible } : c))
+      );
+    }
+  };
+
+  const moveCategory = async (cat: Category, direction: "up" | "down") => {
+    const sorted = [...categories].sort((a, b) => a.display_order - b.display_order);
+    const idx = sorted.findIndex((c) => c.id === cat.id);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+
+    const other = sorted[swapIdx];
+    const myOrder = cat.display_order;
+    const otherOrder = other.display_order;
+
+    await Promise.all([
+      fetch("/api/survey/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: cat.id, display_order: otherOrder }),
+      }),
+      fetch("/api/survey/categories", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: other.id, display_order: myOrder }),
+      }),
+    ]);
+
+    setCategories((prev) =>
+      prev
+        .map((c) => {
+          if (c.id === cat.id) return { ...c, display_order: otherOrder };
+          if (c.id === other.id) return { ...c, display_order: myOrder };
+          return c;
+        })
+        .sort((a, b) => a.display_order - b.display_order)
+    );
+  };
+
+  const deleteCategory = async (cat: Category) => {
+    if (!confirm(`Stergi categoria "${cat.label}"? Materialele din ea vor ramane in baza de date.`)) return;
+    const res = await fetch(`/api/survey/categories?id=${cat.id}`, { method: "DELETE" });
+    if ((await res.json()).success) {
+      setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+    }
+  };
+
+  const startEditCategory = (cat: Category) => {
+    setEditingCatId(cat.id);
+    setEditCatLabel(cat.label);
+    setEditCatColor(cat.color);
+  };
+
+  const saveEditCategory = async () => {
+    if (!editingCatId) return;
+    setSaving(true);
+    const res = await fetch("/api/survey/categories", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingCatId, label: editCatLabel, color: editCatColor }),
+    });
+    if ((await res.json()).success) {
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === editingCatId ? { ...c, label: editCatLabel, color: editCatColor } : c
+        )
+      );
+    }
+    setEditingCatId(null);
+    setSaving(false);
+  };
+
+  // ── Stimulus actions ───────────────────────────────────
+  const startEditStimulus = (stim: Stimulus) => {
+    setEditingStimId(stim.id);
+    setEditStimData({ ...stim });
+  };
+
+  const saveEditStimulus = async () => {
+    if (!editingStimId) return;
+    setSaving(true);
+    const res = await fetch("/api/survey/stimuli", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingStimId, ...editStimData }),
+    });
+    const result = await res.json();
+    if (result.success) {
+      setStimuli((prev) =>
+        prev.map((s) => (s.id === editingStimId ? { ...s, ...editStimData } : s))
+      );
+    }
+    setEditingStimId(null);
+    setSaving(false);
+  };
+
+  const deleteStimulus = async (stim: Stimulus) => {
+    if (!confirm(`Stergi materialul "${stim.name}"?`)) return;
+    const res = await fetch(`/api/survey/stimuli?id=${stim.id}`, { method: "DELETE" });
+    if ((await res.json()).success) {
+      setStimuli((prev) => prev.map((s) => (s.id === stim.id ? { ...s, is_active: false } : s)));
+    }
+  };
+
+  const startAddStimulus = (type: string) => {
+    const materialsCount = getStimuliForType(type).length;
+    setAddingToType(type);
+    setNewStimData(emptyStimulus(type, materialsCount + 1));
+  };
+
+  const saveNewStimulus = async () => {
+    if (!newStimData.name || !addingToType) return;
+    setSaving(true);
+    const res = await fetch("/api/survey/stimuli", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newStimData),
+    });
+    const result = await res.json();
+    if (result.success && result.stimulus) {
+      setStimuli((prev) => [...prev, result.stimulus]);
+    }
+    setAddingToType(null);
+    setNewStimData({});
+    setSaving(false);
+  };
+
+  // ── Media icons helper ─────────────────────────────────
+  const getMediaIcons = (stim: Stimulus) => {
+    const icons: { icon: typeof Image; label: string }[] = [];
+    if (stim.image_url) icons.push({ icon: Image, label: "Imagine" });
+    if (stim.video_url) icons.push({ icon: Video, label: "Video" });
+    if (stim.audio_url) icons.push({ icon: Music, label: "Audio" });
+    if (stim.text_content) icons.push({ icon: FileText, label: "Text" });
+    if (stim.pdf_url) icons.push({ icon: FileText, label: "PDF" });
+    if (stim.site_url) icons.push({ icon: Link, label: "Site" });
+    return icons;
+  };
+
+  // ── Render ──────────────────────────────────────────────
+  return (
+    <div style={S.page}>
+      {/* Header bar */}
+      <div style={S.headerBar}>
+        <a href="/articolstiintific" style={{ ...S.logo, textDecoration: "none", cursor: "pointer" }}>
+          <span style={{ color: "#DC2626", fontWeight: 800 }}>R</span>
+          <span style={{ color: "#6B7280", fontWeight: 300 }}> IF </span>
+          <span style={{ color: "#DC2626", fontWeight: 800 }}>C</span>
+        </a>
+        <div style={S.headerBadge}>SONDAJ</div>
+        <div style={{ flex: 1 }} />
+        <button style={{ ...S.langBtn, background: "#111827", color: "#fff", marginRight: 8 }} onClick={() => { setShowLog(true); fetchLog(); }}>
+          <ClipboardList size={14} />
+          <span>LOG</span>
+        </button>
+        <button style={S.langBtn} onClick={() => {}}>
+          <Globe size={14} />
+          <span>RO</span>
+        </button>
+      </div>
+
+      {/* ═══ LOG PANEL ═══ */}
+      {showLog && (() => {
+        const filtered = logData.filter((l) => {
+          if (logDateFrom) { const d = new Date(l.completed_at || 0); if (d < new Date(logDateFrom)) return false; }
+          if (logDateTo) { const d = new Date(l.completed_at || 0); if (d > new Date(logDateTo + "T23:59:59")) return false; }
+          return true;
+        });
+        const allFilteredIds = filtered.map((l: any) => l.id);
+        const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => logSelected.has(id));
+        return (
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 10000, display: "flex", justifyContent: "center", padding: "30px 20px", overflowY: "auto" }}>
+            <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 1100, padding: "28px 32px", maxHeight: "calc(100vh - 60px)", overflowY: "auto" }}>
+              {/* Header */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "#111827" }}>Log Completări Sondaj</h2>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B7280" }}>{logData.length} înregistrări totale · {filtered.length} afișate</p>
+                </div>
+                <button onClick={() => setShowLog(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 24, color: "#9CA3AF", padding: 4 }}>&times;</button>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>DE LA:</label>
+                <input type="date" value={logDateFrom} onChange={(e) => setLogDateFrom(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>PÂNĂ LA:</label>
+                <input type="date" value={logDateTo} onChange={(e) => setLogDateTo(e.target.value)} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13 }} />
+                {(logDateFrom || logDateTo) && (
+                  <button onClick={() => { setLogDateFrom(""); setLogDateTo(""); }} style={{ padding: "6px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", fontSize: 12, cursor: "pointer", color: "#6B7280" }}>Resetează</button>
+                )}
+                <div style={{ flex: 1 }} />
+                {logSelected.size > 0 && (
+                  <button onClick={() => { if (confirm(`Ștergi ${logSelected.size} înregistrări selectate?`)) deleteLogEntries(Array.from(logSelected)); }} style={{ padding: "8px 16px", borderRadius: 8, border: "none", background: "#DC2626", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    Șterge selectate ({logSelected.size})
+                  </button>
+                )}
+              </div>
+
+              {logLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Se încarcă...</div>
+              ) : filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>Nicio înregistrare</div>
+              ) : (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                      <th style={{ padding: "8px 6px", width: 36 }}>
+                        <input type="checkbox" checked={allSelected} onChange={() => {
+                          if (allSelected) setLogSelected(new Set());
+                          else setLogSelected(new Set(allFilteredIds));
+                        }} />
+                      </th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>#</th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>DATA</th>
+                      <th style={thStyle}>STATUS</th>
+                      <th style={thStyle}>RĂSPUNSURI</th>
+                      <th style={thStyle}>DISPOZITIV</th>
+                      <th style={thStyle}>LIMBĂ</th>
+                      <th style={thStyle}>GRUP</th>
+                      <th style={{ ...thStyle, textAlign: "left" }}>DEMOGRAFIE</th>
+                      <th style={thStyle}>TIMP</th>
+                      <th style={{ padding: "8px 6px", width: 50 }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((log: any, idx: number) => {
+                      const completedDate = log.completed_at ? new Date(log.completed_at) : null;
+                      const isComplete = !!completedDate;
+                      const created = completedDate || new Date();
+                      const demoGender = log.demographics?.gender || "—";
+                      const demoAge = log.demographics?.age_range || "—";
+                      const demoCountry = log.demographics?.country || "—";
+                      const isChecked = logSelected.has(log.id);
+                      return (
+                        <tr key={log.id} style={{ borderBottom: "1px solid #f3f4f6", background: isChecked ? "#fef3c7" : "transparent" }}>
+                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
+                            <input type="checkbox" checked={isChecked} onChange={() => {
+                              setLogSelected((prev) => { const n = new Set(prev); if (n.has(log.id)) n.delete(log.id); else n.add(log.id); return n; });
+                            }} />
+                          </td>
+                          <td style={{ ...tdStyle, fontWeight: 600, color: "#6B7280", fontSize: 11 }}>{filtered.length - idx}</td>
+                          <td style={{ ...tdStyle, fontSize: 12 }}>
+                            <div style={{ fontWeight: 600 }}>{created.toLocaleDateString("ro-RO")}</div>
+                            <div style={{ color: "#9CA3AF", fontSize: 11 }}>{created.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}</div>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: isComplete ? "#d1fae5" : "#fef3c7", color: isComplete ? "#065f46" : "#92400e" }}>
+                              {isComplete ? "COMPLET" : "ÎN CURS"}
+                            </span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center", fontWeight: 600 }}>{log.responseCount}</td>
+                          <td style={{ ...tdStyle, textAlign: "center" }}>
+                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 3, background: "#f3f4f6", color: "#374151" }}>{log.device_type || "—"}</span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: log.locale === "RO" ? "#dbeafe" : log.locale === "RU" ? "#fee2e2" : "#d1fae5", color: log.locale === "RO" ? "#1e40af" : log.locale === "RU" ? "#991b1b" : "#065f46" }}>{log.locale || "—"}</span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center", fontSize: 11, fontWeight: 600 }}>{log.variant_group || "—"}</td>
+                          <td style={{ ...tdStyle, fontSize: 11 }}>
+                            <span>{demoGender} · {demoAge} · {demoCountry}</span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center", fontSize: 11 }}>
+                            {"—"}
+                          </td>
+                          <td style={{ padding: "8px 6px", textAlign: "center" }}>
+                            <button onClick={() => { if (confirm("Ștergi această înregistrare?")) deleteLogEntries([log.id]); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: 14, padding: 4 }} title="Șterge">
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+
+      {/* Tabs */}
+      <div style={S.tabsBar}>
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              style={{
+                ...S.tab,
+                ...(isActive ? S.tabActive : {}),
+              }}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <Icon size={16} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Content area */}
+      <div style={S.content}>
+        {/* ═══ CARTONASE TAB ═══ */}
+        {activeTab === "cartonase" && (
+          <>
+            {/* Header */}
+            <div style={S.sectionHeader}>
+              <div>
+                <h1 style={S.pageTitle}>Structura Sondaj</h1>
+                <p style={S.pageSubtitle}>
+                  {visibleCategories} categorii &middot; {totalMaterials} materiale
+                </p>
+              </div>
+              <button style={S.addCatBtn} onClick={() => {/* TODO: add new category type */}}>
+                <Plus size={16} />
+                <span>ADAUGA CATEGORIE</span>
+              </button>
+            </div>
+
+            {/* Configuration card */}
+            <div style={S.configCard}>
+              <div style={S.configHeader}>
+                <Settings size={16} style={{ color: "#6B7280" }} />
+                <span style={S.configTitle}>CONFIGURATIE</span>
+              </div>
+              <div style={S.configGrid}>
+                <div style={S.configItem}>
+                  <span style={S.configLabel}>FORMULA</span>
+                  <div style={S.configFormula}>
+                    <span style={{ color: "#DC2626" }}>R</span>
+                    <span style={{ color: "#6B7280" }}> + </span>
+                    <span style={{ color: "#D97706" }}>I</span>
+                    <span style={{ color: "#6B7280" }}> &times; </span>
+                    <span style={{ color: "#7C3AED" }}>F</span>
+                    <span style={{ color: "#6B7280" }}> = </span>
+                    <span style={{ color: "#DC2626", fontWeight: 800 }}>C</span>
+                  </div>
+                </div>
+                <div style={S.configItem}>
+                  <span style={S.configLabel}>BUTOANE PER MATERIAL</span>
+                  <div style={S.configValue}>R, I, F, C, CTA (1-10)</div>
+                </div>
+                <div style={S.configItem}>
+                  <span style={S.configLabel}>DESIGN</span>
+                  <div style={S.configValue}>10 canale &times; 3 variante = 30 stimuli</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Loading / Error */}
+            {loading && <p style={{ textAlign: "center", color: "#6B7280", padding: 40 }}>Se incarca...</p>}
+            {error && <p style={{ textAlign: "center", color: "#DC2626", padding: 20 }}>{error}</p>}
+
+            {/* Categories — compact strip when editing, full gallery otherwise */}
+            {!loading && !expandedCat && (
+              <div style={S.galleryGrid}>
+                {categories
+                  .sort((a, b) => a.display_order - b.display_order)
+                  .map((cat, catIdx) => {
+                    const catStimuli = getStimuliForType(cat.type);
+                    const maxMat = cat.max_materials;
+                    return (
+                      <div key={cat.id} style={{ ...S.galleryCard, borderTopColor: cat.color, opacity: cat.is_visible ? 1 : 0.5 }}>
+                        <div style={{ ...S.galleryNum, background: cat.color }}>{String(catIdx + 1).padStart(2, "0")}</div>
+                        <button style={S.galleryVisBtn} title={cat.is_visible ? "Ascunde" : "Arata"} onClick={(e) => { e.stopPropagation(); toggleVisibility(cat); }}>
+                          {cat.is_visible ? <Eye size={14} /> : <EyeOff size={14} />}
+                        </button>
+                        <div style={S.galleryTop}><span style={{ ...S.galleryBadge, background: cat.color }}>{cat.short_code}</span></div>
+                        <div style={S.galleryName}>{cat.label}</div>
+                        <div style={S.galleryCounter}>
+                          <div style={S.counterBar}><div style={{ ...S.counterFill, width: `${(catStimuli.length / maxMat) * 100}%`, background: cat.color }} /></div>
+                          <span style={S.counterText}>{catStimuli.length}/{maxMat} materiale</span>
+                        </div>
+                        <button style={{ ...S.galleryEditBtn, width: "100%", justifyContent: "center" }} onClick={() => { setExpandedCat(cat.id); setEditingStimId(null); setAddingToType(null); setEditingCatId(null); setActiveMatIdx(0); }}>
+                          <Pencil size={13} /><span>Editeaza</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            {/* ═══ COMPACT STRIP + FULL WORKSPACE ═══ */}
+            {!loading && expandedCat && (() => {
+              const cat = categories.find((c) => c.id === expandedCat);
+              if (!cat) return null;
+              const catStimuli = getStimuliForType(cat.type);
+              const maxMat = cat.max_materials;
+              const isEditingName = editingCatId === cat.id;
+              const sortedCats = [...categories].sort((a, b) => a.display_order - b.display_order);
+              const activeStim = catStimuli[activeMatIdx] || null;
+              const isAdding = addingToType === cat.type;
+
+              return (
+                <>
+                  {/* Compact horizontal category strip */}
+                  <div style={S.catStrip}>
+                    {sortedCats.map((c) => {
+                      const isSel = c.id === expandedCat;
+                      const cStim = getStimuliForType(c.type);
+                      return (
+                        <button
+                          key={c.id}
+                          style={{
+                            ...S.catChip,
+                            borderColor: isSel ? c.color : "#e5e7eb",
+                            background: isSel ? c.color : "#fff",
+                            color: isSel ? "#fff" : "#374151",
+                            opacity: c.is_visible ? 1 : 0.4,
+                          }}
+                          onClick={() => { setExpandedCat(c.id); setEditingStimId(null); setAddingToType(null); setEditingCatId(null); setActiveMatIdx(0); }}
+                        >
+                          <span style={{ ...S.chipBadge, background: isSel ? "rgba(255,255,255,0.25)" : c.color, color: isSel ? "#fff" : "#fff" }}>{c.short_code}</span>
+                          <span style={S.chipCount}>{cStim.length}/{c.max_materials}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Full-width workspace */}
+                  <div style={{ ...S.workspace, borderColor: cat.color }}>
+                    {/* Workspace header */}
+                    <div style={S.wsHeader}>
+                      <div style={S.wsHeaderLeft}>
+                        <span style={{ ...S.galleryBadge, background: cat.color, fontSize: 13, padding: "6px 16px" }}>{cat.short_code}</span>
+                        {isEditingName ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <input type="color" value={editCatColor} onChange={(e) => setEditCatColor(e.target.value)} style={S.colorPicker} />
+                            <input type="text" value={editCatLabel} onChange={(e) => setEditCatLabel(e.target.value)} style={{ ...S.catEditInput, fontSize: 18, fontWeight: 700 }} autoFocus />
+                            <button style={S.iconBtnSave} onClick={saveEditCategory} disabled={saving}><Check size={14} /></button>
+                            <button style={S.iconBtnCancel} onClick={() => setEditingCatId(null)}><X size={14} /></button>
+                          </div>
+                        ) : (
+                          <h2 style={{ ...S.wsTitle, fontSize: 22 }}>{cat.label}</h2>
+                        )}
+                        <span style={S.wsMaterialCount}>{catStimuli.length}/{maxMat}</span>
+                      </div>
+                      <div style={S.wsHeaderRight}>
+                        {!isEditingName && (
+                          <>
+                            <button style={S.wsActionBtn} onClick={() => startEditCategory(cat)} title="Redenumeste"><Pencil size={14} /><span>Redenumeste</span></button>
+                            <button style={S.iconBtnSm} title="Muta sus" onClick={() => moveCategory(cat, "up")}><ChevronUp size={14} /></button>
+                            <button style={S.iconBtnSm} title="Muta jos" onClick={() => moveCategory(cat, "down")}><ChevronDown size={14} /></button>
+                            <button style={{ ...S.wsActionBtn, color: "#DC2626", borderColor: "#fecaca" }} onClick={() => deleteCategory(cat)}><Trash2 size={14} /><span>Sterge</span></button>
+                            <button style={{ ...S.wsActionBtn, color: "#6B7280" }} onClick={() => { setExpandedCat(null); setEditingCatId(null); }}><X size={14} /><span>Inchide</span></button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Material tabs bar */}
+                    <div style={S.matTabsBar}>
+                      {catStimuli.map((stim, idx) => (
+                        <button
+                          key={stim.id}
+                          style={{
+                            ...S.matTab,
+                            ...(activeMatIdx === idx && !isAdding ? { color: cat.color, borderBottomColor: cat.color, background: "#fff" } : {}),
+                          }}
+                          onClick={() => { setActiveMatIdx(idx); setEditingStimId(null); setAddingToType(null); }}
+                        >
+                          <span style={{ ...S.matTabNum, background: activeMatIdx === idx && !isAdding ? cat.color : "#e5e7eb", color: activeMatIdx === idx && !isAdding ? "#fff" : "#6B7280" }}>{idx + 1}</span>
+                          <span style={S.matTabName}>{stim.name || "Material " + (idx + 1)}</span>
+                          {getMediaIcons(stim).length > 0 && <span style={S.matTabMediaCount}>{getMediaIcons(stim).length}</span>}
+                        </button>
+                      ))}
+                      {catStimuli.length < maxMat && (
+                        <button
+                          style={{ ...S.matTab, color: "#059669", ...(isAdding ? { borderBottomColor: "#059669", background: "#fff" } : {}) }}
+                          onClick={() => { startAddStimulus(cat.type); setActiveMatIdx(-1); }}
+                        >
+                          <Plus size={14} />
+                          <span>Adauga</span>
+                          <span style={{ fontSize: 10, color: "#9CA3AF" }}>({catStimuli.length + 1}/{maxMat})</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Active material — full width editing area */}
+                    <div style={S.matWorkArea}>
+                      {isAdding ? (
+                        /* ── Adding new material ── */
+                        <div>
+                          <h3 style={S.matWorkTitle}>Material nou</h3>
+                          <div style={S.matFormWide}>
+                            <div style={S.formRow3}>
+                              <div style={S.formField}><label style={S.formLabel}>Nume *</label><input style={S.formInput} value={newStimData.name || ""} onChange={(e) => setNewStimData({ ...newStimData, name: e.target.value })} autoFocus placeholder="Ex: Maison Noir — FB Ad" /></div>
+                              <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={newStimData.industry || ""} onChange={(v) => setNewStimData({ ...newStimData, industry: v })} /></div>
+                              <div style={S.formField}><label style={S.formLabel}>Ordine Afișare</label><input style={S.formInput} type="number" value={newStimData.display_order || 0} onChange={(e) => setNewStimData({ ...newStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
+                            </div>
+                            <div style={S.formRow3}>
+                              <div style={S.formField}><label style={S.formLabel}>Varianta (A/B/C)</label><select style={S.formInput} value={newStimData.variant_label || ""} onChange={(e) => setNewStimData({ ...newStimData, variant_label: e.target.value || null })}><option value="">Neasignat</option>{VARIANT_LABELS.map(v => <option key={v} value={v}>Varianta {v}</option>)}</select></div>
+                              <div style={S.formField}><label style={S.formLabel}>Calitate Executie</label><select style={S.formInput} value={newStimData.execution_quality || ""} onChange={(e) => setNewStimData({ ...newStimData, execution_quality: e.target.value || null })}><option value="">Neasignat</option>{EXECUTION_QUALITIES.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}</select></div>
+                              <div />
+                            </div>
+                            <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={newStimData.description || ""} onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })} /></div>
+                            {uploadStatus && (
+                              <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: uploadStatus.includes("EROARE") ? "#fef2f2" : uploadStatus.includes("complet") ? "#f0fdf4" : "#eff6ff", color: uploadStatus.includes("EROARE") ? "#dc2626" : uploadStatus.includes("complet") ? "#16a34a" : "#2563eb", border: `1px solid ${uploadStatus.includes("EROARE") ? "#fecaca" : uploadStatus.includes("complet") ? "#bbf7d0" : "#bfdbfe"}`, marginBottom: 8, fontFamily: "monospace" }}>
+                                {uploadStatus}
+                              </div>
+                            )}
+                            <div style={S.formRow2}>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>Imagine</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-image"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.image_url ? "Schimba imagine" : "Incarca imagine"}</span>
+                                  <input type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-image"); if (url) setNewStimData((prev) => ({ ...prev, image_url: url })); } }} />
+                                </label>
+                                {newStimData.image_url && (
+                                  <div style={S.filePreview}>
+                                    <img src={newStimData.image_url} alt="" style={{ maxHeight: 80, borderRadius: 6 }} />
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, image_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>Video</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-video"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.video_url ? "Schimba video" : "Incarca video"}</span>
+                                  <input type="file" accept="video/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-video"); if (url) setNewStimData((prev) => ({ ...prev, video_url: url })); } }} />
+                                </label>
+                                {newStimData.video_url && (
+                                  <div style={S.filePreview}>
+                                    <video src={newStimData.video_url} style={{ maxHeight: 80, borderRadius: 6 }} />
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, video_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>Audio (MP3)</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-audio"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.audio_url ? "Schimba audio" : "Incarca audio"}</span>
+                                  <input type="file" accept="audio/*,.mp3,.wav,.ogg" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-audio"); if (url) setNewStimData((prev) => ({ ...prev, audio_url: url })); } }} />
+                                </label>
+                                {newStimData.audio_url && (
+                                  <div style={S.filePreview}>
+                                    <Music size={20} style={{ color: "#7C3AED" }} />
+                                    <audio src={newStimData.audio_url} controls style={{ height: 32, flex: 1 }} />
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, audio_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div style={S.formRow2}>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>PDF</label>
+                                <label style={S.fileLabel}>
+                                  {uploading["new-pdf"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                  <span>{newStimData.pdf_url ? "Schimba PDF" : "Incarca PDF"}</span>
+                                  <input type="file" accept=".pdf" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "new-pdf"); if (url) setNewStimData((prev) => ({ ...prev, pdf_url: url })); } }} />
+                                </label>
+                                {newStimData.pdf_url && (
+                                  <div style={S.filePreview}>
+                                    <FileText size={20} style={{ color: "#DC2626" }} />
+                                    <span style={{ fontSize: 12, color: "#374151" }}>PDF incarcat</span>
+                                    <button style={S.fileRemoveBtn} onClick={() => setNewStimData((prev) => ({ ...prev, pdf_url: "" }))}><X size={12} /></button>
+                                  </div>
+                                )}
+                              </div>
+                              <div style={S.formField}><label style={S.formLabel}>URL Site</label><input style={S.formInput} value={newStimData.site_url || ""} onChange={(e) => setNewStimData({ ...newStimData, site_url: e.target.value })} placeholder="https://..." /></div>
+                            </div>
+                            <div style={S.formField}><label style={S.formLabel}>Continut Text</label><textarea style={{ ...S.formInput, minHeight: 120, resize: "vertical" as const }} value={newStimData.text_content || ""} onChange={(e) => setNewStimData({ ...newStimData, text_content: e.target.value })} placeholder="Daca nu adaugi imagine sau video, textul devine continutul principal." /></div>
+                          </div>
+                          <div style={{ ...S.stimEditActions, marginTop: 20 }}>
+                            <button style={S.btnCancel} onClick={() => { setAddingToType(null); setNewStimData({}); setActiveMatIdx(0); }}>Anuleaza</button>
+                            <button style={{ ...S.btnSave, opacity: !newStimData.name ? 0.5 : 1 }} onClick={saveNewStimulus} disabled={saving || !newStimData.name}>{saving ? "Se salveaza..." : "Adauga Material"}</button>
+                          </div>
+                        </div>
+                      ) : activeStim ? (
+                        /* ── Existing material — always editable ── */
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                              <span style={{ ...S.matNum, background: cat.color, width: 36, height: 36, fontSize: 16 }}>{activeMatIdx + 1}</span>
+                              <h3 style={S.matWorkTitle}>{activeStim.name}</h3>
+                              {activeStim.industry && <span style={S.stimIndustry}>{activeStim.industry}</span>}
+                              {activeStim.variant_label && <span style={{ ...S.stimIndustry, background: "#dbeafe", color: "#1d4ed8" }}>V{activeStim.variant_label}</span>}
+                              {activeStim.execution_quality && <span style={{ ...S.stimIndustry, background: EXECUTION_QUALITIES.find(q => q.value === activeStim.execution_quality)?.color || "#6B7280", color: "#fff" }}>{EXECUTION_QUALITIES.find(q => q.value === activeStim.execution_quality)?.label || activeStim.execution_quality}</span>}
+                              <div style={S.matMediaRow}>
+                                {getMediaIcons(activeStim).map((m, i) => { const MIcon = m.icon; return <span key={i} title={m.label} style={S.matMediaTag}><MIcon size={12} /> {m.label}</span>; })}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {editingStimId === activeStim.id ? (
+                                <>
+                                  <button style={S.btnCancel} onClick={() => setEditingStimId(null)}>Anuleaza</button>
+                                  <button style={S.btnSave} onClick={saveEditStimulus} disabled={saving}>{saving ? "Se salveaza..." : "Salveaza"}</button>
+                                </>
+                              ) : (
+                                <>
+                                  <button style={S.wsActionBtn} onClick={() => startEditStimulus(activeStim)}><Pencil size={14} /><span>Editeaza</span></button>
+                                  <button style={{ ...S.wsActionBtn, color: "#DC2626", borderColor: "#fecaca" }} onClick={() => deleteStimulus(activeStim)}><Trash2 size={14} /><span>Sterge</span></button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {editingStimId === activeStim.id ? (
+                            <div style={S.matFormWide}>
+                              <div style={S.formRow3}>
+                                <div style={S.formField}><label style={S.formLabel}>Nume</label><input style={S.formInput} value={editStimData.name || ""} onChange={(e) => setEditStimData({ ...editStimData, name: e.target.value })} /></div>
+                                <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={editStimData.industry || ""} onChange={(v) => setEditStimData({ ...editStimData, industry: v })} /></div>
+                                <div style={S.formField}><label style={S.formLabel}>Ordine Afișare</label><input style={S.formInput} type="number" value={editStimData.display_order || 0} onChange={(e) => setEditStimData({ ...editStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
+                              </div>
+                              <div style={S.formRow3}>
+                                <div style={S.formField}><label style={S.formLabel}>Varianta (A/B/C)</label><select style={S.formInput} value={editStimData.variant_label || ""} onChange={(e) => setEditStimData({ ...editStimData, variant_label: e.target.value || null })}><option value="">Neasignat</option>{VARIANT_LABELS.map(v => <option key={v} value={v}>Varianta {v}</option>)}</select></div>
+                                <div style={S.formField}><label style={S.formLabel}>Calitate Executie</label><select style={S.formInput} value={editStimData.execution_quality || ""} onChange={(e) => setEditStimData({ ...editStimData, execution_quality: e.target.value || null })}><option value="">Neasignat</option>{EXECUTION_QUALITIES.map(q => <option key={q.value} value={q.value}>{q.label}</option>)}</select></div>
+                                <div />
+                              </div>
+                              <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={editStimData.description || ""} onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })} /></div>
+                              {uploadStatus && (
+                                <div style={{ padding: "8px 12px", borderRadius: 8, fontSize: 13, background: uploadStatus.includes("EROARE") ? "#fef2f2" : uploadStatus.includes("complet") ? "#f0fdf4" : "#eff6ff", color: uploadStatus.includes("EROARE") ? "#dc2626" : uploadStatus.includes("complet") ? "#16a34a" : "#2563eb", border: `1px solid ${uploadStatus.includes("EROARE") ? "#fecaca" : uploadStatus.includes("complet") ? "#bbf7d0" : "#bfdbfe"}`, marginBottom: 8, fontFamily: "monospace" }}>
+                                  {uploadStatus}
+                                </div>
+                              )}
+                              <div style={S.formRow2}>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Imagine</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-image"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.image_url ? "Schimba imagine" : "Incarca imagine"}</span>
+                                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-image"); if (url) setEditStimData((prev) => ({ ...prev, image_url: url })); } }} />
+                                  </label>
+                                  {editStimData.image_url && (
+                                    <div style={S.filePreview}>
+                                      <img src={editStimData.image_url} alt="" style={{ maxHeight: 80, borderRadius: 6 }} />
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, image_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Video</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-video"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.video_url ? "Schimba video" : "Incarca video"}</span>
+                                    <input type="file" accept="video/*" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-video"); if (url) setEditStimData((prev) => ({ ...prev, video_url: url })); } }} />
+                                  </label>
+                                  {editStimData.video_url && (
+                                    <div style={S.filePreview}>
+                                      <video src={editStimData.video_url} style={{ maxHeight: 80, borderRadius: 6 }} />
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, video_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>Audio (MP3)</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-audio"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.audio_url ? "Schimba audio" : "Incarca audio"}</span>
+                                    <input type="file" accept="audio/*,.mp3,.wav,.ogg" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-audio"); if (url) setEditStimData((prev) => ({ ...prev, audio_url: url })); } }} />
+                                  </label>
+                                  {editStimData.audio_url && (
+                                    <div style={S.filePreview}>
+                                      <Music size={20} style={{ color: "#7C3AED" }} />
+                                      <audio src={editStimData.audio_url} controls style={{ height: 32, flex: 1 }} />
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, audio_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <div style={S.formRow2}>
+                                <div style={S.formField}>
+                                  <label style={S.formLabel}>PDF</label>
+                                  <label style={S.fileLabel}>
+                                    {uploading["edit-pdf"] ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Upload size={14} />}
+                                    <span>{editStimData.pdf_url ? "Schimba PDF" : "Incarca PDF"}</span>
+                                    <input type="file" accept=".pdf" style={{ display: "none" }} onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const url = await uploadFile(f, "edit-pdf"); if (url) setEditStimData((prev) => ({ ...prev, pdf_url: url })); } }} />
+                                  </label>
+                                  {editStimData.pdf_url && (
+                                    <div style={S.filePreview}>
+                                      <FileText size={20} style={{ color: "#DC2626" }} />
+                                      <span style={{ fontSize: 12, color: "#374151" }}>PDF incarcat</span>
+                                      <button style={S.fileRemoveBtn} onClick={() => setEditStimData((prev) => ({ ...prev, pdf_url: "" }))}><X size={12} /></button>
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={S.formField}><label style={S.formLabel}>URL Site</label><input style={S.formInput} value={editStimData.site_url || ""} onChange={(e) => setEditStimData({ ...editStimData, site_url: e.target.value })} placeholder="https://..." /></div>
+                              </div>
+                              <div style={S.formField}><label style={S.formLabel}>Continut Text</label><textarea style={{ ...S.formInput, minHeight: 120, resize: "vertical" as const }} value={editStimData.text_content || ""} onChange={(e) => setEditStimData({ ...editStimData, text_content: e.target.value })} placeholder="Daca nu adaugi imagine sau video, textul devine continutul principal." /></div>
+                            </div>
+                          ) : (
+                            <div style={S.matPreview}>
+                              {activeStim.description && <div style={S.previewSection}><label style={S.previewLabel}>DESCRIERE</label><p style={S.previewText}>{activeStim.description}</p></div>}
+                              {activeStim.image_url && (
+                                <div style={S.previewSection}>
+                                  <label style={S.previewLabel}>IMAGINE</label>
+                                  <img src={activeStim.image_url} alt={activeStim.name} style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, display: "block" }} />
+                                </div>
+                              )}
+                              {activeStim.video_url && (
+                                <div style={S.previewSection}>
+                                  <label style={S.previewLabel}>VIDEO</label>
+                                  <video src={activeStim.video_url} controls style={{ maxWidth: "100%", maxHeight: 400, borderRadius: 8, display: "block" }} />
+                                </div>
+                              )}
+                              {activeStim.audio_url && (
+                                <div style={S.previewSection}>
+                                  <label style={S.previewLabel}>AUDIO</label>
+                                  <audio src={activeStim.audio_url} controls style={{ width: "100%", borderRadius: 8 }} />
+                                </div>
+                              )}
+                              {activeStim.text_content && (
+                                <div style={{
+                                  ...S.previewSection,
+                                  ...(!activeStim.image_url && !activeStim.video_url ? { background: "#fef3c7", borderColor: "#fcd34d", padding: "24px 28px" } : {}),
+                                }}>
+                                  <label style={S.previewLabel}>{!activeStim.image_url && !activeStim.video_url ? "CONTINUT PRINCIPAL" : "TEXT CONTENT"}</label>
+                                  <p style={{
+                                    ...S.previewText,
+                                    ...(!activeStim.image_url && !activeStim.video_url ? { fontSize: 16, lineHeight: 1.8, fontWeight: 500 } : {}),
+                                  }}>{activeStim.text_content}</p>
+                                </div>
+                              )}
+                              <div style={S.previewGrid}>
+                                {activeStim.pdf_url && <div style={S.previewItem}><label style={S.previewLabel}>PDF</label><a href={activeStim.pdf_url} target="_blank" rel="noreferrer" style={{ ...S.previewLink, display: "flex", alignItems: "center", gap: 6 }}><FileText size={16} /> Deschide PDF</a></div>}
+                                {activeStim.site_url && <div style={S.previewItem}><label style={S.previewLabel}>SITE</label><a href={activeStim.site_url} target="_blank" rel="noreferrer" style={{ ...S.previewLink, display: "flex", alignItems: "center", gap: 6 }}><Globe size={16} /> {activeStim.site_url}</a></div>}
+                              </div>
+                              {!activeStim.description && !activeStim.image_url && !activeStim.video_url && !activeStim.audio_url && !activeStim.text_content && !activeStim.pdf_url && !activeStim.site_url && (
+                                <div style={{ textAlign: "center" as const, padding: "40px 20px", color: "#9CA3AF" }}>
+                                  <p style={{ fontSize: 14, marginBottom: 12 }}>Materialul nu are continut inca.</p>
+                                  <button style={S.wsActionBtn} onClick={() => startEditStimulus(activeStim)}><Pencil size={14} /><span>Adauga continut</span></button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ textAlign: "center" as const, padding: "60px 20px", color: "#9CA3AF" }}>
+                          <Plus size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+                          <p style={{ fontSize: 15 }}>Niciun material in aceasta categorie.</p>
+                          <p style={{ fontSize: 13, marginTop: 4 }}>Apasa <strong>Adauga</strong> pentru a crea primul material.</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </>
+        )}
+
+        {activeTab === "rezultate" && (() => {
+          // Helper: render a horizontal bar breakdown
+          const renderBreakdown = (label: string, data: Record<string, number>, color: string) => {
+            const total = Object.values(data).reduce((a, v) => a + v, 0);
+            if (total === 0) return null;
+            const sorted = Object.entries(data).sort((a, b) => b[1] - a[1]);
+            return (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const }}>{label}</div>
+                {sorted.map(([key, count]) => {
+                  const pct = Math.round((count / total) * 100);
+                  return (
+                    <div key={key} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: "#374151", minWidth: 100, textAlign: "right" as const }}>{key}</span>
+                      <div style={{ flex: 1, height: 18, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", position: "relative" as const }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 4, transition: "width 0.3s" }} />
+                      </div>
+                      <span style={{ fontSize: 11, color: "#6B7280", minWidth: 50, fontFamily: "JetBrains Mono, monospace" }}>{count} ({pct}%)</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          };
+
+          // Locale pills renderer
+          const localeColors: Record<string, string> = { RO: "#2563EB", RU: "#DC2626", EN: "#059669" };
+          const renderLocalePills = (counts?: Record<string, number>) => {
+            if (!counts || Object.keys(counts).length === 0) return null;
+            const total = Object.values(counts).reduce((a, v) => a + v, 0);
+            return (
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" as const }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, textTransform: "uppercase" as const }}>LIMBA:</span>
+                {Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([lang, n]) => (
+                  <span key={lang} style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: `${localeColors[lang] || "#6B7280"}14`, color: localeColors[lang] || "#6B7280", border: `1px solid ${localeColors[lang] || "#6B7280"}30` }}>
+                    {lang} {n} ({Math.round((n / total) * 100)}%)
+                  </span>
+                ))}
+              </div>
+            );
+          };
+
+          // Psychographic labels map
+          const psychLabels: Record<string, string> = {
+            adReceptivity: "Receptivitate la reclame",
+            visualPreference: "Preferință vizuală",
+            impulseBuying: "Cumpărare impulsivă",
+            irrelevanceAnnoyance: "Iritare reclame irelevante",
+            attentionCapture: "Captare atenție",
+          };
+
+          return (
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>Rezultate Sondaj</h2>
+            <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
+              Scoruri agregate R, I, F, C, CTA pe fiecare material + profil demografic respondenți.
+            </p>
+
+            {/* Segment sub-tabs (distributions) */}
+            <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7eb", marginBottom: 16, overflowX: "auto" as const }}>
+              <button style={{ ...S.tab, fontSize: 12, padding: "10px 16px", ...(resultsSegment === "general" ? S.tabActive : {}) }} onClick={() => setResultsSegment("general")}>GENERAL</button>
+              {distributions.map((d) => (
+                <button key={d.id} style={{ ...S.tab, fontSize: 12, padding: "10px 16px", whiteSpace: "nowrap" as const, ...(resultsSegment === d.id ? S.tabActive : {}) }} onClick={() => setResultsSegment(d.id)}>{d.name}</button>
+              ))}
+            </div>
+
+            {resultsLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>
+                <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
+                <p style={{ marginTop: 8 }}>Se incarca rezultatele...</p>
+              </div>
+            ) : !results ? (
+              <div style={S.placeholderTab}>
+                <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                <p style={{ color: "#6B7280", fontSize: 14 }}>Nu s-au putut incarca rezultatele.</p>
+              </div>
+            ) : (
+              <>
+                {/* Stat card tooltip */}
+                {tooltipStat && (() => {
+                  const statTips: Record<string, { title: string; desc: string }> = {
+                    "RESPONDENȚI": { title: "Respondenti — Total persoane", desc: "Numarul total de persoane care au inceput sondajul (au deschis link-ul si au inceput sa raspunda). Include atat cei care au finalizat, cat si cei care au abandonat.\n\nAcest numar reflecta reach-ul sondajului — cati oameni au fost atinsi de distributie." },
+                    "COMPLETĂRI": { title: "Completari — Raspunsuri finalizate", desc: "Numarul de respondenti care au parcurs sondajul pana la capat si au trimis raspunsurile. Doar acestia sunt inclusi in calculul scorurilor R, I, F, C.\n\nDiferenta intre Respondenti si Completari indica rata de abandon." },
+                    "RATĂ": { title: "Rata de completare", desc: "Procentul de respondenti care au finalizat sondajul: (Completari / Respondenti) x 100.\n\nInterpretare: < 30% = rata slaba (sondaj prea lung sau distributie slaba). 30-60% = acceptabil. 60-80% = buna. > 80% = excelenta." },
+                    "RĂSPUNSURI": { title: "Raspunsuri — Total evaluari", desc: "Numarul total de evaluari individuale (un respondent poate evalua mai multe materiale). Daca sunt 10 materiale si 5 completari, pot fi pana la 50 de raspunsuri.\n\nAcest numar determina robustetea statistica a scorurilor per material." },
+                  };
+                  const t = statTips[tooltipStat];
+                  if (!t) return null;
+                  return (
+                    <div onClick={() => setTooltipStat(null)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.3)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+                      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "24px 28px", maxWidth: 440, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>{t.title}</h3>
+                          <button onClick={() => setTooltipStat(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", padding: 4 }}>&times;</button>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#4B5563", whiteSpace: "pre-line" }}>{t.desc}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {/* Stats cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+                  {[
+                    { label: "RESPONDENȚI", value: results.totalRespondents, color: "#374151" },
+                    { label: "COMPLETĂRI", value: results.completedRespondents, color: "#059669" },
+                    { label: "RATĂ", value: `${results.completionRate}%`, color: "#DC2626" },
+                    { label: "RĂSPUNSURI", value: results.totalResponses, color: "#2563EB" },
+                  ].map((stat) => (
+                    <div key={stat.label} onClick={() => setTooltipStat(stat.label)} style={{ ...S.configItem, cursor: "pointer", transition: "all 0.15s" }}>
+                      <span style={{ ...S.configLabel, display: "flex", alignItems: "center", gap: 4 }}>{stat.label} <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg></span>
+                      <span style={{ fontSize: 24, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>{stat.value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Language breakdown */}
+                {results.localeCounts && Object.keys(results.localeCounts).length > 0 && (
+                  <div style={{ marginBottom: 16 }}>{renderLocalePills(results.localeCounts)}</div>
+                )}
+
+                {/* Content sub-tabs: SCORURI | PROFIL | PSIHOGRAFIC */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                  {([
+                    { key: "scoruri" as const, label: "Scoruri R·I·F·C·CTA" },
+                    { key: "profil" as const, label: "Profil Respondenți" },
+                    { key: "psihografic" as const, label: "Psihografic" },
+                  ]).map((t) => (
+                    <button key={t.key} onClick={() => setResultsSubTab(t.key)} style={{
+                      padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6, border: "1px solid #e5e7eb", cursor: "pointer",
+                      background: resultsSubTab === t.key ? "#111827" : "#fff",
+                      color: resultsSubTab === t.key ? "#fff" : "#6B7280",
+                    }}>{t.label}</button>
+                  ))}
+                </div>
+
+                {/* ── SUB-TAB: SCORURI ── */}
+                {resultsSubTab === "scoruri" && (
+                  <>
+                    {results.stimuliResults.length === 0 ? (
+                      <div style={S.placeholderTab}>
+                        <BarChart3 size={48} style={{ color: "#d1d5db" }} />
+                        <p style={{ color: "#6B7280", fontSize: 14 }}>{resultsSegment === "general" ? "Niciun raspuns inca. Distribue sondajul pentru a colecta date." : "Niciun raspuns pentru acest segment."}</p>
+                      </div>
+                    ) : (() => {
+                      // Build category averages
+                      const byType: Record<string, StimulusResult[]> = {};
+                      results.stimuliResults.filter(s => s.response_count > 0).forEach(s => {
+                        if (!byType[s.type]) byType[s.type] = [];
+                        byType[s.type].push(s);
+                      });
+                      const typeAvgs = Object.entries(byType).map(([type, items]) => {
+                        const n = items.length;
+                        return {
+                          type,
+                          count: items.reduce((a, s) => a + s.response_count, 0),
+                          avg_r: Math.round((items.reduce((a, s) => a + s.avg_r, 0) / n) * 100) / 100,
+                          avg_i: Math.round((items.reduce((a, s) => a + s.avg_i, 0) / n) * 100) / 100,
+                          avg_f: Math.round((items.reduce((a, s) => a + s.avg_f, 0) / n) * 100) / 100,
+                          avg_c: Math.round((items.reduce((a, s) => a + s.avg_c, 0) / n) * 100) / 100,
+                          avg_cta: Math.round((items.reduce((a, s) => a + s.avg_cta, 0) / n) * 100) / 100,
+                        };
+                      }).sort((a, b) => b.avg_c - a.avg_c);
+
+                      // Filter table rows by selected category
+                      const filteredStimuli = resultsCatFilter
+                        ? results.stimuliResults.filter(s => s.type === resultsCatFilter)
+                        : results.stimuliResults;
+
+                      // Compute TOTAL row from filtered data
+                      const withData = filteredStimuli.filter(s => s.response_count > 0);
+                      const totalN = withData.reduce((a, s) => a + s.response_count, 0);
+                      const totalRow = withData.length > 0 ? {
+                        avg_r: Math.round((withData.reduce((a, s) => a + s.avg_r, 0) / withData.length) * 100) / 100,
+                        avg_i: Math.round((withData.reduce((a, s) => a + s.avg_i, 0) / withData.length) * 100) / 100,
+                        avg_f: Math.round((withData.reduce((a, s) => a + s.avg_f, 0) / withData.length) * 100) / 100,
+                        avg_c: Math.round((withData.reduce((a, s) => a + s.avg_c, 0) / withData.length) * 100) / 100,
+                        avg_c_score: Math.round((withData.reduce((a, s) => a + s.avg_c_score, 0) / withData.length) * 100) / 100,
+                        avg_cta: Math.round((withData.reduce((a, s) => a + s.avg_cta, 0) / withData.length) * 100) / 100,
+                        sd_c: Math.round((withData.reduce((a, s) => a + s.sd_c, 0) / withData.length) * 100) / 100,
+                        avg_time: Math.round(withData.reduce((a, s) => a + s.avg_time, 0) / withData.length),
+                      } : null;
+
+                      return (
+                        <>
+                          {/* Category filter pills — from categories table, ordered by display_order */}
+                          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16 }}>
+                            <button onClick={() => setResultsCatFilter(null)} style={{
+                              padding: "6px 14px", borderRadius: 20, cursor: "pointer", transition: "all 0.15s", fontSize: 12, fontWeight: 600,
+                              border: !resultsCatFilter ? "2px solid #111827" : "1px solid #e5e7eb",
+                              background: !resultsCatFilter ? "#111827" : "#fff",
+                              color: !resultsCatFilter ? "#fff" : "#374151",
+                            }}>Toate Canalele</button>
+                            {[...categories].sort((a, b) => a.display_order - b.display_order).map(cat => {
+                              const isActive = resultsCatFilter === cat.type;
+                              const stimCount = results.stimuliResults.filter(s => s.type === cat.type).length;
+                              return (
+                                <button key={cat.type} onClick={() => setResultsCatFilter(isActive ? null : cat.type)} style={{
+                                  padding: "6px 12px", borderRadius: 20, cursor: "pointer", transition: "all 0.15s", fontSize: 12, fontWeight: 600,
+                                  display: "flex", alignItems: "center", gap: 5,
+                                  border: isActive ? `2px solid ${cat.color}` : "1px solid #e5e7eb",
+                                  background: isActive ? `${cat.color}14` : "#fff",
+                                  color: isActive ? cat.color : "#374151",
+                                  opacity: stimCount > 0 ? 1 : 0.5,
+                                }}>
+                                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
+                                  {cat.short_code}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Results table — filtered, with TOTAL first row + expandable per-stimulus details */}
+                          <div style={{ ...S.configCard, padding: 0, overflow: "auto" }}>
+                            {/* Column tooltip */}
+                            {tooltipCol && (() => {
+                              const tips: Record<string, { title: string; desc: string }> = {
+                                N: { title: "N — Numar Raspunsuri", desc: "Cate evaluari (raspunsuri complete) au fost colectate pentru acest material. Fiecare respondent evalueaza materialul pe scalele R, I, F.\n\nInterpretare: N < 30 = esantion mic (rezultate orientative). N 30-100 = esantion acceptabil. N > 100 = date statistice robuste." },
+                                R: { title: "R — Recunoastere (Recognition)", desc: "Scor mediu 1-10. Masoara cat de usor este materialul de recunoscut si identificat. Un R mare inseamna ca brandul/mesajul este vizibil si memorabil.\n\nInterpretare: 1-3 = slab recunoscut. 4-6 = moderat. 7-8 = bine recunoscut. 9-10 = excelent, brand puternic." },
+                                I: { title: "I — Impact Emotional (Emotional Impact)", desc: "Scor mediu 1-10. Masoara intensitatea reactiei emotionale pe care o provoaca materialul. Un I mare inseamna ca materialul genereaza emotii puternice (pozitive sau negative).\n\nInterpretare: 1-3 = impact slab, indiferenta. 4-6 = impact moderat. 7-8 = impact puternic. 9-10 = reactie emotionala intensa." },
+                                F: { title: "F — Frecventa (Frequency/Familiarity)", desc: "Scor mediu 1-10. Masoara cat de familiar si frecvent perceput este materialul. Un F mare inseamna ca respondentul simte ca a mai vazut materialul de mai multe ori.\n\nInterpretare: 1-3 = nou/necunoscut. 4-6 = partial familiar. 7-8 = frecvent intalnit. 9-10 = foarte familiar, omniprezent." },
+                                Cform: { title: "C(form) — Scor Comunicare (Formula)", desc: "Calculat dupa formula originala RIFC: R + (I x F) = C. Combina cele 3 dimensiuni intr-un scor unic. Valori mai mari = comunicare mai eficienta.\n\nInterval: minim 2 (R=1, I=1, F=1), maxim 110 (R=10, I=10, F=10).\n\nInterpretare: < 20 = comunicare slaba. 20-40 = sub medie. 40-60 = medie. 60-80 = buna. > 80 = excelenta." },
+                                Cperc: { title: "C(perc) — Scor Comunicare Perceputa", desc: "Media scorurilor de comunicare percepute direct de respondent (nu calculate). Respondentul raspunde: «Cat de eficient comunica acest material?» pe scala 1-10.\n\nInterpretare: Diferenta mare intre C(form) si C(perc) indica discrepanta intre impactul masurat si cel perceput constient. C(perc) > C(form)/11 = materialul pare mai bun decat metrici. C(perc) < C(form)/11 = impact subliminal puternic." },
+                                CTA: { title: "CTA — Call To Action", desc: "Scor mediu 1-10. Masoara cat de puternic este indemnul la actiune. Un CTA mare inseamna ca materialul il motiveaza pe respondent sa faca ceva (sa cumpere, sa viziteze, sa afle mai mult).\n\nInterpretare: 1-3 = fara impuls de actiune. 4-6 = motivare moderata. 7-8 = CTA puternic. 9-10 = impuls irezistibil de actiune." },
+                                SD: { title: "SD — Standard Deviation (Deviatie Standard)", desc: "Masoara cat de dispersate sunt raspunsurile pe scorul C(form). SD mic = consens (toti evalueaza similar). SD mare = opinii impartite.\n\nInterpretare: SD < 10 = consens puternic. SD 10-20 = variatie normala. SD 20-30 = opinii impartite. SD > 30 = material controversat, polarizant." },
+                                Ts: { title: "T(s) — Timp Mediu (secunde)", desc: "Timpul mediu in secunde pe care un respondent l-a petrecut evaluand acest material.\n\nInterpretare: < 5s = raspuns grabit (posibil neserios). 5-15s = evaluare rapida. 15-30s = analiza atenta. > 30s = implicare mare sau dificultate in evaluare." },
+                              };
+                              const t = tips[tooltipCol];
+                              if (!t) return null;
+                              return (
+                                <div onClick={() => setTooltipCol(null)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.3)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+                                  <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 12, padding: "24px 28px", maxWidth: 440, width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#111827" }}>{t.title}</h3>
+                                      <button onClick={() => setTooltipCol(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9CA3AF", padding: 4 }}>&times;</button>
+                                    </div>
+                                    <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: "#4B5563", whiteSpace: "pre-line" }}>{t.desc}</p>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                            <table style={{ width: "100%", borderCollapse: "collapse" as const, minWidth: 900 }}>
+                              <thead>
+                                <tr style={{ background: "#f9fafb" }}>
+                                  <th style={{ ...thStyle, width: 36, padding: "8px 4px" }}></th>
+                                  <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 180 }}>MATERIAL</th>
+                                  <th style={thStyle}>CANAL</th>
+                                  <th style={{ ...thStyle, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("N")}>N</th>
+                                  <th style={{ ...thStyle, color: "#DC2626", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("R")}>R</th>
+                                  <th style={{ ...thStyle, color: "#D97706", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("I")}>I</th>
+                                  <th style={{ ...thStyle, color: "#7C3AED", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("F")}>F</th>
+                                  <th style={{ ...thStyle, color: "#111827", fontWeight: 800, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("Cform")}>C<sub style={{ fontSize: 9 }}>form</sub></th>
+                                  <th style={{ ...thStyle, color: "#059669", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("Cperc")}>C<sub style={{ fontSize: 9 }}>perc</sub></th>
+                                  <th style={{ ...thStyle, color: "#2563EB", cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("CTA")}>CTA</th>
+                                  <th style={{ ...thStyle, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("SD")}>SD</th>
+                                  <th style={{ ...thStyle, cursor: "pointer", textDecoration: "underline dotted", textUnderlineOffset: 3 }} onClick={() => setTooltipCol("Ts")}>T(s)</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {/* TOTAL row */}
+                                {totalRow && (
+                                  <tr style={{ borderBottom: "2px solid #e5e7eb", background: "#f9fafb" }}>
+                                    <td style={{ ...tdStyle, padding: "8px 4px" }}></td>
+                                    <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", fontSize: 13 }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.label || resultsCatFilter) : "TOTAL"}</td>
+                                    <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#111827", color: "#fff" }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.short_code || resultsCatFilter) : "ALL"}</span></td>
+                                    <td style={{ ...tdStyle, fontWeight: 700 }}>{totalN}</td>
+                                    <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 800 }}>{totalRow.avg_r}</td>
+                                    <td style={{ ...tdStyle, color: "#D97706", fontWeight: 800 }}>{totalRow.avg_i}</td>
+                                    <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 800 }}>{totalRow.avg_f}</td>
+                                    <td style={{ ...tdStyle, color: "#111827", fontWeight: 900, fontSize: 16 }}>{totalRow.avg_c}</td>
+                                    <td style={{ ...tdStyle, color: "#059669", fontWeight: 800 }}>{totalRow.avg_c_score}</td>
+                                    <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 800 }}>{totalRow.avg_cta}</td>
+                                    <td style={{ ...tdStyle, color: "#6B7280", fontWeight: 700 }}>{totalRow.sd_c}</td>
+                                    <td style={{ ...tdStyle, color: "#6B7280", fontWeight: 700, fontSize: 11 }}>{totalRow.avg_time ? `${totalRow.avg_time}s` : "—"}</td>
+                                  </tr>
+                                )}
+                                {filteredStimuli.map((s) => {
+                                  const isExpanded = expandedStimulusId === s.id;
+                                  const stimBreakdown = results.perStimulusBreakdowns?.[s.id];
+                                  const cc = categories.find(c => c.type === s.type);
+                                  return (
+                                    <React.Fragment key={s.id}>
+                                      <tr style={{ borderBottom: isExpanded ? "none" : "1px solid #f3f4f6", cursor: "pointer" }} onClick={() => setExpandedStimulusId(isExpanded ? null : s.id)}>
+                                        <td style={{ ...tdStyle, padding: "8px 4px", textAlign: "center" as const }}>
+                                          <div style={{
+                                            width: 26, height: 26, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center",
+                                            border: `1.5px solid ${isExpanded ? (cc?.color || "#6B7280") : "#d1d5db"}`,
+                                            background: isExpanded ? `${cc?.color || "#6B7280"}14` : "#fff",
+                                            color: isExpanded ? (cc?.color || "#6B7280") : "#9CA3AF",
+                                            fontSize: 16, fontWeight: 700, lineHeight: 1, transition: "all 0.15s",
+                                          }}>
+                                            {isExpanded ? "−" : "+"}
+                                          </div>
+                                        </td>
+                                        <td style={{ ...tdStyle, fontWeight: 600, color: "#111827" }}>
+                                          {s.name}
+                                          {s.variant_label && <span style={{ fontSize: 9, fontWeight: 700, marginLeft: 6, padding: "1px 5px", borderRadius: 3, background: "#dbeafe", color: "#2563EB" }}>{s.variant_label}</span>}
+                                        </td>
+                                        <td style={tdStyle}>
+                                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: cc?.color ? `${cc.color}18` : "#f3f4f6", color: cc?.color || "#6B7280" }}>{cc?.short_code || s.type}</span>
+                                        </td>
+                                        <td style={tdStyle}>{s.response_count}</td>
+                                        <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.avg_f || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#111827", fontWeight: 800, fontSize: 15 }}>{s.avg_c || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{s.avg_c_score || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 600 }}>{s.avg_cta || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#9CA3AF" }}>{s.sd_c || "—"}</td>
+                                        <td style={{ ...tdStyle, color: "#9CA3AF", fontSize: 11 }}>{s.avg_time ? `${s.avg_time}s` : "—"}</td>
+                                      </tr>
+                                      {/* Expanded stimulus detail row */}
+                                      {isExpanded && stimBreakdown && (
+                                        <tr>
+                                          <td colSpan={12} style={{ padding: 0, borderBottom: "2px solid #e5e7eb" }}>
+                                            <div style={{ padding: "16px 20px", background: "#fafbfc", borderTop: "1px solid #f3f4f6" }}>
+                                              {/* Stats cards row */}
+                                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+                                                {[
+                                                  { label: "RESPONDENȚI", value: stimBreakdown.respondentCount, color: "#374151" },
+                                                  { label: "COMPLETĂRI", value: stimBreakdown.completedCount, color: "#059669" },
+                                                  { label: "RATĂ", value: `${stimBreakdown.completionRate}%`, color: "#DC2626" },
+                                                ].map((stat) => (
+                                                  <div key={stat.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", textTransform: "uppercase" as const }}>{stat.label}</span>
+                                                    <span style={{ fontSize: 20, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>{stat.value}</span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                              {/* Language breakdown */}
+                                              {stimBreakdown.localeCounts && Object.keys(stimBreakdown.localeCounts).length > 0 && (
+                                                <div style={{ marginBottom: 12 }}>{renderLocalePills(stimBreakdown.localeCounts)}</div>
+                                              )}
+                                              {/* Demographics + Behavioral */}
+                                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
+                                                  <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Demografice</h4>
+                                                  {renderBreakdown("Gen", stimBreakdown.demographics?.gender || {}, "#EC4899")}
+                                                  {renderBreakdown("Vârstă", stimBreakdown.demographics?.ageRange || {}, "#D97706")}
+                                                  {renderBreakdown("Țară", stimBreakdown.demographics?.country || {}, "#059669")}
+                                                  {renderBreakdown("Urban / Rural", stimBreakdown.demographics?.locationType || {}, "#2563EB")}
+                                                  {renderBreakdown("Venit", stimBreakdown.demographics?.incomeRange || {}, "#7C3AED")}
+                                                  {renderBreakdown("Educație", stimBreakdown.demographics?.education || {}, "#DC2626")}
+                                                </div>
+                                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
+                                                  <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Comportament</h4>
+                                                  {renderBreakdown("Frecvență cumpărare", stimBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
+                                                  {renderBreakdown("Canale preferate", stimBreakdown.behavioral?.preferredChannels || {}, "#2563EB")}
+                                                  {renderBreakdown("Timp online/zi", stimBreakdown.behavioral?.dailyOnlineTime || {}, "#D97706")}
+                                                  {renderBreakdown("Dispozitiv principal", stimBreakdown.behavioral?.primaryDevice || {}, "#7C3AED")}
+                                                </div>
+                                              </div>
+                                              {/* Psychographic */}
+                                              <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: `3px solid ${cc?.color || "#6B7280"}`, borderRadius: 8, padding: "12px 14px" }}>
+                                                <h4 style={{ fontSize: 12, fontWeight: 700, color: "#374151", margin: 0, marginBottom: 10 }}>Profil Psihografic</h4>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 20px" }}>
+                                                  {Object.entries(stimBreakdown.psychographicAvg || {}).map(([key, avg]) => (
+                                                    <div key={key}>
+                                                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                                                        <span style={{ fontSize: 11, fontWeight: 600, color: "#374151" }}>{psychLabels[key] || key}</span>
+                                                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{avg}</span>
+                                                      </div>
+                                                      <div style={{ height: 16, background: "#f3f4f6", borderRadius: 4, overflow: "hidden", position: "relative" as const }}>
+                                                        <div style={{ height: "100%", width: `${(avg / 10) * 100}%`, borderRadius: 4, transition: "width 0.3s", background: cc?.color || "#6B7280" }} />
+                                                        {[1,2,3,4,5,6,7,8,9].map(i => (
+                                                          <div key={i} style={{ position: "absolute" as const, left: `${(i/10)*100}%`, top: 0, bottom: 0, width: 1, background: "rgba(0,0,0,0.05)" }} />
+                                                        ))}
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* ── Per-category PROFIL + PSIHOGRAFIC inline (when a category is selected) ── */}
+                          {resultsCatFilter && results.perCategoryBreakdowns?.[resultsCatFilter] && (() => {
+                            const catBreakdown = results.perCategoryBreakdowns[resultsCatFilter];
+                            const catMeta = categories.find(c => c.type === resultsCatFilter);
+                            const catLabel = catMeta?.label || resultsCatFilter;
+                            const catColor = catMeta?.color || "#6B7280";
+                            const hasDemo = Object.values(catBreakdown.demographics || {}).some(v => Object.keys(v).length > 0);
+                            const hasBehav = Object.values(catBreakdown.behavioral || {}).some(v => Object.keys(v).length > 0);
+                            const hasPsych = Object.values(catBreakdown.psychographicAvg || {}).some(v => v > 0);
+
+                            if (!hasDemo && !hasBehav && !hasPsych) return null;
+
+                            return (
+                              <div style={{ marginTop: 24 }}>
+                                {/* Section header */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: catColor, flexShrink: 0 }} />
+                                  <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>
+                                    Profil Respondenți — {catLabel}
+                                  </h3>
+                                </div>
+
+                                {/* Stats cards row */}
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+                                  {[
+                                    { label: "RESPONDENȚI", value: catBreakdown.respondentCount, color: "#374151" },
+                                    { label: "COMPLETĂRI", value: catBreakdown.completedCount, color: "#059669" },
+                                    { label: "RATĂ", value: `${catBreakdown.completionRate}%`, color: "#DC2626" },
+                                    { label: "RĂSPUNSURI", value: catBreakdown.responseCount, color: "#2563EB" },
+                                  ].map((stat) => (
+                                    <div key={stat.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, color: "#6B7280", textTransform: "uppercase" as const }}>{stat.label}</span>
+                                      <span style={{ fontSize: 20, fontWeight: 700, color: stat.color, fontFamily: "JetBrains Mono, monospace" }}>{stat.value}</span>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                {/* Language breakdown */}
+                                {catBreakdown.localeCounts && Object.keys(catBreakdown.localeCounts).length > 0 && (
+                                  <div style={{ marginBottom: 16 }}>{renderLocalePills(catBreakdown.localeCounts)}</div>
+                                )}
+
+                                {/* Demographics + Behavioral grid */}
+                                {(hasDemo || hasBehav) && (
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                                    {/* Demographics */}
+                                    {hasDemo && (
+                                      <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
+                                        <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 14 }}>Demografice</h4>
+                                        {renderBreakdown("Gen", catBreakdown.demographics?.gender || {}, "#EC4899")}
+                                        {renderBreakdown("Vârstă", catBreakdown.demographics?.ageRange || {}, "#D97706")}
+                                        {renderBreakdown("Țară", catBreakdown.demographics?.country || {}, "#059669")}
+                                        {renderBreakdown("Urban / Rural", catBreakdown.demographics?.locationType || {}, "#2563EB")}
+                                        {renderBreakdown("Venit", catBreakdown.demographics?.incomeRange || {}, "#7C3AED")}
+                                        {renderBreakdown("Educație", catBreakdown.demographics?.education || {}, "#DC2626")}
+                                      </div>
+                                    )}
+                                    {/* Behavioral */}
+                                    {hasBehav && (
+                                      <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
+                                        <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 14 }}>Comportament</h4>
+                                        {renderBreakdown("Frecvență cumpărare", catBreakdown.behavioral?.purchaseFrequency || {}, "#059669")}
+                                        {renderBreakdown("Canale preferate", catBreakdown.behavioral?.preferredChannels || {}, "#2563EB")}
+                                        {renderBreakdown("Timp online/zi", catBreakdown.behavioral?.dailyOnlineTime || {}, "#D97706")}
+                                        {renderBreakdown("Dispozitiv principal", catBreakdown.behavioral?.primaryDevice || {}, "#7C3AED")}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Psychographic */}
+                                {hasPsych && (
+                                  <div style={{ ...S.configCard, borderLeft: `3px solid ${catColor}` }}>
+                                    <h4 style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Profil Psihografic — {catLabel}</h4>
+                                    <p style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 16 }}>Medii 1-10 pentru respondenții care au evaluat materiale {catLabel}.</p>
+                                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 14 }}>
+                                      {Object.entries(catBreakdown.psychographicAvg || {}).map(([key, avg]) => (
+                                        <div key={key}>
+                                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                                            <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>{psychLabels[key] || key}</span>
+                                            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{avg}</span>
+                                          </div>
+                                          <div style={{ height: 20, background: "#f3f4f6", borderRadius: 5, overflow: "hidden", position: "relative" as const }}>
+                                            <div style={{
+                                              height: "100%", width: `${(avg / 10) * 100}%`, borderRadius: 5, transition: "width 0.3s",
+                                              background: catColor,
+                                            }} />
+                                            {[1,2,3,4,5,6,7,8,9].map(i => (
+                                              <div key={i} style={{ position: "absolute" as const, left: `${(i/10)*100}%`, top: 0, bottom: 0, width: 1, background: "rgba(0,0,0,0.06)" }} />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </>
+                      );
+                    })()}
+                  </>
+                )}
+
+                {/* ── SUB-TAB: PROFIL RESPONDENTI ── */}
+                {resultsSubTab === "profil" && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                    {/* Demographics column */}
+                    <div style={S.configCard}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 16 }}>Demografice</h3>
+                      {renderBreakdown("Gen", results.demographics?.gender || {}, "#EC4899")}
+                      {renderBreakdown("Vârstă", results.demographics?.ageRange || {}, "#D97706")}
+                      {renderBreakdown("Țară", results.demographics?.country || {}, "#059669")}
+                      {renderBreakdown("Urban / Rural", results.demographics?.locationType || {}, "#2563EB")}
+                      {renderBreakdown("Venit", results.demographics?.incomeRange || {}, "#7C3AED")}
+                      {renderBreakdown("Educație", results.demographics?.education || {}, "#DC2626")}
+                    </div>
+                    {/* Behavioral column */}
+                    <div style={S.configCard}>
+                      <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 16 }}>Comportament</h3>
+                      {renderBreakdown("Frecvență cumpărare", results.behavioral?.purchaseFrequency || {}, "#059669")}
+                      {renderBreakdown("Canale preferate", results.behavioral?.preferredChannels || {}, "#2563EB")}
+                      {renderBreakdown("Timp online/zi", results.behavioral?.dailyOnlineTime || {}, "#D97706")}
+                      {renderBreakdown("Dispozitiv principal", results.behavioral?.primaryDevice || {}, "#7C3AED")}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── SUB-TAB: PSIHOGRAFIC ── */}
+                {resultsSubTab === "psihografic" && (
+                  <div style={S.configCard}>
+                    <h3 style={{ fontSize: 14, fontWeight: 700, color: "#374151", marginBottom: 4 }}>Profil Psihografic (medii 1-10)</h3>
+                    <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>Întrebările 11-15: cât de mult sunt de acord respondenții cu afirmațiile.</p>
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+                      {Object.entries(results.psychographicAvg || {}).map(([key, avg]) => (
+                        <div key={key}>
+                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{psychLabels[key] || key}</span>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{avg}</span>
+                          </div>
+                          <div style={{ height: 24, background: "#f3f4f6", borderRadius: 6, overflow: "hidden", position: "relative" as const }}>
+                            <div style={{
+                              height: "100%", width: `${(avg / 10) * 100}%`, borderRadius: 6, transition: "width 0.3s",
+                              background: avg >= 7 ? "#059669" : avg >= 4 ? "#D97706" : "#DC2626",
+                            }} />
+                            {/* Scale markers */}
+                            {[1,2,3,4,5,6,7,8,9].map(i => (
+                              <div key={i} style={{ position: "absolute" as const, left: `${(i/10)*100}%`, top: 0, bottom: 0, width: 1, background: "rgba(0,0,0,0.08)" }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          );
+        })()}
+
+        {activeTab === "distributie" && (
+          <div>
+            {/* Header + Add button */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Distributie Sondaj</h2>
+                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  Creeaza link-uri unice pentru a distribui sondajul pe segmente de audienta.
+                </p>
+              </div>
+              <button
+                style={S.addCatBtn}
+                onClick={() => setShowAddDist(true)}
+              >
+                <Plus size={16} />
+                ADAUGA LINK
+              </button>
+            </div>
+
+            {/* Public link card */}
+            <div style={{ ...S.configCard, marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <Globe size={16} style={{ color: "#DC2626" }} />
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280" }}>LINK PUBLIC GENERAL</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                <code style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  background: "#f9fafb",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontFamily: "JetBrains Mono, monospace",
+                  color: "#DC2626",
+                  wordBreak: "break-all" as const,
+                }}>
+                  {baseUrl}/articolstiintific/sondaj/wizard
+                </code>
+                <button
+                  style={{ ...S.galleryEditBtn, gap: 6 }}
+                  onClick={() => copyToClipboard(`${baseUrl}/articolstiintific/sondaj/wizard`, "general")}
+                >
+                  {copiedId === "general" ? <Check size={14} style={{ color: "#059669" }} /> : <Copy size={14} />}
+                  {copiedId === "general" ? "Copiat!" : "Copiaza"}
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: "#9CA3AF", marginTop: 8 }}>
+                Acest link duce la sondaj fara segment de distributie (rezultatele apar doar in GENERAL).
+              </p>
+            </div>
+
+            {/* Add distribution form */}
+            {showAddDist && (
+              <div style={{ ...S.configCard, borderColor: "#DC2626", borderWidth: 2, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Plus size={16} style={{ color: "#DC2626" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#DC2626" }}>LINK NOU DE DISTRIBUTIE</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={S.configLabel}>NUME SEGMENT *</label>
+                    <input
+                      value={newDistName}
+                      onChange={(e) => setNewDistName(e.target.value)}
+                      placeholder="ex: Grupa 2A 2026B"
+                      style={{ ...S.catEditInput, width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.configLabel}>TAG UNIC (URL) *</label>
+                    <input
+                      value={newDistTag}
+                      onChange={(e) => setNewDistTag(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                      placeholder="ex: grupa-2a-2026b"
+                      style={{ ...S.catEditInput, width: "100%", fontFamily: "JetBrains Mono, monospace" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.configLabel}>DESCRIERE</label>
+                    <input
+                      value={newDistDesc}
+                      onChange={(e) => setNewDistDesc(e.target.value)}
+                      placeholder="ex: Studenti anul 2, semestrul B"
+                      style={{ ...S.catEditInput, width: "100%" }}
+                    />
+                  </div>
+                  <div>
+                    <label style={S.configLabel}>ESTIMARE PERSOANE</label>
+                    <input
+                      type="number"
+                      value={newDistEstimate}
+                      onChange={(e) => setNewDistEstimate(e.target.value)}
+                      placeholder="ex: 100"
+                      style={{ ...S.catEditInput, width: "100%" }}
+                    />
+                  </div>
+                </div>
+                {newDistTag && (
+                  <div style={{ padding: "8px 12px", background: "#fef2f2", borderRadius: 6, marginBottom: 12 }}>
+                    <span style={{ fontSize: 12, color: "#6B7280" }}>Link generat: </span>
+                    <span style={{ fontSize: 12, fontFamily: "JetBrains Mono, monospace", color: "#DC2626" }}>
+                      {getDistLink(newDistTag.replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, ""))}
+                    </span>
+                  </div>
+                )}
+                {distError && (
+                  <p style={{ fontSize: 13, color: "#DC2626", marginBottom: 12 }}>{distError}</p>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    style={{ ...S.addCatBtn, opacity: distSaving ? 0.6 : 1 }}
+                    onClick={addDistribution}
+                    disabled={distSaving}
+                  >
+                    {distSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    {distSaving ? "Se salveaza..." : "Salveaza"}
+                  </button>
+                  <button
+                    style={{ ...S.galleryEditBtn }}
+                    onClick={() => { setShowAddDist(false); setDistError(null); }}
+                  >
+                    <X size={14} />
+                    Anuleaza
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Distribution list */}
+            {distLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>
+                <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
+                <p style={{ marginTop: 8 }}>Se incarca...</p>
+              </div>
+            ) : distributions.length === 0 ? (
+              <div style={S.placeholderTab}>
+                <Share2 size={48} style={{ color: "#d1d5db" }} />
+                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio distributie creata</h3>
+                <p style={{ color: "#6B7280", fontSize: 14 }}>
+                  Apasa &quot;Adauga Link&quot; pentru a crea primul segment de distributie.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+                {distributions.map((dist, idx) => {
+                  const link = getDistLink(dist.tag);
+                  const pct = dist.estimated_completions > 0
+                    ? Math.min(100, Math.round((dist.completions / dist.estimated_completions) * 100))
+                    : 0;
+                  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(link)}`;
+
+                  return (
+                    <div key={dist.id} style={{ ...S.configCard, position: "relative" as const }}>
+                      {/* Number badge */}
+                      <div style={{
+                        position: "absolute" as const,
+                        top: -10,
+                        left: 16,
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        color: "#fff",
+                        background: "#DC2626",
+                        fontFamily: "JetBrains Mono, monospace",
+                      }}>
+                        {idx + 1}
+                      </div>
+
+                      {/* Header row */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginTop: 4 }}>
+                        <div>
+                          <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111827", margin: 0 }}>{dist.name}</h3>
+                          {dist.description && (
+                            <p style={{ fontSize: 13, color: "#6B7280", marginTop: 2 }}>{dist.description}</p>
+                          )}
+                        </div>
+                        <button
+                          style={{ ...S.iconBtnDanger }}
+                          title="Sterge distributia"
+                          onClick={() => deleteDistribution(dist.id)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      {/* Link row */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, flexWrap: "wrap" as const }}>
+                        <code style={{
+                          flex: 1,
+                          padding: "8px 12px",
+                          background: "#f9fafb",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontFamily: "JetBrains Mono, monospace",
+                          color: "#DC2626",
+                          wordBreak: "break-all" as const,
+                          minWidth: 0,
+                        }}>
+                          {link}
+                        </code>
+                        <button
+                          style={{ ...S.galleryEditBtn, gap: 6 }}
+                          onClick={() => copyToClipboard(link, dist.id)}
+                        >
+                          {copiedId === dist.id ? <Check size={14} style={{ color: "#059669" }} /> : <Copy size={14} />}
+                          {copiedId === dist.id ? "Copiat!" : "Copiaza"}
+                        </button>
+                        <button
+                          style={{ ...S.galleryEditBtn, gap: 6 }}
+                          onClick={() => setShowQr(showQr === dist.id ? null : dist.id)}
+                        >
+                          <QrCode size={14} />
+                          QR
+                        </button>
+                        <a
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ ...S.galleryEditBtn, gap: 6, textDecoration: "none" }}
+                        >
+                          <ExternalLink size={14} />
+                          Deschide
+                        </a>
+                      </div>
+
+                      {/* QR code (collapsible) */}
+                      {showQr === dist.id && (
+                        <div style={{
+                          marginTop: 12,
+                          padding: 16,
+                          background: "#fff",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: 8,
+                          textAlign: "center" as const,
+                        }}>
+                          <img
+                            src={qrUrl}
+                            alt={`QR Code ${dist.name}`}
+                            width={200}
+                            height={200}
+                            style={{ margin: "0 auto", borderRadius: 4 }}
+                          />
+                          <p style={{ fontSize: 12, color: "#6B7280", marginTop: 8 }}>
+                            Scaneaza sau salveaza (click dreapta &rarr; Save Image)
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Stats row */}
+                      <div style={{ display: "flex", gap: 20, marginTop: 14, flexWrap: "wrap" as const }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <Users size={14} style={{ color: "#6B7280" }} />
+                          <span style={{ fontSize: 13, color: "#374151", fontWeight: 600 }}>
+                            {dist.completions}
+                          </span>
+                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                            / {dist.estimated_completions} completari
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 12, color: "#9CA3AF" }}>
+                            {dist.started} incepute
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", fontFamily: "JetBrains Mono, monospace" }}>
+                            TAG: {dist.tag}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      {dist.estimated_completions > 0 && (
+                        <div style={{ marginTop: 10 }}>
+                          <div style={S.counterBar}>
+                            <div style={{
+                              ...S.counterFill,
+                              width: `${pct}%`,
+                              background: pct >= 100 ? "#059669" : "#DC2626",
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4, display: "block" }}>
+                            {pct}% completat
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ PANEL EXPERTI (Layer 1) ═══ */}
+        {activeTab === "experti" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Panel Experti (Stratul 1)</h2>
+                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  Evaluari R, I, F de catre experti in marketing. Fiecare expert scoreaza stimulii cu justificari.
+                </p>
+              </div>
+              <button style={S.addCatBtn} onClick={() => setShowAddExpert(true)}>
+                <Plus size={16} />
+                ADAUGA EVALUARE
+              </button>
+            </div>
+
+            {/* Add expert form */}
+            {showAddExpert && (
+              <div style={{ ...S.configCard, borderColor: "#059669", borderWidth: 2, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <UserCheck size={16} style={{ color: "#059669" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#059669" }}>EVALUARE NOUA EXPERT</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div><label style={S.configLabel}>MATERIAL *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={expertForm.stimulus_id} onChange={(e) => setExpertForm({ ...expertForm, stimulus_id: e.target.value })}>
+                      <option value="">Selecteaza material...</option>
+                      {stimuli.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>EXPERT *</label><input style={{ ...S.catEditInput, width: "100%" }} value={expertForm.expert_name} onChange={(e) => setExpertForm({ ...expertForm, expert_name: e.target.value })} placeholder="Nume expert" /></div>
+                  <div><label style={S.configLabel}>ROL</label><input style={{ ...S.catEditInput, width: "100%" }} value={expertForm.expert_role} onChange={(e) => setExpertForm({ ...expertForm, expert_role: e.target.value })} placeholder="Ex: Marketing Director" /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#DC2626" }}>R (RELEVANTA) *</label>
+                    <input type="number" min={1} max={10} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#DC2626" }} value={expertForm.r_score} onChange={(e) => setExpertForm({ ...expertForm, r_score: parseInt(e.target.value) || 1 })} />
+                    <textarea style={{ ...S.catEditInput, width: "100%", marginTop: 4, fontSize: 12 }} value={expertForm.r_justification} onChange={(e) => setExpertForm({ ...expertForm, r_justification: e.target.value })} placeholder="Justificare R..." rows={2} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#D97706" }}>I (INTERES) *</label>
+                    <input type="number" min={1} max={10} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#D97706" }} value={expertForm.i_score} onChange={(e) => setExpertForm({ ...expertForm, i_score: parseInt(e.target.value) || 1 })} />
+                    <textarea style={{ ...S.catEditInput, width: "100%", marginTop: 4, fontSize: 12 }} value={expertForm.i_justification} onChange={(e) => setExpertForm({ ...expertForm, i_justification: e.target.value })} placeholder="Justificare I..." rows={2} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#7C3AED" }}>F (FORMA) *</label>
+                    <input type="number" min={1} max={10} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#7C3AED" }} value={expertForm.f_score} onChange={(e) => setExpertForm({ ...expertForm, f_score: parseInt(e.target.value) || 1 })} />
+                    <textarea style={{ ...S.catEditInput, width: "100%", marginTop: 4, fontSize: 12 }} value={expertForm.f_justification} onChange={(e) => setExpertForm({ ...expertForm, f_justification: e.target.value })} placeholder="Justificare F..." rows={2} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}><label style={S.configLabel}>NOTE</label><textarea style={{ ...S.catEditInput, width: "100%" }} value={expertForm.notes} onChange={(e) => setExpertForm({ ...expertForm, notes: e.target.value })} placeholder="Note suplimentare..." rows={2} /></div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...S.addCatBtn, background: "#059669", opacity: expertSaving ? 0.6 : 1 }} onClick={addExpertEval} disabled={expertSaving}>
+                    {expertSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    {expertSaving ? "Se salveaza..." : "Salveaza"}
+                  </button>
+                  <button style={S.galleryEditBtn} onClick={() => setShowAddExpert(false)}><X size={14} /> Anuleaza</button>
+                </div>
+              </div>
+            )}
+
+            {/* Expert evaluations table */}
+            {expertLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}><Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} /></div>
+            ) : expertEvals.length === 0 ? (
+              <div style={S.placeholderTab}>
+                <UserCheck size={48} style={{ color: "#d1d5db" }} />
+                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio evaluare de expert</h3>
+                <p style={{ color: "#6B7280", fontSize: 14 }}>Apasa &quot;Adauga Evaluare&quot; pentru a inregistra scorurile expertilor pe fiecare material.</p>
+              </div>
+            ) : (
+              <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb" }}>
+                      <th style={{ ...thStyle, textAlign: "left", minWidth: 160 }}>MATERIAL</th>
+                      <th style={{ ...thStyle, textAlign: "left", minWidth: 120 }}>EXPERT</th>
+                      <th style={thStyle}>ROL</th>
+                      <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                      <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                      <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                      <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
+                      <th style={thStyle}>DATA</th>
+                      <th style={thStyle}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expertEvals.map((ev) => {
+                      const stim = stimuli.find(s => s.id === ev.stimulus_id);
+                      return (
+                        <tr key={ev.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, color: "#111827" }}>{stim?.name || "?"}</td>
+                          <td style={{ ...tdStyle, textAlign: "left" }}>{ev.expert_name}</td>
+                          <td style={tdStyle}><span style={{ fontSize: 11, color: "#6B7280" }}>{ev.expert_role || "—"}</span></td>
+                          <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
+                          <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                          <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                          <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{ev.c_computed}</td>
+                          <td style={{ ...tdStyle, fontSize: 11, color: "#9CA3AF" }}>{new Date(ev.evaluated_at).toLocaleDateString("ro-RO")}</td>
+                          <td style={tdStyle}><button style={S.iconBtnDanger} onClick={() => deleteExpertEval(ev.id)}><Trash2 size={14} /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Summary by stimulus */}
+            {expertEvals.length > 0 && (
+              <div style={{ ...S.configCard, marginTop: 20 }}>
+                <div style={S.configHeader}>
+                  <Settings size={16} style={{ color: "#6B7280" }} />
+                  <span style={S.configTitle}>SUMAR PER MATERIAL</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+                  {stimuli.filter(s => s.is_active).map(stim => {
+                    const evals = expertEvals.filter(e => e.stimulus_id === stim.id);
+                    if (evals.length === 0) return null;
+                    const avgR = (evals.reduce((s, e) => s + e.r_score, 0) / evals.length).toFixed(1);
+                    const avgI = (evals.reduce((s, e) => s + e.i_score, 0) / evals.length).toFixed(1);
+                    const avgF = (evals.reduce((s, e) => s + e.f_score, 0) / evals.length).toFixed(1);
+                    const avgC = (evals.reduce((s, e) => s + e.c_computed, 0) / evals.length).toFixed(1);
+                    return (
+                      <div key={stim.id} style={S.configItem}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#111827", display: "block", marginBottom: 6 }}>{stim.name}</span>
+                        <span style={{ fontSize: 10, color: "#9CA3AF" }}>{evals.length} evaluari</span>
+                        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#DC2626" }}>{avgR}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#D97706" }}>{avgI}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#7C3AED" }}>{avgF}</span>
+                          <span style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>C={avgC}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ AI BENCHMARK (Layer 3) ═══ */}
+        {activeTab === "ai" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>AI Benchmark (Stratul 3)</h2>
+                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  3 modele AI (Claude, Gemini, GPT) scoreaza aceleasi 30 de stimuli cu prompt-uri identice.
+                </p>
+              </div>
+              <button style={S.addCatBtn} onClick={() => setShowAddAi(true)}>
+                <Plus size={16} />
+                ADAUGA EVALUARE AI
+              </button>
+            </div>
+
+            {/* Add AI eval form */}
+            {showAddAi && (
+              <div style={{ ...S.configCard, borderColor: "#7C3AED", borderWidth: 2, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Bot size={16} style={{ color: "#7C3AED" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#7C3AED" }}>EVALUARE AI NOUA</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div><label style={S.configLabel}>MATERIAL *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.stimulus_id} onChange={(e) => setAiForm({ ...aiForm, stimulus_id: e.target.value })}>
+                      <option value="">Selecteaza material...</option>
+                      {stimuli.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>MODEL AI *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.model_name} onChange={(e) => setAiForm({ ...aiForm, model_name: e.target.value })}>
+                      {AI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>VERSIUNE PROMPT</label><input style={{ ...S.catEditInput, width: "100%", fontFamily: "JetBrains Mono, monospace" }} value={aiForm.prompt_version} onChange={(e) => setAiForm({ ...aiForm, prompt_version: e.target.value })} placeholder="v1" /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#DC2626" }}>R (RELEVANTA) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#DC2626" }} value={aiForm.r_score} onChange={(e) => setAiForm({ ...aiForm, r_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#D97706" }}>I (INTERES) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#D97706" }} value={aiForm.i_score} onChange={(e) => setAiForm({ ...aiForm, i_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#7C3AED" }}>F (FORMA) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#7C3AED" }} value={aiForm.f_score} onChange={(e) => setAiForm({ ...aiForm, f_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}><label style={S.configLabel}>JUSTIFICARE AI</label><textarea style={{ ...S.catEditInput, width: "100%" }} value={aiForm.justification} onChange={(e) => setAiForm({ ...aiForm, justification: e.target.value })} placeholder="Output-ul modelului AI..." rows={3} /></div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...S.addCatBtn, background: "#7C3AED", opacity: aiSaving ? 0.6 : 1 }} onClick={addAiEval} disabled={aiSaving}>
+                    {aiSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    {aiSaving ? "Se salveaza..." : "Salveaza"}
+                  </button>
+                  <button style={S.galleryEditBtn} onClick={() => setShowAddAi(false)}><X size={14} /> Anuleaza</button>
+                </div>
+              </div>
+            )}
+
+            {/* AI evaluations table */}
+            {aiLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}><Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} /></div>
+            ) : aiEvals.length === 0 ? (
+              <div style={S.placeholderTab}>
+                <Bot size={48} style={{ color: "#d1d5db" }} />
+                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio evaluare AI</h3>
+                <p style={{ color: "#6B7280", fontSize: 14 }}>Adauga scorurile modelelor AI (Claude, Gemini, GPT) pe fiecare material.</p>
+              </div>
+            ) : (
+              <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb" }}>
+                      <th style={{ ...thStyle, textAlign: "left", minWidth: 160 }}>MATERIAL</th>
+                      <th style={thStyle}>MODEL</th>
+                      <th style={thStyle}>PROMPT</th>
+                      <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                      <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                      <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                      <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
+                      <th style={thStyle}>DATA</th>
+                      <th style={thStyle}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiEvals.map((ev) => {
+                      const stim = stimuli.find(s => s.id === ev.stimulus_id);
+                      const modelColors: Record<string, string> = { Claude: "#D97706", Gemini: "#2563EB", GPT: "#059669" };
+                      return (
+                        <tr key={ev.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, color: "#111827" }}>{stim?.name || "?"}</td>
+                          <td style={tdStyle}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 4, background: modelColors[ev.model_name] || "#6B7280", color: "#fff" }}>{ev.model_name}</span>
+                          </td>
+                          <td style={{ ...tdStyle, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{ev.prompt_version}</td>
+                          <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
+                          <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                          <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                          <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{ev.c_computed}</td>
+                          <td style={{ ...tdStyle, fontSize: 11, color: "#9CA3AF" }}>{new Date(ev.evaluated_at).toLocaleDateString("ro-RO")}</td>
+                          <td style={tdStyle}><button style={S.iconBtnDanger} onClick={() => deleteAiEval(ev.id)}><Trash2 size={14} /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Comparison matrix: per stimulus, show all 3 models side by side */}
+            {aiEvals.length > 0 && (
+              <div style={{ ...S.configCard, marginTop: 20 }}>
+                <div style={S.configHeader}>
+                  <BarChart3 size={16} style={{ color: "#6B7280" }} />
+                  <span style={S.configTitle}>COMPARATIE AI vs CONSUMATORI</span>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={{ ...thStyle, textAlign: "left" }}>MATERIAL</th>
+                        {AI_MODELS.map(m => (
+                          <th key={m} colSpan={4} style={{ ...thStyle, borderLeft: "2px solid #e5e7eb" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{m.toUpperCase()}</span>
+                          </th>
+                        ))}
+                      </tr>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={thStyle}></th>
+                        {AI_MODELS.map(m => (
+                          <React.Fragment key={m}>
+                            <th style={{ ...thStyle, color: "#DC2626", borderLeft: "2px solid #e5e7eb" }}>R</th>
+                            <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                            <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                            <th style={{ ...thStyle, fontWeight: 800 }}>C</th>
+                          </React.Fragment>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stimuli.filter(s => s.is_active).map(stim => {
+                        const hasAny = aiEvals.some(e => e.stimulus_id === stim.id);
+                        if (!hasAny) return null;
+                        return (
+                          <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, fontSize: 12 }}>{stim.name}</td>
+                            {AI_MODELS.map(m => {
+                              const ev = aiEvals.find(e => e.stimulus_id === stim.id && e.model_name === m);
+                              if (!ev) return (
+                                <React.Fragment key={m}>
+                                  <td style={{ ...tdStyle, borderLeft: "2px solid #f3f4f6", color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                </React.Fragment>
+                              );
+                              return (
+                                <React.Fragment key={m}>
+                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600, borderLeft: "2px solid #f3f4f6" }}>{ev.r_score}</td>
+                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                                  <td style={{ ...tdStyle, fontWeight: 800 }}>{ev.c_computed}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "preview" && (() => {
+          // ── Compute step structure for cards ──
+          const profileStepCount = 16;
+          const activeStimuli = stimuli.filter(s => s.is_active);
+          const numStim = activeStimuli.length || 8;
+          const stepsPerStim = 5;
+          const firstStimulusStep = profileStepCount;
+          const lastStimulusStep = firstStimulusStep + (numStim * stepsPerStim) - 1;
+          const thankYouStep = lastStimulusStep + 1;
+
+          // Group stimuli by category type (in display order)
+          const stimByType: Record<string, typeof activeStimuli> = {};
+          for (const s of activeStimuli) {
+            if (!stimByType[s.type]) stimByType[s.type] = [];
+            stimByType[s.type].push(s);
+          }
+
+          // Step card definitions
+          const STEP_CARDS: { label: string; step: number; icon: React.ReactNode; color: string; group: string }[] = [
+            { label: "Bun venit", step: 0, icon: <Play size={16} />, color: "#DC2626", group: "start" },
+            // Demographics
+            { label: "Gen", step: 1, icon: <UserCircle size={16} />, color: "#6366f1", group: "Profil Demografic" },
+            { label: "Vârstă", step: 2, icon: <Users size={16} />, color: "#6366f1", group: "Profil Demografic" },
+            { label: "Țară", step: 3, icon: <Globe size={16} />, color: "#6366f1", group: "Profil Demografic" },
+            { label: "Urban / Rural", step: 4, icon: <MapPin size={16} />, color: "#6366f1", group: "Profil Demografic" },
+            { label: "Venit", step: 5, icon: <Wallet size={16} />, color: "#6366f1", group: "Profil Demografic" },
+            { label: "Educație", step: 6, icon: <GraduationCap size={16} />, color: "#6366f1", group: "Profil Demografic" },
+            // Behavioral
+            { label: "Frecvență cumpărare", step: 7, icon: <ShoppingCart size={16} />, color: "#059669", group: "Comportament" },
+            { label: "Canale media", step: 8, icon: <LayoutGrid size={16} />, color: "#059669", group: "Comportament" },
+            { label: "Timp online", step: 9, icon: <Clock size={16} />, color: "#059669", group: "Comportament" },
+            { label: "Dispozitiv", step: 10, icon: <Monitor size={16} />, color: "#059669", group: "Comportament" },
+            // Psychographic
+            { label: "Receptivitate publicitară", step: 11, icon: <Target size={16} />, color: "#D97706", group: "Psihografic" },
+            { label: "Preferință vizuală", step: 12, icon: <Sparkles size={16} />, color: "#D97706", group: "Psihografic" },
+            { label: "Cumpărare impulsivă", step: 13, icon: <Heart size={16} />, color: "#D97706", group: "Psihografic" },
+            { label: "Iritare irelevanță", step: 14, icon: <AlertCircle size={16} />, color: "#D97706", group: "Psihografic" },
+            { label: "Captare atenție", step: 15, icon: <Zap size={16} />, color: "#D97706", group: "Psihografic" },
+          ];
+
+          // Add stimulus cards
+          activeStimuli.forEach((stim, idx) => {
+            const cat = categories.find(c => c.type === stim.type);
+            STEP_CARDS.push({
+              label: stim.name || `Material ${idx + 1}`,
+              step: firstStimulusStep + idx * stepsPerStim,
+              icon: <ImageIcon size={16} />,
+              color: cat?.color || "#DC2626",
+              group: `Evaluare Stimuli`,
+            });
+          });
+
+          // Thank you
+          STEP_CARDS.push({
+            label: "Mulțumim!",
+            step: thankYouStep,
+            icon: <PartyPopper size={16} />,
+            color: "#059669",
+            group: "final",
+          });
+
+          // Group cards for rendering
+          const groups: { name: string; cards: typeof STEP_CARDS }[] = [];
+          let lastGroup = "";
+          for (const card of STEP_CARDS) {
+            if (card.group !== lastGroup) {
+              groups.push({ name: card.group, cards: [] });
+              lastGroup = card.group;
+            }
+            groups[groups.length - 1].cards.push(card);
+          }
+
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {/* Preview banner */}
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "10px 16px", background: "#fffbeb", border: "1px solid #fde68a",
+                borderRadius: 8,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#92400e" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#f59e0b" }} />
+                  <strong>MOD PREVIEW</strong> — datele NU se salveaza in baza de date
+                </div>
+                <button
+                  onClick={() => {
+                    const iframe = document.getElementById("preview-iframe") as HTMLIFrameElement;
+                    if (iframe) {
+                      iframe.src = "/articolstiintific/sondaj/wizard?reset=1&t=" + Date.now();
+                    }
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6,
+                    padding: "6px 14px", borderRadius: 6, border: "1px solid #d1d5db",
+                    background: "#fff", fontSize: 12, fontWeight: 600, color: "#374151",
+                    cursor: "pointer",
+                  }}
+                >
+                  <RotateCcw size={14} />
+                  Reset Preview
+                </button>
+              </div>
+
+              {/* Iframe */}
+              <div style={{ width: "100%", height: "70vh", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+                <iframe
+                  id="preview-iframe"
+                  src="/articolstiintific/sondaj/wizard"
+                  style={{ width: "100%", height: "100%", border: "none" }}
+                  title="Preview Sondaj"
+                />
+              </div>
+
+              {/* Step cards */}
+              <div style={{
+                background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12,
+                padding: 24,
+              }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, letterSpacing: 1, color: "#6B7280", marginBottom: 20, textTransform: "uppercase" }}>
+                  Navigare rapidă — click pentru a deschide pasul în preview
+                </h3>
+
+                {groups.map((group) => (
+                  <div key={group.name} style={{ marginBottom: 20 }}>
+                    {group.name !== "start" && group.name !== "final" && (
+                      <div style={{
+                        fontSize: 11, fontWeight: 700, letterSpacing: 1.5,
+                        color: "#9CA3AF", marginBottom: 10, textTransform: "uppercase",
+                      }}>
+                        {group.name}
+                      </div>
+                    )}
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                      gap: 8,
+                    }}>
+                      {group.cards.map((card) => (
+                        <button
+                          key={card.step}
+                          onClick={() => {
+                            const iframe = document.getElementById("preview-iframe") as HTMLIFrameElement;
+                            if (iframe?.contentWindow) {
+                              iframe.contentWindow.postMessage({ type: "goToStep", step: card.step }, "*");
+                            }
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 10,
+                            padding: "10px 14px", borderRadius: 8,
+                            border: "1.5px solid #e5e7eb", background: "#fafafa",
+                            cursor: "pointer", textAlign: "left",
+                            transition: "all 0.15s ease",
+                            fontSize: 13, fontWeight: 500, color: "#374151",
+                            fontFamily: "Outfit, system-ui, sans-serif",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = card.color;
+                            e.currentTarget.style.background = card.color + "08";
+                            e.currentTarget.style.transform = "translateY(-1px)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "#e5e7eb";
+                            e.currentTarget.style.background = "#fafafa";
+                            e.currentTarget.style.transform = "translateY(0)";
+                          }}
+                        >
+                          <span style={{
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            width: 30, height: 30, borderRadius: 6,
+                            background: card.color + "15", color: card.color,
+                            flexShrink: 0,
+                          }}>
+                            {card.icon}
+                          </span>
+                          <span style={{ flex: 1, lineHeight: 1.3 }}>{card.label}</span>
+                          <ChevronRight size={14} style={{ color: "#d1d5db", flexShrink: 0 }} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
+// ── Table cell styles (results) ──────────────────────────
+const thStyle: React.CSSProperties = {
+  padding: "10px 14px",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: 1.5,
+  color: "#6B7280",
+  textAlign: "center",
+  borderBottom: "2px solid #e5e7eb",
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "12px 14px",
+  fontSize: 14,
+  color: "#374151",
+  textAlign: "center",
+};
+
+// ── Styles ─────────────────────────────────────────────────
+const S: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: "100vh",
+    background: "#f8f9fa",
+    fontFamily: "Outfit, system-ui, sans-serif",
+  },
+  headerBar: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: "12px 24px",
+    background: "#fff",
+    borderBottom: "1px solid #e5e7eb",
+  },
+  logo: {
+    fontSize: 22,
+    fontFamily: "JetBrains Mono, monospace",
+    letterSpacing: 2,
+  },
+  headerBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 1,
+    padding: "4px 12px",
+    borderRadius: 6,
+    background: "#DC2626",
+    color: "#fff",
+  },
+  langBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    padding: "6px 12px",
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#374151",
+    cursor: "pointer",
+  },
+  tabsBar: {
+    display: "flex",
+    gap: 0,
+    padding: "0 24px",
+    background: "#fff",
+    borderBottom: "2px solid #e5e7eb",
+  },
+  tab: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "14px 20px",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#6B7280",
+    background: "none",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    marginBottom: -2,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  tabActive: {
+    color: "#DC2626",
+    borderBottomColor: "#DC2626",
+  },
+  content: {
+    maxWidth: 1400,
+    margin: "0 auto",
+    padding: "24px 24px",
+  },
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 20,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: "#111827",
+    margin: 0,
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    color: "#6B7280",
+    marginTop: 4,
+  },
+  addCatBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 20px",
+    fontSize: 13,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    color: "#fff",
+    background: "#DC2626",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+  },
+  configCard: {
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+  },
+  configHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  configTitle: {
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: 2,
+    color: "#6B7280",
+  },
+  configGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr 1fr",
+    gap: 12,
+  },
+  configItem: {
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    padding: 14,
+  },
+  configLabel: {
+    fontSize: 10,
+    fontWeight: 600,
+    letterSpacing: 1,
+    color: "#9CA3AF",
+    display: "block",
+    marginBottom: 8,
+  },
+  configFormula: {
+    fontSize: 20,
+    fontWeight: 700,
+    fontFamily: "JetBrains Mono, monospace",
+  },
+  configValue: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#374151",
+  },
+  galleryGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+    gap: 16,
+  },
+  galleryCard: {
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderTop: "4px solid transparent",
+    borderRadius: 14,
+    padding: 20,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 12,
+    position: "relative" as const,
+    transition: "box-shadow 0.2s, transform 0.2s",
+  },
+  galleryNum: {
+    position: "absolute" as const,
+    top: -14,
+    left: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 11,
+    fontWeight: 800,
+    color: "#fff",
+    fontFamily: "JetBrains Mono, monospace",
+    letterSpacing: 0.5,
+  },
+  galleryVisBtn: {
+    position: "absolute" as const,
+    top: 12,
+    right: 12,
+    width: 28,
+    height: 28,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    borderRadius: 6,
+    background: "#f3f4f6",
+    color: "#6B7280",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  galleryTop: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
+  },
+  galleryBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    padding: "4px 12px",
+    borderRadius: 6,
+    color: "#fff",
+    whiteSpace: "nowrap" as const,
+  },
+  galleryName: {
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#111827",
+    lineHeight: 1.3,
+  },
+  galleryCounter: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+  },
+  counterBar: {
+    height: 4,
+    background: "#f3f4f6",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  counterFill: {
+    height: "100%",
+    borderRadius: 2,
+    transition: "width 0.3s",
+  },
+  counterText: {
+    fontSize: 12,
+    color: "#9CA3AF",
+    fontWeight: 500,
+  },
+  galleryActions: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  galleryEditBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "6px 14px",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#374151",
+    background: "#f3f4f6",
+    border: "1px solid #e5e7eb",
+    borderRadius: 6,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  galleryExpandBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: "8px 12px",
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#6B7280",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    width: "100%",
+  },
+  galleryMaterials: {
+    borderTop: "1px solid #e5e7eb",
+    paddingTop: 12,
+  },
+  galleryEditWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  iconBtnSm: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 26,
+    height: 26,
+    border: "none",
+    borderRadius: 5,
+    background: "#f3f4f6",
+    color: "#6B7280",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  catEditRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  catEditInput: {
+    flex: 1,
+    padding: "6px 10px",
+    fontSize: 14,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    color: "#111827",
+  },
+  colorPicker: {
+    width: 32,
+    height: 32,
+    padding: 0,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  iconBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 30,
+    height: 30,
+    border: "none",
+    borderRadius: 6,
+    background: "transparent",
+    color: "#6B7280",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  iconBtnDanger: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 30,
+    height: 30,
+    border: "none",
+    borderRadius: 6,
+    background: "transparent",
+    color: "#DC2626",
+    cursor: "pointer",
+    transition: "background 0.15s",
+  },
+  iconBtnSave: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 28,
+    height: 28,
+    border: "none",
+    borderRadius: 6,
+    background: "#059669",
+    color: "#fff",
+    cursor: "pointer",
+  },
+  iconBtnCancel: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 28,
+    height: 28,
+    border: "none",
+    borderRadius: 6,
+    background: "#e5e7eb",
+    color: "#6B7280",
+    cursor: "pointer",
+  },
+  materialsWrap: {
+    padding: "0 0 0 0",
+    borderTop: "1px solid #f3f4f6",
+  },
+  emptyMsg: {
+    fontSize: 13,
+    color: "#9CA3AF",
+    padding: "16px 0 8px",
+    fontStyle: "italic",
+  },
+  stimCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 12px",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  stimIdx: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#9CA3AF",
+    fontFamily: "JetBrains Mono, monospace",
+    minWidth: 20,
+  },
+  stimName: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#111827",
+    flex: 1,
+  },
+  stimIndustry: {
+    fontSize: 11,
+    fontWeight: 500,
+    padding: "2px 8px",
+    borderRadius: 4,
+    background: "#e5e7eb",
+    color: "#374151",
+  },
+  stimMediaIcons: {
+    display: "flex",
+    gap: 4,
+  },
+  mediaIcon: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    background: "#e5e7eb",
+    color: "#6B7280",
+  },
+  stimActions: {
+    display: "flex",
+    gap: 2,
+  },
+  stimEditForm: {
+    background: "#fff",
+    border: "1px solid #d1d5db",
+    borderRadius: 10,
+    padding: 16,
+    marginTop: 10,
+  },
+  stimEditHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  stimEditTitle: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#374151",
+  },
+  stimEditGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+  },
+  formField: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 4,
+  },
+  formLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#6B7280",
+  },
+  formInput: {
+    padding: "8px 10px",
+    fontSize: 13,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    color: "#111827",
+    boxSizing: "border-box" as const,
+    width: "100%",
+    fontFamily: "inherit",
+  },
+  stimEditActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTop: "1px solid #e5e7eb",
+  },
+  btnCancel: {
+    padding: "8px 16px",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#6B7280",
+    background: "transparent",
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  btnSave: {
+    padding: "8px 20px",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#fff",
+    background: "#DC2626",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer",
+  },
+  addStimBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 14px",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#059669",
+    background: "transparent",
+    border: "1px dashed #bbf7d0",
+    borderRadius: 8,
+    cursor: "pointer",
+    marginTop: 8,
+    width: "100%",
+    justifyContent: "center",
+  },
+  placeholderTab: {
+    textAlign: "center" as const,
+    padding: 60,
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+  },
+  /* ═══ WORKSPACE ═══ */
+  workspace: {
+    marginTop: 24,
+    background: "#fff",
+    border: "2px solid #e5e7eb",
+    borderRadius: 16,
+    padding: 24,
+  },
+  wsHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottom: "1px solid #e5e7eb",
+  },
+  wsHeaderLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+  wsTitle: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: "#111827",
+    margin: 0,
+  },
+  wsMaterialCount: {
+    fontSize: 12,
+    fontWeight: 700,
+    color: "#6B7280",
+    background: "#f3f4f6",
+    padding: "3px 10px",
+    borderRadius: 12,
+    fontFamily: "JetBrains Mono, monospace",
+  },
+  wsHeaderRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  wsActionBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: 5,
+    padding: "6px 12px",
+    fontSize: 12,
+    fontWeight: 500,
+    color: "#374151",
+    background: "#fff",
+    border: "1px solid #e5e7eb",
+    borderRadius: 6,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  /* ═══ MATERIAL CARDS ═══ */
+  matGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+    gap: 16,
+  },
+  matCard: {
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: 12,
+    padding: 18,
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 10,
+  },
+  matCardHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+  },
+  matNum: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 13,
+    fontWeight: 800,
+    color: "#fff",
+    fontFamily: "JetBrains Mono, monospace",
+    flexShrink: 0,
+  },
+  matCardName: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: "#111827",
+  },
+  matDesc: {
+    fontSize: 13,
+    color: "#6B7280",
+    lineHeight: 1.5,
+    margin: 0,
+  },
+  matMediaRow: {
+    display: "flex",
+    flexWrap: "wrap" as const,
+    gap: 6,
+    marginTop: 4,
+  },
+  matMediaTag: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    fontSize: 11,
+    fontWeight: 500,
+    padding: "3px 8px",
+    borderRadius: 4,
+    background: "#e5e7eb",
+    color: "#374151",
+  },
+  matAddCard: {
+    background: "#fff",
+    border: "2px dashed #e5e7eb",
+    borderRadius: 12,
+    padding: 32,
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    cursor: "pointer",
+    transition: "all 0.2s",
+    minHeight: 180,
+  },
+  /* ═══ COMPACT CATEGORY STRIP ═══ */
+  catStrip: {
+    display: "flex",
+    gap: 6,
+    flexWrap: "wrap" as const,
+    marginBottom: 16,
+  },
+  catChip: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "6px 12px",
+    border: "2px solid #e5e7eb",
+    borderRadius: 8,
+    fontSize: 12,
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    background: "#fff",
+  },
+  chipBadge: {
+    fontSize: 9,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    padding: "2px 6px",
+    borderRadius: 4,
+    color: "#fff",
+  },
+  chipCount: {
+    fontSize: 10,
+    fontWeight: 600,
+    opacity: 0.7,
+    fontFamily: "JetBrains Mono, monospace",
+  },
+  /* ═══ MATERIAL TABS BAR ═══ */
+  matTabsBar: {
+    display: "flex",
+    gap: 0,
+    borderBottom: "2px solid #e5e7eb",
+    marginBottom: 0,
+    overflowX: "auto" as const,
+  },
+  matTab: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    padding: "12px 20px",
+    fontSize: 13,
+    fontWeight: 600,
+    color: "#6B7280",
+    background: "#f9fafb",
+    border: "none",
+    borderBottom: "2px solid transparent",
+    marginBottom: -2,
+    cursor: "pointer",
+    transition: "all 0.15s",
+    whiteSpace: "nowrap" as const,
+  },
+  matTabNum: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: 11,
+    fontWeight: 800,
+    fontFamily: "JetBrains Mono, monospace",
+    flexShrink: 0,
+  },
+  matTabName: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  matTabMediaCount: {
+    fontSize: 10,
+    fontWeight: 700,
+    padding: "1px 6px",
+    borderRadius: 10,
+    background: "#e5e7eb",
+    color: "#6B7280",
+  },
+  /* ═══ MATERIAL WORK AREA ═══ */
+  matWorkArea: {
+    padding: "28px 4px",
+    minHeight: 300,
+  },
+  matWorkTitle: {
+    fontSize: 18,
+    fontWeight: 700,
+    color: "#111827",
+    margin: 0,
+  },
+  matFormWide: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 16,
+  },
+  formRow2: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 16,
+  },
+  formRow3: {
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr 1fr",
+    gap: 16,
+  },
+  /* ═══ MATERIAL PREVIEW ═══ */
+  matPreview: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 16,
+  },
+  previewSection: {
+    padding: "16px 20px",
+    background: "#f9fafb",
+    borderRadius: 10,
+    border: "1px solid #e5e7eb",
+  },
+  previewLabel: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 1.5,
+    color: "#9CA3AF",
+    display: "block",
+    marginBottom: 8,
+  },
+  previewText: {
+    fontSize: 14,
+    color: "#374151",
+    lineHeight: 1.7,
+    margin: 0,
+    whiteSpace: "pre-wrap" as const,
+  },
+  previewGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 12,
+  },
+  previewItem: {
+    padding: "12px 16px",
+    background: "#f9fafb",
+    borderRadius: 8,
+    border: "1px solid #e5e7eb",
+  },
+  previewLink: {
+    fontSize: 13,
+    color: "#2563EB",
+    wordBreak: "break-all" as const,
+    textDecoration: "none",
+  },
+  /* ═══ FILE UPLOAD ═══ */
+  fileLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "10px 14px",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#374151",
+    background: "#f9fafb",
+    border: "1px dashed #d1d5db",
+    borderRadius: 8,
+    cursor: "pointer",
+    transition: "all 0.15s",
+  },
+  filePreview: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    padding: 8,
+    background: "#f9fafb",
+    borderRadius: 8,
+    border: "1px solid #e5e7eb",
+    position: "relative" as const,
+  },
+  fileRemoveBtn: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    border: "none",
+    background: "#fee2e2",
+    color: "#DC2626",
+    cursor: "pointer",
+    marginLeft: "auto",
+    flexShrink: 0,
+  },
+};
