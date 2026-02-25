@@ -26,6 +26,15 @@ export async function GET(request: Request) {
 
     const { data: filteredRespondents, error: respondentError } = await respondentQuery;
 
+    // DEBUG: also fetch raw count without filters to compare
+    const { count: rawCountAll } = await supabase
+      .from("survey_respondents")
+      .select("*", { count: "exact", head: true });
+    const { count: rawCountActive } = await supabase
+      .from("survey_respondents")
+      .select("*", { count: "exact", head: true })
+      .or("is_archived.eq.false,is_archived.is.null");
+
     // Use all non-archived respondents directly (LOG counts them all)
     const respondents = filteredRespondents || [];
     const totalRespondents = respondents.length;
@@ -621,6 +630,17 @@ export async function GET(request: Request) {
       perStimulusBreakdowns,
       fatigueAnalysis,
       completionFunnel,
+      _debug: {
+        rawCountAll,
+        rawCountActive,
+        filteredRespondentsCount: (filteredRespondents || []).length,
+        respondentError: respondentError?.message || null,
+        distributionIdParam: distributionId,
+        respondentIds,
+        respCountByRespondent,
+        expectedResponseCount,
+        needsRepairCount: needsRepair.length,
+      },
     });
   } catch (err: any) {
     return NextResponse.json(
