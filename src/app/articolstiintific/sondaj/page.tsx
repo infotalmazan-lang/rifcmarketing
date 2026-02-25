@@ -5978,8 +5978,13 @@ export default function StudiuAdminPage() {
           const allFilteredIds = filtered.map((l: any) => l.id);
           const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => logSelected.has(id));
 
+          // Completion detection — mirrors backend isEffectivelyCompleted():
+          // completed_at is set OR respondent evaluated all active stimuli
+          const expectedLogResponses = stimuli.filter(s => s.is_active).length;
+          const isLogCompleted = (l: any) => !!l.completed_at || (expectedLogResponses > 0 && (l.responseCount || 0) >= expectedLogResponses);
+
           // Stats
-          const completedCount = filtered.filter((l: any) => !!l.completed_at).length;
+          const completedCount = filtered.filter((l: any) => isLogCompleted(l)).length;
           const rate = filtered.length > 0 ? Math.round((completedCount / filtered.length) * 100) : 0;
           const totalResponses = filtered.reduce((sum: number, l: any) => sum + (l.responseCount || 0), 0);
 
@@ -6048,8 +6053,8 @@ export default function StudiuAdminPage() {
                 const now = new Date();
                 const todayStr = now.toISOString().slice(0, 10);
                 const monthStr = now.toISOString().slice(0, 7);
-                const completedToday = filtered.filter((l: any) => l.completed_at && l.completed_at.slice(0, 10) === todayStr).length;
-                const completedMonth = filtered.filter((l: any) => l.completed_at && l.completed_at.slice(0, 7) === monthStr).length;
+                const completedToday = filtered.filter((l: any) => isLogCompleted(l) && (l.completed_at || l.started_at) && (l.completed_at || l.started_at).slice(0, 10) === todayStr).length;
+                const completedMonth = filtered.filter((l: any) => isLogCompleted(l) && (l.completed_at || l.started_at) && (l.completed_at || l.started_at).slice(0, 7) === monthStr).length;
 
                 return (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 10, marginBottom: 14 }}>
@@ -6227,7 +6232,7 @@ export default function StudiuAdminPage() {
                                       <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 4, background: l.is_flagged ? "#fef2f2" : "#f9fafb", border: `1px solid ${l.is_flagged ? "#fecaca" : "#e5e7eb"}` }}>
                                         <div style={{ width: 8, height: 8, borderRadius: "50%", background: l.is_flagged ? "#DC2626" : "#10b981", flexShrink: 0 }} />
                                         <span style={{ fontSize: 11, color: "#374151", fontWeight: 500, minWidth: 100 }}>{d ? d.toLocaleDateString("ro-RO") + " " + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "—"}</span>
-                                        <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: l.completed_at ? "#d1fae5" : "#fef3c7", color: l.completed_at ? "#065f46" : "#92400e", fontWeight: 600 }}>{l.completed_at ? "COMPLET" : `Pas ${l.step_completed}`}</span>
+                                        <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: isLogCompleted(l) ? "#d1fae5" : "#fef3c7", color: isLogCompleted(l) ? "#065f46" : "#92400e", fontWeight: 600 }}>{isLogCompleted(l) ? "COMPLET" : `Pas ${l.step_completed}`}</span>
                                         <span style={{ fontSize: 11, color: "#6B7280" }}>{l.device_type}</span>
                                         <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{(l.locale || "ro").toUpperCase()}</span>
                                         {l.browser_fingerprint && <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: "#9CA3AF" }} title={`Fingerprint: ${l.browser_fingerprint}`}><Fingerprint size={10} style={{ display: "inline", verticalAlign: "middle" }} /> {l.browser_fingerprint.slice(0, 8)}...</span>}
@@ -6321,7 +6326,7 @@ export default function StudiuAdminPage() {
                                         <div style={{ width: 8, height: 8, borderRadius: "50%", background: l.is_flagged ? "#DC2626" : "#10b981", flexShrink: 0 }} />
                                         <span style={{ fontSize: 11, color: "#374151", fontWeight: 500, minWidth: 100 }}>{d ? d.toLocaleDateString("ro-RO") + " " + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "—"}</span>
                                         <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: "#6B7280" }}>{l.ip_address || l.ip_hash || "—"}</span>
-                                        <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: l.completed_at ? "#d1fae5" : "#fef3c7", color: l.completed_at ? "#065f46" : "#92400e", fontWeight: 600 }}>{l.completed_at ? "COMPLET" : `Pas ${l.step_completed}`}</span>
+                                        <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: isLogCompleted(l) ? "#d1fae5" : "#fef3c7", color: isLogCompleted(l) ? "#065f46" : "#92400e", fontWeight: 600 }}>{isLogCompleted(l) ? "COMPLET" : `Pas ${l.step_completed}`}</span>
                                         <span style={{ fontSize: 11, color: "#6B7280" }}>{l.device_type}</span>
                                         <span style={{ flex: 1 }} />
                                         {l.is_flagged ? (
@@ -6479,10 +6484,10 @@ export default function StudiuAdminPage() {
                       {filtered.map((log: any, idx: number) => {
                         const completedDate = log.completed_at ? new Date(log.completed_at) : null;
                         const startedDate = log.started_at ? new Date(log.started_at) : null;
-                        const isComplete = completedDate && !isNaN(completedDate.getTime());
-                        const displayDate = isComplete ? completedDate : (startedDate && !isNaN(startedDate.getTime()) ? startedDate : null);
+                        const isComplete = isLogCompleted(log);
+                        const displayDate = (completedDate && !isNaN(completedDate.getTime())) ? completedDate : (startedDate && !isNaN(startedDate.getTime()) ? startedDate : null);
                         const hasValidDate = !!displayDate;
-                        const duration = (isComplete && startedDate) ? Math.round((completedDate.getTime() - startedDate.getTime()) / 1000) : null;
+                        const duration = (completedDate && !isNaN(completedDate.getTime()) && startedDate) ? Math.round((completedDate.getTime() - startedDate.getTime()) / 1000) : null;
                         const demoGender = log.demographics?.gender || "—";
                         const demoAge = log.demographics?.ageRange || log.demographics?.age_range || "—";
                         const demoCountry = log.demographics?.country || "—";
@@ -6727,7 +6732,9 @@ export default function StudiuAdminPage() {
                       <tbody>
                         {archiveData.map((log: any, idx: number) => {
                           const completedDate = log.completed_at ? new Date(log.completed_at) : null;
-                          const isComplete = completedDate && !isNaN(completedDate.getTime());
+                          const startedDate = log.started_at ? new Date(log.started_at) : null;
+                          const isComplete = isLogCompleted(log);
+                          const archiveDisplayDate = completedDate || startedDate;
                           const archivedDate = log.archived_at ? new Date(log.archived_at) : null;
                           const isChecked = archiveSelected.has(log.id);
                           return (
@@ -6739,8 +6746,8 @@ export default function StudiuAdminPage() {
                               </td>
                               <td style={{ padding: "10px 10px", fontWeight: 700, color: "#6B7280", fontSize: 12 }}>{archiveData.length - idx}</td>
                               <td style={{ padding: "10px 10px", fontSize: 12 }}>
-                                {isComplete ? (
-                                  <><div style={{ fontWeight: 600, color: "#111827" }}>{completedDate!.toLocaleDateString("ro-RO")}</div><div style={{ color: "#6B7280", fontSize: 11 }}>{completedDate!.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}</div></>
+                                {archiveDisplayDate ? (
+                                  <><div style={{ fontWeight: 600, color: "#111827" }}>{archiveDisplayDate.toLocaleDateString("ro-RO")}</div><div style={{ color: "#6B7280", fontSize: 11 }}>{archiveDisplayDate.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}</div></>
                                 ) : <span style={{ color: "#9CA3AF" }}>—</span>}
                               </td>
                               <td style={{ padding: "10px 10px", textAlign: "center" }}>
