@@ -56,19 +56,64 @@ export async function GET(request: Request) {
     }
     const totalResponses = allFilteredResponses.length;
 
-    // Completed respondents — those with completed_at set
-    const completedRespondents = respondents.filter(r => r.completed_at != null).length;
+    // Build response count per respondent (needed for completion detection)
+    const respCountByRespondent: Record<string, number> = {};
+    for (const resp of allFilteredResponses) {
+      respCountByRespondent[resp.respondent_id] = (respCountByRespondent[resp.respondent_id] || 0) + 1;
+    }
+
+    // Fetch stimuli count early (for completion detection)
+    const { data: stimuli } = await supabase
+      .from("survey_stimuli")
+      .select("id, name, type, industry, variant_label, execution_quality")
+      .eq("is_active", true)
+      .order("display_order");
+    const expectedResponseCount = (stimuli || []).length;
+
+    // A respondent is "completed" if completed_at is set OR if they evaluated all active stimuli.
+    // This handles legacy respondents from older wizard versions that didn't set completed_at.
+    const isEffectivelyCompleted = (r: any) =>
+      r.completed_at != null ||
+      (expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount);
+
+    // Auto-repair: set completed_at for respondents who have all responses but missing completed_at
+    // (one-time data fix for legacy wizard entries)
+    const needsRepair = respondents.filter(r =>
+      r.completed_at == null &&
+      expectedResponseCount > 0 &&
+      (respCountByRespondent[r.id] || 0) >= expectedResponseCount
+    );
+    if (needsRepair.length > 0) {
+      // Find latest response created_at per respondent to use as completed_at
+      const latestResponseTime: Record<string, string> = {};
+      for (const resp of allFilteredResponses) {
+        if (resp.created_at && needsRepair.some(r => r.id === resp.respondent_id)) {
+          if (!latestResponseTime[resp.respondent_id] || resp.created_at > latestResponseTime[resp.respondent_id]) {
+            latestResponseTime[resp.respondent_id] = resp.created_at;
+          }
+        }
+      }
+      // Repair each respondent (fire-and-forget, don't block response)
+      for (const r of needsRepair) {
+        const completedAt = latestResponseTime[r.id] || new Date().toISOString();
+        supabase.from("survey_respondents").update({ completed_at: completedAt }).eq("id", r.id).then(() => {});
+        // Update local data so this response reflects the repair
+        r.completed_at = completedAt;
+      }
+    }
+
+    const completedRespondents = respondents.filter(isEffectivelyCompleted).length;
 
     // Today / this month / avg session time
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10);
     const monthStr = now.toISOString().slice(0, 7);
-    const completedToday = respondents.filter(r => r.completed_at && (r.completed_at as string).slice(0, 10) === todayStr).length;
-    const completedMonth = respondents.filter(r => r.completed_at && (r.completed_at as string).slice(0, 7) === monthStr).length;
+    const completedToday = respondents.filter(r => isEffectivelyCompleted(r) && r.completed_at && (r.completed_at as string).slice(0, 10) === todayStr).length;
+    const completedMonth = respondents.filter(r => isEffectivelyCompleted(r) && r.completed_at && (r.completed_at as string).slice(0, 7) === monthStr).length;
 
     // Avg session duration (completed_at - started_at)
     const durations = respondents
-      .filter(r => r.completed_at && r.started_at)
+      .filter(r => isEffectivelyCompleted(r) && r.completed_at && r.started_at)
       .map(r => Math.round((new Date(r.completed_at as string).getTime() - new Date(r.started_at as string).getTime()) / 1000))
       .filter(s => s > 0 && s < 7200); // ignore outliers > 2h
     const avgSessionTime = durations.length > 0 ? Math.round(durations.reduce((a, v) => a + v, 0) / durations.length) : 0;
@@ -80,13 +125,7 @@ export async function GET(request: Request) {
       responsesByStimulus[resp.stimulus_id].push(resp);
     }
 
-    // Per-stimulus aggregated results — ALL active stimuli
-    const { data: stimuli } = await supabase
-      .from("survey_stimuli")
-      .select("id, name, type, industry, variant_label, execution_quality")
-      .eq("is_active", true)
-      .order("display_order");
-
+    // Per-stimulus aggregated results (stimuli already fetched above)
     const stimuliResults = [];
     for (const s of stimuli || []) {
       const responses = responsesByStimulus[s.id] || [];
@@ -246,7 +285,7 @@ export async function GET(request: Request) {
         psychAvg[key] = arr.length > 0 ? Math.round((arr.reduce((a, v) => a + v, 0) / arr.length) * 100) / 100 : 0;
       }
 
-      const completedCount = resps.filter(r => r.completed_at != null).length;
+      const completedCount = resps.filter(isEffectivelyCompleted).length;
 
       return {
         demographics: demo,
@@ -331,10 +370,10 @@ export async function GET(request: Request) {
           if (did) {
             if (!distMap[did]) distMap[did] = { total: 0, completed: 0 };
             distMap[did].total++;
-            if (r.completed_at) distMap[did].completed++;
+            if (isEffectivelyCompleted(r)) distMap[did].completed++;
           } else {
             noDistTotal++;
-            if (r.completed_at) noDistCompleted++;
+            if (isEffectivelyCompleted(r)) noDistCompleted++;
           }
         }
         distributionSummary = dists.map(d => ({
@@ -364,7 +403,7 @@ export async function GET(request: Request) {
 
       // Only use completed respondents with enough responses
       const completedIds = new Set(
-        respondents.filter(r => r.completed_at != null).map(r => r.id)
+        respondents.filter(isEffectivelyCompleted).map(r => r.id)
       );
 
       // Collect per-position scores (position = index within respondent's sequence)
@@ -467,7 +506,7 @@ export async function GET(request: Request) {
       // Wizard sends step = groupIdx + 4 for each stimulus (groupIdx = 0,1,2,...N-1)
       // So step_completed for stimulus evaluation goes: 4, 5, 6, 7, ... (N+3)
       // Best heuristic: count responses per completed respondent, take the maximum.
-      const completedResps = respondents.filter(r => r.completed_at != null);
+      const completedResps = respondents.filter(isEffectivelyCompleted);
       let actualStimuliCount = 0;
       if (completedResps.length > 0) {
         const respCounts: number[] = completedResps.map(r => {
@@ -513,8 +552,8 @@ export async function GET(request: Request) {
         let reached: number;
 
         if (ms.step === COMPLETED_SENTINEL) {
-          // "Completed" means completed_at is set
-          reached = respondents.filter(r => r.completed_at != null).length;
+          // "Completed" means completed_at is set OR all stimuli evaluated
+          reached = respondents.filter(isEffectivelyCompleted).length;
         } else {
           reached = respondents.filter(r => (r.step_completed || 0) >= ms.step).length;
         }
