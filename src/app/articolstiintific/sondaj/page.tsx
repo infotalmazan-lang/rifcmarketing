@@ -696,6 +696,7 @@ export default function StudiuAdminPage() {
   const [expandedIndustryType, setExpandedIndustryType] = useState<string | null>(null);
   const [interpSubTab, setInterpSubTab] = useState<"total" | "industrie" | "brand">("total");
   const [expandedInterpIndustry, setExpandedInterpIndustry] = useState<string | null>(null);
+  const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
 
   // Log panel state
   const [logData, setLogData] = useState<any[]>([]);
@@ -2568,7 +2569,7 @@ export default function StudiuAdminPage() {
                                 R: { title: "R \u2014 Recunoa\u0219tere (Recognition)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de u\u0219or este materialul de recunoscut \u0219i identificat. Un R mare \u00eenseamn\u0103 c\u0103 brandul/mesajul este vizibil \u0219i memorabil." },
                                 I: { title: "I \u2014 Impact Emo\u021Bional (Emotional Impact)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 intensitatea reac\u021Biei emo\u021Bionale pe care o provoac\u0103 materialul. Un I mare \u00eenseamn\u0103 c\u0103 materialul genereaz\u0103 emo\u021Bii puternice (pozitive sau negative)." },
                                 F: { title: "F \u2014 Frecven\u021B\u0103 (Frequency/Familiarity)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de familiar \u0219i frecvent perceput este materialul. Un F mare \u00eenseamn\u0103 c\u0103 respondentul simte c\u0103 a mai v\u0103zut materialul de mai multe ori." },
-                                Cform: { title: "C\u2091\u2092\u2093\u2098 \u2014 Scor Comunicare (Formula)", desc: "Calculat dup\u0103 formula: C = R + I \u00d7 F. Combin\u0103 cele 3 dimensiuni \u00eentr-un scor unic. Valori mai mari = comunicare mai eficient\u0103. Maxim teoretic: 110 (R=10, I=10, F=10)." },
+                                Cform: { title: "C\u2091\u2092\u2093\u2098 \u2014 Scor Comunicare (Formula)", desc: "Calculat dup\u0103 formula: R+(I\u00d7F)=C. Combin\u0103 cele 3 dimensiuni \u00eentr-un scor unic. Valori mai mari = comunicare mai eficient\u0103. Maxim teoretic: 110 (R=10, I=10, F=10)." },
                                 Cperc: { title: "C\u209a\u2091\u2093\u2094 \u2014 Scor Comunicare Perceput\u0103", desc: "Media scorurilor de Comunicare percepute direct de respondent (nu calculate). Respondentul r\u0103spunde: \u201eC\u00e2t de eficient comunic\u0103 acest material?\u201d pe scala 1\u201310." },
                                 CTA: { title: "CTA \u2014 Call To Action", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de puternic este \u00eendemnul la ac\u021Biune. Un CTA mare \u00eenseamn\u0103 c\u0103 materialul \u00eel motiveaz\u0103 pe respondent s\u0103 fac\u0103 ceva (s\u0103 cumpere, s\u0103 viziteze, s\u0103 afle mai mult)." },
                                 SD: { title: "SD \u2014 Standard Deviation (Devia\u021Bie Standard)", desc: "M\u0103soar\u0103 c\u00e2t de dispersate sunt r\u0103spunsurile. SD mic = consens (to\u021Bi evalueaz\u0103 similar). SD mare = opinii \u00eemp\u0103r\u021Bite (unii dau note mari, al\u021Bii mici). Util pentru identificarea materialelor controversate." },
@@ -5137,7 +5138,7 @@ export default function StudiuAdminPage() {
           }
 
           // ── Helper functions ──
-          const GATE = 3; // RELEVANCE_GATE_THRESHOLD
+          const GATE = 3;
           const getZone = (score: number): string => {
             if (score <= 20) return "Critical";
             if (score <= 50) return "Noise";
@@ -5176,13 +5177,145 @@ export default function StudiuAdminPage() {
           const getConclusion = (pct: number, avgR: number, zoneMatch: boolean): string => {
             const gateOk = avgR >= GATE;
             if (pct >= 80 && gateOk && zoneMatch) {
-              return `Formula C = R + (I × F) este validata. Scorurile calculate si cele percepute se afla in aceeasi zona (${getZone(pct)}), iar Relevance Gate este depasit (R=${avgR.toFixed(1)} >= ${GATE}). Ipoteza este confirmata cu ${pct}% acuratete.`;
+              return `Formula R+(I×F)=C este validata. Scorurile calculate si cele percepute se afla in aceeasi zona (${getZone(pct)}), iar Relevance Gate este depasit (R=${avgR.toFixed(1)} >= ${GATE}). Ipoteza este confirmata cu ${pct}% acuratete.`;
             }
             if (pct >= 50) {
-              return `Formula C = R + (I × F) este partial validata (${pct}%). ${!gateOk ? `Relevance Gate nu este depasit (R=${avgR.toFixed(1)} < ${GATE}), ceea ce indica lipsa de relevanta perceputa.` : ""} ${!zoneMatch ? "Scorurile calculate si percepute se afla in zone diferite." : ""} Sunt necesare ajustari.`;
+              return `Formula R+(I×F)=C este partial validata (${pct}%). ${!gateOk ? `Relevance Gate nu este depasit (R=${avgR.toFixed(1)} < ${GATE}), ceea ce indica lipsa de relevanta perceputa.` : ""} ${!zoneMatch ? "Scorurile calculate si percepute se afla in zone diferite." : ""} Sunt necesare ajustari.`;
             }
-            return `Formula C = R + (I × F) nu este validata in acest context (${pct}%). Diferenta semnificativa intre scorul calculat si cel perceput sugereaza ca factorii R, I si F nu explica suficient variabilitatea lui C.`;
+            return `Formula R+(I×F)=C nu este validata in acest context (${pct}%). Diferenta semnificativa intre scorul calculat si cel perceput sugereaza ca factorii R, I si F nu explica suficient variabilitatea lui C.`;
           };
+
+          // ── Interpretation content generator ──
+          const getInterpretation = (key: string, val: string, ctx?: Record<string, unknown>): { sections: { heading: string; text: string }[] } => {
+            const v = parseFloat(val) || 0;
+            const _ctx = ctx || {};
+            switch (key) {
+              case "hypothesis_total": return { sections: [
+                { heading: "Ce reprezinta acest rezultat", text: `Procentul de ${val}% indica gradul de acuratete cu care formula RIFC R+(I×F)=C prezice scorul de Claritate (C) perceput de respondenti. Este calculat ca diferenta relativa intre C formula (calculat matematic din R, I si F) si C perceput (evaluat direct de respondent), raportata la scala maxima de 110 puncte.` },
+                { heading: "Cum se aplica formula", text: `Formula R+(I×F)=C combina trei componente: R (Relevanta) ca baza aditionala, iar I (Interesul) inmultit cu F (Forma/Calitatea Executiei) ca amplificator multiplicativ. Scorul final C formula este comparat cu scorul C perceput — evaluarea directa a respondentului privind cat de clar si convingator este mesajul.` },
+                { heading: "De ce arata formula acest rezultat", text: v >= 80 ? `Rezultatul de ${val}% indica o aliniere puternica intre modelul matematic si perceptia reala. Factorii R, I si F explica in mare masura variabilitatea scorului de Claritate, ceea ce sustine ipoteza RIFC.` : v >= 50 ? `Rezultatul de ${val}% arata o aliniere partiala. Exista factori externi (context cultural, experienta anterioara cu brandul, starea emotionala) care influenteaza perceptia C dincolo de ce surprinde formula.` : `Rezultatul de ${val}% indica o discrepanta semnificativa. Factorii R, I si F nu explica suficient perceptia C in acest context — sunt necesari factori suplimentari sau recalibrare.` },
+                { heading: "Cum se interpreteaza", text: `Peste 80% = ipoteza puternic validata. 50-80% = partial validata, necesita investigare suplimentara. Sub 50% = nevalidata, formula nu prezice comportamentul in acest context. Rezultatul trebuie corelat cu Relevance Gate si Zone Match pentru o imagine completa.` },
+                { heading: "Concluzie", text: `${v >= 80 ? "Formula RIFC demonstreaza capacitate predictiva solida." : v >= 50 ? "Formula RIFC are potentialul de a prezice, dar necesita refinare." : "Formula RIFC nu reuseste sa prezica in acest context."} Acest scor de ${val}% ${v >= 80 ? "sustine publicarea rezultatelor ca evidenta pentru validarea ipotezei." : v >= 50 ? "justifica continuarea cercetarii cu un esantion mai mare sau ajustari metodologice." : "sugereaza revizuirea modelului teoretic sau a instrumentului de masurare."}` },
+              ]};
+              case "score_r": return { sections: [
+                { heading: "Ce reprezinta R (Relevanta)", text: `Scorul R = ${val} masoara cat de relevant percepe respondentul mesajul de marketing in raport cu nevoile, interesele sau contextul sau personal. Se evalueaza pe o scala de la 1 la 5 (1 = complet irelevant, 5 = foarte relevant).` },
+                { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, R este componenta aditionala de baza. Relevanta actioneaza ca un "gate" (prag): daca R < ${GATE}, formula prezice ca materialul va avea impact scazut, indiferent cat de interesant sau bine executat este. R se aduna direct la produsul I×F.` },
+                { heading: "De ce arata acest rezultat", text: v >= 4 ? `R = ${val} indica o relevanta ridicata. Respondentii considera ca mesajul se adreseaza direct nevoilor lor. Aceasta baza solida permite amplificarea prin I×F.` : v >= GATE ? `R = ${val} indica o relevanta acceptabila. Mesajul trece Relevance Gate (>= ${GATE}), dar exista spatiu de imbunatatire a targetarii.` : `R = ${val} indica relevanta scazuta, sub pragul Gate de ${GATE}. Mesajul nu rezoneza cu audienta tinta, ceea ce diminueaza drastic eficacitatea, indiferent de calitatea executiei (F) sau interesul generat (I).` },
+                { heading: "Cum se interpreteaza", text: `R >= 4: Excelent — mesajul este foarte relevant. R >= ${GATE}: Acceptabil — formula poate functiona. R < ${GATE}: Gate Fail — materialul necesita re-targetare sau reformulare fundamentala a mesajului.` },
+                { heading: "Concluzie", text: `Cu R = ${val}, ${v >= GATE ? `materialul depaseste Relevance Gate si poate beneficia de amplificarea I×F.` : `materialul nu depaseste Relevance Gate — prioritatea este imbunatatirea relevantei inainte de a optimiza Interesul sau Forma.`}` },
+              ]};
+              case "score_i": return { sections: [
+                { heading: "Ce reprezinta I (Interes)", text: `Scorul I = ${val} masoara cat de captivant si interesant percepe respondentul materialul de marketing. Se evalueaza pe o scala de la 1 la 5 (1 = plictisitor, 5 = extrem de interesant/captivant).` },
+                { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, I este primul factor al componentei multiplicative. Interesul se inmulteste cu Forma (F) — daca continutul este interesant DAR prost executat, produsul I×F va fi modest. Daca este si interesant SI bine executat, amplificarea este maxima.` },
+                { heading: "De ce arata acest rezultat", text: v >= 4 ? `I = ${val} arata ca materialul capteaza atentia. Continutul, mesajul sau povestea rezoneza cu audienta si genereaza curiozitate sau implicare emotionala.` : v >= 3 ? `I = ${val} arata un interes moderat. Materialul nu este plictisitor, dar nici nu iese in evidenta — exista potential de imbunatatire prin storytelling, hooks mai puternice sau elemente de noutate.` : `I = ${val} arata un interes scazut. Materialul nu reuseste sa capteze atentia — continutul este perceput ca generic, repetitiv sau fara valoare adaugata.` },
+                { heading: "Cum se interpreteaza", text: `I >= 4: Materialul genereaza interes puternic — amplificarea prin F va fi semnificativa. I 3-4: Interes moderat — produsul I×F va fi mediu. I < 3: Interes scazut — chiar si o executie excelenta (F mare) nu va compensa.` },
+                { heading: "Concluzie", text: `Cu I = ${val}, ${v >= 4 ? "materialul are un continut captivant care amplifica impactul formulei." : v >= 3 ? "materialul mentine atentia dar nu iese in evidenta — optimizarea continutului poate creste semnificativ scorul C." : "materialul necesita o reformulare fundamentala a continutului pentru a genera interes."}` },
+              ]};
+              case "score_f": return { sections: [
+                { heading: "Ce reprezinta F (Forma)", text: `Scorul F = ${val} masoara calitatea executiei vizuale, audio si de design a materialului de marketing. Se evalueaza pe o scala de la 1 la 5 (1 = executie foarte slaba, 5 = executie exceptionala/profesionala).` },
+                { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, F este al doilea factor al componentei multiplicative. Forma amplifica (sau diminueaza) Interesul: un continut interesant (I mare) cu executie excelenta (F mare) produce un produs I×F maxim. Forma slaba "franeaza" impactul chiar si al celui mai bun continut.` },
+                { heading: "De ce arata acest rezultat", text: v >= 4 ? `F = ${val} indica o executie de inalta calitate. Designul, layoutul, tipografia, culorile si elementele vizuale sunt percepute ca profesionale si coerente.` : v >= 3 ? `F = ${val} indica o executie acceptabila. Nu sunt erori grave, dar materialul nu impresioneza — poate fi imbunatatit prin design mai atent, imagine mai clara, sau layout mai profesional.` : `F = ${val} indica o executie slaba. Materialul este perceput ca neprofesional, cu probleme vizuale, text greu de citit, sau design necorespunzator.` },
+                { heading: "Cum se interpreteaza", text: `F >= 4: Executie profesionala — amplifica puternic Interesul. F 3-4: Executie acceptabila — nu obstructioneaza, dar nici nu adauga. F < 3: Executie problematica — diminueaza impactul indiferent de calitatea continutului.` },
+                { heading: "Concluzie", text: `Cu F = ${val}, ${v >= 4 ? "calitatea executiei amplifica maxim impactul continutului in formula I×F." : v >= 3 ? "executia este acceptabila dar poate fi optimizata pentru a creste multiplicatorul I×F." : "executia necesita imbunatatiri semnificative — este cel mai rapid mod de a creste scorul C final."}` },
+              ]};
+              case "score_cf": return { sections: [
+                { heading: "Ce reprezinta C formula", text: `Scorul C formula = ${val} este rezultatul matematic al formulei RIFC: R+(I×F)=C. Acest scor prezice cat de clar si convingator ar trebui sa fie mesajul, pe baza celor trei componente masurate (R, I, F). Scala este 0-110.` },
+                { heading: "Cum se calculeaza", text: `R+(I×F)=C. Exemplu: daca R = ${_ctx.r || "?"}, I = ${_ctx.i || "?"}, F = ${_ctx.f || "?"}, atunci ${_ctx.r || "?"} + (${_ctx.i || "?"} × ${_ctx.f || "?"}) = ${val}. R se aduna direct (baza de relevanta), iar I×F reprezinta amplificarea multiplicativa (interes × calitate executie).` },
+                { heading: "De ce arata acest rezultat", text: `C formula = ${val} reflecta combinatia celor trei factori. ${v > 80 ? "Scorul ridicat indica ca toate cele trei componente sunt puternice, iar amplificarea I×F este semnificativa." : v > 50 ? "Scorul mediu sugereaza ca cel putin una dintre componente limiteaza rezultatul — fie relevanta este scazuta, fie produsul I×F nu amplifica suficient." : "Scorul scazut indica slabiciuni in mai multe componente sau un efect de franare reciproca."}` },
+                { heading: "Zone de performanta", text: `0-20 (Critical): Materialul nu comunica eficient. 21-50 (Noise): Materialul exista dar nu se diferentiaza. 51-80 (Medium): Materialul comunica acceptabil. 81-110 (Supreme): Materialul are impact maxim. C formula = ${val} se afla in zona ${getZone(v)}.` },
+                { heading: "Concluzie", text: `Scorul predictiv de ${val} plaseaza materialul in zona ${getZone(v)}. ${v > 80 ? "Formula prezice un impact puternic — daca C perceput confirma, ipoteza este validata." : v > 50 ? "Formula prezice un impact moderat — comparatia cu C perceput va arata daca modelul este calibrat corect." : "Formula prezice un impact scazut — necesita interventie pe factorii cu scoruri mici."}` },
+              ]};
+              case "score_cp": return { sections: [
+                { heading: "Ce reprezinta C perceput", text: `Scorul C perceput = ${val} este evaluarea directa a respondentului: cat de clar, convingator si memorabil percepe mesajul materialului de marketing. Este masurat independent de R, I si F, pe aceeasi scala 0-110.` },
+                { heading: "Rolul in validarea formulei", text: `C perceput este "realitatea" — perceptia reala a respondentului. Formula RIFC prezice ca R+(I×F)=C ar trebui sa aproximeze C perceput. Comparand cele doua (C formula vs C perceput), validam daca formula functioneaza: daca sunt apropiate, formula prezice corect; daca difera mult, formula nu surprinde toti factorii.` },
+                { heading: "De ce arata acest rezultat", text: `C perceput = ${val} reflecta experienta subiectiva a respondentului cu materialul. ${v > 80 ? "Respondentul a perceput mesajul ca fiind foarte clar si convingator — indiferent de formula, impactul real este puternic." : v > 50 ? "Respondentul a perceput mesajul ca moderat de clar — exista loc de imbunatatire." : "Respondentul nu a fost convins de mesaj — materialul nu comunica eficient."}` },
+                { heading: "Cum se interpreteaza", text: `C perceput este ancora de validare. Daca C formula ≈ C perceput → formula functioneaza. Daca C formula >> C perceput → formula supraestimeaza (materialul pare bun pe hartie dar nu convinge). Daca C formula << C perceput → formula subestimeaza (exista factori pozitivi pe care formula nu ii surprinde).` },
+                { heading: "Concluzie", text: `Scorul C perceput de ${val} (zona ${getZone(v)}) reprezinta evaluarea reala a audientei. ${_ctx.cf ? `Comparat cu C formula = ${_ctx.cf}, diferenta Delta = ${_ctx.delta} indica ${Math.abs(v - Number(_ctx.cf)) < 15 ? "o buna aliniere intre predictie si realitate." : "o discrepanta care necesita investigare suplimentara."}` : ""}` },
+              ]};
+              case "score_delta": return { sections: [
+                { heading: "Ce reprezinta Delta", text: `Delta = ${val} este diferenta absoluta intre C formula si C perceput: |Cf - Cp|. Masoara cat de precisa este predictia formulei RIFC — cu cat Delta este mai mica, cu atat formula prezice mai exact.` },
+                { heading: "Cum se calculeaza", text: `Delta = |C formula - C perceput| = |${_ctx.cf || "?"} - ${_ctx.cp || "?"}| = ${val}. Pe o scala de 0-110, o Delta mica (< 10) indica predictie excelenta, iar una mare (> 30) indica discrepanta semnificativa.` },
+                { heading: "De ce arata acest rezultat", text: `Delta = ${val} ${v < 10 ? "indica o predictie excelenta — formula RIFC surprinde cu acuratete factorii care influenteaza perceptia C." : v < 20 ? "indica o predictie buna — exista o aliniere solida intre model si realitate, cu o mica variatie acceptabila." : v < 30 ? "indica o predictie moderata — exista factori care influenteaza perceptia C dincolo de R, I si F." : "indica o discrepanta semnificativa — formula nu surprinde factorii cheie care influenteaza perceptia respondentilor."}` },
+                { heading: "Cum se interpreteaza", text: `Delta 0-10: Predictie excelenta — formula este calibrata corect. Delta 10-20: Predictie buna — variatie acceptabila. Delta 20-30: Predictie moderata — necesita investigare. Delta > 30: Discrepanta — formula nu functioneaza in acest context.` },
+                { heading: "Concluzie", text: `O Delta de ${val} ${v < 15 ? "sustine validitatea formulei RIFC ca instrument de predictie." : v < 25 ? "sugereaza ca formula necesita calibrare fina, dar conceptul fundamental este viabil." : "indica nevoia de a integra factori suplimentari in model sau de a reconsidera ponderile componentelor."}` },
+              ]};
+              case "gate": return { sections: [
+                { heading: "Ce reprezinta Relevance Gate", text: `Relevance Gate arata ca ${_ctx.pass || 0} din ${_ctx.total || 0} materiale (${val}%) au un scor R (Relevanta) >= ${GATE}. Acest prag este conditia minima pentru ca formula RIFC sa poata functiona — fara relevanta, nici Interesul nici Forma nu conteaza.` },
+                { heading: "Cum functioneaza in formula", text: `Gate-ul de Relevanta este un pre-filtru conceptual: daca R < ${GATE}, materialul nu trece pragul minim de relevanta pentru audienta. Chiar daca I = 5 si F = 5, un R de 1 sau 2 inseamna ca mesajul nu se adreseaza nevoilor reale ale respondentului, iar formula prezice un C scazut.` },
+                { heading: "De ce arata acest rezultat", text: `${val}% din materiale trec Gate-ul. ${v >= 80 ? "Aceasta rata ridicata indica ca materialele testate sunt relevante pentru audienta — premisa fundamentala a studiului este indeplinita." : v >= 50 ? "Rata moderata sugereaza ca o parte din materiale nu sunt relevante pentru audienta testata — fie targetarea a fost imprecisa, fie unele materiale necesita reformulare." : "Rata scazuta indica o problema fundamentala de targetare — materialele nu sunt relevante pentru audienta care le-a evaluat."}` },
+                { heading: "Cum se interpreteaza", text: `>= 80% Gate Pass: Excelent — esantionul si materialele sunt bine aliniate. 50-80%: Acceptabil — dar rezultatele pot fi distorsionate de materialele sub-gate. < 50%: Problematic — concluziile studiului sunt compromise de lipsa de relevanta.` },
+                { heading: "Concluzie", text: `Cu ${val}% materiale trecand Gate-ul, ${v >= 70 ? "premisa de relevanta este indeplinita si rezultatele formulei sunt fiabile." : v >= 40 ? "rezultatele trebuie interpretate cu prudenta, separand materialele sub-gate de cele peste prag." : "studiul necesita fie o alta audienta tinta, fie materiale cu relevanta mai mare."}` },
+              ]};
+              case "zonematch": return { sections: [
+                { heading: "Ce reprezinta Zone Match", text: `Zone Match = ${val}% arata ca ${_ctx.match || 0} din ${_ctx.total || 0} materiale au C formula si C perceput in aceeasi zona de performanta (Critical/Noise/Medium/Supreme). Aceasta este o masura calitativa a preciziei formulei.` },
+                { heading: "Cum functioneaza", text: `Scala 0-110 este impartita in 4 zone: Critical (0-20), Noise (21-50), Medium (51-80), Supreme (81-110). Daca formula plaseaza un material in zona Medium si respondentul il percepe tot in Medium, avem un Zone Match — formula prezice corect "categoria" de impact, chiar daca scorul exact difera putin.` },
+                { heading: "De ce arata acest rezultat", text: `${val}% Zone Match ${v >= 80 ? "arata ca formula clasifica corect materialele in categorii de impact — chiar daca scorurile exacte difera usor, directia este corecta." : v >= 50 ? "arata o clasificare partiala corecta — formula nimeresste zona in jumatate din cazuri, dar exista materiale unde predictia si realitatea sunt in zone diferite." : "arata o clasificare slaba — formula plaseaza materialele in zone diferite fata de perceptia reala, ceea ce indica o problema de calibrare."}` },
+                { heading: "Cum se interpreteaza", text: `>= 80%: Formula clasifica corect — nivel inalt de incredere. 50-80%: Clasificare partiala — formula functioneaza dar nu pentru toate tipurile de materiale. < 50%: Clasificare slaba — formula necesita recalibrare sau factori suplimentari.` },
+                { heading: "Concluzie", text: `Un Zone Match de ${val}% ${v >= 70 ? "confirma ca formula RIFC are o capacitate solida de clasificare a materialelor in categorii de impact." : v >= 40 ? "sugereaza ca formula are potentialul de clasificare, dar necesita raffinare pentru anumite tipuri de materiale sau industrii." : "indica nevoia de a reconsidera structura formulei sau factorii inclusi."}` },
+              ]};
+              case "materials": return { sections: [
+                { heading: "Ce reprezinta", text: `Au fost analizate ${val} materiale de marketing care au primit cel putin un raspuns de la respondenti. Totalul de ${_ctx.responses || 0} raspunsuri ofera baza statistica pentru calculul mediilor R, I, F si C.` },
+                { heading: "De ce conteaza numarul", text: `Cu cat numarul de materiale analizate este mai mare, cu atat validarea formulei este mai robusta statistic. Fiecare material reprezinta un "test" independent al formulei — daca formula functioneaza pe multe materiale diverse, evidenta este mai puternica.` },
+                { heading: "Cum se interpreteaza", text: `${v >= 20 ? `${val} materiale ofera un esantion solid pentru concluzii statistice.` : v >= 10 ? `${val} materiale ofera un esantion acceptabil, dar concluziile trebuie tratate cu prudenta.` : `${val} materiale reprezinta un esantion mic — rezultatele sunt preliminare si orientative.`}` },
+                { heading: "Concluzie", text: `Analiza pe ${val} materiale si ${_ctx.responses || 0} raspunsuri ${v >= 15 ? "ofera o baza suficienta pentru concluzii semnificative despre validitatea formulei RIFC." : "ofera o indicatie preliminara — se recomanda extinderea esantionului pentru concluzii definitive."}` },
+              ]};
+              case "zones": return { sections: [
+                { heading: "Ce reprezinta distributia pe zone", text: `Graficul compara cum sunt distribuite materialele pe cele 4 zone de performanta (Critical, Noise, Medium, Supreme) — o data calculat prin formula (C formula) si o data perceput de respondenti (C perceput).` },
+                { heading: "Cum se aplica", text: `Cele 4 zone sunt: Critical (0-20) = materialul nu comunica; Noise (21-50) = materialul exista dar nu se diferentiaza; Medium (51-80) = comunicare acceptabila; Supreme (81-110) = impact maxim. Daca distributiile formula vs perceput sunt similare, formula prezice corect.` },
+                { heading: "De ce arata acest rezultat", text: `Distributia arata unde se concentreaza materialele. Daca majoritatea sunt in zona Medium/Supreme pe ambele coloane, materialele sunt eficiente si formula le prezice corect. Daca exista discrepante mari intre coloane, formula nu estimeaza corect pentru anumite materiale.` },
+                { heading: "Cum se interpreteaza", text: `Distributii similare intre Formula si Perceput = formula valida. Shift catre stanga pe Perceput (mai multe in Noise/Critical) fata de Formula = formula supraestimeaza. Shift catre dreapta pe Perceput = formula subestimeaza.` },
+                { heading: "Concluzie", text: `Comparand cele doua distributii se poate observa daca formula tinde sa supraestimeze sau subestimeze impactul real al materialelor, oferind directie pentru calibrare.` },
+              ]};
+              case "industry": {
+                const nm = String(_ctx.name || "");
+                const iN = Number(_ctx.count || 0);
+                const iPct = Number(_ctx.pct || 0);
+                return { sections: [
+                  { heading: `Ce reprezinta rezultatul pentru ${nm}`, text: `Industria ${nm} cuprinde ${iN} material${iN !== 1 ? "e" : ""} analizat${iN !== 1 ? "e" : ""}. Scorul de validare de ${iPct}% arata cat de bine prezice formula RIFC R+(I×F)=C perceptia de Claritate in aceasta industrie specifica.` },
+                  { heading: "Cum se aplica formula pe industrie", text: `Fiecare industrie are particularitati: audienta difera (B2B vs B2C), complexitatea mesajelor variaza, si asteptarile de calitate a executiei difera. Formula se aplica identic, dar rezultatele pot varia semnificativ — ceea ce testeaza robustetea modelului RIFC in contexte diverse.` },
+                  { heading: "De ce arata acest rezultat", text: `${iPct >= 80 ? `In ${nm}, formula prezice cu acuratete ridicata — materialele din aceasta industrie se comporta conform modelului RIFC.` : iPct >= 50 ? `In ${nm}, formula prezice partial — pot exista particularitati ale industriei (terminologie specifica, public expert, standarde vizuale diferite) care influenteaza perceptia C dincolo de R, I si F.` : `In ${nm}, formula nu prezice bine — aceasta industrie are probabil factori distinctivi (reglementari, incredere in brand, complexitate tehnica) care necesita factori suplimentari in model.`}` },
+                  { heading: "Cum se interpreteaza", text: `Comparand scorurile de validare intre industrii se identifica unde formula functioneaza cel mai bine si unde necesita ajustari. Industriile cu validare ridicata confirma modelul; cele cu validare scazuta ofera directii de cercetare.` },
+                  { heading: "Concluzie", text: `Industria ${nm} cu ${iPct}% validare ${iPct >= 70 ? "sustine aplicabilitatea formulei RIFC in acest sector." : iPct >= 40 ? "sugereaza ca formula are potential dar necesita calibrare specifica acestui sector." : "indica limitari ale formulei in acest context industrial — necesita investigare suplimentara."}` },
+                ]};
+              }
+              case "brand": {
+                const nm = String(_ctx.name || "");
+                const bPct = Number(_ctx.pct || 0);
+                const bR = Number(_ctx.r || 0);
+                const bGateOk = bR >= GATE;
+                return { sections: [
+                  { heading: `Ce reprezinta rezultatul pentru ${nm}`, text: `Materialul "${nm}" are un scor de validare de ${bPct}%. Aceasta arata cat de precis prezice formula RIFC scorul de Claritate perceput de respondenti pentru acest material specific. Cu R=${_ctx.r}, I=${_ctx.i}, F=${_ctx.f}, formula calculeaza C=${_ctx.cf}, iar respondentii percep C=${_ctx.cp}.` },
+                  { heading: "Cum se aplica formula", text: `Pentru acest material: C formula = ${_ctx.r} + (${_ctx.i} × ${_ctx.f}) = ${_ctx.cf}. Aceasta valoare este comparata cu C perceput = ${_ctx.cp}. Diferenta Delta = ${_ctx.delta} puncte pe scala 0-110, ceea ce se traduce in ${bPct}% acuratete de predictie.` },
+                  { heading: "De ce arata acest rezultat", text: `${bPct >= 80 ? `Materialul "${nm}" confirma formula — componentele R, I si F explica bine perceptia respondentilor. ${bGateOk ? "Relevanta este peste prag, iar combinatia I×F amplifica corect." : "Desi Relevance Gate nu este depasit, formula totusi prezice relativ corect."}` : bPct >= 50 ? `Materialul "${nm}" arata o aliniere partiala. ${!bGateOk ? `Cu R=${_ctx.r} sub Gate (${GATE}), materialul nu rezoneza suficient cu audienta.` : `Desi relevanta este OK, exista factori specifici acestui material care influenteaza perceptia dincolo de model.`}` : `Materialul "${nm}" nu valideaza formula in acest caz. Diferenta semnificativa de ${_ctx.delta} puncte sugereaza factori necontrolati (experienta anterioara cu brandul, context competitiv, moment de expunere).`}` },
+                  { heading: "Cum se interpreteaza", text: `Fiecare material este un test individual al formulei. Materialele cu validare >= 80% confirma modelul. Cele cu 50-80% necesita analiza pe componente (care factor limiteaza?). Cele sub 50% sunt exceptii care pot oferi insight-uri valoroase despre limitarile modelului.` },
+                  { heading: "Concluzie", text: `"${nm}" cu ${bPct}% validare ${bPct >= 80 ? "este o evidenta puternica pentru formula RIFC." : bPct >= 50 ? "ofera evidenta partiala — se recomanda analiza detaliata a componentelor individuale." : "reprezinta un caz unde formula necesita factori suplimentari pentru a explica perceptia."} ${!bGateOk ? `Atentie: R=${_ctx.r} < ${GATE} indica o problema fundamentala de relevanta.` : ""}` },
+                ]};
+              }
+              default: return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare a formulei RIFC." }] };
+            }
+          };
+
+          // ── Interpretation button component ──
+          const interpBtnHover = (e: React.MouseEvent, enter: boolean) => {
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.background = enter ? "#111827" : "#f9fafb";
+            el.style.color = enter ? "#fff" : "#6B7280";
+            el.style.borderColor = enter ? "#111827" : "#d1d5db";
+          };
+          const InterpBtn = ({ k, title, val, ctx }: { k: string; title: string; val: string; ctx?: Record<string, unknown> }) => (
+            <button
+              onClick={(e) => { e.stopPropagation(); setInterpDrawer({ key: k, title, value: val, context: ctx }); }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 10, fontWeight: 600,
+                borderRadius: 4, border: "1px solid #d1d5db", background: "#f9fafb", color: "#6B7280",
+                cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" as const,
+              }}
+              onMouseEnter={e => interpBtnHover(e, true)}
+              onMouseLeave={e => interpBtnHover(e, false)}
+            >
+              <FileText size={10} /> Interpretare
+            </button>
+          );
 
           // ── Data with responses ──
           const withData = results.stimuliResults.filter(s => s.response_count > 0);
@@ -5248,7 +5381,51 @@ export default function StudiuAdminPage() {
           });
 
           return (
-            <div>
+            <div style={{ position: "relative" }}>
+              {/* ── Interpretation Drawer ── */}
+              {interpDrawer && (() => {
+                const info = getInterpretation(interpDrawer.key, interpDrawer.value, interpDrawer.context);
+                return (
+                  <>
+                    {/* Overlay */}
+                    <div onClick={() => setInterpDrawer(null)} style={{
+                      position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9998, transition: "opacity 0.2s",
+                    }} />
+                    {/* Slider panel */}
+                    <div style={{
+                      position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 90vw)",
+                      background: "#fff", zIndex: 9999, boxShadow: "-4px 0 24px rgba(0,0,0,0.15)",
+                      display: "flex", flexDirection: "column", animation: "slideInRight 0.25s ease-out",
+                    }}>
+                      {/* Header */}
+                      <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 10 }}>
+                        <Brain size={18} style={{ color: "#111827" }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{interpDrawer.title}</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>Valoare: {interpDrawer.value}</div>
+                        </div>
+                        <button onClick={() => setInterpDrawer(null)} style={{
+                          width: 28, height: 28, borderRadius: 6, border: "1px solid #e5e7eb", background: "#f9fafb",
+                          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                        }}><X size={14} /></button>
+                      </div>
+                      {/* Content — scrollable */}
+                      <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+                        {info.sections.map((sec, i) => (
+                          <div key={i} style={{ marginBottom: 20 }}>
+                            <div style={{
+                              fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#111827",
+                              marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid #f3f4f6",
+                            }}>{sec.heading}</div>
+                            <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, margin: 0 }}>{sec.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
               {/* Sub-tab pills */}
               <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
                 {([
@@ -5274,23 +5451,29 @@ export default function StudiuAdminPage() {
                       background: `${getValidationColor(grandHypPct)}15`, color: getValidationColor(grandHypPct),
                     }}>{getValidationLabel(grandHypPct)}</div>
                     <div style={{ fontSize: 12, color: "#6B7280", marginTop: 12, maxWidth: 500, margin: "12px auto 0" }}>
-                      Formula <strong>C = R + (I &times; F)</strong> prezice scorul de claritate cu o acuratete de <strong>{grandHypPct}%</strong> fata de perceptia respondentilor.
+                      Formula <strong>R+(I&times;F)=C</strong> prezice scorul de claritate cu o acuratete de <strong>{grandHypPct}%</strong> fata de perceptia respondentilor.
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <InterpBtn k="hypothesis_total" title="Validare Ipoteza — Total" val={String(grandHypPct)} />
                     </div>
                   </div>
 
                   {/* Score comparison cards */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 20 }}>
                     {[
-                      { label: "R (Relevanta)", value: grandR, color: "#DC2626" },
-                      { label: "I (Interes)", value: grandI, color: "#D97706" },
-                      { label: "F (Forma)", value: grandF, color: "#7C3AED" },
-                      { label: "C formula", value: grandCf, color: "#111827" },
-                      { label: "C perceput", value: grandCp, color: "#059669" },
-                      { label: "Delta |Cf-Cp|", value: grandDelta, color: "#6B7280" },
+                      { label: "R (Relevanta)", value: grandR, color: "#DC2626", k: "score_r" },
+                      { label: "I (Interes)", value: grandI, color: "#D97706", k: "score_i" },
+                      { label: "F (Forma)", value: grandF, color: "#7C3AED", k: "score_f" },
+                      { label: "C formula", value: grandCf, color: "#111827", k: "score_cf" },
+                      { label: "C perceput", value: grandCp, color: "#059669", k: "score_cp" },
+                      { label: "Delta |Cf-Cp|", value: grandDelta, color: "#6B7280", k: "score_delta" },
                     ].map(c => (
                       <div key={c.label} style={{ ...S.configItem, textAlign: "center" as const }}>
                         <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>{c.label.toUpperCase()}</div>
                         <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
+                        <div style={{ marginTop: 6 }}>
+                          <InterpBtn k={c.k} title={c.label} val={String(c.value)} ctx={{ r: grandR, i: grandI, f: grandF, cf: grandCf, cp: grandCp, delta: grandDelta }} />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -5301,22 +5484,28 @@ export default function StudiuAdminPage() {
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>RELEVANCE GATE (R &ge; {GATE})</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: gatePassRate >= 70 ? "#059669" : gatePassRate >= 40 ? "#D97706" : "#DC2626" }}>{gatePassRate}%</div>
                       <div style={{ fontSize: 11, color: "#6B7280" }}>{gatePassCount} din {n} materiale</div>
+                      <div style={{ marginTop: 6 }}><InterpBtn k="gate" title="Relevance Gate" val={String(gatePassRate)} ctx={{ pass: gatePassCount, total: n }} /></div>
                     </div>
                     <div style={{ ...S.configItem, textAlign: "center" as const }}>
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>ZONE MATCH (Cf = Cp)</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: zoneMatchRate >= 70 ? "#059669" : zoneMatchRate >= 40 ? "#D97706" : "#DC2626" }}>{zoneMatchRate}%</div>
                       <div style={{ fontSize: 11, color: "#6B7280" }}>{zoneMatchCount} din {n} materiale in aceeasi zona</div>
+                      <div style={{ marginTop: 6 }}><InterpBtn k="zonematch" title="Zone Match" val={String(zoneMatchRate)} ctx={{ match: zoneMatchCount, total: n }} /></div>
                     </div>
                     <div style={{ ...S.configItem, textAlign: "center" as const }}>
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>MATERIALE ANALIZATE</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{n}</div>
                       <div style={{ fontSize: 11, color: "#6B7280" }}>{results.totalResponses} raspunsuri totale</div>
+                      <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: results.totalResponses }} /></div>
                     </div>
                   </div>
 
                   {/* Zone distribution */}
                   <div style={{ ...S.configItem, marginBottom: 20 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 12 }}>DISTRIBUTIE PE ZONE</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", flex: 1 }}>DISTRIBUTIE PE ZONE</div>
+                      <InterpBtn k="zones" title="Distributie pe Zone" val={`${n} materiale`} />
+                    </div>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                       <div>
                         <div style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", marginBottom: 8 }}>C FORMULA</div>
@@ -5432,8 +5621,11 @@ export default function StudiuAdminPage() {
                               {iZoneMatch && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: "#05966915", color: "#059669" }}>MATCH</span>}
                             </div>
 
-                            {/* Validation label */}
-                            <div style={{ fontSize: 11, fontWeight: 600, color: getValidationColor(iPct), marginTop: 4 }}>{getValidationLabel(iPct)}</div>
+                            {/* Validation label + Interp button */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: getValidationColor(iPct) }}>{getValidationLabel(iPct)}</span>
+                              <InterpBtn k="industry" title={`Industrie: ${ind}`} val={String(iPct)} ctx={{ name: ind, count: iN, pct: iPct, r: iR, i: iI, f: iF, cf: iCf, cp: iCp, delta: iDelta }} />
+                            </div>
 
                             <div style={{ marginTop: 6, textAlign: "center" as const }}>
                               {isExpanded ? <ChevronUp size={14} style={{ color: iColor }} /> : <ChevronDown size={14} style={{ color: "#9CA3AF" }} />}
@@ -5455,6 +5647,7 @@ export default function StudiuAdminPage() {
                                     <th style={thStyle}>&Delta;</th>
                                     <th style={thStyle}>VALID %</th>
                                     <th style={thStyle}>ZONA</th>
+                                    <th style={thStyle}></th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -5474,6 +5667,9 @@ export default function StudiuAdminPage() {
                                         <td style={{ ...tdStyle, fontWeight: 800, color: getValidationColor(sPct) }}>{sPct}%</td>
                                         <td style={tdStyle}>
                                           <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: getZoneBg(sZone), color: getZoneColor(sZone) }}>{sZone}</span>
+                                        </td>
+                                        <td style={tdStyle}>
+                                          <InterpBtn k="brand" title={s.name} val={String(sPct)} ctx={{ name: s.name, pct: sPct, r: s.avg_r, i: s.avg_i, f: s.avg_f, cf: s.avg_c, cp: s.avg_c_score, delta: sDelta }} />
                                         </td>
                                       </tr>
                                     );
@@ -5496,7 +5692,6 @@ export default function StudiuAdminPage() {
               {/* ═══ PER BRAND ═══ */}
               {interpSubTab === "brand" && (
                 <div>
-                  {/* Sort by validation % descending */}
                   {withData
                     .map(s => ({
                       ...s,
@@ -5513,10 +5708,11 @@ export default function StudiuAdminPage() {
                         ...S.configItem, marginBottom: 10,
                         borderLeft: `3px solid ${getValidationColor(s.pct)}`,
                       }}>
-                        {/* Top row: name + validation % */}
+                        {/* Top row: name + validation % + interp button */}
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", minWidth: 20 }}>#{idx + 1}</span>
                           <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", flex: 1 }}>{s.name}</span>
+                          <InterpBtn k="brand" title={s.name} val={String(s.pct)} ctx={{ name: s.name, pct: s.pct, r: s.avg_r, i: s.avg_i, f: s.avg_f, cf: s.avg_c, cp: s.avg_c_score, delta: s.delta }} />
                           <span style={{
                             fontSize: 18, fontWeight: 900, color: getValidationColor(s.pct),
                           }}>{s.pct}%</span>

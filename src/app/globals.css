@@ -84,6 +84,12 @@ html {
   to { transform: rotate(360deg); }
 }
 
+/* Slide-in from right for interpretation drawer */
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
 /* ── Survey Wizard: Mobile-friendly range sliders ── */
 .wizard-slider {
   -webkit-appearance: none;
