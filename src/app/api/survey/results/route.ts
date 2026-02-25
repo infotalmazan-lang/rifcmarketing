@@ -625,18 +625,6 @@ export async function GET(request: Request) {
       perStimulusBreakdowns,
       fatigueAnalysis,
       completionFunnel,
-      _debug: {
-        idRowsCount: (idRows || []).length,
-        respondentsHydrated: respondents.length,
-        allResponsesRaw: allResponses.length,
-        allFilteredResponsesCount: allFilteredResponses.length,
-        respondentError: respondentError?.message || null,
-        distributionIdParam: distributionId,
-        respondentIds,
-        respCountByRespondent,
-        expectedResponseCount,
-        needsRepairCount: needsRepair.length,
-      },
     });
   } catch (err: any) {
     return NextResponse.json(

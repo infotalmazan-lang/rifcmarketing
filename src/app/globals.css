@@ -26,43 +26,6 @@ html {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
 }
 
-/* Score table */
-.score-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.score-table th {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 16px 20px;
-  text-align: left;
-  border-bottom: 2px solid rgba(220, 38, 38, 0.3);
-  color: #DC2626;
-}
-.score-table td {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 14px;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  color: rgba(232, 230, 227, 0.6);
-}
-.score-table tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-/* Animation utilities */
-.animate-on-scroll {
-  opacity: 0;
-  transform: translateY(40px);
-  transition: all 0.8s ease;
-}
-.animate-on-scroll.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
