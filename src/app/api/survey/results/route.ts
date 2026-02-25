@@ -9,60 +9,55 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const distributionId = searchParams.get("distribution_id");
 
-    // Build respondent query — use select("*") for reliable column retrieval
-    // (PostgREST can return inconsistent results with specific column selects on JSONB tables)
-    // Always exclude archived respondents (is_archived = false OR null for pre-migration rows)
-    let respondentQuery = supabase
+    // ── Step 1: Fetch respondent IDs first (lightweight, avoids JSONB serialization issues) ──
+    // PostgREST can silently drop rows when serializing large JSONB columns in select("*").
+    // Fix: fetch IDs first, then fetch full data in small batches.
+    let idQuery = supabase
       .from("survey_respondents")
-      .select("*")
+      .select("id")
       .or("is_archived.eq.false,is_archived.is.null");
 
     if (distributionId === "__none__") {
-      // Filter for respondents with NO distribution (clean link / general)
-      respondentQuery = respondentQuery.is("distribution_id", null);
+      idQuery = idQuery.is("distribution_id", null);
     } else if (distributionId) {
-      respondentQuery = respondentQuery.eq("distribution_id", distributionId);
+      idQuery = idQuery.eq("distribution_id", distributionId);
     }
 
-    const { data: filteredRespondents, error: respondentError } = await respondentQuery;
+    const { data: idRows, error: respondentError } = await idQuery;
+    const respondentIds = (idRows || []).map((r: { id: string }) => r.id);
 
-    // DEBUG: also fetch raw count without filters to compare
-    const { count: rawCountAll } = await supabase
-      .from("survey_respondents")
-      .select("*", { count: "exact", head: true });
-    const { count: rawCountActive } = await supabase
-      .from("survey_respondents")
-      .select("*", { count: "exact", head: true })
-      .or("is_archived.eq.false,is_archived.is.null");
-
-    // Use all non-archived respondents directly (LOG counts them all)
-    const respondents = filteredRespondents || [];
+    // ── Step 2: Fetch full respondent data in batches by ID ──
+    let respondents: any[] = [];
+    for (let i = 0; i < respondentIds.length; i += 5) {
+      const batchIds = respondentIds.slice(i, i + 5);
+      const { data: batchData } = await supabase
+        .from("survey_respondents")
+        .select("*")
+        .in("id", batchIds);
+      respondents = respondents.concat(batchData || []);
+    }
     const totalRespondents = respondents.length;
-    const respondentIds = respondents.map((r: { id: string }) => r.id);
 
-    // Fetch responses — use individual queries per respondent batch to avoid .in() issues
-    let allFilteredResponses: any[] = [];
-    if (respondentIds.length > 0) {
-      // Fetch responses in batches of respondent IDs (PostgREST .in() can miss rows with many UUIDs)
-      const BATCH_SIZE = 10; // small batches of respondent IDs
-      for (let i = 0; i < respondentIds.length; i += BATCH_SIZE) {
-        const batchIds = respondentIds.slice(i, i + BATCH_SIZE);
-        const PAGE_SIZE = 1000;
-        let offset = 0;
-        let hasMore = true;
-        while (hasMore) {
-          const { data: respData } = await supabase
-            .from("survey_responses")
-            .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
-            .in("respondent_id", batchIds)
-            .range(offset, offset + PAGE_SIZE - 1);
-          const batch = respData || [];
-          allFilteredResponses = allFilteredResponses.concat(batch);
-          hasMore = batch.length === PAGE_SIZE;
-          offset += PAGE_SIZE;
-        }
-      }
+    // ── Step 3: Fetch ALL responses (no respondent filter — matches LOG API approach) ──
+    // Then filter in JS. This avoids .in() issues with UUIDs.
+    let allResponses: any[] = [];
+    const PAGE_SIZE = 1000;
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data: respData } = await supabase
+        .from("survey_responses")
+        .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
+        .range(offset, offset + PAGE_SIZE - 1);
+      const batch = respData || [];
+      allResponses = allResponses.concat(batch);
+      hasMore = batch.length === PAGE_SIZE;
+      offset += PAGE_SIZE;
     }
+
+    // Filter responses to only include our respondent IDs
+    const respondentIdSet = new Set(respondentIds);
+    const allFilteredResponses = allResponses.filter(r => respondentIdSet.has(r.respondent_id));
     const totalResponses = allFilteredResponses.length;
 
     // Build response count per respondent (needed for completion detection)
@@ -631,9 +626,10 @@ export async function GET(request: Request) {
       fatigueAnalysis,
       completionFunnel,
       _debug: {
-        rawCountAll,
-        rawCountActive,
-        filteredRespondentsCount: (filteredRespondents || []).length,
+        idRowsCount: (idRows || []).length,
+        respondentsHydrated: respondents.length,
+        allResponsesRaw: allResponses.length,
+        allFilteredResponsesCount: allFilteredResponses.length,
         respondentError: respondentError?.message || null,
         distributionIdParam: distributionId,
         respondentIds,
