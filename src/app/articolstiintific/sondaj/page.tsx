@@ -167,12 +167,13 @@ interface Distribution {
   created_at: string;
 }
 
-type TabKey = "cartonase" | "rezultate" | "distributie" | "experti" | "ai" | "preview" | "log" | "cvi";
+type TabKey = "cartonase" | "rezultate" | "distributie" | "interpretare" | "experti" | "ai" | "preview" | "log" | "cvi";
 
 const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "cartonase", label: "Cartonase", icon: LayoutGrid },
   { key: "rezultate", label: "Rezultate", icon: BarChart3 },
   { key: "distributie", label: "Distributie", icon: Share2 },
+  { key: "interpretare", label: "Interpretare", icon: Brain },
 ];
 const TABS_RIGHT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "preview", label: "Preview", icon: PlayCircle },
@@ -693,6 +694,8 @@ export default function StudiuAdminPage() {
   const [tooltipCol, setTooltipCol] = useState<string | null>(null);
   const [expandedChannelType, setExpandedChannelType] = useState<string | null>(null);
   const [expandedIndustryType, setExpandedIndustryType] = useState<string | null>(null);
+  const [interpSubTab, setInterpSubTab] = useState<"total" | "industrie" | "brand">("total");
+  const [expandedInterpIndustry, setExpandedInterpIndustry] = useState<string | null>(null);
 
   // Log panel state
   const [logData, setLogData] = useState<any[]>([]);
@@ -1072,7 +1075,7 @@ export default function StudiuAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "rezultate") {
+    if (activeTab === "rezultate" || activeTab === "interpretare") {
       fetchResults(resultsSegment);
       fetchGlobalStats();
     }
@@ -5113,6 +5116,445 @@ export default function StudiuAdminPage() {
             )}
           </div>
         )}
+
+        {/* ═══ INTERPRETARE TAB ═══ */}
+        {activeTab === "interpretare" && (() => {
+          if (resultsLoading) {
+            return (
+              <div style={{ textAlign: "center", padding: 60 }}>
+                <Loader2 size={32} style={{ color: "#6B7280", animation: "spin 1s linear infinite" }} />
+                <p style={{ color: "#6B7280", fontSize: 13, marginTop: 12 }}>Se incarca datele...</p>
+              </div>
+            );
+          }
+          if (!results || results.stimuliResults.length === 0) {
+            return (
+              <div style={S.placeholderTab}>
+                <Brain size={48} style={{ color: "#d1d5db" }} />
+                <p style={{ color: "#6B7280", fontSize: 14, marginTop: 12 }}>Niciun raspuns inca pentru a genera interpretarea formulei.</p>
+              </div>
+            );
+          }
+
+          // ── Helper functions ──
+          const GATE = 3; // RELEVANCE_GATE_THRESHOLD
+          const getZone = (score: number): string => {
+            if (score <= 20) return "Critical";
+            if (score <= 50) return "Noise";
+            if (score <= 80) return "Medium";
+            return "Supreme";
+          };
+          const getZoneColor = (zone: string): string => {
+            if (zone === "Critical") return "#DC2626";
+            if (zone === "Noise") return "#D97706";
+            if (zone === "Medium") return "#2563EB";
+            return "#059669";
+          };
+          const getZoneBg = (zone: string): string => {
+            if (zone === "Critical") return "#DC262615";
+            if (zone === "Noise") return "#D9770615";
+            if (zone === "Medium") return "#2563EB15";
+            return "#05966915";
+          };
+          const hypothesisPct = (cF: number, cP: number): number => {
+            const delta = Math.abs(cF - cP);
+            return Math.round(Math.max(0, Math.min(100, 100 - (delta / 110 * 100))) * 10) / 10;
+          };
+          const getValidationColor = (pct: number): string => {
+            if (pct >= 80) return "#059669";
+            if (pct >= 50) return "#D97706";
+            return "#DC2626";
+          };
+          const getValidationLabel = (pct: number): string => {
+            if (pct >= 90) return "Foarte puternic validata";
+            if (pct >= 80) return "Puternic validata";
+            if (pct >= 70) return "Validata";
+            if (pct >= 50) return "Partial validata";
+            if (pct >= 30) return "Slab validata";
+            return "Nevalidata";
+          };
+          const getConclusion = (pct: number, avgR: number, zoneMatch: boolean): string => {
+            const gateOk = avgR >= GATE;
+            if (pct >= 80 && gateOk && zoneMatch) {
+              return `Formula C = R + (I × F) este validata. Scorurile calculate si cele percepute se afla in aceeasi zona (${getZone(pct)}), iar Relevance Gate este depasit (R=${avgR.toFixed(1)} >= ${GATE}). Ipoteza este confirmata cu ${pct}% acuratete.`;
+            }
+            if (pct >= 50) {
+              return `Formula C = R + (I × F) este partial validata (${pct}%). ${!gateOk ? `Relevance Gate nu este depasit (R=${avgR.toFixed(1)} < ${GATE}), ceea ce indica lipsa de relevanta perceputa.` : ""} ${!zoneMatch ? "Scorurile calculate si percepute se afla in zone diferite." : ""} Sunt necesare ajustari.`;
+            }
+            return `Formula C = R + (I × F) nu este validata in acest context (${pct}%). Diferenta semnificativa intre scorul calculat si cel perceput sugereaza ca factorii R, I si F nu explica suficient variabilitatea lui C.`;
+          };
+
+          // ── Data with responses ──
+          const withData = results.stimuliResults.filter(s => s.response_count > 0);
+          if (withData.length === 0) {
+            return (
+              <div style={S.placeholderTab}>
+                <Brain size={48} style={{ color: "#d1d5db" }} />
+                <p style={{ color: "#6B7280", fontSize: 14, marginTop: 12 }}>Nu exista materiale cu raspunsuri pentru analiza.</p>
+              </div>
+            );
+          }
+
+          // ── Grand totals ──
+          const n = withData.length;
+          const grandR = Math.round((withData.reduce((a, s) => a + s.avg_r, 0) / n) * 100) / 100;
+          const grandI = Math.round((withData.reduce((a, s) => a + s.avg_i, 0) / n) * 100) / 100;
+          const grandF = Math.round((withData.reduce((a, s) => a + s.avg_f, 0) / n) * 100) / 100;
+          const grandCf = Math.round((withData.reduce((a, s) => a + s.avg_c, 0) / n) * 100) / 100;
+          const grandCp = Math.round((withData.reduce((a, s) => a + s.avg_c_score, 0) / n) * 100) / 100;
+          const grandDelta = Math.round(Math.abs(grandCf - grandCp) * 100) / 100;
+          const grandHypPct = hypothesisPct(grandCf, grandCp);
+          const grandZoneCf = getZone(grandCf);
+          const grandZoneCp = getZone(grandCp);
+          const grandZoneMatch = grandZoneCf === grandZoneCp;
+          const gatePassCount = withData.filter(s => s.avg_r >= GATE).length;
+          const gatePassRate = Math.round((gatePassCount / n) * 100);
+          const zoneMatchCount = withData.filter(s => getZone(s.avg_c) === getZone(s.avg_c_score)).length;
+          const zoneMatchRate = Math.round((zoneMatchCount / n) * 100);
+
+          // ── Zone distribution ──
+          const zones = ["Critical", "Noise", "Medium", "Supreme"];
+          const zoneDistFormula: Record<string, number> = { Critical: 0, Noise: 0, Medium: 0, Supreme: 0 };
+          const zoneDistPerceived: Record<string, number> = { Critical: 0, Noise: 0, Medium: 0, Supreme: 0 };
+          withData.forEach(s => {
+            zoneDistFormula[getZone(s.avg_c)]++;
+            zoneDistPerceived[getZone(s.avg_c_score)]++;
+          });
+
+          // ── Per Industry aggregates ──
+          const byIndustry: Record<string, typeof withData> = {};
+          withData.forEach(s => {
+            const ind = s.industry || "Neatribuit";
+            if (!byIndustry[ind]) byIndustry[ind] = [];
+            byIndustry[ind].push(s);
+          });
+          const industryKeys = Object.keys(byIndustry).sort((a, b) => {
+            if (a === "Neatribuit") return 1;
+            if (b === "Neatribuit") return -1;
+            return byIndustry[b].length - byIndustry[a].length;
+          });
+
+          const INDUSTRY_COLORS = [
+            "#2563EB", "#DC2626", "#059669", "#D97706", "#7C3AED",
+            "#EC4899", "#0D9488", "#EA580C", "#4F46E5", "#CA8A04",
+          ];
+
+          // ── Sub-tab pill style ──
+          const pillStyle = (active: boolean): React.CSSProperties => ({
+            padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6,
+            border: "1px solid #e5e7eb", cursor: "pointer",
+            background: active ? "#111827" : "#fff",
+            color: active ? "#fff" : "#6B7280",
+          });
+
+          return (
+            <div>
+              {/* Sub-tab pills */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                {([
+                  { key: "total" as const, label: "Total" },
+                  { key: "industrie" as const, label: "Per Industrie" },
+                  { key: "brand" as const, label: "Per Brand" },
+                ] as const).map(t => (
+                  <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
+                ))}
+              </div>
+
+              {/* ═══ TOTAL ═══ */}
+              {interpSubTab === "total" && (
+                <div>
+                  {/* Hypothesis validation hero */}
+                  <div style={{
+                    background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 8 }}>VALIDARE IPOTEZA — TOTAL</div>
+                    <div style={{ fontSize: 48, fontWeight: 900, color: getValidationColor(grandHypPct), lineHeight: 1 }}>{grandHypPct}%</div>
+                    <div style={{
+                      display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                      background: `${getValidationColor(grandHypPct)}15`, color: getValidationColor(grandHypPct),
+                    }}>{getValidationLabel(grandHypPct)}</div>
+                    <div style={{ fontSize: 12, color: "#6B7280", marginTop: 12, maxWidth: 500, margin: "12px auto 0" }}>
+                      Formula <strong>C = R + (I &times; F)</strong> prezice scorul de claritate cu o acuratete de <strong>{grandHypPct}%</strong> fata de perceptia respondentilor.
+                    </div>
+                  </div>
+
+                  {/* Score comparison cards */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 20 }}>
+                    {[
+                      { label: "R (Relevanta)", value: grandR, color: "#DC2626" },
+                      { label: "I (Interes)", value: grandI, color: "#D97706" },
+                      { label: "F (Forma)", value: grandF, color: "#7C3AED" },
+                      { label: "C formula", value: grandCf, color: "#111827" },
+                      { label: "C perceput", value: grandCp, color: "#059669" },
+                      { label: "Delta |Cf-Cp|", value: grandDelta, color: "#6B7280" },
+                    ].map(c => (
+                      <div key={c.label} style={{ ...S.configItem, textAlign: "center" as const }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>{c.label.toUpperCase()}</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>{c.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Gate + Zone match stats */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+                    <div style={{ ...S.configItem, textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>RELEVANCE GATE (R &ge; {GATE})</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: gatePassRate >= 70 ? "#059669" : gatePassRate >= 40 ? "#D97706" : "#DC2626" }}>{gatePassRate}%</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>{gatePassCount} din {n} materiale</div>
+                    </div>
+                    <div style={{ ...S.configItem, textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>ZONE MATCH (Cf = Cp)</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: zoneMatchRate >= 70 ? "#059669" : zoneMatchRate >= 40 ? "#D97706" : "#DC2626" }}>{zoneMatchRate}%</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>{zoneMatchCount} din {n} materiale in aceeasi zona</div>
+                    </div>
+                    <div style={{ ...S.configItem, textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>MATERIALE ANALIZATE</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{n}</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>{results.totalResponses} raspunsuri totale</div>
+                    </div>
+                  </div>
+
+                  {/* Zone distribution */}
+                  <div style={{ ...S.configItem, marginBottom: 20 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 12 }}>DISTRIBUTIE PE ZONE</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", marginBottom: 8 }}>C FORMULA</div>
+                        {zones.map(z => {
+                          const count = zoneDistFormula[z];
+                          const pct = n > 0 ? Math.round((count / n) * 100) : 0;
+                          return (
+                            <div key={`f-${z}`} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: getZoneColor(z), flexShrink: 0 }} />
+                              <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", minWidth: 60 }}>{z}</span>
+                              <div style={{ flex: 1, height: 6, background: "#f3f4f6", borderRadius: 3, overflow: "hidden" }}>
+                                <div style={{ width: `${pct}%`, height: "100%", background: getZoneColor(z), borderRadius: 3, transition: "width 0.3s" }} />
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", minWidth: 40, textAlign: "right" as const }}>{count} ({pct}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", marginBottom: 8 }}>C PERCEPUT</div>
+                        {zones.map(z => {
+                          const count = zoneDistPerceived[z];
+                          const pct = n > 0 ? Math.round((count / n) * 100) : 0;
+                          return (
+                            <div key={`p-${z}`} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: getZoneColor(z), flexShrink: 0 }} />
+                              <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", minWidth: 60 }}>{z}</span>
+                              <div style={{ flex: 1, height: 6, background: "#f3f4f6", borderRadius: 3, overflow: "hidden" }}>
+                                <div style={{ width: `${pct}%`, height: "100%", background: getZoneColor(z), borderRadius: 3, transition: "width 0.3s" }} />
+                              </div>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", minWidth: 40, textAlign: "right" as const }}>{count} ({pct}%)</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Conclusion */}
+                  <div style={{
+                    background: `${getValidationColor(grandHypPct)}08`, border: `1px solid ${getValidationColor(grandHypPct)}30`,
+                    borderRadius: 10, padding: 16,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <Brain size={16} style={{ color: getValidationColor(grandHypPct) }} />
+                      <span style={{ fontSize: 12, fontWeight: 700, color: getValidationColor(grandHypPct) }}>CONCLUZIE GENERALA</span>
+                    </div>
+                    <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, margin: 0 }}>
+                      {getConclusion(grandHypPct, grandR, grandZoneMatch)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ PER INDUSTRIE ═══ */}
+              {interpSubTab === "industrie" && (
+                <div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                    {industryKeys.map((ind, idx) => {
+                      const items = byIndustry[ind];
+                      const iN = items.length;
+                      const iR = Math.round((items.reduce((a, s) => a + s.avg_r, 0) / iN) * 100) / 100;
+                      const iI = Math.round((items.reduce((a, s) => a + s.avg_i, 0) / iN) * 100) / 100;
+                      const iF = Math.round((items.reduce((a, s) => a + s.avg_f, 0) / iN) * 100) / 100;
+                      const iCf = Math.round((items.reduce((a, s) => a + s.avg_c, 0) / iN) * 100) / 100;
+                      const iCp = Math.round((items.reduce((a, s) => a + s.avg_c_score, 0) / iN) * 100) / 100;
+                      const iDelta = Math.round(Math.abs(iCf - iCp) * 100) / 100;
+                      const iPct = hypothesisPct(iCf, iCp);
+                      const iZoneCf = getZone(iCf);
+                      const iZoneCp = getZone(iCp);
+                      const iZoneMatch = iZoneCf === iZoneCp;
+                      const iGatePass = items.filter(s => s.avg_r >= GATE).length;
+                      const iColor = INDUSTRY_COLORS[idx % INDUSTRY_COLORS.length];
+                      const isExpanded = expandedInterpIndustry === ind;
+
+                      return (
+                        <div key={ind}>
+                          <div
+                            onClick={() => setExpandedInterpIndustry(isExpanded ? null : ind)}
+                            style={{
+                              ...S.configItem, cursor: "pointer",
+                              borderColor: isExpanded ? iColor : "#e5e7eb",
+                              borderWidth: isExpanded ? 2 : 1,
+                              background: isExpanded ? `${iColor}08` : "#f9fafb",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {/* Industry header */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                              <span style={{ width: 10, height: 10, borderRadius: "50%", background: iColor, flexShrink: 0 }} />
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", flex: 1 }}>{ind}</span>
+                              <span style={{
+                                fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 10,
+                                background: `${getValidationColor(iPct)}15`, color: getValidationColor(iPct),
+                              }}>{iPct}%</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 8 }}>{iN} material{iN !== 1 ? "e" : ""} · Gate: {iGatePass}/{iN}</div>
+
+                            {/* Scores row */}
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, alignItems: "baseline", marginBottom: 6 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "#DC2626" }}>R:{iR}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "#D97706" }}>I:{iI}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED" }}>F:{iF}</span>
+                              <span style={{ fontSize: 12, fontWeight: 800, color: "#111827" }}>Cf:{iCf}</span>
+                              <span style={{ fontSize: 12, fontWeight: 800, color: "#059669" }}>Cp:{iCp}</span>
+                              <span style={{ fontSize: 11, color: "#6B7280" }}>&Delta;:{iDelta}</span>
+                            </div>
+
+                            {/* Zone badges */}
+                            <div style={{ display: "flex", gap: 4, alignItems: "center", marginBottom: 4 }}>
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: getZoneBg(iZoneCf), color: getZoneColor(iZoneCf) }}>Cf: {iZoneCf}</span>
+                              <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: getZoneBg(iZoneCp), color: getZoneColor(iZoneCp) }}>Cp: {iZoneCp}</span>
+                              {iZoneMatch && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: "#05966915", color: "#059669" }}>MATCH</span>}
+                            </div>
+
+                            {/* Validation label */}
+                            <div style={{ fontSize: 11, fontWeight: 600, color: getValidationColor(iPct), marginTop: 4 }}>{getValidationLabel(iPct)}</div>
+
+                            <div style={{ marginTop: 6, textAlign: "center" as const }}>
+                              {isExpanded ? <ChevronUp size={14} style={{ color: iColor }} /> : <ChevronDown size={14} style={{ color: "#9CA3AF" }} />}
+                            </div>
+                          </div>
+
+                          {/* Expanded: per-stimulus table */}
+                          {isExpanded && (
+                            <div style={{ marginTop: -1, border: `2px solid ${iColor}40`, borderRadius: "0 0 10px 10px", background: "#fff", overflow: "auto" }}>
+                              <table style={{ width: "100%", borderCollapse: "collapse" as const, minWidth: 600 }}>
+                                <thead>
+                                  <tr style={{ background: "#f9fafb" }}>
+                                    <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 140 }}>MATERIAL</th>
+                                    <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                                    <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                                    <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                                    <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>Cf</th>
+                                    <th style={{ ...thStyle, color: "#059669" }}>Cp</th>
+                                    <th style={thStyle}>&Delta;</th>
+                                    <th style={thStyle}>VALID %</th>
+                                    <th style={thStyle}>ZONA</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {items.map(s => {
+                                    const sPct = hypothesisPct(s.avg_c, s.avg_c_score);
+                                    const sZone = getZone(s.avg_c);
+                                    const sDelta = Math.round(Math.abs(s.avg_c - s.avg_c_score) * 100) / 100;
+                                    return (
+                                      <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                        <td style={{ ...tdStyle, textAlign: "left" as const, fontWeight: 600, color: "#111827", fontSize: 12 }}>{s.name}</td>
+                                        <td style={{ ...tdStyle, color: s.avg_r < GATE ? "#DC2626" : "#374151", fontWeight: s.avg_r < GATE ? 800 : 600 }}>{s.avg_r}</td>
+                                        <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i}</td>
+                                        <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{s.avg_f}</td>
+                                        <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{s.avg_c}</td>
+                                        <td style={{ ...tdStyle, color: "#059669", fontWeight: 700 }}>{s.avg_c_score}</td>
+                                        <td style={{ ...tdStyle, color: "#6B7280" }}>{sDelta}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 800, color: getValidationColor(sPct) }}>{sPct}%</td>
+                                        <td style={tdStyle}>
+                                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 3, background: getZoneBg(sZone), color: getZoneColor(sZone) }}>{sZone}</span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                              {/* Industry conclusion */}
+                              <div style={{ padding: 12, borderTop: "1px solid #f3f4f6", fontSize: 12, color: "#374151", lineHeight: 1.5 }}>
+                                <strong style={{ color: getValidationColor(iPct) }}>Concluzie {ind}:</strong> {getConclusion(iPct, iR, iZoneMatch)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ PER BRAND ═══ */}
+              {interpSubTab === "brand" && (
+                <div>
+                  {/* Sort by validation % descending */}
+                  {withData
+                    .map(s => ({
+                      ...s,
+                      pct: hypothesisPct(s.avg_c, s.avg_c_score),
+                      delta: Math.round(Math.abs(s.avg_c - s.avg_c_score) * 100) / 100,
+                      zoneCf: getZone(s.avg_c),
+                      zoneCp: getZone(s.avg_c_score),
+                      zoneMatch: getZone(s.avg_c) === getZone(s.avg_c_score),
+                      gateOk: s.avg_r >= GATE,
+                    }))
+                    .sort((a, b) => b.pct - a.pct)
+                    .map((s, idx) => (
+                      <div key={s.id} style={{
+                        ...S.configItem, marginBottom: 10,
+                        borderLeft: `3px solid ${getValidationColor(s.pct)}`,
+                      }}>
+                        {/* Top row: name + validation % */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", minWidth: 20 }}>#{idx + 1}</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#111827", flex: 1 }}>{s.name}</span>
+                          <span style={{
+                            fontSize: 18, fontWeight: 900, color: getValidationColor(s.pct),
+                          }}>{s.pct}%</span>
+                        </div>
+
+                        {/* Meta row: industry, channel, responses */}
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 8 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{s.industry || "Neatribuit"}</span>
+                          <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{s.type}</span>
+                          <span style={{ fontSize: 10, color: "#9CA3AF" }}>{s.response_count} raspunsuri</span>
+                        </div>
+
+                        {/* Scores row */}
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const, alignItems: "baseline", marginBottom: 6 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: s.gateOk ? "#374151" : "#DC2626" }}>R:{s.avg_r} {!s.gateOk ? "(sub gate)" : ""}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#D97706" }}>I:{s.avg_i}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#7C3AED" }}>F:{s.avg_f}</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>Cf:{s.avg_c}</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: "#059669" }}>Cp:{s.avg_c_score}</span>
+                          <span style={{ fontSize: 12, color: "#6B7280" }}>&Delta;:{s.delta}</span>
+                        </div>
+
+                        {/* Zone + validation */}
+                        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: getZoneBg(s.zoneCf), color: getZoneColor(s.zoneCf) }}>Cf: {s.zoneCf}</span>
+                          <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: getZoneBg(s.zoneCp), color: getZoneColor(s.zoneCp) }}>Cp: {s.zoneCp}</span>
+                          {s.zoneMatch && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: "#05966915", color: "#059669" }}>MATCH</span>}
+                          {!s.gateOk && <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: "#DC262615", color: "#DC2626" }}>GATE FAIL</span>}
+                          <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: getValidationColor(s.pct) }}>{getValidationLabel(s.pct)}</span>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {activeTab === "preview" && (() => {
           // ── Compute step structure for cards ──
