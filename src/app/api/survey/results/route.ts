@@ -50,7 +50,7 @@ export async function GET(request: Request) {
         .select("r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds")
         .eq("stimulus_id", s.id);
 
-      if (respondentIds.length > 0 && distributionId) {
+      if (respondentIds.length > 0) {
         respQuery = respQuery.in("respondent_id", respondentIds);
       }
 
@@ -231,10 +231,11 @@ export async function GET(request: Request) {
     const respondentMap = new Map(respondents.map(r => [r.id, r]));
 
     // Helper: get respondent records for a set of respondent IDs
+    const respondentIdSet = new Set(respondentIds);
     const getRespondentsForIds = (rIds: Set<string>) => {
       const filtered: typeof respondents = [];
       rIds.forEach(id => {
-        if (distributionId && !respondentIds.includes(id)) return;
+        if (!respondentIdSet.has(id)) return;
         const r = respondentMap.get(id);
         if (r) filtered.push(r);
       });
