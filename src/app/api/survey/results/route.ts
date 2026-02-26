@@ -10,65 +10,33 @@ export async function GET(request: Request) {
     const distributionId = searchParams.get("distribution_id");
     const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
-    // ── Step 1: Fetch respondent IDs + exact count (lightweight, avoids JSONB serialization issues) ──
-    // PostgREST can silently drop rows when serializing large JSONB columns in select("*").
-    // Fix: fetch IDs first with exact count, then fetch full data in small batches.
-    let idQuery = supabase
+    // ── Step 1: Fetch respondents — SAME approach as LOG API (proven reliable) ──
+    // No .in(), no pagination, no batch hydration. Simple select("*") with filters.
+    let respondentQuery = supabase
       .from("survey_respondents")
-      .select("id", { count: "exact" })
+      .select("*", { count: "exact" })
       .or("is_archived.eq.false,is_archived.is.null");
 
     if (distributionId === "__none__") {
-      idQuery = idQuery.is("distribution_id", null);
+      respondentQuery = respondentQuery.is("distribution_id", null);
     } else if (distributionId) {
-      idQuery = idQuery.eq("distribution_id", distributionId);
+      respondentQuery = respondentQuery.eq("distribution_id", distributionId);
     }
 
-    const { data: idRows, count: exactCount, error: respondentError } = await idQuery;
-    const respondentIds = (idRows || []).map((r: { id: string }) => r.id);
-    // Use PostgreSQL exact count as the most reliable source
-    const totalRespondents = exactCount ?? respondentIds.length;
+    const { data: respondentData, count: exactCount } = await respondentQuery;
+    const respondents = respondentData || [];
+    const respondentIds = respondents.map((r: any) => r.id);
+    // Use PostgreSQL exact count as authoritative, fall back to array length
+    const totalRespondents = exactCount ?? respondents.length;
 
-    // ── Step 2: Fetch full respondent data ──
-    // Use the same approach as LOG API: select("*") without .in() filter.
-    // PostgREST drops rows when .in() is combined with large JSONB columns,
-    // but returns all rows correctly without .in().
-    let respondents: any[] = [];
-    {
-      let allRespondentQuery = supabase
-        .from("survey_respondents")
-        .select("*")
-        .or("is_archived.eq.false,is_archived.is.null");
-      // Apply distribution filter directly (no .in() needed)
-      if (distributionId === "__none__") {
-        allRespondentQuery = allRespondentQuery.is("distribution_id", null);
-      } else if (distributionId) {
-        allRespondentQuery = allRespondentQuery.eq("distribution_id", distributionId);
-      }
-      const { data: allResps } = await allRespondentQuery;
-      respondents = allResps || [];
-    }
+    // ── Step 2: Fetch ALL responses — SAME approach as LOG API (proven reliable) ──
+    // Single query, no pagination, no .in() filter. Filter by respondent IDs in JS.
+    const { data: allResponseData } = await supabase
+      .from("survey_responses")
+      .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at");
 
-    // ── Step 3: Fetch ALL responses (no respondent filter — matches LOG API approach) ──
-    // Then filter in JS. This avoids .in() issues with UUIDs.
-    let allResponses: any[] = [];
-    const PAGE_SIZE = 1000;
-    let offset = 0;
-    let hasMore = true;
-    while (hasMore) {
-      const { data: respData } = await supabase
-        .from("survey_responses")
-        .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
-        .range(offset, offset + PAGE_SIZE - 1);
-      const batch = respData || [];
-      allResponses = allResponses.concat(batch);
-      hasMore = batch.length === PAGE_SIZE;
-      offset += PAGE_SIZE;
-    }
-
-    // Filter responses to only include our respondent IDs
     const respondentIdSet = new Set(respondentIds);
-    let allFilteredResponses = allResponses.filter(r => respondentIdSet.has(r.respondent_id));
+    let allFilteredResponses = (allResponseData || []).filter((r: any) => respondentIdSet.has(r.respondent_id));
 
     // Optional month filter: filter responses by created_at month
     if (monthParam && monthParam !== "all") {
@@ -633,14 +601,13 @@ export async function GET(request: Request) {
       completedRespondents,
       // Temporary debug — remove after verifying sync
       _syncDebug: {
-        step1_idCount: respondentIds.length,
-        step1_exactCount: exactCount,
-        step2_respondentsLength: respondents.length,
-        step3_allResponsesLength: allResponses.length,
-        step3_filteredResponsesLength: allFilteredResponses.length,
+        exactCount,
+        respondentsLength: respondents.length,
+        allResponsesFromDB: (allResponseData || []).length,
+        filteredResponses: allFilteredResponses.length,
         expectedResponseCount,
-        completedByCompletedAt: respondents.filter(r => r.completed_at != null).length,
-        completedByRespCount: respondents.filter(r => expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount).length,
+        completedByCompletedAt: respondents.filter((r: any) => r.completed_at != null).length,
+        completedByRespCount: respondents.filter((r: any) => expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount).length,
       },
       completionRate: totalRespondents > 0 ? Math.round((completedRespondents / totalRespondents) * 100) : 0,
       totalResponses,
