@@ -8,6 +8,7 @@ export async function GET(request: Request) {
     const supabase = createServiceRole();
     const { searchParams } = new URL(request.url);
     const distributionId = searchParams.get("distribution_id");
+    const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
     // ── Step 1: Fetch respondent IDs first (lightweight, avoids JSONB serialization issues) ──
     // PostgREST can silently drop rows when serializing large JSONB columns in select("*").
@@ -57,7 +58,18 @@ export async function GET(request: Request) {
 
     // Filter responses to only include our respondent IDs
     const respondentIdSet = new Set(respondentIds);
-    const allFilteredResponses = allResponses.filter(r => respondentIdSet.has(r.respondent_id));
+    let allFilteredResponses = allResponses.filter(r => respondentIdSet.has(r.respondent_id));
+
+    // Optional month filter: filter responses by created_at month
+    if (monthParam && monthParam !== "all") {
+      const targetMonth = monthParam === "current"
+        ? new Date().toISOString().slice(0, 7)
+        : monthParam; // expects "YYYY-MM"
+      allFilteredResponses = allFilteredResponses.filter(
+        r => r.created_at && (r.created_at as string).slice(0, 7) === targetMonth
+      );
+    }
+
     const totalResponses = allFilteredResponses.length;
 
     // Build response count per respondent (needed for completion detection)

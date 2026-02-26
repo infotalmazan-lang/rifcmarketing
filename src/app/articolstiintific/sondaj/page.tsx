@@ -697,6 +697,7 @@ export default function StudiuAdminPage() {
   const [interpSubTab, setInterpSubTab] = useState<"total" | "industrie" | "brand">("total");
   const [expandedInterpIndustry, setExpandedInterpIndustry] = useState<string | null>(null);
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
+  const [interpMonth, setInterpMonth] = useState<string>("all");
 
   // Log panel state
   const [logData, setLogData] = useState<any[]>([]);
@@ -1041,15 +1042,18 @@ export default function StudiuAdminPage() {
   }, [activeTab, fetchDistributions]);
 
   // ── Results data ───────────────────────────────────────
-  const fetchResults = useCallback(async (segmentId: string) => {
+  const fetchResults = useCallback(async (segmentId: string, month?: string) => {
     setResultsLoading(true);
     try {
       // "all" = unfiltered (ALL respondents), "general" = only respondents with NO distribution tag
-      const url = segmentId === "all"
+      let url = segmentId === "all"
         ? "/api/survey/results"
         : segmentId === "general"
           ? "/api/survey/results?distribution_id=__none__"
           : `/api/survey/results?distribution_id=${segmentId}`;
+      if (month && month !== "all") {
+        url += (url.includes("?") ? "&" : "?") + `month=${month}`;
+      }
       const res = await fetch(url);
       const data = await res.json();
       setResults(data);
@@ -1076,14 +1080,18 @@ export default function StudiuAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "rezultate" || activeTab === "interpretare") {
+    if (activeTab === "rezultate") {
       fetchResults(resultsSegment);
+      fetchGlobalStats();
+    }
+    if (activeTab === "interpretare") {
+      fetchResults(resultsSegment, interpMonth);
       fetchGlobalStats();
     }
     if (activeTab === "distributie") {
       fetchGlobalStats();
     }
-  }, [activeTab, resultsSegment, fetchResults, fetchGlobalStats]);
+  }, [activeTab, resultsSegment, interpMonth, fetchResults, fetchGlobalStats]);
 
   // ── Expert data ──────────────────────────────────────────
   const fetchExperts = useCallback(async () => {
@@ -5380,6 +5388,22 @@ export default function StudiuAdminPage() {
             color: active ? "#fff" : "#6B7280",
           });
 
+          const MONTHS_RO = ["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+          const currentYear = new Date().getFullYear();
+          const currentMonthIdx = new Date().getMonth(); // 0-based
+          const monthPillStyle = (active: boolean): React.CSSProperties => ({
+            padding: "5px 12px", fontSize: 11, fontWeight: active ? 700 : 500, borderRadius: 20,
+            border: active ? "2px solid #DC2626" : "1px solid #e5e7eb", cursor: "pointer",
+            background: active ? "#FEF2F2" : "#fff",
+            color: active ? "#DC2626" : "#6B7280",
+            whiteSpace: "nowrap",
+          });
+          const activeMonthLabel = interpMonth === "all"
+            ? "Toata perioada"
+            : interpMonth === "current"
+              ? `${MONTHS_RO[currentMonthIdx]} ${currentYear}`
+              : (() => { const [y, m] = interpMonth.split("-"); return `${MONTHS_RO[parseInt(m, 10) - 1]} ${y}`; })();
+
           return (
             <div style={{ position: "relative" }}>
               {/* ── Interpretation Drawer ── */}
@@ -5427,7 +5451,7 @@ export default function StudiuAdminPage() {
               })()}
 
               {/* Sub-tab pills */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 {([
                   { key: "total" as const, label: "Total" },
                   { key: "industrie" as const, label: "Per Industrie" },
@@ -5435,6 +5459,22 @@ export default function StudiuAdminPage() {
                 ] as const).map(t => (
                   <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
                 ))}
+              </div>
+
+              {/* Month filter pills */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <button onClick={() => setInterpMonth("all")} style={monthPillStyle(interpMonth === "all")}>Toata perioada</button>
+                <button onClick={() => setInterpMonth("current")} style={monthPillStyle(interpMonth === "current")}>Luna curenta</button>
+                <span style={{ width: 1, height: 20, background: "#e5e7eb", margin: "0 4px" }} />
+                {MONTHS_RO.map((name, i) => {
+                  const val = `${currentYear}-${String(i + 1).padStart(2, "0")}`;
+                  return (
+                    <button key={val} onClick={() => setInterpMonth(val)} style={monthPillStyle(interpMonth === val)}>{name}</button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>
+                Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
               </div>
 
               {/* ═══ TOTAL ═══ */}
