@@ -10,11 +10,12 @@ export async function GET(request: Request) {
     const distributionId = searchParams.get("distribution_id");
     const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
-    // ── Step 1: Fetch respondents — SAME approach as LOG API (proven reliable) ──
-    // No .in(), no pagination, no batch hydration. Simple select("*") with filters.
+    // ── Step 1: Fetch respondents — IDENTICAL to LOG API ──
+    // Uses select("*") WITHOUT { count: "exact" } to match LOG exactly.
+    // Previously used { count: "exact" } which returned different counts than LOG.
     let respondentQuery = supabase
       .from("survey_respondents")
-      .select("*", { count: "exact" })
+      .select("*")
       .or("is_archived.eq.false,is_archived.is.null");
 
     if (distributionId === "__none__") {
@@ -23,11 +24,10 @@ export async function GET(request: Request) {
       respondentQuery = respondentQuery.eq("distribution_id", distributionId);
     }
 
-    const { data: respondentData, count: exactCount } = await respondentQuery;
+    const { data: respondentData } = await respondentQuery;
     const respondents = respondentData || [];
     const respondentIds = respondents.map((r: any) => r.id);
-    // Use PostgreSQL exact count as authoritative, fall back to array length
-    const totalRespondents = exactCount ?? respondents.length;
+    const totalRespondents = respondents.length;
 
     // ── Step 2: Fetch ALL responses — SAME approach as LOG API (proven reliable) ──
     // Single query, no pagination, no .in() filter. Filter by respondent IDs in JS.
@@ -601,13 +601,14 @@ export async function GET(request: Request) {
       completedRespondents,
       // Temporary debug — remove after verifying sync
       _syncDebug: {
-        exactCount,
         respondentsLength: respondents.length,
         allResponsesFromDB: (allResponseData || []).length,
         filteredResponses: allFilteredResponses.length,
         expectedResponseCount,
         completedByCompletedAt: respondents.filter((r: any) => r.completed_at != null).length,
         completedByRespCount: respondents.filter((r: any) => expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount).length,
+        distributionFilter: distributionId || "none",
+        monthFilter: monthParam || "none",
       },
       completionRate: totalRespondents > 0 ? Math.round((completedRespondents / totalRespondents) * 100) : 0,
       totalResponses,
