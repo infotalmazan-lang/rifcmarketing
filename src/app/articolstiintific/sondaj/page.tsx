@@ -1516,9 +1516,11 @@ export default function StudiuAdminPage() {
       setStimuli((prev) =>
         prev.map((s) => (s.id === editingStimId ? { ...s, ...editStimData } : s))
       );
-      // Invalidate results cache so REZULTATE shows updated names
+      // Invalidate + force re-fetch results so all tabs show updated names
       setResults(null);
       setGlobalStats(null);
+      fetchResults(resultsSegment);
+      fetchGlobalStats();
     }
     setEditingStimId(null);
     setSaving(false);

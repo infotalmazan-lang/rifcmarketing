@@ -28,16 +28,19 @@ export async function GET(request: Request) {
     const respondentIds = (idRows || []).map((r: { id: string }) => r.id);
 
     // ── Step 2: Fetch full respondent data in batches by ID ──
+    // Use small batches (3) to avoid PostgREST silently dropping rows with large JSONB
     let respondents: any[] = [];
-    for (let i = 0; i < respondentIds.length; i += 5) {
-      const batchIds = respondentIds.slice(i, i + 5);
+    for (let i = 0; i < respondentIds.length; i += 3) {
+      const batchIds = respondentIds.slice(i, i + 3);
       const { data: batchData } = await supabase
         .from("survey_respondents")
         .select("*")
         .in("id", batchIds);
       respondents = respondents.concat(batchData || []);
     }
-    const totalRespondents = respondents.length;
+    // Use respondentIds.length (from lightweight Step 1) for true total —
+    // respondents.length may be lower if PostgREST drops rows during JSONB hydration
+    const totalRespondents = respondentIds.length;
 
     // ── Step 3: Fetch ALL responses (no respondent filter — matches LOG API approach) ──
     // Then filter in JS. This avoids .in() issues with UUIDs.
