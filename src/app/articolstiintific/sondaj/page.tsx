@@ -5530,7 +5530,8 @@ export default function StudiuAdminPage() {
                   <div style={{
                     background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
                   }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 8 }}>VALIDARE IPOTEZA — TOTAL</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — TOTAL</div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{results.completedRespondents}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{results.totalRespondents}</strong> pornite ({results.totalResponses} raspunsuri individuale)</div>
                     <div style={{ fontSize: 48, fontWeight: 900, color: getValidationColor(grandHypPct), lineHeight: 1 }}>{grandHypPct}%</div>
                     <div style={{
                       display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,

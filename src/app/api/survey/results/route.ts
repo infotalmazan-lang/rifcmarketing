@@ -631,6 +631,17 @@ export async function GET(request: Request) {
     return NextResponse.json({
       totalRespondents,
       completedRespondents,
+      // Temporary debug — remove after verifying sync
+      _syncDebug: {
+        step1_idCount: respondentIds.length,
+        step1_exactCount: exactCount,
+        step2_respondentsLength: respondents.length,
+        step3_allResponsesLength: allResponses.length,
+        step3_filteredResponsesLength: allFilteredResponses.length,
+        expectedResponseCount,
+        completedByCompletedAt: respondents.filter(r => r.completed_at != null).length,
+        completedByRespCount: respondents.filter(r => expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount).length,
+      },
       completionRate: totalRespondents > 0 ? Math.round((completedRespondents / totalRespondents) * 100) : 0,
       totalResponses,
       completedToday,
