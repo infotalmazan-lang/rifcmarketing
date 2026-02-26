@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceRole } from "@/lib/supabase/server";
 
 // GET — list all distributions with completion counts
+// Uses SAME logic as Results API: excludes archived, uses isEffectivelyCompleted
 export async function GET() {
   try {
     const supabase = createServiceRole();
@@ -19,27 +20,43 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Get completion counts per distribution
-    const { data: counts } = await supabase
+    // Fetch non-archived respondents with a distribution_id — SAME filter as LOG & Results APIs
+    const { data: respondents } = await supabase
       .from("survey_respondents")
-      .select("distribution_id")
+      .select("id, distribution_id, completed_at")
       .not("distribution_id", "is", null)
-      .not("completed_at", "is", null);
+      .or("is_archived.eq.false,is_archived.is.null");
 
-    const countMap: Record<string, number> = {};
-    (counts || []).forEach((r: { distribution_id: string }) => {
-      countMap[r.distribution_id] = (countMap[r.distribution_id] || 0) + 1;
+    // Fetch active stimuli count (for isEffectivelyCompleted detection)
+    const { data: activeStimuli } = await supabase
+      .from("survey_stimuli")
+      .select("id")
+      .eq("is_active", true);
+    const expectedResponseCount = (activeStimuli || []).length;
+
+    // Fetch response counts per respondent (for isEffectivelyCompleted detection)
+    const { data: responses } = await supabase
+      .from("survey_responses")
+      .select("respondent_id");
+
+    const respCountByRespondent: Record<string, number> = {};
+    (responses || []).forEach((r: { respondent_id: string }) => {
+      respCountByRespondent[r.respondent_id] = (respCountByRespondent[r.respondent_id] || 0) + 1;
     });
 
-    // Also get started (not necessarily completed) counts
-    const { data: startedCounts } = await supabase
-      .from("survey_respondents")
-      .select("distribution_id")
-      .not("distribution_id", "is", null);
+    // isEffectivelyCompleted — SAME logic as Results API
+    const isEffectivelyCompleted = (r: { id: string; completed_at: string | null }) =>
+      r.completed_at != null ||
+      (expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount);
 
+    // Count completions and started per distribution
+    const countMap: Record<string, number> = {};
     const startedMap: Record<string, number> = {};
-    (startedCounts || []).forEach((r: { distribution_id: string }) => {
+    (respondents || []).forEach((r: { id: string; distribution_id: string; completed_at: string | null }) => {
       startedMap[r.distribution_id] = (startedMap[r.distribution_id] || 0) + 1;
+      if (isEffectivelyCompleted(r)) {
+        countMap[r.distribution_id] = (countMap[r.distribution_id] || 0) + 1;
+      }
     });
 
     const enriched = (distributions || []).map((d: Record<string, unknown>) => ({
