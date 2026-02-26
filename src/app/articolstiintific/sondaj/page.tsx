@@ -749,6 +749,23 @@ export default function StudiuAdminPage() {
     } catch { /* ignore */ }
   };
 
+  // Dismiss duplicate as OK (coincidence) — persists to DB so it survives across sessions
+  const dismissDupOk = async (ids: string[]) => {
+    // Update local state immediately (optimistic)
+    setDismissedDupIds(prev => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n; });
+    // Persist to DB: set flag_reason="dup_ok" without flagging
+    try {
+      await fetch("/api/survey/log", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, flagged: false, reason: "dup_ok" }),
+      });
+      setLogData((prev) => prev.map((l) =>
+        ids.includes(l.id) ? { ...l, flag_reason: "dup_ok" } : l
+      ));
+    } catch { /* ignore */ }
+  };
+
   // Auto-detect duplicates: group by IP + fingerprint
   const computeDuplicates = useCallback((data: any[]) => {
     const ipMap: Record<string, string[]> = {};
@@ -5130,19 +5147,78 @@ export default function StudiuAdminPage() {
 
         {/* ═══ INTERPRETARE TAB ═══ */}
         {activeTab === "interpretare" && (() => {
-          if (resultsLoading) {
+          // ── Pill styles (always visible, even when loading/empty) ──
+          const pillStyle = (active: boolean): React.CSSProperties => ({
+            padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6,
+            border: "1px solid #e5e7eb", cursor: "pointer",
+            background: active ? "#111827" : "#fff",
+            color: active ? "#fff" : "#6B7280",
+          });
+          const MONTHS_RO = ["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
+          const currentYear = new Date().getFullYear();
+          const currentMonthIdx = new Date().getMonth();
+          const monthPillStyle = (active: boolean): React.CSSProperties => ({
+            padding: "5px 12px", fontSize: 11, fontWeight: active ? 700 : 500, borderRadius: 20,
+            border: active ? "2px solid #DC2626" : "1px solid #e5e7eb", cursor: "pointer",
+            background: active ? "#FEF2F2" : "#fff",
+            color: active ? "#DC2626" : "#6B7280",
+            whiteSpace: "nowrap",
+          });
+          const activeMonthLabel = interpMonth === "all"
+            ? "Toata perioada"
+            : interpMonth === "current"
+              ? `${MONTHS_RO[currentMonthIdx]} ${currentYear}`
+              : (() => { const [y, m] = interpMonth.split("-"); return `${MONTHS_RO[parseInt(m, 10) - 1]} ${y}`; })();
+
+          // ── Check loading / empty states ──
+          const isLoading = resultsLoading;
+          const hasNoData = !results || results.stimuliResults.length === 0;
+          const withDataCheck = results ? results.stimuliResults.filter(s => s.response_count > 0) : [];
+          const hasNoResponses = !isLoading && !hasNoData && withDataCheck.length === 0;
+
+          // If loading or no data, render pills + empty state message
+          if (isLoading || hasNoData || hasNoResponses) {
             return (
-              <div style={{ textAlign: "center", padding: 60 }}>
-                <Loader2 size={32} style={{ color: "#6B7280", animation: "spin 1s linear infinite" }} />
-                <p style={{ color: "#6B7280", fontSize: 13, marginTop: 12 }}>Se incarca datele...</p>
-              </div>
-            );
-          }
-          if (!results || results.stimuliResults.length === 0) {
-            return (
-              <div style={S.placeholderTab}>
-                <Brain size={48} style={{ color: "#d1d5db" }} />
-                <p style={{ color: "#6B7280", fontSize: 14, marginTop: 12 }}>Niciun raspuns inca pentru a genera interpretarea formulei.</p>
+              <div>
+                {/* Sub-tab pills — always visible */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  {([
+                    { key: "total" as const, label: "Total" },
+                    { key: "industrie" as const, label: "Per Industrie" },
+                    { key: "brand" as const, label: "Per Brand" },
+                  ] as const).map(t => (
+                    <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
+                  ))}
+                </div>
+                {/* Month filter pills — always visible */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <button onClick={() => setInterpMonth("all")} style={monthPillStyle(interpMonth === "all")}>Toata perioada</button>
+                  <button onClick={() => setInterpMonth("current")} style={monthPillStyle(interpMonth === "current")}>Luna curenta</button>
+                  <span style={{ width: 1, height: 20, background: "#e5e7eb", margin: "0 4px" }} />
+                  {MONTHS_RO.map((name, i) => {
+                    const val = `${currentYear}-${String(i + 1).padStart(2, "0")}`;
+                    return <button key={val} onClick={() => setInterpMonth(val)} style={monthPillStyle(interpMonth === val)}>{name}</button>;
+                  })}
+                </div>
+                <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>
+                  Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
+                </div>
+                {/* Empty state message */}
+                {isLoading ? (
+                  <div style={{ textAlign: "center", padding: 60 }}>
+                    <Loader2 size={32} style={{ color: "#6B7280", animation: "spin 1s linear infinite" }} />
+                    <p style={{ color: "#6B7280", fontSize: 13, marginTop: 12 }}>Se incarca datele...</p>
+                  </div>
+                ) : (
+                  <div style={S.placeholderTab}>
+                    <Brain size={48} style={{ color: "#d1d5db" }} />
+                    <p style={{ color: "#6B7280", fontSize: 14, marginTop: 12 }}>
+                      {interpMonth !== "all"
+                        ? `Nu exista date pentru ${activeMonthLabel}. Selecteaza o alta perioada.`
+                        : "Nu exista materiale cu raspunsuri pentru analiza."}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           }
@@ -5327,16 +5403,8 @@ export default function StudiuAdminPage() {
             </button>
           );
 
-          // ── Data with responses ──
-          const withData = results.stimuliResults.filter(s => s.response_count > 0);
-          if (withData.length === 0) {
-            return (
-              <div style={S.placeholderTab}>
-                <Brain size={48} style={{ color: "#d1d5db" }} />
-                <p style={{ color: "#6B7280", fontSize: 14, marginTop: 12 }}>Nu exista materiale cu raspunsuri pentru analiza.</p>
-              </div>
-            );
-          }
+          // ── Data with responses (already verified non-empty above) ──
+          const withData = withDataCheck;
 
           // ── Grand totals ──
           const n = withData.length;
@@ -5381,30 +5449,6 @@ export default function StudiuAdminPage() {
             "#2563EB", "#DC2626", "#059669", "#D97706", "#7C3AED",
             "#EC4899", "#0D9488", "#EA580C", "#4F46E5", "#CA8A04",
           ];
-
-          // ── Sub-tab pill style ──
-          const pillStyle = (active: boolean): React.CSSProperties => ({
-            padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6,
-            border: "1px solid #e5e7eb", cursor: "pointer",
-            background: active ? "#111827" : "#fff",
-            color: active ? "#fff" : "#6B7280",
-          });
-
-          const MONTHS_RO = ["Ianuarie","Februarie","Martie","Aprilie","Mai","Iunie","Iulie","August","Septembrie","Octombrie","Noiembrie","Decembrie"];
-          const currentYear = new Date().getFullYear();
-          const currentMonthIdx = new Date().getMonth(); // 0-based
-          const monthPillStyle = (active: boolean): React.CSSProperties => ({
-            padding: "5px 12px", fontSize: 11, fontWeight: active ? 700 : 500, borderRadius: 20,
-            border: active ? "2px solid #DC2626" : "1px solid #e5e7eb", cursor: "pointer",
-            background: active ? "#FEF2F2" : "#fff",
-            color: active ? "#DC2626" : "#6B7280",
-            whiteSpace: "nowrap",
-          });
-          const activeMonthLabel = interpMonth === "all"
-            ? "Toata perioada"
-            : interpMonth === "current"
-              ? `${MONTHS_RO[currentMonthIdx]} ${currentYear}`
-              : (() => { const [y, m] = interpMonth.split("-"); return `${MONTHS_RO[parseInt(m, 10) - 1]} ${y}`; })();
 
           return (
             <div style={{ position: "relative" }}>
@@ -6788,7 +6832,7 @@ export default function StudiuAdminPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
                           <span style={{ fontSize: 9, color: "#D97706", fontWeight: 600 }}>+{autoDetected} suspecte</span>
                           <button
-                            onClick={(e) => { e.stopPropagation(); setDismissedDupIds(prev => { const n = new Set(prev); autoDetectedIds.forEach(id => n.add(id)); return n; }); }}
+                            onClick={(e) => { e.stopPropagation(); dismissDupOk(autoDetectedIds); }}
                             style={{ padding: "1px 4px", borderRadius: 3, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 8, fontWeight: 700, cursor: "pointer", lineHeight: 1 }}
                             title="Ignora suspectele — marcheaza ca OK"
                           >
@@ -6840,7 +6884,7 @@ export default function StudiuAdminPage() {
               {logSubTab === "flagged" && (() => {
                 const { dupIps, dupFps, suspectIds } = computeDuplicates(logData);
                 const flaggedItems = logData.filter((l: any) => l.is_flagged);
-                const suspectNotFlagged = logData.filter((l: any) => suspectIds.has(l.id) && !l.is_flagged && !dismissedDupIds.has(l.id));
+                const suspectNotFlagged = logData.filter((l: any) => suspectIds.has(l.id) && !l.is_flagged && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
 
                 return (
                   <div>
@@ -6869,7 +6913,7 @@ export default function StudiuAdminPage() {
                         </div>
                         <div style={{ display: "grid", gap: 8 }}>
                           {dupIps.map(([ip, ids]) => {
-                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id));
+                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
                             if (entries.length === 0) return null; // all dismissed
                             const hasFlagged = entries.some((l: any) => l.is_flagged);
                             const hasUnflagged = entries.some((l: any) => !l.is_flagged);
@@ -6898,7 +6942,7 @@ export default function StudiuAdminPage() {
                                       </button>
                                     )}
                                     <button
-                                      onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); entries.forEach((l: any) => n.add(l.id)); return n; }); }}
+                                      onClick={() => dismissDupOk(entries.map((l: any) => l.id))}
                                       style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
                                     >
                                       Coincidenta OK
@@ -6914,6 +6958,7 @@ export default function StudiuAdminPage() {
                                         <span style={{ fontSize: 11, color: "#374151", fontWeight: 500, minWidth: 100 }}>{d ? d.toLocaleDateString("ro-RO") + " " + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "—"}</span>
                                         <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: isLogCompleted(l) ? "#d1fae5" : "#fef3c7", color: isLogCompleted(l) ? "#065f46" : "#92400e", fontWeight: 600 }}>{isLogCompleted(l) ? "COMPLET" : `Pas ${l.step_completed}`}</span>
                                         <span style={{ fontSize: 11, color: "#6B7280" }}>{l.device_type}</span>
+                                        <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: l.distribution_name === "General" ? "#dbeafe" : "#fef3c7", color: l.distribution_name === "General" ? "#1e40af" : "#92400e", fontWeight: 600 }}>{l.distribution_name || "General"}</span>
                                         <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{(l.locale || "ro").toUpperCase()}</span>
                                         {l.browser_fingerprint && <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: "#9CA3AF" }} title={`Fingerprint: ${l.browser_fingerprint}`}><Fingerprint size={10} style={{ display: "inline", verticalAlign: "middle" }} /> {l.browser_fingerprint.slice(0, 8)}...</span>}
                                         <span style={{ flex: 1 }} />
@@ -6933,7 +6978,7 @@ export default function StudiuAdminPage() {
                                               FLAG
                                             </button>
                                             <button
-                                              onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); n.add(l.id); return n; }); }}
+                                              onClick={() => dismissDupOk([l.id])}
                                               style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
                                             >
                                               OK
@@ -6959,7 +7004,7 @@ export default function StudiuAdminPage() {
                         </div>
                         <div style={{ display: "grid", gap: 8 }}>
                           {dupFps.map(([fp, ids]) => {
-                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id));
+                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
                             if (entries.length === 0) return null; // all dismissed
                             // Show unique IPs for this fingerprint group
                             const uniqueIps = Array.from(new Set(entries.map((l: any) => l.ip_address || l.ip_hash).filter(Boolean)));
@@ -6991,7 +7036,7 @@ export default function StudiuAdminPage() {
                                       </button>
                                     )}
                                     <button
-                                      onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); entries.forEach((l: any) => n.add(l.id)); return n; }); }}
+                                      onClick={() => dismissDupOk(entries.map((l: any) => l.id))}
                                       style={{ padding: "4px 10px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 10, fontWeight: 700, cursor: "pointer" }}
                                     >
                                       Coincidenta OK
@@ -7025,7 +7070,7 @@ export default function StudiuAdminPage() {
                                               FLAG
                                             </button>
                                             <button
-                                              onClick={() => { setDismissedDupIds(prev => { const n = new Set(prev); n.add(l.id); return n; }); }}
+                                              onClick={() => dismissDupOk([l.id])}
                                               style={{ padding: "3px 8px", borderRadius: 4, border: "1px solid #d1d5db", background: "#f0fdf4", color: "#059669", fontSize: 9, fontWeight: 700, cursor: "pointer" }}
                                             >
                                               OK

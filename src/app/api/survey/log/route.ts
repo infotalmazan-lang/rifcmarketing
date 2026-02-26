@@ -170,7 +170,13 @@ export async function PATCH(request: Request) {
       updateData.flag_reason = String(reason).slice(0, 200);
     }
     if (!flagged) {
-      updateData.flag_reason = null;
+      // Preserve "dup_ok" flag_reason when clearing flag (it means user confirmed OK)
+      if (reason === "dup_ok") {
+        updateData.is_flagged = false;
+        updateData.flag_reason = "dup_ok";
+      } else {
+        updateData.flag_reason = null;
+      }
     }
 
     const { error } = await supabase
