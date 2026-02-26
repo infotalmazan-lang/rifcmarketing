@@ -10,12 +10,12 @@ export async function GET(request: Request) {
     const distributionId = searchParams.get("distribution_id");
     const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
-    // ── Step 1: Fetch respondent IDs first (lightweight, avoids JSONB serialization issues) ──
+    // ── Step 1: Fetch respondent IDs + exact count (lightweight, avoids JSONB serialization issues) ──
     // PostgREST can silently drop rows when serializing large JSONB columns in select("*").
-    // Fix: fetch IDs first, then fetch full data in small batches.
+    // Fix: fetch IDs first with exact count, then fetch full data in small batches.
     let idQuery = supabase
       .from("survey_respondents")
-      .select("id")
+      .select("id", { count: "exact" })
       .or("is_archived.eq.false,is_archived.is.null");
 
     if (distributionId === "__none__") {
@@ -24,23 +24,30 @@ export async function GET(request: Request) {
       idQuery = idQuery.eq("distribution_id", distributionId);
     }
 
-    const { data: idRows, error: respondentError } = await idQuery;
+    const { data: idRows, count: exactCount, error: respondentError } = await idQuery;
     const respondentIds = (idRows || []).map((r: { id: string }) => r.id);
+    // Use PostgreSQL exact count as the most reliable source
+    const totalRespondents = exactCount ?? respondentIds.length;
 
-    // ── Step 2: Fetch full respondent data in batches by ID ──
-    // Use small batches (3) to avoid PostgREST silently dropping rows with large JSONB
+    // ── Step 2: Fetch full respondent data ──
+    // Use the same approach as LOG API: select("*") without .in() filter.
+    // PostgREST drops rows when .in() is combined with large JSONB columns,
+    // but returns all rows correctly without .in().
     let respondents: any[] = [];
-    for (let i = 0; i < respondentIds.length; i += 3) {
-      const batchIds = respondentIds.slice(i, i + 3);
-      const { data: batchData } = await supabase
+    {
+      let allRespondentQuery = supabase
         .from("survey_respondents")
         .select("*")
-        .in("id", batchIds);
-      respondents = respondents.concat(batchData || []);
+        .or("is_archived.eq.false,is_archived.is.null");
+      // Apply distribution filter directly (no .in() needed)
+      if (distributionId === "__none__") {
+        allRespondentQuery = allRespondentQuery.is("distribution_id", null);
+      } else if (distributionId) {
+        allRespondentQuery = allRespondentQuery.eq("distribution_id", distributionId);
+      }
+      const { data: allResps } = await allRespondentQuery;
+      respondents = allResps || [];
     }
-    // Use respondentIds.length (from lightweight Step 1) for true total —
-    // respondents.length may be lower if PostgREST drops rows during JSONB hydration
-    const totalRespondents = respondentIds.length;
 
     // ── Step 3: Fetch ALL responses (no respondent filter — matches LOG API approach) ──
     // Then filter in JS. This avoids .in() issues with UUIDs.

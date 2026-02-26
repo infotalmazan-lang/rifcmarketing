@@ -7053,6 +7053,7 @@ export default function StudiuAdminPage() {
                                         <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: "#6B7280" }}>{l.ip_address || l.ip_hash || "—"}</span>
                                         <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3, background: isLogCompleted(l) ? "#d1fae5" : "#fef3c7", color: isLogCompleted(l) ? "#065f46" : "#92400e", fontWeight: 600 }}>{isLogCompleted(l) ? "COMPLET" : `Pas ${l.step_completed}`}</span>
                                         <span style={{ fontSize: 11, color: "#6B7280" }}>{l.device_type}</span>
+                                        <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: l.distribution_name === "General" ? "#dbeafe" : "#fef3c7", color: l.distribution_name === "General" ? "#1e40af" : "#92400e", fontWeight: 600 }}>{l.distribution_name || "General"}</span>
                                         <span style={{ flex: 1 }} />
                                         {l.is_flagged ? (
                                           <button
