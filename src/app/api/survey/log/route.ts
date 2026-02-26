@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const showArchived = searchParams.get("archived") === "1";
 
     // Fetch respondents — active or archived
-    let query = supabase.from("survey_respondents").select("*");
+    let query = supabase.from("survey_respondents").select("*").range(0, 9999);
     if (showArchived) {
       query = query.eq("is_archived", true);
     } else {
@@ -28,7 +28,8 @@ export async function GET(request: Request) {
     // Get full response data per respondent (scores + stimulus info)
     const { data: responses } = await supabase
       .from("survey_responses")
-      .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_score, cta_score, brand_familiar, time_spent_seconds");
+      .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_score, cta_score, brand_familiar, time_spent_seconds")
+      .range(0, 99999);
 
     // Also get stimuli names for display
     const { data: stimuliData } = await supabase

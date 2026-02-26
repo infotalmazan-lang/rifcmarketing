@@ -25,7 +25,8 @@ export async function GET() {
       .from("survey_respondents")
       .select("id, distribution_id, completed_at")
       .not("distribution_id", "is", null)
-      .or("is_archived.eq.false,is_archived.is.null");
+      .or("is_archived.eq.false,is_archived.is.null")
+      .range(0, 9999);
 
     // Fetch active stimuli count (for isEffectivelyCompleted detection)
     const { data: activeStimuli } = await supabase
@@ -37,7 +38,8 @@ export async function GET() {
     // Fetch response counts per respondent (for isEffectivelyCompleted detection)
     const { data: responses } = await supabase
       .from("survey_responses")
-      .select("respondent_id");
+      .select("respondent_id")
+      .range(0, 99999);
 
     const respCountByRespondent: Record<string, number> = {};
     (responses || []).forEach((r: { respondent_id: string }) => {

@@ -10,13 +10,14 @@ export async function GET(request: Request) {
     const distributionId = searchParams.get("distribution_id");
     const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
-    // ── Step 1: Fetch respondents — IDENTICAL to LOG API ──
-    // Uses select("*") WITHOUT { count: "exact" } to match LOG exactly.
-    // Previously used { count: "exact" } which returned different counts than LOG.
+    // ── Step 1: Fetch respondents — IDENTICAL approach to LOG API ──
+    // CRITICAL: Use .range(0, 9999) to override Supabase default row limit.
+    // Without explicit range, PostgREST may truncate large payloads silently.
     let respondentQuery = supabase
       .from("survey_respondents")
       .select("*")
-      .or("is_archived.eq.false,is_archived.is.null");
+      .or("is_archived.eq.false,is_archived.is.null")
+      .range(0, 9999);
 
     if (distributionId === "__none__") {
       respondentQuery = respondentQuery.is("distribution_id", null);
@@ -24,16 +25,21 @@ export async function GET(request: Request) {
       respondentQuery = respondentQuery.eq("distribution_id", distributionId);
     }
 
-    const { data: respondentData } = await respondentQuery;
+    const { data: respondentData, error: respError } = await respondentQuery;
+    if (respError) {
+      return NextResponse.json({ error: "Respondent query failed", message: respError.message }, { status: 500 });
+    }
     const respondents = respondentData || [];
     const respondentIds = respondents.map((r: any) => r.id);
     const totalRespondents = respondents.length;
 
     // ── Step 2: Fetch ALL responses — SAME approach as LOG API (proven reliable) ──
     // Single query, no pagination, no .in() filter. Filter by respondent IDs in JS.
+    // CRITICAL: Use .range(0, 99999) to ensure ALL responses are returned.
     const { data: allResponseData } = await supabase
       .from("survey_responses")
-      .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at");
+      .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
+      .range(0, 99999);
 
     const respondentIdSet = new Set(respondentIds);
     let allFilteredResponses = (allResponseData || []).filter((r: any) => respondentIdSet.has(r.respondent_id));
@@ -602,6 +608,7 @@ export async function GET(request: Request) {
       // Temporary debug — remove after verifying sync
       _syncDebug: {
         respondentsLength: respondents.length,
+        respondentQueryHadError: !!respError,
         allResponsesFromDB: (allResponseData || []).length,
         filteredResponses: allFilteredResponses.length,
         expectedResponseCount,
@@ -609,6 +616,7 @@ export async function GET(request: Request) {
         completedByRespCount: respondents.filter((r: any) => expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount).length,
         distributionFilter: distributionId || "none",
         monthFilter: monthParam || "none",
+        rangeUsed: "0-9999",
       },
       completionRate: totalRespondents > 0 ? Math.round((completedRespondents / totalRespondents) * 100) : 0,
       totalResponses,
