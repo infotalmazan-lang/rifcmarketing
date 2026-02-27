@@ -6597,7 +6597,7 @@ export default function StudiuAdminPage() {
                       <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
                       <div>
                         <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H6)</div>
-                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe N={scatter.length} evaluari individuale din {results.stimuliResults.filter((s: any) => s.response_count > 0).length} materiale ({results.completedRespondents} respondenti).</div>
+                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {_interpResponses.toLocaleString("ro-RO")} raspunsuri din {n} materiale ({_interpCompleted} completati / {_interpTotal} inscrisi).</div>
                       </div>
                     </div>
 
