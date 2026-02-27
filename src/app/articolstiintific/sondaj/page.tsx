@@ -101,7 +101,77 @@ interface Stimulus {
   is_active: boolean;
   variant_label: string | null;
   execution_quality: string | null;
+  marketing_objective: string | null;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// STATISTICAL HELPERS — used by H5, H6, V1, V2, Sumar
+// ═══════════════════════════════════════════════════════════════
+const _mean = (arr: number[]): number => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+const _variance = (arr: number[]): number => { const m = _mean(arr); return _mean(arr.map(x => (x - m) ** 2)); };
+const _stdDev = (arr: number[]): number => Math.sqrt(_variance(arr));
+const _skewness = (arr: number[]): number => { const m = _mean(arr); const s = _stdDev(arr); return s > 0 ? _mean(arr.map(x => ((x - m) / s) ** 3)) : 0; };
+const _kurtosis = (arr: number[]): number => { const m = _mean(arr); const s = _stdDev(arr); return s > 0 ? _mean(arr.map(x => ((x - m) / s) ** 4)) - 3 : 0; };
+const _pearsonR = (xs: number[], ys: number[]): number => {
+  const n = xs.length;
+  if (n < 2) return 0;
+  const mx = _mean(xs), my = _mean(ys);
+  const num = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0);
+  const dx = Math.sqrt(xs.reduce((a, x) => a + (x - mx) ** 2, 0));
+  const dy = Math.sqrt(ys.reduce((a, y) => a + (y - my) ** 2, 0));
+  return dx > 0 && dy > 0 ? num / (dx * dy) : 0;
+};
+const _cronbachAlpha = (items: number[][]): number => {
+  // items = array of k arrays (one per dimension), each of length n (respondents)
+  const k = items.length;
+  if (k < 2) return 0;
+  const n = items[0].length;
+  if (n < 2) return 0;
+  const itemVars = items.map(col => _variance(col));
+  const totals = Array.from({ length: n }, (_, i) => items.reduce((a, col) => a + col[i], 0));
+  const totalVar = _variance(totals);
+  if (totalVar === 0) return 0;
+  return (k / (k - 1)) * (1 - itemVars.reduce((a, v) => a + v, 0) / totalVar);
+};
+
+// ── Shared constants & zone helpers (used by both Rezultate + Interpretare) ──
+const GATE = 4;
+const getZone = (score: number): string => { if (score <= 20) return "Critical"; if (score <= 50) return "Noise"; if (score <= 80) return "Medium"; return "Supreme"; };
+const getZoneCp = (score: number): string => { if (score <= 2) return "Critical"; if (score <= 5) return "Noise"; if (score <= 8) return "Medium"; return "Supreme"; };
+
+// Marketing objective options with labels and colors
+const MARKETING_OBJECTIVES: { value: string; label: string; color: string; bg: string }[] = [
+  { value: "awareness", label: "Awareness", color: "#2563EB", bg: "#2563EB18" },
+  { value: "considerare", label: "Considerare", color: "#7C3AED", bg: "#7C3AED18" },
+  { value: "conversie", label: "Conversie", color: "#059669", bg: "#05966918" },
+];
+
+const getObjectiveBadge = (obj: string | null) => {
+  const mo = MARKETING_OBJECTIVES.find(o => o.value === (obj || "conversie"));
+  return mo || MARKETING_OBJECTIVES[2]; // default to conversie
+};
+
+// Explanatory descriptions per marketing objective (TASK 4)
+const OBJECTIVE_EXPLANATIONS: Record<string, { title: string; description: string; ctaInterpretation: string; expectedCTA: string }> = {
+  awareness: {
+    title: "Awareness (Constientizare)",
+    description: "Materialul are ca scop principal cresterea vizibilitatii brandului. Nu urmareste o actiune imediata, ci memorabilitatea mesajului.",
+    ctaInterpretation: "CTA-ul la awareness se refera la 'memorare' si 'recall', nu la actiune directa. Un scor CTA mai mic este normal si asteptat.",
+    expectedCTA: "CTA asteptat: 3-5 (moderat)",
+  },
+  considerare: {
+    title: "Considerare",
+    description: "Materialul invita audienta sa ia in calcul produsul/serviciul. E un pas intermediar intre awareness si conversie.",
+    ctaInterpretation: "CTA-ul masoara dorinta de a afla mai mult sau de a evalua oferta. Scoruri moderate-ridicate sunt asteptate.",
+    expectedCTA: "CTA asteptat: 5-7 (mediu-ridicat)",
+  },
+  conversie: {
+    title: "Conversie",
+    description: "Materialul urmareste o actiune directa: cumparare, inscriere, descarcare, completare formular etc.",
+    ctaInterpretation: "CTA-ul masoara intentia clara de actiune. Materialele de conversie trebuie sa aiba scoruri CTA ridicate pentru a fi eficiente.",
+    expectedCTA: "CTA asteptat: 7-10 (ridicat)",
+  },
+};
 
 interface Expert {
   id: string;
@@ -322,6 +392,7 @@ const emptyStimulus = (type: string, order: number): Partial<Stimulus> => ({
   display_order: order,
   variant_label: null,
   execution_quality: null,
+  marketing_objective: "conversie",
 });
 
 // ── Profile Questions (16 questions used in wizard, editable in 3 languages) ──
@@ -602,6 +673,7 @@ export default function StudiuAdminPage() {
     industry: string;
     variant_label: string | null;
     execution_quality: string | null;
+    marketing_objective: string | null;
     response_count: number;
     avg_r: number;
     avg_i: number;
@@ -683,6 +755,9 @@ export default function StudiuAdminPage() {
     perStimulusBreakdowns?: Record<string, BreakdownData>;
     fatigueAnalysis?: FatigueAnalysis;
     completionFunnel?: CompletionFunnel;
+    hypothesisScatterData?: { r: number; i: number; f: number; c_computed: number; c_score: number | null; cta: number | null; brand: boolean | null; stimulus_id: string }[];
+
+    distributionSummary?: { id: string; name: string; total: number; completed: number }[];
   }
   const [results, setResults] = useState<ResultsData | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -698,6 +773,9 @@ export default function StudiuAdminPage() {
   const [expandedInterpIndustry, setExpandedInterpIndustry] = useState<string | null>(null);
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
+  const [interpSource, setInterpSource] = useState<string>("all");
+  const [h2ObjFilter, setH2ObjFilter] = useState<string[]>(["conversie", "considerare"]);
+  const [objExplainOpen, setObjExplainOpen] = useState<string | null>(null); // which stimulus_id shows objective explanation card
 
   // Log panel state
   const [logData, setLogData] = useState<any[]>([]);
@@ -815,7 +893,7 @@ export default function StudiuAdminPage() {
       if (json.ok) {
         setLogData((prev) => prev.filter((l) => !ids.includes(l.id)));
         setLogSelected((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
-        // Refresh LOG data (single source of truth) + results
+        // Refresh results (archived entries excluded from results)
         fetchLog();
         fetchResults(resultsSegment);
       }
@@ -846,7 +924,7 @@ export default function StudiuAdminPage() {
       if (json.ok) {
         setArchiveData((prev) => prev.filter((l) => !ids.includes(l.id)));
         setArchiveSelected((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
-        fetchLog(); // Refresh main log (single source of truth)
+        fetchLog(); // Refresh main log
         fetchResults(resultsSegment);
       }
     } catch { /* ignore */ }
@@ -1102,12 +1180,12 @@ export default function StudiuAdminPage() {
     }
     if (activeTab === "interpretare") {
       fetchLog();
-      fetchResults(resultsSegment, interpMonth);
+      fetchResults(interpSource, interpMonth);
     }
     if (activeTab === "distributie") {
       fetchLog();
     }
-  }, [activeTab, resultsSegment, interpMonth, fetchResults, fetchLog]);
+  }, [activeTab, resultsSegment, interpMonth, interpSource, fetchResults, fetchLog]);
 
   // ── Expert data ──────────────────────────────────────────
   const fetchExperts = useCallback(async () => {
@@ -1133,7 +1211,7 @@ export default function StudiuAdminPage() {
   }, [activeTab, fetchExperts, fetchExpertEvals]);
 
   useEffect(() => {
-    if (activeTab === "log") fetchLog(); // LOG tab also refreshes on enter
+    if (activeTab === "log") fetchLog();
   }, [activeTab, fetchLog]);
 
   // CVI data fetching
@@ -1534,6 +1612,7 @@ export default function StudiuAdminPage() {
       );
       // Invalidate + force re-fetch results so all tabs show updated names
       setResults(null);
+      setGlobalStats(null);
       fetchLog();
       fetchResults(resultsSegment);
     }
@@ -1985,6 +2064,12 @@ export default function StudiuAdminPage() {
                               <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={newStimData.industry || ""} onChange={(v) => setNewStimData({ ...newStimData, industry: v })} /></div>
                               <div style={S.formField}><label style={S.formLabel}>Ordine Afișare</label><input style={S.formInput} type="number" value={newStimData.display_order || 0} onChange={(e) => setNewStimData({ ...newStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
                             </div>
+                            <div style={S.formField}>
+                              <label style={S.formLabel}>Obiectiv Marketing</label>
+                              <select style={{ ...S.formInput, cursor: "pointer" }} value={newStimData.marketing_objective || "conversie"} onChange={(e) => setNewStimData({ ...newStimData, marketing_objective: e.target.value })}>
+                                {MARKETING_OBJECTIVES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                              </select>
+                            </div>
                             {/* Variant A/B/C and Execution Quality removed — not used */}
                             <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={newStimData.description || ""} onChange={(e) => setNewStimData({ ...newStimData, description: e.target.value })} /></div>
                             {uploadStatus && (
@@ -2070,6 +2155,33 @@ export default function StudiuAdminPage() {
                               <span style={{ ...S.matNum, background: cat.color, width: 36, height: 36, fontSize: 16 }}>{activeMatIdx + 1}</span>
                               <h3 style={S.matWorkTitle}>{activeStim.name}</h3>
                               {activeStim.industry && <span style={S.stimIndustry}>{activeStim.industry}</span>}
+                              {(() => {
+                                const ob = getObjectiveBadge(activeStim.marketing_objective);
+                                const objKey = activeStim.marketing_objective || "conversie";
+                                const expl = OBJECTIVE_EXPLANATIONS[objKey];
+                                const isOpen = objExplainOpen === activeStim.id;
+                                return (
+                                  <span style={{ position: "relative" as const }}>
+                                    <span
+                                      onClick={() => setObjExplainOpen(isOpen ? null : activeStim.id)}
+                                      style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: ob.bg, color: ob.color, cursor: "pointer", border: isOpen ? `1.5px solid ${ob.color}` : "1.5px solid transparent" }}
+                                    >{ob.label}</span>
+                                    {isOpen && expl && (
+                                      <div onClick={(e) => e.stopPropagation()} style={{
+                                        position: "absolute" as const, top: "calc(100% + 6px)", left: 0, zIndex: 50,
+                                        width: 300, padding: "14px 16px", borderRadius: 10,
+                                        background: "#fff", border: `1.5px solid ${ob.color}`,
+                                        boxShadow: "0 4px 16px rgba(0,0,0,0.12)", fontSize: 12, lineHeight: 1.5,
+                                      }}>
+                                        <div style={{ fontWeight: 800, color: ob.color, marginBottom: 6, fontSize: 13 }}>{expl.title}</div>
+                                        <div style={{ color: "#374151", marginBottom: 6 }}>{expl.description}</div>
+                                        <div style={{ color: "#6B7280", fontStyle: "italic", marginBottom: 4 }}>{expl.ctaInterpretation}</div>
+                                        <div style={{ fontSize: 10, fontWeight: 700, color: ob.color, background: ob.bg, padding: "3px 8px", borderRadius: 4, display: "inline-block" }}>{expl.expectedCTA}</div>
+                                      </div>
+                                    )}
+                                  </span>
+                                );
+                              })()}
                               {/* Variant/Quality badges removed */}
                               <div style={S.matMediaRow}>
                                 {getMediaIcons(activeStim).map((m, i) => { const MIcon = m.icon; return <span key={i} title={m.label} style={S.matMediaTag}><MIcon size={12} /> {m.label}</span>; })}
@@ -2096,6 +2208,12 @@ export default function StudiuAdminPage() {
                                 <div style={S.formField}><label style={S.formLabel}>Nume</label><input style={S.formInput} value={editStimData.name || ""} onChange={(e) => setEditStimData({ ...editStimData, name: e.target.value })} /></div>
                                 <div style={S.formField}><label style={S.formLabel}>Industrie</label><IndustryPicker value={editStimData.industry || ""} onChange={(v) => setEditStimData({ ...editStimData, industry: v })} /></div>
                                 <div style={S.formField}><label style={S.formLabel}>Ordine Afișare</label><input style={S.formInput} type="number" value={editStimData.display_order || 0} onChange={(e) => setEditStimData({ ...editStimData, display_order: parseInt(e.target.value) || 0 })} /></div>
+                              </div>
+                              <div style={S.formField}>
+                                <label style={S.formLabel}>Obiectiv Marketing</label>
+                                <select style={{ ...S.formInput, cursor: "pointer" }} value={editStimData.marketing_objective || "conversie"} onChange={(e) => setEditStimData({ ...editStimData, marketing_objective: e.target.value })}>
+                                  {MARKETING_OBJECTIVES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                                </select>
                               </div>
                               {/* Variant A/B/C and Execution Quality removed — not used */}
                               <div style={S.formField}><label style={S.formLabel}>Descriere</label><textarea style={{ ...S.formInput, minHeight: 100, resize: "vertical" as const }} value={editStimData.description || ""} onChange={(e) => setEditStimData({ ...editStimData, description: e.target.value })} /></div>
@@ -2289,9 +2407,10 @@ export default function StudiuAdminPage() {
               <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Rezultate Sondaj</h2>
               <button
                 onClick={() => { fetchLog(); fetchResults(resultsSegment); }}
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                disabled={resultsLoading}
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: 12, fontWeight: 600, cursor: resultsLoading ? "default" : "pointer", opacity: resultsLoading ? 0.5 : 1 }}
               >
-                <RotateCcw size={13} /> Reincarca
+                <RotateCcw size={13} style={resultsLoading ? { animation: "spin 1s linear infinite" } : {}} /> Reincarca
               </button>
             </div>
             <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
@@ -2319,57 +2438,34 @@ export default function StudiuAdminPage() {
               </div>
             ) : (
               <>
-                {/* ═══ KPI Hero — Stats derived from LOG data (single source of truth) ═══ */}
+                {/* ═══ KPI Hero — stats derived from LOG data (single source of truth) ═══ */}
                 {(() => {
                   const TARGET = 10000;
-                  const isFiltered = resultsSegment !== "all";
-
-                  // ── Compute stats from LOG data — matches LOG tab exactly ──
+                  // Compute stats from LOG data — matches LOG tab exactly
                   const _activeStimN = stimuli.filter(s => s.is_active).length;
                   const _isDone = (l: any) => !!l.completed_at || (_activeStimN > 0 && (l.responseCount || 0) >= _activeStimN);
-                  const _now = new Date();
-                  const _todayStr = _now.toISOString().slice(0, 10);
-                  const _monthStr = _now.toISOString().slice(0, 7);
-
                   const _computeStats = (logs: any[]) => {
                     const completed = logs.filter(_isDone).length;
                     const responses = logs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
-                    const today = logs.filter((l: any) => _isDone(l) && l.completed_at?.slice(0, 10) === _todayStr).length;
-                    const month = logs.filter((l: any) => _isDone(l) && l.completed_at?.slice(0, 7) === _monthStr).length;
-                    const durs = logs.filter((l: any) => _isDone(l) && l.completed_at && l.started_at)
-                      .map((l: any) => Math.round((new Date(l.completed_at).getTime() - new Date(l.started_at).getTime()) / 1000))
-                      .filter((s: number) => s > 0 && s < 7200);
-                    const avgTime = durs.length > 0 ? Math.round(durs.reduce((a: number, v: number) => a + v, 0) / durs.length) : 0;
-                    return { total: logs.length, completed, rate: logs.length > 0 ? Math.round((completed / logs.length) * 100) : 0, responses, today, month, avgTime };
+                    const now = new Date();
+                    const todayStr = now.toISOString().slice(0, 10);
+                    const monthStr = now.toISOString().slice(0, 7);
+                    const today = logs.filter((l: any) => _isDone(l) && (l.completed_at || "").slice(0, 10) === todayStr).length;
+                    const month = logs.filter((l: any) => _isDone(l) && (l.completed_at || "").slice(0, 7) === monthStr).length;
+                    const times = logs.filter((l: any) => _isDone(l) && l.responses?.length).map((l: any) => l.responses.reduce((a: number, r: any) => a + (r.time_spent_seconds || 0), 0));
+                    const avgTime = times.length ? Math.round(times.reduce((a: number, b: number) => a + b, 0) / times.length) : 0;
+                    const rate = logs.length > 0 ? Math.round((completed / logs.length) * 100) : 0;
+                    return { total: logs.length, completed, rate, responses, today, month, avgTime };
                   };
-
-                  // Global stats (all respondents)
-                  const gStats = _computeStats(logData);
-
-                  // Per-distribution breakdown from logData
-                  const _dg: Record<string, { name: string; tag: string; total: number; completed: number }> = {};
-                  let _ndT = 0, _ndC = 0;
-                  for (const l of logData) {
-                    if (l.distribution_id) {
-                      if (!_dg[l.distribution_id]) _dg[l.distribution_id] = { name: (l as any).distribution_name || "?", tag: (l as any).distribution_tag || "", total: 0, completed: 0 };
-                      _dg[l.distribution_id].total++;
-                      if (_isDone(l)) _dg[l.distribution_id].completed++;
-                    } else { _ndT++; if (_isDone(l)) _ndC++; }
-                  }
-                  const _pd: any[] = Object.entries(_dg).map(([id, d]) => ({ id, ...d }));
-                  if (_ndT > 0) _pd.unshift({ id: "__none__", name: "Fara link", tag: "", total: _ndT, completed: _ndC });
-
-                  const g = { ...gStats, perDist: _pd };
-
-                  // Per-segment stats (filtered by current resultsSegment)
-                  const segLogs = logData.filter((l: any) => {
+                  const gStats = logData.length > 0 ? _computeStats(logData) : (globalStats || { total: results.totalRespondents, completed: results.completedRespondents, rate: results.completionRate, responses: results.totalResponses, today: results.completedToday || 0, month: results.completedMonth || 0, avgTime: results.avgSessionTime || 0 });
+                  const isFiltered = resultsSegment !== "all";
+                  // Per-segment stats from logData
+                  const segLogs = isFiltered ? logData.filter((l: any) => {
                     if (resultsSegment === "general") return !l.distribution_id;
-                    if (resultsSegment !== "all") return l.distribution_id === resultsSegment;
-                    return true;
-                  });
-                  const segStats = isFiltered ? _computeStats(segLogs) : gStats;
-
-                  const current = g.completed;
+                    return l.distribution_id === resultsSegment;
+                  }) : logData;
+                  const segStats = (isFiltered && logData.length > 0) ? _computeStats(segLogs) : gStats;
+                  const current = gStats.completed;
                   const pct = Math.min(Math.round((current / TARGET) * 100), 100);
                   const remaining = Math.max(TARGET - current, 0);
                   return (
@@ -2402,18 +2498,17 @@ export default function StudiuAdminPage() {
                           </div>
                         </div>
 
-                        {/* Mini stat pills — derived from LOG data (single source of truth) */}
+                        {/* Mini stat pills — from LOG data */}
                         {(() => {
-                          const segData = segStats;
-                          const avgT = segData.avgTime;
+                          const avgT = segStats.avgTime;
                           const avgTStr = avgT >= 60 ? `${Math.floor(avgT / 60)}m ${avgT % 60}s` : `${avgT}s`;
                           return (
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, justifyContent: "flex-end", alignItems: "stretch" }}>
                               {[
-                                { label: isFiltered ? "Respondenti" : "Total porniti", value: segData.total, color: "#94a3b8" },
-                                { label: "Completari", value: segData.completed, color: "#10b981" },
-                                { label: "Rata", value: `${segData.rate}%`, color: segData.rate >= 80 ? "#10b981" : segData.rate >= 50 ? "#f59e0b" : "#ef4444", isText: true },
-                                { label: "Raspunsuri", value: segData.responses, color: "#3b82f6" },
+                                { label: isFiltered ? "Respondenti" : "Total porniti", value: segStats.total, color: "#94a3b8" },
+                                { label: "Completari", value: segStats.completed, color: "#10b981" },
+                                { label: "Rata", value: `${segStats.rate}%`, color: segStats.rate >= 80 ? "#10b981" : segStats.rate >= 50 ? "#f59e0b" : "#ef4444", isText: true },
+                                { label: "Raspunsuri", value: segStats.responses, color: "#3b82f6" },
                                 { label: "Timp mediu", value: avgTStr, color: "#a78bfa", isText: true },
                               ].map((s: any) => (
                                 <div key={s.label} style={{ textAlign: "center" as const, minWidth: 56, padding: "4px 6px" }}>
@@ -2427,12 +2522,12 @@ export default function StudiuAdminPage() {
                               <div style={{ display: "flex", gap: 0, background: "rgba(245,158,11,0.1)", borderRadius: 8, border: "1px solid rgba(245,158,11,0.2)", padding: "4px 10px", alignItems: "center" }}>
                                 <div style={{ textAlign: "center" as const, minWidth: 30 }}>
                                   <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: "#92400e", marginBottom: 1 }}>AZI</div>
-                                  <div style={{ fontSize: 17, fontWeight: 800, color: "#f59e0b", fontFamily: "JetBrains Mono, monospace", lineHeight: 1.2 }}>{segData.today}</div>
+                                  <div style={{ fontSize: 17, fontWeight: 800, color: "#f59e0b", fontFamily: "JetBrains Mono, monospace", lineHeight: 1.2 }}>{segStats.today}</div>
                                 </div>
                                 <div style={{ width: 1, height: 22, background: "rgba(245,158,11,0.3)", margin: "0 8px" }} />
                                 <div style={{ textAlign: "center" as const, minWidth: 30 }}>
                                   <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: 0.5, color: "#92400e", marginBottom: 1 }}>LUNA</div>
-                                  <div style={{ fontSize: 17, fontWeight: 800, color: "#d97706", fontFamily: "JetBrains Mono, monospace", lineHeight: 1.2 }}>{segData.month}</div>
+                                  <div style={{ fontSize: 17, fontWeight: 800, color: "#d97706", fontFamily: "JetBrains Mono, monospace", lineHeight: 1.2 }}>{segStats.month}</div>
                                 </div>
                               </div>
                             </div>
@@ -2464,11 +2559,21 @@ export default function StudiuAdminPage() {
 
                       {/* Per-distribution breakdown + Language pills */}
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, position: "relative" as const, zIndex: 1, flexWrap: "wrap" as const, gap: 8 }}>
-                        {/* Per-distribution mini breakdown with plan progress */}
-                        {g.perDist.length > 0 && (
+                        {/* Per-distribution mini breakdown with plan progress (from logData) */}
+                        {(() => {
+                          const distMap: Record<string, { id: string; name: string; total: number; completed: number }> = {};
+                          logData.forEach((l: any) => {
+                            const key = l.distribution_id || "__none__";
+                            if (!distMap[key]) distMap[key] = { id: key, name: l.distribution_name || (key === "__none__" ? "General" : key), total: 0, completed: 0 };
+                            distMap[key].total++;
+                            if (_isDone(l)) distMap[key].completed++;
+                          });
+                          const perDist = Object.values(distMap).filter(d => d.id !== "__none__");
+                          if (perDist.length === 0) return null;
+                          return (
                           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, alignItems: "center" }}>
                             <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", letterSpacing: 0.5 }}>SURSE:</span>
-                            {g.perDist.map((d: any) => {
+                            {perDist.map((d: any) => {
                               const distInfo = distributions.find(dd => dd.id === d.id);
                               const plan = distInfo?.estimated_completions || 0;
                               const planPct = plan > 0 ? Math.round((d.completed / plan) * 100) : 0;
@@ -2490,7 +2595,8 @@ export default function StudiuAdminPage() {
                               );
                             })}
                           </div>
-                        )}
+                          );
+                        })()}
 
                         {/* Language pills */}
                         {results.localeCounts && Object.keys(results.localeCounts).length > 0 && (
@@ -2513,7 +2619,7 @@ export default function StudiuAdminPage() {
                       {isFiltered && (() => {
                         const activeDist = distributions.find(d => d.id === resultsSegment);
                         const plan = activeDist?.estimated_completions || 0;
-                        const planPct = plan > 0 ? Math.round((segStats.completed / plan) * 100) : 0;
+                        const planPct = plan > 0 ? Math.round((results.completedRespondents / plan) * 100) : 0;
                         return (
                           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #334155", position: "relative" as const, zIndex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
@@ -2522,11 +2628,11 @@ export default function StudiuAdminPage() {
                                 {resultsSegment === "general" ? "General (fara tag)" : (activeDist?.name || resultsSegment)}
                               </span>
                               <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                                — {segStats.completed} completari din {segStats.total} porniti ({segStats.rate}%)
+                                — {results.completedRespondents} completari din {results.totalRespondents} porniti ({results.completionRate}%)
                               </span>
                               {plan > 0 && (
                                 <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 8, background: planPct >= 100 ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.15)", color: planPct >= 100 ? "#34d399" : "#fbbf24" }}>
-                                  {segStats.completed}/{plan} plan · {planPct}%
+                                  {results.completedRespondents}/{plan} plan · {planPct}%
                                 </span>
                               )}
                             </div>
@@ -2536,6 +2642,7 @@ export default function StudiuAdminPage() {
                     </div>
                   );
                 })()}
+
 
                 {/* Content sub-tabs: SCORURI | PROFIL | PSIHOGRAFIC | CANALE | INDUSTRII */}
                 <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" as const }}>
@@ -2609,6 +2716,170 @@ export default function StudiuAdminPage() {
 
                       return (
                         <>
+                          {/* ═══ Sumar Validare Academica ═══ */}
+                          {results.hypothesisScatterData && results.hypothesisScatterData.length >= 3 && (() => {
+                            const sc = results.hypothesisScatterData;
+                            const scValid = sc.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_computed > 0);
+                            const rArr = scValid.map(d => d.r);
+                            const iArr = scValid.map(d => d.i);
+                            const fArr = scValid.map(d => d.f);
+                            const cNArr = scValid.map(d => d.c_computed / 11);
+                            const alpha = scValid.length >= 3 ? _cronbachAlpha([rArr, iArr, fArr, cNArr]) : 0;
+                            const alphaLabel = alpha >= 0.9 ? "Excelent" : alpha >= 0.8 ? "Bun" : alpha >= 0.7 ? "Acceptabil" : alpha >= 0.6 ? "Discutabil" : "Slab";
+                            const alphaColor = alpha >= 0.8 ? "#059669" : alpha >= 0.7 ? "#D97706" : "#DC2626";
+                            // C formula vs C perceived correlation
+                            const scWithCp = scValid.filter(d => d.c_score != null && d.c_score > 0);
+                            const cfCpR = scWithCp.length >= 3 ? _pearsonR(scWithCp.map(d => d.c_computed / 11), scWithCp.map(d => d.c_score!)) : 0;
+                            // Gate pass rate
+                            const gatePass = withData.filter(s => s.avg_r >= GATE).length;
+                            const gatePct = withData.length > 0 ? Math.round((gatePass / withData.length) * 100) : 0;
+                            // Zone match rate (uses getZone and getZoneCp from scope)
+                            const zoneMatches = withData.filter(s => getZone(s.avg_c) === getZoneCp(s.avg_c_score)).length;
+                            const zonePct = withData.length > 0 ? Math.round((zoneMatches / withData.length) * 100) : 0;
+                            // Grand validation
+                            const gR = _mean(withData.map(s => s.avg_r));
+                            const gCf = _mean(withData.map(s => s.avg_c));
+                            const gCp = _mean(withData.map(s => s.avg_c_score));
+                            const gDelta = Math.abs(gCf / 11 - gCp);
+                            const gValPct = Math.round(Math.max(0, (1 - gDelta / 10) * 100));
+                            // H5 winner
+                            const h5D = scValid.filter(d => d.c_score != null && d.c_score > 0);
+                            const h5MultR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i * d.f), h5D.map(d => d.c_score!)) : 0;
+                            const h5AddR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i + d.f), h5D.map(d => d.c_score!)) : 0;
+                            // H6 gate effect
+                            const h6Below = scValid.filter(d => d.r < GATE);
+                            const h6Above = scValid.filter(d => d.r >= GATE);
+                            const h6BR = h6Below.length >= 2 ? _pearsonR(h6Below.map(d => d.i * d.f), h6Below.map(d => d.c_computed / 11)) : 0;
+                            const h6AR = h6Above.length >= 2 ? _pearsonR(h6Above.map(d => d.i * d.f), h6Above.map(d => d.c_computed / 11)) : 0;
+
+                            // Compute Factor Calibrare
+                            const calD = scValid.filter(d => d.c_score != null && d.c_score > 0);
+                            const cfN = calD.length >= 2 ? _mean(calD.map(d => d.c_computed / 11)) : 0;
+                            const cpN = calD.length >= 2 ? _mean(calD.map(d => d.c_score!)) : 0;
+                            const fc = cfN > 0 ? cpN / cfN : 0;
+                            const fcColor = fc >= 1.0 && fc <= 1.2 ? "#059669" : fc <= 1.5 ? "#D97706" : "#DC2626";
+                            const fcLabel = fc >= 1.0 && fc <= 1.2 ? "Calibrat excelent" : fc <= 1.5 ? "Subestimare moderata" : fc <= 2.0 ? "Subestimare semnificativa" : "Discrepanta mare";
+
+                            // H5 deltas
+                            const h5Valid = scValid.filter(d => d.c_score != null && d.c_score > 0);
+                            const dMult = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i * d.f) / 11 - d.c_score! / 10))) : 0;
+                            const dAdit = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i + d.f) / 30 - d.c_score! / 10))) : 0;
+                            const h5CastigPct = dAdit > 0 ? Math.round(((dAdit - dMult) / dAdit) * 100) : 0;
+
+                            // Metric card builder
+                            const metricCard = (icon: string, title: string, value: string, color: string, explanation: string, thresholds: string) => (
+                              <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "14px 16px", borderTop: `3px solid ${color}` }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                                  <span style={{ fontSize: 16 }}>{icon}</span>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>{title}</div>
+                                </div>
+                                <div style={{ fontSize: 26, fontWeight: 900, color, fontFamily: "JetBrains Mono, monospace", marginBottom: 6 }}>{value}</div>
+                                <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 6 }}>{explanation}</div>
+                                <div style={{ fontSize: 9, color: "#9CA3AF", lineHeight: 1.4, padding: "4px 8px", background: "#f9fafb", borderRadius: 4, borderLeft: `2px solid ${color}` }}>{thresholds}</div>
+                              </div>
+                            );
+
+                            return (
+                              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderLeft: "4px solid #7C3AED", borderRadius: 10, padding: "20px 24px", marginBottom: 20 }}>
+                                {/* Header */}
+                                <div style={{ marginBottom: 16 }}>
+                                  <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4 }}>Sumar Validare Academica</div>
+                                  <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>
+                                    Aceasta sectiune rezuma indicatorii cheie care demonstreaza validitatea stiintifica a modelului RIFC.
+                                    Fiecare metric explica un aspect diferit: de la fiabilitatea instrumentului pana la acuratetea predictiei.
+                                  </div>
+                                </div>
+
+                                {/* Sample size bar */}
+                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 16px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>Dimensiunea esantionului</div>
+                                    <div style={{ fontSize: 9, color: "#9CA3AF" }}>Numarul total de raspunsuri individuale analizate in studiu</div>
+                                  </div>
+                                  <div style={{ textAlign: "right" as const }}>
+                                    <span style={{ fontSize: 22, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{sc.length}</span>
+                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>raspunsuri din {withData.length} materiale</span>
+                                  </div>
+                                </div>
+
+                                {/* Metric cards - 2 per row */}
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                                  {metricCard(
+                                    "\u03B1",
+                                    "Cronbach Alpha — Consistenta Interna",
+                                    alpha.toFixed(3),
+                                    alphaColor,
+                                    `Masoara cat de bine coreleaza intre ele cele 4 dimensiuni ale instrumentului (R, I, F, C). Un alpha de ${alpha.toFixed(2)} inseamna ca instrumentul nostru masoara un construct unitar — dimensiunile sunt coerente intre ele.`,
+                                    `Excelent: >= 0.90 | Bun: 0.80-0.89 | Acceptabil: 0.70-0.79 | Slab: < 0.70 — Rezultat: ${alphaLabel} (k=4 dimensiuni, n=${scValid.length})`
+                                  )}
+                                  {metricCard(
+                                    "%",
+                                    "Validare Generala — Acuratete Formula",
+                                    `${gValPct}%`,
+                                    gValPct >= 70 ? "#059669" : gValPct >= 50 ? "#D97706" : "#DC2626",
+                                    `Arata cat de aproape este scorul calculat de formula (Cf) de perceptia reala a respondentilor (Cp). ${gValPct}% inseamna ca diferenta medie intre predictie si realitate este de doar ${gDelta.toFixed(2)} puncte pe o scala 0-10.`,
+                                    `Excelent: >= 80% | Bun: 70-79% | Acceptabil: 50-69% | Slab: < 50% — Delta medie = ${gDelta.toFixed(2)}`
+                                  )}
+                                  {metricCard(
+                                    "G",
+                                    "Relevance Gate — Pragul de Activare",
+                                    `${gatePct}%`,
+                                    gatePct >= 70 ? "#059669" : "#D97706",
+                                    `Din ${withData.length} materiale testate, ${gatePass} au trecut pragul de relevanta (R >= ${GATE}). Asta inseamna ca ${gatePct}% din mesajele evaluate au fost considerate suficient de relevante de respondenti pentru ca formula sa functioneze corect.`,
+                                    `Ideal: >= 80% | Bun: 70-79% | Atentie: < 70% — ${gatePass} din ${withData.length} materiale au R >= ${GATE}`
+                                  )}
+                                  {metricCard(
+                                    "Z",
+                                    "Zone Match — Concordanta Clasificari",
+                                    `${zonePct}%`,
+                                    zonePct >= 60 ? "#059669" : "#D97706",
+                                    `Compara daca zona in care formula plaseaza materialul (Critic/Zgomot/Mediu/Suprem) coincide cu zona perceptiei reale. ${zonePct}% concordanta inseamna ca ${zoneMatches} din ${withData.length} materiale au fost clasificate identic.`,
+                                    `Excelent: >= 70% | Bun: 60-69% | Acceptabil: 50-59% | Slab: < 50% — ${zoneMatches}/${withData.length} zone concordante`
+                                  )}
+                                  {metricCard(
+                                    "r",
+                                    "Pearson r (C_formula vs C_perceput)",
+                                    cfCpR.toFixed(3),
+                                    Math.abs(cfCpR) >= 0.5 ? "#059669" : Math.abs(cfCpR) >= 0.3 ? "#D97706" : "#DC2626",
+                                    `Corelatia Pearson masoara cat de puternic se misca impreuna scorul formulei si perceptia respondentilor. Un r de ${cfCpR.toFixed(2)} indica o ${Math.abs(cfCpR) >= 0.5 ? "corelatie puternica" : Math.abs(cfCpR) >= 0.3 ? "corelatie moderata" : "corelatie slaba"} — cand formula prezice un scor mai mare, si respondentii chiar percep mai pozitiv.`,
+                                    `Puternic: |r| >= 0.50 | Moderat: 0.30-0.49 | Slab: < 0.30 — directia: ${cfCpR > 0 ? "pozitiva (concordanta)" : "negativa (inversa)"}`
+                                  )}
+                                  {metricCard(
+                                    "\u00D7",
+                                    "Factor Calibrare — Bias Sistematic",
+                                    `${fc.toFixed(2)}\u00D7`,
+                                    fcColor,
+                                    `Raportul intre perceptia reala medie si scorul formulei mediu. Un factor de ${fc.toFixed(2)} inseamna ca ${fc > 1 ? `respondentii percep mesajele cu ${Math.round((fc - 1) * 100)}% mai pozitiv decat prezice formula` : fc < 1 ? "formula supraestimeaza perceptia" : "formula e perfect calibrata"}. Acesta nu este o eroare, ci un bias sistematic care justifica cercetarea.`,
+                                    `Perfect: 1.00 | Calibrat: 1.00-1.20 | Subestimare moderata: 1.20-1.50 | Semnificativa: > 1.50 — ${fcLabel}`
+                                  )}
+                                </div>
+
+                                {/* Hypotheses verdicts - full names */}
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, letterSpacing: 0.3, borderBottom: "1px solid #e5e7eb", paddingBottom: 6 }}>VERDICT IPOTEZE</div>
+                                <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                                  {[
+                                    { code: "H1", name: "Poarta Relevantei (Threshold Effect)", verdict: gR >= GATE ? `Confirmata — R mediu = ${gR.toFixed(1)} depaseste pragul de ${GATE}. Mesajele sunt percepute ca relevante.` : `Neconfirmata — R mediu = ${gR.toFixed(1)} sub pragul ${GATE}. Mesajele nu ating pragul de relevanta.`, color: gR >= GATE ? "#059669" : "#DC2626" },
+                                    { code: "H2", name: "Formula prezice actiunea reala (Pearson Correlation)", verdict: `r = ${cfCpR.toFixed(2)} — ${Math.abs(cfCpR) >= 0.5 ? "Corelatie puternica. Formula prezice cu succes comportamentul real." : Math.abs(cfCpR) >= 0.3 ? "Corelatie moderata. Formula are putere predictiva, dar exista si alti factori." : "Corelatie slaba. Formula necesita ajustari suplimentare."}`, color: Math.abs(cfCpR) >= 0.3 ? "#059669" : "#D97706" },
+                                    { code: "H3", name: "Brandul modereaza C (Moderation Analysis)", verdict: "Vezi graficul H3 — analiza compara corelatia C→CTA intre brand cunoscut vs necunoscut.", color: "#6B7280" },
+                                    { code: "H4", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul H4 — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
+                                    { code: "H5", name: "Multiplicativ vs Aditiv (Model Comparison)", verdict: `${h5CastigPct > 0 ? "Modelul multiplicativ (I\u00D7F) este superior" : "Modelul aditiv (I+F) este superior"} cu ${Math.abs(h5CastigPct)}% eroare mai mica. \u0394mult=${dMult.toFixed(2)}, \u0394adit=${dAdit.toFixed(2)}.`, color: h5CastigPct > 10 ? "#059669" : h5CastigPct >= 0 ? "#D97706" : "#DC2626" },
+                                    { code: "H6", name: "I\u00D7F irelevant sub prag (Sub-threshold Test)", verdict: `Sub R<${GATE}: r=${h6BR.toFixed(2)} — ${Math.abs(h6BR) < 0.2 ? "Gate confirmat. Sub prag, I\u00D7F nu influenteaza C." : Math.abs(h6BR) <= 0.4 ? "Partial confirmat. Exista o corelatie slaba sub prag." : "Neconfirmat. I\u00D7F inca influenteaza sub prag."}`, color: Math.abs(h6BR) < 0.2 ? "#059669" : Math.abs(h6BR) <= 0.4 ? "#D97706" : "#DC2626" },
+                                  ].map(h => (
+                                    <div key={h.code} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 10, padding: "8px 12px", background: "#fff", borderRadius: 6, border: "1px solid #f3f4f6", borderLeft: `3px solid ${h.color}` }}>
+                                      <div style={{ minWidth: 24 }}>
+                                        <span style={{ fontWeight: 900, color: h.color, fontSize: 11 }}>{h.code}</span>
+                                      </div>
+                                      <div>
+                                        <div style={{ fontWeight: 700, color: "#374151", marginBottom: 2 }}>{h.name}</div>
+                                        <div style={{ color: "#6B7280", lineHeight: 1.4 }}>{h.verdict}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })()}
+
                           {/* Category filter pills — from categories table, ordered by display_order */}
                           <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 16 }}>
                             <button onClick={() => setResultsCatFilter(null)} style={{
@@ -2642,10 +2913,10 @@ export default function StudiuAdminPage() {
                             {tooltipCol && (() => {
                               const tips: Record<string, { title: string; desc: string }> = {
                                 N: { title: "N \u2014 Num\u0103r R\u0103spunsuri", desc: "C\u00e2te evalu\u0103ri (r\u0103spunsuri complete) au fost colectate pentru acest material. Fiecare respondent evalueaz\u0103 materialul pe scalele R, I, F." },
-                                R: { title: "R \u2014 Recunoa\u0219tere (Recognition)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de u\u0219or este materialul de recunoscut \u0219i identificat. Un R mare \u00eenseamn\u0103 c\u0103 brandul/mesajul este vizibil \u0219i memorabil." },
-                                I: { title: "I \u2014 Impact Emo\u021Bional (Emotional Impact)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 intensitatea reac\u021Biei emo\u021Bionale pe care o provoac\u0103 materialul. Un I mare \u00eenseamn\u0103 c\u0103 materialul genereaz\u0103 emo\u021Bii puternice (pozitive sau negative)." },
-                                F: { title: "F \u2014 Frecven\u021B\u0103 (Frequency/Familiarity)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de familiar \u0219i frecvent perceput este materialul. Un F mare \u00eenseamn\u0103 c\u0103 respondentul simte c\u0103 a mai v\u0103zut materialul de mai multe ori." },
-                                Cform: { title: "C\u2091\u2092\u2093\u2098 \u2014 Scor Comunicare (Formula)", desc: "Calculat dup\u0103 formula: R+(I\u00d7F)=C. Combin\u0103 cele 3 dimensiuni \u00eentr-un scor unic. Valori mai mari = comunicare mai eficient\u0103. Maxim teoretic: 110 (R=10, I=10, F=10)." },
+                                R: { title: "R \u2014 Relevan\u021B\u0103 (Relevance)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de relevant este mesajul pentru publicul \u021Bint\u0103 \u2014 pentru nevoile, interesele sau situa\u021Bia respondentului. Un R mare \u00eenseamn\u0103 c\u0103 mesajul se adreseaz\u0103 direct nevoilor audien\u021Bei. R ac\u021Bioneaz\u0103 ca \u201ePoarta Relevan\u021Bei\u201d: sub pragul de 4, formula prezice impact sc\u0103zut." },
+                                I: { title: "I \u2014 Interes (Interest)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de interesant \u0219i captivant este con\u021Binutul materialului \u2014 informa\u021Bia, oferta sau ideea din spatele lui. Un I mare \u00eenseamn\u0103 c\u0103 materialul genereaz\u0103 curiozitate \u0219i dorin\u021Ba de a afla mai mult. \u00cen formula RIFC, I se \u00eenmul\u021Be\u0219te cu F (amplificator multiplicativ)." },
+                                F: { title: "F \u2014 Form\u0103 (Form/Execution)", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 calitatea execu\u021Biei vizuale \u0219i structurale a mesajului \u2014 design, layout, tipografie, claritatea textului. Un F mare \u00eenseamn\u0103 o execu\u021Bie profesional\u0103, atractiv\u0103 \u0219i u\u0219or de \u00een\u021Beles. \u00cen formula RIFC, F amplific\u0103 Interesul (I\u00d7F)." },
+                                Cform: { title: "C\u2091\u2092\u2093\u2098 \u2014 Claritate (Formula)", desc: "Calculat dup\u0103 formula: R+(I\u00d7F)=C. Combin\u0103 cele 3 dimensiuni \u00eentr-un scor unic de claritate \u0219i putere de conversie a mesajului. Valori mai mari = mesaj mai clar \u0219i mai convingator. Maxim teoretic: 110 (R=10, I=10, F=10)." },
                                 Cperc: { title: "C\u209a\u2091\u2093\u2094 \u2014 Scor Comunicare Perceput\u0103", desc: "Media scorurilor de Comunicare percepute direct de respondent (nu calculate). Respondentul r\u0103spunde: \u201eC\u00e2t de eficient comunic\u0103 acest material?\u201d pe scala 1\u201310." },
                                 CTA: { title: "CTA \u2014 Call To Action", desc: "Scor mediu 1\u201310. M\u0103soar\u0103 c\u00e2t de puternic este \u00eendemnul la ac\u021Biune. Un CTA mare \u00eenseamn\u0103 c\u0103 materialul \u00eel motiveaz\u0103 pe respondent s\u0103 fac\u0103 ceva (s\u0103 cumpere, s\u0103 viziteze, s\u0103 afle mai mult)." },
                                 SD: { title: "SD \u2014 Standard Deviation (Devia\u021Bie Standard)", desc: "M\u0103soar\u0103 c\u00e2t de dispersate sunt r\u0103spunsurile. SD mic = consens (to\u021Bi evalueaz\u0103 similar). SD mare = opinii \u00eemp\u0103r\u021Bite (unii dau note mari, al\u021Bii mici). Util pentru identificarea materialelor controversate." },
@@ -2672,6 +2943,7 @@ export default function StudiuAdminPage() {
                                   <th style={{ ...thStyle, width: 36, padding: "8px 4px" }}></th>
                                   <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 180 }}>MATERIAL</th>
                                   <th style={thStyle}>CANAL</th>
+                                  <th style={thStyle}>OBJ</th>
                                   <th style={{ ...thStyle, cursor: "pointer" }} onClick={() => setTooltipCol("N")}>N</th>
                                   <th style={{ ...thStyle, color: "#DC2626", cursor: "pointer" }} onClick={() => setTooltipCol("R")}>R</th>
                                   <th style={{ ...thStyle, color: "#D97706", cursor: "pointer" }} onClick={() => setTooltipCol("I")}>I</th>
@@ -2691,6 +2963,7 @@ export default function StudiuAdminPage() {
                                     <td style={{ ...tdStyle, padding: "8px 4px" }}></td>
                                     <td style={{ ...tdStyle, fontWeight: 800, color: "#111827", fontSize: 13 }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.label || resultsCatFilter) : "TOTAL"}</td>
                                     <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 4, background: "#111827", color: "#fff" }}>{resultsCatFilter ? (categories.find(c => c.type === resultsCatFilter)?.short_code || resultsCatFilter) : "ALL"}</span></td>
+                                    <td style={tdStyle}></td>
                                     <td style={{ ...tdStyle, fontWeight: 700 }}>{totalN}</td>
                                     <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 800 }}>{totalRow.avg_r}</td>
                                     <td style={{ ...tdStyle, color: "#D97706", fontWeight: 800 }}>{totalRow.avg_i}</td>
@@ -2744,6 +3017,37 @@ export default function StudiuAdminPage() {
                                         <td style={tdStyle}>
                                           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5, padding: "3px 8px", borderRadius: 4, background: cc?.color ? `${cc.color}18` : "#f3f4f6", color: cc?.color || "#6B7280" }}>{cc?.short_code || s.type}</span>
                                         </td>
+                                        <td style={{ ...tdStyle, position: "relative" as const }}>
+                                          {(() => {
+                                            const ob = getObjectiveBadge(s.marketing_objective);
+                                            const objKey = s.marketing_objective || "conversie";
+                                            const expl = OBJECTIVE_EXPLANATIONS[objKey];
+                                            const isOpen = objExplainOpen === s.id;
+                                            return (
+                                              <>
+                                                <span
+                                                  onClick={(e) => { e.stopPropagation(); setObjExplainOpen(isOpen ? null : s.id); }}
+                                                  style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.3, padding: "2px 6px", borderRadius: 4, background: ob.bg, color: ob.color, whiteSpace: "nowrap" as const, cursor: "pointer", border: isOpen ? `1.5px solid ${ob.color}` : "1.5px solid transparent", transition: "all 0.15s" }}
+                                                >
+                                                  {ob.label}
+                                                </span>
+                                                {isOpen && expl && (
+                                                  <div onClick={(e) => e.stopPropagation()} style={{
+                                                    position: "absolute" as const, top: "100%", left: 0, zIndex: 50,
+                                                    width: 280, padding: "12px 14px", borderRadius: 10,
+                                                    background: "#fff", border: `1.5px solid ${ob.color}`,
+                                                    boxShadow: "0 4px 16px rgba(0,0,0,0.12)", fontSize: 11, lineHeight: 1.5,
+                                                  }}>
+                                                    <div style={{ fontWeight: 800, color: ob.color, marginBottom: 6, fontSize: 12 }}>{expl.title}</div>
+                                                    <div style={{ color: "#374151", marginBottom: 6 }}>{expl.description}</div>
+                                                    <div style={{ color: "#6B7280", fontStyle: "italic", marginBottom: 4 }}>{expl.ctaInterpretation}</div>
+                                                    <div style={{ fontSize: 10, fontWeight: 700, color: ob.color, background: ob.bg, padding: "3px 8px", borderRadius: 4, display: "inline-block" }}>{expl.expectedCTA}</div>
+                                                  </div>
+                                                )}
+                                              </>
+                                            );
+                                          })()}
+                                        </td>
                                         <td style={tdStyle}>{s.response_count}</td>
                                         <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{s.avg_r || "—"}</td>
                                         <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{s.avg_i || "—"}</td>
@@ -2765,7 +3069,7 @@ export default function StudiuAdminPage() {
                                       {/* Expanded stimulus detail row */}
                                       {isExpanded && stimBreakdown && (
                                         <tr>
-                                          <td colSpan={13} style={{ padding: 0, borderBottom: "2px solid #e5e7eb" }}>
+                                          <td colSpan={14} style={{ padding: 0, borderBottom: "2px solid #e5e7eb" }}>
                                             <div style={{ padding: "16px 20px", background: "#fafbfc", borderTop: "1px solid #f3f4f6" }}>
                                               {/* Stats cards row */}
                                               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
@@ -3970,22 +4274,20 @@ export default function StudiuAdminPage() {
               </button>
             </div>
 
-            {/* ═══ KPI Cards ═══ */}
+            {/* ═══ KPI Cards — derived from LOG data (single source of truth) ═══ */}
             {(() => {
               const TARGET = 10000;
-              // Sum completions from all distribution links
-              const distCompletions = distributions.reduce((sum, d) => sum + (d.completions || 0), 0);
-              // Sum estimated KPI from all individual distribution links
-              const distEstimated = distributions.reduce((sum, d) => sum + (d.estimated_completions || 0), 0);
-
-              // Derive completion counts from logData (single source of truth)
+              // Derive completion stats from logData
               const _activeN = stimuli.filter(s => s.is_active).length;
               const _done = (l: any) => !!l.completed_at || (_activeN > 0 && (l.responseCount || 0) >= _activeN);
               const logCompleted = logData.filter(_done).length;
               const logGeneralCompleted = logData.filter((l: any) => !l.distribution_id && _done(l)).length;
-
-              const generalCompleted = logData.length > 0 ? logGeneralCompleted : (globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0);
-              const totalCompleted = logData.length > 0 ? logCompleted : (distCompletions + generalCompleted);
+              // Sum completions from all distribution links
+              const distCompletions = distributions.reduce((sum, d) => sum + (d.completions || 0), 0);
+              // Sum estimated KPI from all individual distribution links
+              const distEstimated = distributions.reduce((sum, d) => sum + (d.estimated_completions || 0), 0);
+              // Use logData as source of truth when available
+              const totalCompleted = logData.length > 0 ? logCompleted : (distCompletions + (globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0));
               const kpiCompleted = totalCompleted;
               const kpiRemaining = Math.max(TARGET - kpiCompleted, 0);
               // Percentage with decimals: show 2 decimals when < 1%, whole number when >= 1%
@@ -3996,8 +4298,8 @@ export default function StudiuAdminPage() {
 
               // ── Link Public General: KPI = TARGET minus all individual source KPIs ──
               const generalKpi = Math.max(TARGET - distEstimated, 0);
-              // Completions for general link = total completions minus completions from named sources
-              const generalCompletions = Math.max(kpiCompleted - distCompletions, 0);
+              // Completions for general link — from logData when available
+              const generalCompletions = logData.length > 0 ? logGeneralCompleted : Math.max(kpiCompleted - distCompletions, 0);
               const generalRemaining = Math.max(generalKpi - generalCompletions, 0);
               const generalPctRaw = generalKpi > 0 ? Math.min((generalCompletions / generalKpi) * 100, 100) : 0;
               const generalPct = generalPctRaw >= 1 ? Math.round(generalPctRaw) : parseFloat(generalPctRaw.toFixed(2));
@@ -5223,6 +5525,30 @@ export default function StudiuAdminPage() {
             : interpMonth === "current"
               ? `${MONTHS_RO[currentMonthIdx]} ${currentYear}`
               : (() => { const [y, m] = interpMonth.split("-"); return `${MONTHS_RO[parseInt(m, 10) - 1]} ${y}`; })();
+          const activeSourceLabel = interpSource === "all"
+            ? "Toate sursele"
+            : interpSource === "general"
+              ? "General (fara tag)"
+              : (distributions.find(d => d.id === interpSource)?.name || interpSource);
+          const sourcePillStyle = (active: boolean): React.CSSProperties => ({
+            padding: "5px 12px", fontSize: 11, fontWeight: active ? 700 : 500, borderRadius: 20,
+            border: active ? "2px solid #7C3AED" : "1px solid #e5e7eb", cursor: "pointer",
+            background: active ? "#F5F3FF" : "#fff",
+            color: active ? "#7C3AED" : "#6B7280",
+            whiteSpace: "nowrap",
+          });
+
+          // Render source pills helper
+          const renderSourcePills = () => (
+            <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" as const, alignItems: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>SURSA:</span>
+              <button onClick={() => setInterpSource("all")} style={sourcePillStyle(interpSource === "all")}>Toate sursele</button>
+              <button onClick={() => setInterpSource("general")} style={sourcePillStyle(interpSource === "general")}>General</button>
+              {distributions.map(d => (
+                <button key={d.id} onClick={() => setInterpSource(d.id)} style={sourcePillStyle(interpSource === d.id)}>{d.name}</button>
+              ))}
+            </div>
+          );
 
           // ── Check loading / empty states ──
           const isLoading = resultsLoading;
@@ -5254,8 +5580,11 @@ export default function StudiuAdminPage() {
                     return <button key={val} onClick={() => setInterpMonth(val)} style={monthPillStyle(interpMonth === val)}>{name}</button>;
                   })}
                 </div>
+                {/* Source filter pills — always visible */}
+                {renderSourcePills()}
                 <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>
                   Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
+                  {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
                 </div>
                 {/* Empty state message */}
                 {isLoading ? (
@@ -5267,8 +5596,8 @@ export default function StudiuAdminPage() {
                   <div style={S.placeholderTab}>
                     <Brain size={48} style={{ color: "#d1d5db" }} />
                     <p style={{ color: "#6B7280", fontSize: 14, marginTop: 12 }}>
-                      {interpMonth !== "all"
-                        ? `Nu exista date pentru ${activeMonthLabel}. Selecteaza o alta perioada.`
+                      {interpMonth !== "all" || interpSource !== "all"
+                        ? `Nu exista date pentru ${activeMonthLabel}${interpSource !== "all" ? ` · ${activeSourceLabel}` : ""}. Selecteaza o alta perioada sau sursa.`
                         : "Nu exista materiale cu raspunsuri pentru analiza."}
                     </p>
                   </div>
@@ -5278,7 +5607,7 @@ export default function StudiuAdminPage() {
           }
 
           // ── Helper functions ──
-          const GATE = 3;
+          const GATE = 4;
           const getZone = (score: number): string => {
             if (score <= 20) return "Critical";
             if (score <= 50) return "Noise";
@@ -5297,9 +5626,23 @@ export default function StudiuAdminPage() {
             if (zone === "Medium") return "#2563EB15";
             return "#05966915";
           };
+          // Normalize Cf (0-110 scale) to 1-10 scale for comparison with Cp (1-10)
+          const normCf = (cF: number): number => Math.round((cF / 11) * 100) / 100;
+          // Delta between Cf and Cp — BOTH on 1-10 scale after normalization
+          const calcDelta = (cF: number, cP: number): number => Math.round(Math.abs(normCf(cF) - cP) * 100) / 100;
+          // Hypothesis validation %: how close Cf(normalized) and Cp are on 0-10 scale
           const hypothesisPct = (cF: number, cP: number): number => {
-            const delta = Math.abs(cF - cP);
-            return Math.round(Math.max(0, Math.min(100, 100 - (delta / 110 * 100))) * 10) / 10;
+            const delta = Math.abs(normCf(cF) - cP);
+            return Math.round(Math.max(0, Math.min(100, 100 - (delta / 10 * 100))) * 10) / 10;
+          };
+          // Zone classification for Cp (scale 1-10) — mirrors getZone but with proportional boundaries
+          // Cf zones: Critical 0-20 (18%), Noise 21-50 (27%), Medium 51-80 (27%), Supreme 81-110 (27%)
+          // Cp zones: Critical 1-2, Noise 2.1-5, Medium 5.1-8, Supreme 8.1-10 (proportional on 1-10 scale)
+          const getZoneCp = (score: number): string => {
+            if (score <= 2) return "Critical";
+            if (score <= 5) return "Noise";
+            if (score <= 8) return "Medium";
+            return "Supreme";
           };
           const getValidationColor = (pct: number): string => {
             if (pct >= 80) return "#059669";
@@ -5338,21 +5681,21 @@ export default function StudiuAdminPage() {
                 { heading: "Concluzie", text: `${v >= 80 ? "Formula RIFC demonstreaza capacitate predictiva solida." : v >= 50 ? "Formula RIFC are potentialul de a prezice, dar necesita refinare." : "Formula RIFC nu reuseste sa prezica in acest context."} Acest scor de ${val}% ${v >= 80 ? "sustine publicarea rezultatelor ca evidenta pentru validarea ipotezei." : v >= 50 ? "justifica continuarea cercetarii cu un esantion mai mare sau ajustari metodologice." : "sugereaza revizuirea modelului teoretic sau a instrumentului de masurare."}` },
               ]};
               case "score_r": return { sections: [
-                { heading: "Ce reprezinta R (Relevanta)", text: `Scorul R = ${val} masoara cat de relevant percepe respondentul mesajul de marketing in raport cu nevoile, interesele sau contextul sau personal. Se evalueaza pe o scala de la 1 la 5 (1 = complet irelevant, 5 = foarte relevant).` },
+                { heading: "Ce reprezinta R (Relevanta)", text: `Scorul R = ${val} masoara cat de relevant percepe respondentul mesajul de marketing in raport cu nevoile, interesele sau contextul sau personal. Se evalueaza pe o scala de la 1 la 10 (1 = complet irelevant, 10 = foarte relevant).` },
                 { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, R este componenta aditionala de baza. Relevanta actioneaza ca un "gate" (prag): daca R < ${GATE}, formula prezice ca materialul va avea impact scazut, indiferent cat de interesant sau bine executat este. R se aduna direct la produsul I×F.` },
                 { heading: "De ce arata acest rezultat", text: v >= 4 ? `R = ${val} indica o relevanta ridicata. Respondentii considera ca mesajul se adreseaza direct nevoilor lor. Aceasta baza solida permite amplificarea prin I×F.` : v >= GATE ? `R = ${val} indica o relevanta acceptabila. Mesajul trece Relevance Gate (>= ${GATE}), dar exista spatiu de imbunatatire a targetarii.` : `R = ${val} indica relevanta scazuta, sub pragul Gate de ${GATE}. Mesajul nu rezoneza cu audienta tinta, ceea ce diminueaza drastic eficacitatea, indiferent de calitatea executiei (F) sau interesul generat (I).` },
                 { heading: "Cum se interpreteaza", text: `R >= 4: Excelent — mesajul este foarte relevant. R >= ${GATE}: Acceptabil — formula poate functiona. R < ${GATE}: Gate Fail — materialul necesita re-targetare sau reformulare fundamentala a mesajului.` },
                 { heading: "Concluzie", text: `Cu R = ${val}, ${v >= GATE ? `materialul depaseste Relevance Gate si poate beneficia de amplificarea I×F.` : `materialul nu depaseste Relevance Gate — prioritatea este imbunatatirea relevantei inainte de a optimiza Interesul sau Forma.`}` },
               ]};
               case "score_i": return { sections: [
-                { heading: "Ce reprezinta I (Interes)", text: `Scorul I = ${val} masoara cat de captivant si interesant percepe respondentul materialul de marketing. Se evalueaza pe o scala de la 1 la 5 (1 = plictisitor, 5 = extrem de interesant/captivant).` },
+                { heading: "Ce reprezinta I (Interes)", text: `Scorul I = ${val} masoara cat de captivant si interesant percepe respondentul materialul de marketing. Se evalueaza pe o scala de la 1 la 10 (1 = plictisitor, 10 = extrem de interesant/captivant).` },
                 { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, I este primul factor al componentei multiplicative. Interesul se inmulteste cu Forma (F) — daca continutul este interesant DAR prost executat, produsul I×F va fi modest. Daca este si interesant SI bine executat, amplificarea este maxima.` },
                 { heading: "De ce arata acest rezultat", text: v >= 4 ? `I = ${val} arata ca materialul capteaza atentia. Continutul, mesajul sau povestea rezoneza cu audienta si genereaza curiozitate sau implicare emotionala.` : v >= 3 ? `I = ${val} arata un interes moderat. Materialul nu este plictisitor, dar nici nu iese in evidenta — exista potential de imbunatatire prin storytelling, hooks mai puternice sau elemente de noutate.` : `I = ${val} arata un interes scazut. Materialul nu reuseste sa capteze atentia — continutul este perceput ca generic, repetitiv sau fara valoare adaugata.` },
                 { heading: "Cum se interpreteaza", text: `I >= 4: Materialul genereaza interes puternic — amplificarea prin F va fi semnificativa. I 3-4: Interes moderat — produsul I×F va fi mediu. I < 3: Interes scazut — chiar si o executie excelenta (F mare) nu va compensa.` },
                 { heading: "Concluzie", text: `Cu I = ${val}, ${v >= 4 ? "materialul are un continut captivant care amplifica impactul formulei." : v >= 3 ? "materialul mentine atentia dar nu iese in evidenta — optimizarea continutului poate creste semnificativ scorul C." : "materialul necesita o reformulare fundamentala a continutului pentru a genera interes."}` },
               ]};
               case "score_f": return { sections: [
-                { heading: "Ce reprezinta F (Forma)", text: `Scorul F = ${val} masoara calitatea executiei vizuale, audio si de design a materialului de marketing. Se evalueaza pe o scala de la 1 la 5 (1 = executie foarte slaba, 5 = executie exceptionala/profesionala).` },
+                { heading: "Ce reprezinta F (Forma)", text: `Scorul F = ${val} masoara calitatea executiei vizuale, audio si de design a materialului de marketing. Se evalueaza pe o scala de la 1 la 10 (1 = executie foarte slaba, 10 = executie exceptionala/profesionala).` },
                 { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, F este al doilea factor al componentei multiplicative. Forma amplifica (sau diminueaza) Interesul: un continut interesant (I mare) cu executie excelenta (F mare) produce un produs I×F maxim. Forma slaba "franeaza" impactul chiar si al celui mai bun continut.` },
                 { heading: "De ce arata acest rezultat", text: v >= 4 ? `F = ${val} indica o executie de inalta calitate. Designul, layoutul, tipografia, culorile si elementele vizuale sunt percepute ca profesionale si coerente.` : v >= 3 ? `F = ${val} indica o executie acceptabila. Nu sunt erori grave, dar materialul nu impresioneza — poate fi imbunatatit prin design mai atent, imagine mai clara, sau layout mai profesional.` : `F = ${val} indica o executie slaba. Materialul este perceput ca neprofesional, cu probleme vizuale, text greu de citit, sau design necorespunzator.` },
                 { heading: "Cum se interpreteaza", text: `F >= 4: Executie profesionala — amplifica puternic Interesul. F 3-4: Executie acceptabila — nu obstructioneaza, dar nici nu adauga. F < 3: Executie problematica — diminueaza impactul indiferent de calitatea continutului.` },
@@ -5366,18 +5709,18 @@ export default function StudiuAdminPage() {
                 { heading: "Concluzie", text: `Scorul predictiv de ${val} plaseaza materialul in zona ${getZone(v)}. ${v > 80 ? "Formula prezice un impact puternic — daca C perceput confirma, ipoteza este validata." : v > 50 ? "Formula prezice un impact moderat — comparatia cu C perceput va arata daca modelul este calibrat corect." : "Formula prezice un impact scazut — necesita interventie pe factorii cu scoruri mici."}` },
               ]};
               case "score_cp": return { sections: [
-                { heading: "Ce reprezinta C perceput", text: `Scorul C perceput = ${val} este evaluarea directa a respondentului: cat de clar, convingator si memorabil percepe mesajul materialului de marketing. Este masurat independent de R, I si F, pe aceeasi scala 0-110.` },
-                { heading: "Rolul in validarea formulei", text: `C perceput este "realitatea" — perceptia reala a respondentului. Formula RIFC prezice ca R+(I×F)=C ar trebui sa aproximeze C perceput. Comparand cele doua (C formula vs C perceput), validam daca formula functioneaza: daca sunt apropiate, formula prezice corect; daca difera mult, formula nu surprinde toti factorii.` },
-                { heading: "De ce arata acest rezultat", text: `C perceput = ${val} reflecta experienta subiectiva a respondentului cu materialul. ${v > 80 ? "Respondentul a perceput mesajul ca fiind foarte clar si convingator — indiferent de formula, impactul real este puternic." : v > 50 ? "Respondentul a perceput mesajul ca moderat de clar — exista loc de imbunatatire." : "Respondentul nu a fost convins de mesaj — materialul nu comunica eficient."}` },
-                { heading: "Cum se interpreteaza", text: `C perceput este ancora de validare. Daca C formula ≈ C perceput → formula functioneaza. Daca C formula >> C perceput → formula supraestimeaza (materialul pare bun pe hartie dar nu convinge). Daca C formula << C perceput → formula subestimeaza (exista factori pozitivi pe care formula nu ii surprinde).` },
-                { heading: "Concluzie", text: `Scorul C perceput de ${val} (zona ${getZone(v)}) reprezinta evaluarea reala a audientei. ${_ctx.cf ? `Comparat cu C formula = ${_ctx.cf}, diferenta Delta = ${_ctx.delta} indica ${Math.abs(v - Number(_ctx.cf)) < 15 ? "o buna aliniere intre predictie si realitate." : "o discrepanta care necesita investigare suplimentara."}` : ""}` },
+                { heading: "Ce reprezinta C perceput", text: `Scorul C perceput = ${val} este evaluarea directa a respondentului: cat de clar, convingator si memorabil percepe mesajul materialului de marketing. Este masurat independent de R, I si F, pe scala 1-10.` },
+                { heading: "Rolul in validarea formulei", text: `C perceput este "realitatea" — perceptia reala a respondentului. Formula RIFC prezice ca R+(I×F)=C ar trebui sa aproximeze C perceput. Pentru comparatie, Cf (scala 0-110) este normalizat la scala 1-10 prin impartire la 11. Daca sunt apropiate, formula prezice corect; daca difera mult, formula nu surprinde toti factorii.` },
+                { heading: "De ce arata acest rezultat", text: `C perceput = ${val} reflecta experienta subiectiva a respondentului cu materialul. ${v > 8 ? "Respondentul a perceput mesajul ca fiind foarte clar si convingator — indiferent de formula, impactul real este puternic." : v > 5 ? "Respondentul a perceput mesajul ca moderat de clar — exista loc de imbunatatire." : "Respondentul nu a fost convins de mesaj — materialul nu comunica eficient."}` },
+                { heading: "Cum se interpreteaza", text: `C perceput este ancora de validare. Daca Cf normalizat ≈ Cp → formula functioneaza. Daca Cf norm. >> Cp → formula supraestimeaza (materialul pare bun pe hartie dar nu convinge). Daca Cf norm. << Cp → formula subestimeaza (exista factori pozitivi pe care formula nu ii surprinde).` },
+                { heading: "Concluzie", text: `Scorul C perceput de ${val} (zona ${getZoneCp(v)}) reprezinta evaluarea reala a audientei. ${_ctx.cf ? `Comparat cu C formula = ${_ctx.cf} (normalizat: ${normCf(Number(_ctx.cf))}), diferenta Delta = ${_ctx.delta} pe scala 1-10 indica ${Number(_ctx.delta) < 1.5 ? "o buna aliniere intre predictie si realitate." : "o discrepanta care necesita investigare suplimentara."}` : ""}` },
               ]};
               case "score_delta": return { sections: [
-                { heading: "Ce reprezinta Delta", text: `Delta = ${val} este diferenta absoluta intre C formula si C perceput: |Cf - Cp|. Masoara cat de precisa este predictia formulei RIFC — cu cat Delta este mai mica, cu atat formula prezice mai exact.` },
-                { heading: "Cum se calculeaza", text: `Delta = |C formula - C perceput| = |${_ctx.cf || "?"} - ${_ctx.cp || "?"}| = ${val}. Pe o scala de 0-110, o Delta mica (< 10) indica predictie excelenta, iar una mare (> 30) indica discrepanta semnificativa.` },
-                { heading: "De ce arata acest rezultat", text: `Delta = ${val} ${v < 10 ? "indica o predictie excelenta — formula RIFC surprinde cu acuratete factorii care influenteaza perceptia C." : v < 20 ? "indica o predictie buna — exista o aliniere solida intre model si realitate, cu o mica variatie acceptabila." : v < 30 ? "indica o predictie moderata — exista factori care influenteaza perceptia C dincolo de R, I si F." : "indica o discrepanta semnificativa — formula nu surprinde factorii cheie care influenteaza perceptia respondentilor."}` },
-                { heading: "Cum se interpreteaza", text: `Delta 0-10: Predictie excelenta — formula este calibrata corect. Delta 10-20: Predictie buna — variatie acceptabila. Delta 20-30: Predictie moderata — necesita investigare. Delta > 30: Discrepanta — formula nu functioneaza in acest context.` },
-                { heading: "Concluzie", text: `O Delta de ${val} ${v < 15 ? "sustine validitatea formulei RIFC ca instrument de predictie." : v < 25 ? "sugereaza ca formula necesita calibrare fina, dar conceptul fundamental este viabil." : "indica nevoia de a integra factori suplimentari in model sau de a reconsidera ponderile componentelor."}` },
+                { heading: "Ce reprezinta Delta", text: `Delta = ${val} este diferenta absoluta intre C formula (normalizat la scala 1-10) si C perceput (scala 1-10). Masoara cat de precisa este predictia formulei RIFC — cu cat Delta este mai mica, cu atat formula prezice mai exact.` },
+                { heading: "Cum se calculeaza", text: `Mai intai, Cf se normalizeaza: Cf_norm = Cf / 11 = ${_ctx.cf || "?"} / 11 = ${_ctx.cf ? normCf(Number(_ctx.cf)) : "?"}. Apoi Delta = |Cf_norm - Cp| = |${_ctx.cf ? normCf(Number(_ctx.cf)) : "?"} - ${_ctx.cp || "?"}| = ${val}. Pe scala 0-10, o Delta mica (< 1) indica predictie excelenta, iar una mare (> 3) indica discrepanta semnificativa.` },
+                { heading: "De ce arata acest rezultat", text: `Delta = ${val} ${v < 1 ? "indica o predictie excelenta — formula RIFC surprinde cu acuratete factorii care influenteaza perceptia C." : v < 2 ? "indica o predictie buna — exista o aliniere solida intre model si realitate, cu o mica variatie acceptabila." : v < 3 ? "indica o predictie moderata — exista factori care influenteaza perceptia C dincolo de R, I si F." : "indica o discrepanta semnificativa — formula nu surprinde factorii cheie care influenteaza perceptia respondentilor."}` },
+                { heading: "Cum se interpreteaza", text: `Delta 0-1: Predictie excelenta — formula este calibrata corect. Delta 1-2: Predictie buna — variatie acceptabila. Delta 2-3: Predictie moderata — necesita investigare. Delta > 3: Discrepanta — formula nu functioneaza in acest context.` },
+                { heading: "Concluzie", text: `O Delta de ${val} ${v < 1.5 ? "sustine validitatea formulei RIFC ca instrument de predictie." : v < 2.5 ? "sugereaza ca formula necesita calibrare fina, dar conceptul fundamental este viabil." : "indica nevoia de a integra factori suplimentari in model sau de a reconsidera ponderile componentelor."}` },
               ]};
               case "gate": return { sections: [
                 { heading: "Ce reprezinta Relevance Gate", text: `Relevance Gate arata ca ${_ctx.pass || 0} din ${_ctx.total || 0} materiale (${val}%) au un scor R (Relevanta) >= ${GATE}. Acest prag este conditia minima pentru ca formula RIFC sa poata functiona — fara relevanta, nici Interesul nici Forma nu conteaza.` },
@@ -5388,7 +5731,7 @@ export default function StudiuAdminPage() {
               ]};
               case "zonematch": return { sections: [
                 { heading: "Ce reprezinta Zone Match", text: `Zone Match = ${val}% arata ca ${_ctx.match || 0} din ${_ctx.total || 0} materiale au C formula si C perceput in aceeasi zona de performanta (Critical/Noise/Medium/Supreme). Aceasta este o masura calitativa a preciziei formulei.` },
-                { heading: "Cum functioneaza", text: `Scala 0-110 este impartita in 4 zone: Critical (0-20), Noise (21-50), Medium (51-80), Supreme (81-110). Daca formula plaseaza un material in zona Medium si respondentul il percepe tot in Medium, avem un Zone Match — formula prezice corect "categoria" de impact, chiar daca scorul exact difera putin.` },
+                { heading: "Cum functioneaza", text: `Fiecare scala are propriile zone proportionale. Cf (0-110): Critical (0-20), Noise (21-50), Medium (51-80), Supreme (81-110). Cp (1-10): Critical (1-2), Noise (2.1-5), Medium (5.1-8), Supreme (8.1-10). Daca formula plaseaza un material in zona Medium si respondentul il percepe tot in Medium pe scala sa, avem un Zone Match — formula prezice corect "categoria" de impact.` },
                 { heading: "De ce arata acest rezultat", text: `${val}% Zone Match ${v >= 80 ? "arata ca formula clasifica corect materialele in categorii de impact — chiar daca scorurile exacte difera usor, directia este corecta." : v >= 50 ? "arata o clasificare partiala corecta — formula nimeresste zona in jumatate din cazuri, dar exista materiale unde predictia si realitatea sunt in zone diferite." : "arata o clasificare slaba — formula plaseaza materialele in zone diferite fata de perceptia reala, ceea ce indica o problema de calibrare."}` },
                 { heading: "Cum se interpreteaza", text: `>= 80%: Formula clasifica corect — nivel inalt de incredere. 50-80%: Clasificare partiala — formula functioneaza dar nu pentru toate tipurile de materiale. < 50%: Clasificare slaba — formula necesita recalibrare sau factori suplimentari.` },
                 { heading: "Concluzie", text: `Un Zone Match de ${val}% ${v >= 70 ? "confirma ca formula RIFC are o capacitate solida de clasificare a materialelor in categorii de impact." : v >= 40 ? "sugereaza ca formula are potentialul de clasificare, dar necesita raffinare pentru anumite tipuri de materiale sau industrii." : "indica nevoia de a reconsidera structura formulei sau factorii inclusi."}` },
@@ -5401,7 +5744,7 @@ export default function StudiuAdminPage() {
               ]};
               case "zones": return { sections: [
                 { heading: "Ce reprezinta distributia pe zone", text: `Graficul compara cum sunt distribuite materialele pe cele 4 zone de performanta (Critical, Noise, Medium, Supreme) — o data calculat prin formula (C formula) si o data perceput de respondenti (C perceput).` },
-                { heading: "Cum se aplica", text: `Cele 4 zone sunt: Critical (0-20) = materialul nu comunica; Noise (21-50) = materialul exista dar nu se diferentiaza; Medium (51-80) = comunicare acceptabila; Supreme (81-110) = impact maxim. Daca distributiile formula vs perceput sunt similare, formula prezice corect.` },
+                { heading: "Cum se aplica", text: `Cele 4 zone se aplica proportional pe fiecare scala. Cf (0-110): Critical (0-20), Noise (21-50), Medium (51-80), Supreme (81-110). Cp (1-10): Critical (1-2), Noise (2.1-5), Medium (5.1-8), Supreme (8.1-10). Daca distributiile formula vs perceput sunt similare, formula prezice corect.` },
                 { heading: "De ce arata acest rezultat", text: `Distributia arata unde se concentreaza materialele. Daca majoritatea sunt in zona Medium/Supreme pe ambele coloane, materialele sunt eficiente si formula le prezice corect. Daca exista discrepante mari intre coloane, formula nu estimeaza corect pentru anumite materiale.` },
                 { heading: "Cum se interpreteaza", text: `Distributii similare intre Formula si Perceput = formula valida. Shift catre stanga pe Perceput (mai multe in Noise/Critical) fata de Formula = formula supraestimeaza. Shift catre dreapta pe Perceput = formula subestimeaza.` },
                 { heading: "Concluzie", text: `Comparand cele doua distributii se poate observa daca formula tinde sa supraestimeze sau subestimeze impactul real al materialelor, oferind directie pentru calibrare.` },
@@ -5425,12 +5768,47 @@ export default function StudiuAdminPage() {
                 const bGateOk = bR >= GATE;
                 return { sections: [
                   { heading: `Ce reprezinta rezultatul pentru ${nm}`, text: `Materialul "${nm}" are un scor de validare de ${bPct}%. Aceasta arata cat de precis prezice formula RIFC scorul de Claritate perceput de respondenti pentru acest material specific. Cu R=${_ctx.r}, I=${_ctx.i}, F=${_ctx.f}, formula calculeaza C=${_ctx.cf}, iar respondentii percep C=${_ctx.cp}.` },
-                  { heading: "Cum se aplica formula", text: `Pentru acest material: C formula = ${_ctx.r} + (${_ctx.i} × ${_ctx.f}) = ${_ctx.cf}. Aceasta valoare este comparata cu C perceput = ${_ctx.cp}. Diferenta Delta = ${_ctx.delta} puncte pe scala 0-110, ceea ce se traduce in ${bPct}% acuratete de predictie.` },
+                  { heading: "Cum se aplica formula", text: `Pentru acest material: C formula = ${_ctx.r} + (${_ctx.i} × ${_ctx.f}) = ${_ctx.cf} (pe scala 0-110, normalizat: ${_ctx.cf ? normCf(Number(_ctx.cf)) : "?"} pe scala 1-10). Aceasta valoare normalizata este comparata cu C perceput = ${_ctx.cp}. Diferenta Delta = ${_ctx.delta} puncte pe scala 1-10, ceea ce se traduce in ${bPct}% acuratete de predictie.` },
                   { heading: "De ce arata acest rezultat", text: `${bPct >= 80 ? `Materialul "${nm}" confirma formula — componentele R, I si F explica bine perceptia respondentilor. ${bGateOk ? "Relevanta este peste prag, iar combinatia I×F amplifica corect." : "Desi Relevance Gate nu este depasit, formula totusi prezice relativ corect."}` : bPct >= 50 ? `Materialul "${nm}" arata o aliniere partiala. ${!bGateOk ? `Cu R=${_ctx.r} sub Gate (${GATE}), materialul nu rezoneza suficient cu audienta.` : `Desi relevanta este OK, exista factori specifici acestui material care influenteaza perceptia dincolo de model.`}` : `Materialul "${nm}" nu valideaza formula in acest caz. Diferenta semnificativa de ${_ctx.delta} puncte sugereaza factori necontrolati (experienta anterioara cu brandul, context competitiv, moment de expunere).`}` },
                   { heading: "Cum se interpreteaza", text: `Fiecare material este un test individual al formulei. Materialele cu validare >= 80% confirma modelul. Cele cu 50-80% necesita analiza pe componente (care factor limiteaza?). Cele sub 50% sunt exceptii care pot oferi insight-uri valoroase despre limitarile modelului.` },
                   { heading: "Concluzie", text: `"${nm}" cu ${bPct}% validare ${bPct >= 80 ? "este o evidenta puternica pentru formula RIFC." : bPct >= 50 ? "ofera evidenta partiala — se recomanda analiza detaliata a componentelor individuale." : "reprezinta un caz unde formula necesita factori suplimentari pentru a explica perceptia."} ${!bGateOk ? `Atentie: R=${_ctx.r} < ${GATE} indica o problema fundamentala de relevanta.` : ""}` },
                 ]};
               }
+              case "h5": return { sections: [
+                { heading: "Ce testeaza H5", text: "Ipoteza H5 compara doua modele de combinare a Interesului (I) si Formei (F): modelul multiplicativ (I×F) din RIFC versus un model aditiv alternativ (I+F). Se compara Delta medie (eroarea de predictie absoluta) a fiecarui model fata de C perceput normalizat." },
+                { heading: "Cum se calculeaza", text: "Cf_mult = (R + I×F) / 11, Cf_adit = (R + I + F) / 30, Cp_norm = C_score / 10. Delta_mult = |Cf_mult - Cp_norm|, Delta_adit = |Cf_adit - Cp_norm|. Castigul % = ((Delta_adit - Delta_mult) / Delta_adit) × 100." },
+                { heading: "De ce conteaza", text: "Formula RIFC postuleaza ca I si F se amplifica reciproc — un continut foarte interesant dar prost prezentat pierde forta. Modelul aditiv nu capteaza aceasta interdependenta. Daca Delta multiplicativ < Delta aditiv, formula R+(I×F)=C este matematic superioara fata de R+I+F=C." },
+                { heading: "Cum se interpreteaza", text: "Castig > 10%: H5 confirmata — modelul multiplicativ prezice semnificativ mai precis. Castig 0-10%: Diferenta mica, ambele modele similare. Castig < 0%: Modelul aditiv performeaza mai bine — reconsidera structura formulei." },
+                { heading: "Concluzie", text: "Daca modelul multiplicativ castiga, formula RIFC este justificata matematic — sinergia I×F este reala si captureaza interdependenta intre calitatea continutului si calitatea executiei." },
+              ]};
+              case "h6": return { sections: [
+                { heading: "Ce testeaza H6", text: `Ipoteza H6 testeaza ca atunci cand R (Relevanta) este sub pragul Gate de ${GATE}, produsul I×F devine complet irelevant — C nu mai raspunde la I×F. Aceasta diferentiaza H6 de H1: H1 spune ca R mic = C mic, H6 spune ca sub R=${GATE}, I si F devin irelevante.` },
+                { heading: "Cum se calculeaza", text: `Se filtreaza DOAR raspunsurile cu r_score < ${GATE}. Pe acest subset se calculeaza corelatia Pearson intre I×F (produsul) si C_norm (c_computed/11). Daca |r| ≈ 0, I×F nu influenteaza C sub prag.` },
+                { heading: "Cum se interpreteaza", text: `|r| < 0.2: H6 confirmata — sub R=${GATE}, I×F nu influenteaza C. Poarta Relevantei functioneaza ca gate real. |r| 0.2-0.4: Influenta slaba reziduala a I×F sub prag. |r| > 0.4: H6 neconfirmata — I×F influenteaza C chiar sub R=${GATE}. Pragul poate fi incorect.` },
+                { heading: "De ce conteaza", text: `Daca R < ${GATE} si totusi I×F coreleaza cu C, inseamna ca R e doar o variabila obisnuita, nu un gate. Daca corelatia e ~0 (haos), inseamna ca sub prag, oricat investesti in Interes si Forma, nu produci Claritate. Aceasta ar fi cea mai puternica confirmare a originalitatii RIFC.` },
+                { heading: "Concluzie", text: `Un r aproape de 0 sub gate confirma puternic rolul de "poarta" al Relevantei — cel mai distinctiv element al formulei RIFC fata de alte framework-uri de marketing.` },
+              ]};
+              case "v1": return { sections: [
+                { heading: "Ce masoara Cronbach Alpha", text: "Cronbach Alpha (α) masoara consistenta interna a instrumentului de masurare. In cazul RIFC, verifica daca cele 4 dimensiuni (R, I, F, C normalizat) masoara un construct coerent — adica daca respondentii care dau scoruri mari pe o dimensiune tind sa dea scoruri mari si pe celelalte." },
+                { heading: "Formula", text: "α = (k/(k-1)) × (1 - Σσ²ᵢ / σ²total), unde k = numarul de dimensiuni (4), σ²ᵢ = varianta fiecarei dimensiuni, σ²total = varianta sumei tuturor dimensiunilor. Valori mai mari indica consistenta mai buna." },
+                { heading: "Praguri de interpretare", text: "α ≥ 0.9: Excelent. α ≥ 0.8: Bun. α ≥ 0.7: Acceptabil — pragul minim pentru publicare academica. α ≥ 0.6: Discutabil. α < 0.6: Slab — instrumentul necesita revizuire." },
+                { heading: "Matricea de corelatii", text: "Matricea inter-item arata corelatiile Pearson r intre fiecare pereche de dimensiuni. Corelatii moderate (0.3-0.7) sunt ideale — indica ca dimensiunile masoara aspecte diferite ale aceluiasi construct, fara a fi redundante." },
+                { heading: "Concluzie", text: "Un α adecvat (≥ 0.7) sustine ca instrumentul RIFC este fiabil si poate fi utilizat in cercetare academica. Corelatii inter-item echilibrate confirma ca fiecare dimensiune aduce informatie unica." },
+              ]};
+              case "v2": return { sections: [
+                { heading: "Ce arata histogramele", text: "Distributia frecventelor scorurilor pe fiecare dimensiune (R, I, F, C normalizat). Fiecare bara arata cate raspunsuri au primit acel scor (1-10). Linia verticala marcheaza media." },
+                { heading: "Skewness (asimetrie)", text: "Skewness masoara asimetria distributiei. Valori aproape de 0 = distributie simetrica. Pozitiv = coada catre dreapta (majoritatea scorurilor mici). Negativ = coada catre stanga (majoritatea scorurilor mari). |Skewness| < 1 indica o distributie aproximativ normala." },
+                { heading: "Kurtosis (aplatizare)", text: "Kurtosis (exces) masoara 'ascutimea' distributiei fata de curba normala. 0 = identic cu normala. Pozitiv = distributie mai ascutita (concentrata). Negativ = distributie mai plata (dispersata). |Kurtosis| < 2 indica normalitate acceptabila." },
+                { heading: "De ce conteaza normalitatea", text: "Distributii aproximativ normale (|skewness| < 1, |kurtosis| < 2) permit utilizarea testelor parametrice (t-test, ANOVA, regresie). Distributii puternic non-normale pot necesita teste non-parametrice sau transformari de date." },
+                { heading: "Concluzie", text: "Verificarea normalitatii distributiilor este un pas standard in validarea unui instrument de masurare. Rezultatele confirma sau infirma posibilitatea de a aplica statistici parametrice pe datele RIFC." },
+              ]};
+              case "calibrare": return { sections: [
+                { heading: "Ce reprezinta Factorul de Corectie", text: `Factorul de Corectie = Cp_mediu / Cf_norm_mediu = ${val}×. Masoara cat de mult subestimeaza (sau supraestimeaza) formula perceptia reala a respondentilor. Este raportul dintre media scorului C perceput direct si media scorului C calculat prin formula, ambele normalizate.` },
+                { heading: "Cum se calculeaza", text: "Cf_norm_mediu = media tuturor (c_computed / 11) din raspunsuri. Cp_mediu = media tuturor c_score din raspunsuri. Factor = Cp_mediu / Cf_norm_mediu. Un factor de 1.0 = calibrare perfecta." },
+                { heading: "Cum se interpreteaza", text: "1.0-1.2: Formula calibrata excelent. 1.2-1.5: Subestimare moderata — formula prezice mai putin decat percepe respondentul. 1.5-2.0: Subestimare semnificativa — factor de calibrare necesar. > 2.0: Discrepanta mare — verifica datele sau adauga factori noi in model." },
+                { heading: "De ce nu e o eroare", text: "Factorul de corectie nu indica o greseala in formula, ci o descoperire academica. Sugereaza ca exista factori (brand equity, emotie, context cultural, experienta anterioara) neinclusi in formula actuala. Aceasta justifica cercetarea continua si posibila extindere a modelului RIFC." },
+                { heading: "Concluzie", text: `Cu un factor de ${val}×, formula RIFC ${v <= 1.2 ? "este bine calibrata — predictia se aliniaza cu perceptia reala." : v <= 1.5 ? "subestimeaza moderat — exista factori pozitivi externi formulei care ridica perceptia." : "subestimeaza semnificativ — este necesara o investigare a factorilor care amplifica perceptia dincolo de R, I si F."}` },
+              ]};
               default: return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare a formulei RIFC." }] };
             }
           };
@@ -5467,23 +5845,24 @@ export default function StudiuAdminPage() {
           const grandF = Math.round((withData.reduce((a, s) => a + s.avg_f, 0) / n) * 100) / 100;
           const grandCf = Math.round((withData.reduce((a, s) => a + s.avg_c, 0) / n) * 100) / 100;
           const grandCp = Math.round((withData.reduce((a, s) => a + s.avg_c_score, 0) / n) * 100) / 100;
-          const grandDelta = Math.round(Math.abs(grandCf - grandCp) * 100) / 100;
+          const grandDelta = calcDelta(grandCf, grandCp);
           const grandHypPct = hypothesisPct(grandCf, grandCp);
           const grandZoneCf = getZone(grandCf);
-          const grandZoneCp = getZone(grandCp);
+          const grandZoneCp = getZoneCp(grandCp);
           const grandZoneMatch = grandZoneCf === grandZoneCp;
           const gatePassCount = withData.filter(s => s.avg_r >= GATE).length;
           const gatePassRate = Math.round((gatePassCount / n) * 100);
-          const zoneMatchCount = withData.filter(s => getZone(s.avg_c) === getZone(s.avg_c_score)).length;
+          const zoneMatchCount = withData.filter(s => getZone(s.avg_c) === getZoneCp(s.avg_c_score)).length;
           const zoneMatchRate = Math.round((zoneMatchCount / n) * 100);
 
           // ── Zone distribution ──
+          // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
           const zones = ["Critical", "Noise", "Medium", "Supreme"];
           const zoneDistFormula: Record<string, number> = { Critical: 0, Noise: 0, Medium: 0, Supreme: 0 };
           const zoneDistPerceived: Record<string, number> = { Critical: 0, Noise: 0, Medium: 0, Supreme: 0 };
           withData.forEach(s => {
             zoneDistFormula[getZone(s.avg_c)]++;
-            zoneDistPerceived[getZone(s.avg_c_score)]++;
+            zoneDistPerceived[getZoneCp(s.avg_c_score)]++;
           });
 
           // ── Per Industry aggregates ──
@@ -5573,8 +5952,11 @@ export default function StudiuAdminPage() {
                   );
                 })}
               </div>
+              {/* Source filter pills */}
+              {renderSourcePills()}
               <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>
                 Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
+                {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
               </div>
 
               {/* ═══ TOTAL ═══ */}
@@ -5585,11 +5967,7 @@ export default function StudiuAdminPage() {
                     background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — TOTAL</div>
-                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{results.completedRespondents}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{results.totalRespondents}</strong> pornite ({results.totalResponses} raspunsuri individuale)
-                      {logData.length > 0 && results.totalRespondents !== logData.length && (
-                        <span style={{ color: "#f59e0b", fontWeight: 700 }}> (LOG: {logData.length} resp.)</span>
-                      )}
-                    </div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{results.completedRespondents}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{results.totalRespondents}</strong> pornite ({results.totalResponses} raspunsuri individuale)</div>
                     <div style={{ fontSize: 48, fontWeight: 900, color: getValidationColor(grandHypPct), lineHeight: 1 }}>{grandHypPct}%</div>
                     <div style={{
                       display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
@@ -5717,10 +6095,10 @@ export default function StudiuAdminPage() {
                       const iF = Math.round((items.reduce((a, s) => a + s.avg_f, 0) / iN) * 100) / 100;
                       const iCf = Math.round((items.reduce((a, s) => a + s.avg_c, 0) / iN) * 100) / 100;
                       const iCp = Math.round((items.reduce((a, s) => a + s.avg_c_score, 0) / iN) * 100) / 100;
-                      const iDelta = Math.round(Math.abs(iCf - iCp) * 100) / 100;
+                      const iDelta = calcDelta(iCf, iCp);
                       const iPct = hypothesisPct(iCf, iCp);
                       const iZoneCf = getZone(iCf);
-                      const iZoneCp = getZone(iCp);
+                      const iZoneCp = getZoneCp(iCp);
                       const iZoneMatch = iZoneCf === iZoneCp;
                       const iGatePass = items.filter(s => s.avg_r >= GATE).length;
                       const iColor = INDUSTRY_COLORS[idx % INDUSTRY_COLORS.length];
@@ -5799,7 +6177,7 @@ export default function StudiuAdminPage() {
                                   {items.map(s => {
                                     const sPct = hypothesisPct(s.avg_c, s.avg_c_score);
                                     const sZone = getZone(s.avg_c);
-                                    const sDelta = Math.round(Math.abs(s.avg_c - s.avg_c_score) * 100) / 100;
+                                    const sDelta = calcDelta(s.avg_c, s.avg_c_score);
                                     return (
                                       <tr key={s.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                                         <td style={{ ...tdStyle, textAlign: "left" as const, fontWeight: 600, color: "#111827", fontSize: 12 }}>{s.name}</td>
@@ -5841,10 +6219,10 @@ export default function StudiuAdminPage() {
                     .map(s => ({
                       ...s,
                       pct: hypothesisPct(s.avg_c, s.avg_c_score),
-                      delta: Math.round(Math.abs(s.avg_c - s.avg_c_score) * 100) / 100,
+                      delta: calcDelta(s.avg_c, s.avg_c_score),
                       zoneCf: getZone(s.avg_c),
-                      zoneCp: getZone(s.avg_c_score),
-                      zoneMatch: getZone(s.avg_c) === getZone(s.avg_c_score),
+                      zoneCp: getZoneCp(s.avg_c_score),
+                      zoneMatch: getZone(s.avg_c) === getZoneCp(s.avg_c_score),
                       gateOk: s.avg_r >= GATE,
                     }))
                     .sort((a, b) => b.pct - a.pct)
@@ -5893,6 +6271,1013 @@ export default function StudiuAdminPage() {
                   }
                 </div>
               )}
+
+              {/* ═══════════════════════════════════════════════════════════════
+                  TESTARE IPOTEZE H1 – H4 — SVG scatter & bar charts
+                  ═══════════════════════════════════════════════════════════════ */}
+              {(() => {
+                const scatter = results.hypothesisScatterData || [];
+                if (scatter.length === 0) return null;
+
+                // Build stimulus_id → marketing_objective lookup
+                const stimObjMap: Record<string, string> = {};
+                for (const s of results.stimuliResults || []) {
+                  stimObjMap[s.id] = (s as any).marketing_objective || "conversie";
+                }
+                // Helper: check if a scatter point passes the H2 objective filter
+                const passesObjFilter = (d: { stimulus_id: string }) => h2ObjFilter.includes(stimObjMap[d.stimulus_id] || "conversie");
+
+                const chartW = 520;
+                const chartH = 260;
+                const pad = { l: 38, r: 12, t: 12, b: 28 };
+                const plotW = chartW - pad.l - pad.r;
+                const plotH = chartH - pad.t - pad.b;
+
+                // ── Linear regression helper ──
+                const linReg = (pts: { x: number; y: number }[]): { slope: number; intercept: number; r2: number } => {
+                  const n = pts.length;
+                  if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
+                  const sx = pts.reduce((a, p) => a + p.x, 0);
+                  const sy = pts.reduce((a, p) => a + p.y, 0);
+                  const sxy = pts.reduce((a, p) => a + p.x * p.y, 0);
+                  const sx2 = pts.reduce((a, p) => a + p.x * p.x, 0);
+                  const slope = (n * sxy - sx * sy) / (n * sx2 - sx * sx) || 0;
+                  const intercept = (sy - slope * sx) / n;
+                  const yMean = sy / n;
+                  const ssTot = pts.reduce((a, p) => a + (p.y - yMean) ** 2, 0);
+                  const ssRes = pts.reduce((a, p) => a + (p.y - (slope * p.x + intercept)) ** 2, 0);
+                  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+                  return { slope, intercept, r2 };
+                };
+
+                // ── Axis helpers ──
+                const toX = (val: number, minV: number, maxV: number) => pad.l + ((val - minV) / (maxV - minV || 1)) * plotW;
+                const toY = (val: number, minV: number, maxV: number) => pad.t + plotH - ((val - minV) / (maxV - minV || 1)) * plotH;
+
+                const gridLines = (minV: number, maxV: number, isX: boolean, steps = 5) => {
+                  const stepSize = (maxV - minV) / steps;
+                  return Array.from({ length: steps + 1 }, (_, i) => {
+                    const v = Math.round((minV + i * stepSize) * 10) / 10;
+                    const pos = isX ? toX(v, minV, maxV) : toY(v, minV, maxV);
+                    return { v, pos };
+                  });
+                };
+
+                const renderGrid = (xMin: number, xMax: number, yMin: number, yMax: number, xLabel: string, yLabel: string) => (
+                  <>
+                    {/* Y grid + labels */}
+                    {gridLines(yMin, yMax, false).map((g, i) => (
+                      <g key={`yg-${i}`}>
+                        <line x1={pad.l} y1={g.pos} x2={chartW - pad.r} y2={g.pos} stroke="#f3f4f6" strokeWidth={0.5} />
+                        <text x={pad.l - 4} y={g.pos + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{g.v}</text>
+                      </g>
+                    ))}
+                    {/* X grid + labels */}
+                    {gridLines(xMin, xMax, true).map((g, i) => (
+                      <g key={`xg-${i}`}>
+                        <line x1={g.pos} y1={pad.t} x2={g.pos} y2={chartH - pad.b} stroke="#f3f4f6" strokeWidth={0.5} />
+                        <text x={g.pos} y={chartH - pad.b + 14} textAnchor="middle" fontSize={8} fill="#9CA3AF">{g.v}</text>
+                      </g>
+                    ))}
+                    {/* Axis labels */}
+                    <text x={chartW / 2} y={chartH - 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280">{xLabel}</text>
+                    <text x={8} y={chartH / 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280" transform={`rotate(-90 8 ${chartH / 2})`}>{yLabel}</text>
+                    {/* Border */}
+                    <rect x={pad.l} y={pad.t} width={plotW} height={plotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                  </>
+                );
+
+                const cardStyle: React.CSSProperties = {
+                  background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px",
+                  fontSize: 12, color: "#374151", lineHeight: 1.6, marginTop: 10,
+                };
+
+                // ── H1: R vs C scatter (normalized 0-10) ──
+                const h1Data = scatter.filter(d => d.c_computed > 0).map(d => ({ ...d, cNorm: Math.round((d.c_computed / 11) * 100) / 100 }));
+                const h1XMin = 0, h1XMax = 11, h1YMin = 0, h1YMax = 10;
+                const h1BelowGate = h1Data.filter(d => d.r < GATE);
+                const h1AboveGate = h1Data.filter(d => d.r >= GATE);
+                const h1BelowAvgC = h1BelowGate.length > 0 ? Math.round((h1BelowGate.reduce((a, d) => a + d.cNorm, 0) / h1BelowGate.length) * 100) / 100 : 0;
+                const h1AboveAvgC = h1AboveGate.length > 0 ? Math.round((h1AboveGate.reduce((a, d) => a + d.cNorm, 0) / h1AboveGate.length) * 100) / 100 : 0;
+
+                // ── H2: C vs CTA scatter (filtered by marketing_objective, normalized X) ──
+                const h2DataAll = scatter.filter(d => d.c_computed > 0 && d.cta != null && d.cta > 0);
+                const h2Data = h2DataAll.filter(passesObjFilter);
+                const h2Pts = h2Data.map(d => ({ x: d.c_computed / 11, y: d.cta! }));
+                const h2Reg = linReg(h2Pts);
+                const h2PearsonR = _pearsonR(h2Pts.map(p => p.x), h2Pts.map(p => p.y));
+                const h2XMin = 0, h2XMax = 10, h2YMin = 0, h2YMax = 11;
+
+                // Separate data by objective for color-coded dots
+                const h2ByObj: Record<string, typeof h2Data> = {};
+                for (const d of h2Data) {
+                  const obj = stimObjMap[d.stimulus_id] || "conversie";
+                  if (!h2ByObj[obj]) h2ByObj[obj] = [];
+                  h2ByObj[obj].push(d);
+                }
+
+                // Awareness/engagement secondary insight
+                const h2AwareEng = h2DataAll.filter(d => {
+                  const obj = stimObjMap[d.stimulus_id] || "conversie";
+                  return obj === "awareness" || obj === "engagement";
+                });
+                const h2Conv = h2DataAll.filter(d => {
+                  const obj = stimObjMap[d.stimulus_id] || "conversie";
+                  return obj === "conversie";
+                });
+                const h2AEAvgCta = h2AwareEng.length > 0 ? Math.round((h2AwareEng.reduce((a, d) => a + d.cta!, 0) / h2AwareEng.length) * 100) / 100 : 0;
+                const h2ConvAvgCta = h2Conv.length > 0 ? Math.round((h2Conv.reduce((a, d) => a + d.cta!, 0) / h2Conv.length) * 100) / 100 : 0;
+
+                // ── H3: C vs CTA split by brand (normalized X) ──
+                const h3Known = h2Data.filter(d => d.brand === true);
+                const h3Unknown = h2Data.filter(d => d.brand === false);
+                const h3RegKnown = linReg(h3Known.map(d => ({ x: d.c_computed / 11, y: d.cta! })));
+                const h3RegUnknown = linReg(h3Unknown.map(d => ({ x: d.c_computed / 11, y: d.cta! })));
+                const h3PearsonKnown = _pearsonR(h3Known.map(d => d.c_computed / 11), h3Known.map(d => d.cta!));
+                const h3PearsonUnknown = _pearsonR(h3Unknown.map(d => d.c_computed / 11), h3Unknown.map(d => d.cta!));
+
+                // ── H4: Per-material C vs brand_rate bar chart ──
+                const h4Materials = withData
+                  .filter(s => s.response_count > 0 && (s.brand_yes + s.brand_no) > 0)
+                  .map(s => ({
+                    name: s.name.length > 18 ? s.name.slice(0, 16) + "…" : s.name,
+                    fullName: s.name,
+                    cNorm: Math.round((s.avg_c / 110) * 100),
+                    brandRate: s.brand_rate,
+                  }))
+                  .sort((a, b) => b.cNorm - a.cNorm)
+                  .slice(0, 20);
+                const h4BarW = h4Materials.length > 0 ? Math.min(28, Math.floor((chartW - pad.l - pad.r - 20) / h4Materials.length / 2)) : 20;
+
+                return (
+                  <div style={{ marginTop: 32, borderTop: "2px solid #e5e7eb", paddingTop: 24 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                      <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H6)</div>
+                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {scatter.length} raspunsuri individuale.</div>
+                      </div>
+                    </div>
+
+                    {/* ── GRAFIC H1 — Poarta Relevanței ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H1: Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
+                        <strong>Ce testeaza:</strong> Relevanta (R) functioneaza ca un prag minim — sub R={GATE}, formula prezice ca mesajul nu produce Claritate, indiferent de Interes sau Forma.{" "}
+                        <strong>Metoda:</strong> Scatter plot cu comparatie medii pe doua grupuri (R&lt;{GATE} vs R&ge;{GATE}).{" "}
+                        <strong>Interpretare:</strong> Diferenta &gt; 2 puncte = confirmat, 1-2 = partial, &lt; 1 = neconfirmat.
+                      </div>
+                      {/* Stats banner */}
+                      {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
+                        const diff = Math.round((h1AboveAvgC - h1BelowAvgC) * 100) / 100;
+                        const verdict = diff > 2 ? "H1 CONFIRMATA" : diff >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
+                        const verdColor = diff > 2 ? "#059669" : diff >= 1 ? "#D97706" : "#DC2626";
+                        const verdIcon = diff > 2 ? "\u2705" : diff >= 1 ? "\u26A0\uFE0F" : "\u274C";
+                        return (
+                          <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fee2e2" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Media C cand R&lt;{GATE}</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgC}</div>
+                              </div>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #d1fae5" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Media C cand R&ge;{GATE}</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgC}</div>
+                              </div>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Diferenta</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{diff.toFixed(2)}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                          </div>
+                        );
+                      })()}
+                      <div style={{ overflowX: "auto" as const }}>
+                        <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
+                          {renderGrid(h1XMin, h1XMax, h1YMin, h1YMax, "R (Relevanta)", "C formula (norm. 0-10)")}
+                          {/* Gate line */}
+                          <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
+                          <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">Prag R={GATE}</text>
+                          {/* Dots — red below gate, green above */}
+                          {h1Data.map((d, i) => (
+                            <circle key={i} cx={toX(d.r, h1XMin, h1XMax)} cy={toY(d.cNorm, h1YMin, h1YMax)} r={3} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.55} />
+                          ))}
+                          {/* Legend */}
+                          <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
+                          <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1BelowGate.length})</text>
+                          <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
+                          <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1AboveGate.length})</text>
+                        </svg>
+                      </div>
+                      <div style={cardStyle}>
+                        <strong>H1 — Poarta Relevantei:</strong> Ipoteza centrala a RIFC sustine ca Relevanta functioneaza ca un prag minim, nu ca o variabila obisnuita. Sub R={GATE}, indiferent cat de interesant e continutul sau cat de bine e prezentat, mesajul nu produce Claritate. Zona rosie din grafic (R&lt;{GATE}) ar trebui sa arate C sistematic mai mic decat zona verde (R&ge;{GATE}).
+                        {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
+                          const diff = h1AboveAvgC - h1BelowAvgC;
+                          return diff > 2
+                            ? <> <strong style={{ color: "#059669" }}>Poarta Relevantei functioneaza — diferenta de {diff.toFixed(2)} puncte confirma ipoteza.</strong></>
+                            : diff >= 1
+                              ? <> <strong style={{ color: "#D97706" }}>Efect prezent dar moderat (diferenta {diff.toFixed(2)}) — date suplimentare necesare.</strong></>
+                              : <> <strong style={{ color: "#DC2626" }}>R nu actioneaza ca gate in acest esantion (diferenta {diff.toFixed(2)}).</strong></>;
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* ── GRAFIC H2 — Corelatie C → CTA (cu filtru Obiectiv Marketing) ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H2: Formula prezice actiunea reala <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
+                        <strong>Ce testeaza:</strong> Daca materialele cu scor C (Claritate) mai mare genereaza intentie de actiune (CTA) mai mare — validarea practica a formulei RIFC.{" "}
+                        <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
+                        <strong>Interpretare:</strong> r &gt; 0.7 = corelatie puternica (confirmata), r 0.4-0.7 = moderata (partial), r &lt; 0.4 = slaba (nesemnificativa).
+                      </div>
+                      {/* Stats banner */}
+                      {(() => {
+                        const absR = Math.abs(h2PearsonR);
+                        const verdict = absR > 0.7 ? "Corelatie puternica" : absR >= 0.4 ? "Corelatie moderata" : "Corelatie slaba";
+                        const verdColor = absR > 0.7 ? "#059669" : absR >= 0.4 ? "#D97706" : "#DC2626";
+                        const verdIcon = absR > 0.7 ? "\u2705" : absR >= 0.4 ? "\u26A0\uFE0F" : "\u274C";
+                        return (
+                          <div style={{ marginBottom: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Pearson R</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{h2PearsonR.toFixed(3)}</div>
+                              </div>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>N raspunsuri filtrate</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h2Data.length}</div>
+                              </div>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>r&sup2; (coeficient determinare)</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h2Reg.r2.toFixed(3)}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} H2 {verdict}</div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Objective filter pills */}
+                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 12 }}>
+                        <span style={{ fontSize: 10, color: "#6B7280", fontWeight: 600, lineHeight: "24px" }}>Filtru obiectiv:</span>
+                        {MARKETING_OBJECTIVES.map((o) => {
+                          const active = h2ObjFilter.includes(o.value);
+                          const count = (h2ByObj[o.value] || []).length;
+                          return (
+                            <button key={o.value} onClick={() => {
+                              setH2ObjFilter(prev => active ? prev.filter(v => v !== o.value) : [...prev, o.value]);
+                            }} style={{
+                              padding: "3px 10px", fontSize: 10, fontWeight: 700, borderRadius: 12,
+                              border: `1.5px solid ${active ? o.color : "#e5e7eb"}`,
+                              background: active ? o.bg : "#fff",
+                              color: active ? o.color : "#9CA3AF",
+                              cursor: "pointer", transition: "all 0.15s",
+                            }}>
+                              {o.label} ({count})
+                            </button>
+                          );
+                        })}
+                        <button onClick={() => setH2ObjFilter(MARKETING_OBJECTIVES.map(o => o.value))} style={{
+                          padding: "3px 8px", fontSize: 9, borderRadius: 12, border: "1px solid #e5e7eb",
+                          background: "#f9fafb", color: "#6B7280", cursor: "pointer",
+                        }}>Toate</button>
+                      </div>
+
+                      <div style={{ overflowX: "auto" as const }}>
+                        <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
+                          {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
+                          {/* Trend line */}
+                          {h2Pts.length >= 2 && (() => {
+                            const x1 = h2XMin;
+                            const x2 = h2XMax;
+                            const y1v = Math.max(h2YMin, Math.min(h2YMax, h2Reg.slope * x1 + h2Reg.intercept));
+                            const y2v = Math.max(h2YMin, Math.min(h2YMax, h2Reg.slope * x2 + h2Reg.intercept));
+                            return <line x1={toX(x1, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(x2, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
+                          })()}
+                          {/* Color-coded dots by objective (normalized X) */}
+                          {h2Data.map((d, i) => {
+                            const obj = stimObjMap[d.stimulus_id] || "conversie";
+                            const mo = MARKETING_OBJECTIVES.find(o => o.value === obj);
+                            return <circle key={i} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3.5} fill={mo?.color || "#2563EB"} opacity={0.55} />;
+                          })}
+                          {/* Legend — per objective counts (stacked vertically) */}
+                          {(() => {
+                            const items = MARKETING_OBJECTIVES.filter(o => h2ObjFilter.includes(o.value) && (h2ByObj[o.value] || []).length > 0);
+                            return items.map((o, idx) => {
+                              const lx = pad.l + 4 + idx * Math.floor((chartW - pad.l - pad.r - 10) / Math.max(items.length, 1));
+                              return (
+                                <g key={o.value}>
+                                  <circle cx={lx} cy={chartH - 2} r={3} fill={o.color} />
+                                  <text x={lx + 6} y={chartH + 1} fontSize={7} fill={o.color} fontWeight={600}>{o.label} ({(h2ByObj[o.value] || []).length})</text>
+                                </g>
+                              );
+                            });
+                          })()}
+                          <text x={chartW - pad.r - 5} y={pad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill="#2563EB">r = {h2PearsonR.toFixed(3)} | r² = {h2Reg.r2.toFixed(3)}</text>
+                        </svg>
+                      </div>
+
+                      {/* ── H2 Heatmap Densitate (vizualizare alternativa) ── */}
+                      {h2Data.length >= 5 && (() => {
+                        const hmBins = 10;
+                        const hmW = chartW;
+                        const hmLegendW = 50;
+                        const hmPad = { l: 42, r: hmLegendW + 16, t: 14, b: 38 };
+                        const hmPlotW = hmW - hmPad.l - hmPad.r;
+                        const hmPlotH = 220;
+                        const hmH = hmPlotH + hmPad.t + hmPad.b;
+                        const cellW = hmPlotW / hmBins;
+                        const cellH = hmPlotH / hmBins;
+                        // Build count grid
+                        const grid: number[][] = Array.from({ length: hmBins }, () => Array(hmBins).fill(0));
+                        let hmMax = 0;
+                        for (const d of h2Data) {
+                          const cx = Math.min(hmBins - 1, Math.max(0, Math.floor((d.c_computed / 11) - 0.5)));
+                          const cy = Math.min(hmBins - 1, Math.max(0, Math.floor(d.cta! - 0.5)));
+                          grid[cy][cx]++;
+                          hmMax = Math.max(hmMax, grid[cy][cx]);
+                        }
+                        const heatColor = (count: number): string => {
+                          if (count === 0) return "#fafafa";
+                          const t = count / Math.max(hmMax, 1);
+                          if (t < 0.15) return "#fef3c7";
+                          if (t < 0.3) return "#fde68a";
+                          if (t < 0.5) return "#f59e0b";
+                          if (t < 0.7) return "#ea580c";
+                          return "#dc2626";
+                        };
+                        const textColor = (count: number): string => count / Math.max(hmMax, 1) > 0.4 ? "#fff" : "#374151";
+                        return (
+                          <div style={{ marginTop: 14 }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Vizualizare alternativa: Heatmap Densitate</div>
+                            <div style={{ overflowX: "auto" as const }}>
+                              <svg width={hmW} height={hmH} style={{ display: "block" }}>
+                                {/* Cells */}
+                                {grid.map((row, ri) => row.map((count, ci) => {
+                                  const x = hmPad.l + ci * cellW;
+                                  const y = hmPad.t + (hmBins - 1 - ri) * cellH;
+                                  return (
+                                    <g key={`hm-${ri}-${ci}`}>
+                                      <rect x={x} y={y} width={cellW} height={cellH} fill={heatColor(count)} stroke="#fff" strokeWidth={1} rx={2} />
+                                      {count > 0 && (
+                                        <text x={x + cellW / 2} y={y + cellH / 2 + 4} textAnchor="middle" fontSize={count > 9 ? 8 : 9} fontWeight={700} fill={textColor(count)}>{count}</text>
+                                      )}
+                                    </g>
+                                  );
+                                }))}
+                                {/* Y axis labels */}
+                                {Array.from({ length: hmBins }, (_, i) => (
+                                  <text key={`hy-${i}`} x={hmPad.l - 5} y={hmPad.t + (hmBins - 1 - i) * cellH + cellH / 2 + 3} textAnchor="end" fontSize={9} fill="#9CA3AF">{i + 1}</text>
+                                ))}
+                                {/* X axis labels */}
+                                {Array.from({ length: hmBins }, (_, i) => (
+                                  <text key={`hx-${i}`} x={hmPad.l + i * cellW + cellW / 2} y={hmH - hmPad.b + 16} textAnchor="middle" fontSize={9} fill="#9CA3AF">{i + 1}</text>
+                                ))}
+                                {/* Axis labels */}
+                                <text x={hmPad.l + hmPlotW / 2} y={hmH - 4} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280">C formula (norm. 1-10)</text>
+                                <text x={8} y={hmPad.t + hmPlotH / 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280" transform={`rotate(-90 8 ${hmPad.t + hmPlotH / 2})`}>CTA (1-10)</text>
+                                {/* Border */}
+                                <rect x={hmPad.l} y={hmPad.t} width={hmPlotW} height={hmPlotH} fill="none" stroke="#e5e7eb" strokeWidth={1} />
+                                {/* Color legend */}
+                                {(() => {
+                                  const lgX = hmW - hmLegendW + 4;
+                                  const lgW = 14;
+                                  const lgH = hmPlotH;
+                                  const lgTop = hmPad.t;
+                                  const colors = ["#fafafa", "#fef3c7", "#fde68a", "#f59e0b", "#ea580c", "#dc2626"];
+                                  const segH = lgH / colors.length;
+                                  return (
+                                    <>
+                                      {colors.map((c, i) => (
+                                        <rect key={`lg-${i}`} x={lgX} y={lgTop + (colors.length - 1 - i) * segH} width={lgW} height={segH} fill={c} stroke="#e5e7eb" strokeWidth={0.5} />
+                                      ))}
+                                      <text x={lgX + lgW + 4} y={lgTop + 10} fontSize={8} fill="#6B7280">{hmMax}</text>
+                                      <text x={lgX + lgW + 4} y={lgTop + lgH} fontSize={8} fill="#6B7280">0</text>
+                                      <text x={lgX + lgW / 2} y={lgTop - 5} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">N</text>
+                                    </>
+                                  );
+                                })()}
+                              </svg>
+                            </div>
+                            <div style={{ fontSize: 10, color: "#6B7280", lineHeight: 1.5, marginTop: 6, padding: "6px 10px", background: "#f9fafb", borderRadius: 6 }}>
+                              Fiecare celula arata cate raspunsuri au C=x si CTA=y. Culorile mai intense (rosu) = concentratie mai mare. Un pattern diagonal stanga-jos → dreapta-sus confirma corelatia pozitiva C→CTA.
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      <div style={cardStyle}>
+                        <strong>H2 — Formula prezice actiunea:</strong> Daca RIFC functioneaza, materialele cu scor C mai mare ar trebui sa genereze intentie de actiune mai mare. Corelatia pozitiva confirma ca formula nu e doar teoretica — prezice comportamentul real.{" "}
+                        {Math.abs(h2PearsonR) > 0.7
+                          ? <strong style={{ color: "#059669" }}>Corelatie puternica (r={h2PearsonR.toFixed(3)}) — H2 confirmata.</strong>
+                          : Math.abs(h2PearsonR) >= 0.4
+                            ? <strong style={{ color: "#D97706" }}>Corelatie moderata (r={h2PearsonR.toFixed(3)}) — H2 partial confirmata.</strong>
+                            : <strong style={{ color: "#DC2626" }}>Corelatie slaba (r={h2PearsonR.toFixed(3)}) — relatie nesemnificativa.</strong>}
+                      </div>
+                      <div style={{ ...cardStyle, marginTop: 8, borderLeft: "3px solid #6B7280", color: "#6B7280", fontSize: 11 }}>
+                        Analiza filtrata pe materiale Conversie + Considerare (N={h2Data.length}). Materialele Awareness sunt excluse — CTA-ul lor are semnificatie diferita si nu trebuie comparat direct.
+                      </div>
+                    </div>
+
+                    {/* ── GRAFIC H3 — Moderarea Brand Awareness ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H3: Brandul modereaza relatia C → CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
+                        <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
+                        <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={h3Known.length}) vs necunoscut (portocaliu, n={h3Unknown.length}).{" "}
+                        <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
+                      </div>
+                      <div style={{ overflowX: "auto" as const }}>
+                        <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
+                          {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
+                          {/* Trend lines */}
+                          {h3Known.length >= 2 && (() => {
+                            const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMin + h3RegKnown.intercept));
+                            const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMax + h3RegKnown.intercept));
+                            return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                          })()}
+                          {h3Unknown.length >= 2 && (() => {
+                            const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMin + h3RegUnknown.intercept));
+                            const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMax + h3RegUnknown.intercept));
+                            return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                          })()}
+                          {/* Known brand dots (normalized X) */}
+                          {h3Known.map((d, i) => (
+                            <circle key={`k-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#2563EB" opacity={0.5} />
+                          ))}
+                          {/* Unknown brand dots (normalized X) */}
+                          {h3Unknown.map((d, i) => (
+                            <circle key={`u-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#D97706" opacity={0.5} />
+                          ))}
+                          {/* Legend with Pearson R — evenly spaced */}
+                          <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#2563EB" />
+                          <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#2563EB" fontWeight={600}>Brand cunoscut (n={h3Known.length}, r={h3PearsonKnown.toFixed(2)})</text>
+                          <circle cx={chartW / 2 + 20} cy={chartH - 2} r={3} fill="#D97706" />
+                          <text x={chartW / 2 + 28} y={chartH + 1} fontSize={8} fill="#D97706" fontWeight={600}>Brand necunoscut (n={h3Unknown.length}, r={h3PearsonUnknown.toFixed(2)})</text>
+                        </svg>
+                      </div>
+                      {/* Stats banner H3 */}
+                      {h3Known.length > 0 && h3Unknown.length > 0 && (() => {
+                        const unknownStronger = Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown);
+                        const diff = Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown));
+                        const verdict = unknownStronger ? "H3 CONFIRMATA" : diff < 0.05 ? "H3 NEUTRA" : "H3 INVERSATA";
+                        const verdColor = unknownStronger ? "#059669" : diff < 0.05 ? "#D97706" : "#2563EB";
+                        const verdIcon = unknownStronger ? "\u2705" : diff < 0.05 ? "\u26A0\uFE0F" : "\u21C4";
+                        return (
+                          <div style={{ marginBottom: 0, marginTop: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={h3Known.length})</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonKnown.toFixed(3)}</div>
+                              </div>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={h3Unknown.length})</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonUnknown.toFixed(3)}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                          </div>
+                        );
+                      })()}
+                      <div style={cardStyle}>
+                        <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
+                        {h3Known.length > 0 && h3Unknown.length > 0 ? (
+                          <>
+                          {Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown)
+                            ? <> <strong style={{ color: "#059669" }}>RIFC conteaza mai mult cand brandul nu e familiar. Brand-ul cunoscut compenseaza un scor C slab.</strong></>
+                            : Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown)) < 0.05
+                              ? <> <strong style={{ color: "#D97706" }}>Brand awareness nu modereaza semnificativ relatia C→CTA in acest esantion.</strong></>
+                              : <> <strong style={{ color: "#2563EB" }}>Brand familiar amplifica efectul C→CTA — ipoteza inversata.</strong></>}
+                          </>
+                        ) : <> Date insuficiente pentru una dintre serii.</>}
+                      </div>
+                    </div>
+
+                    {/* ── GRAFIC H4 — C vs Brand Recognition per Material ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H4: Claritate si recognoscibilitate <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Bar Chart Comparison — C vs Brand Recognition)</span></div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
+                        <strong>Ce testeaza:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului — un mesaj clar e si mai usor de recunoscut si retinut.{" "}
+                        <strong>Metoda:</strong> Bar chart grupat per material: C formula normalizat (albastru) vs procentul care cunosc brandul (portocaliu).{" "}
+                        <strong>Interpretare:</strong> Corespondenta intre inaltimile barelor = confirmat, lipsa corespondentei = brand recognition independent de C.
+                      </div>
+                      {h4Materials.length > 0 ? (
+                        <div style={{ overflowX: "auto" as const }}>
+                          <svg width={Math.max(chartW, h4Materials.length * (h4BarW * 2 + 12) + pad.l + pad.r + 20)} height={chartH + 50} style={{ display: "block" }}>
+                            {/* Y grid */}
+                            {[0, 25, 50, 75, 100].map(v => {
+                              const y = pad.t + plotH - (v / 100) * plotH;
+                              return (
+                                <g key={`h4y-${v}`}>
+                                  <line x1={pad.l} y1={y} x2={chartW - pad.r} y2={y} stroke="#f3f4f6" strokeWidth={0.5} />
+                                  <text x={pad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{v}%</text>
+                                </g>
+                              );
+                            })}
+                            <rect x={pad.l} y={pad.t} width={plotW} height={plotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                            {/* Bars */}
+                            {h4Materials.map((m, i) => {
+                              const groupX = pad.l + 16 + i * (h4BarW * 2 + 12);
+                              const cH = (m.cNorm / 100) * plotH;
+                              const bH = (m.brandRate / 100) * plotH;
+                              return (
+                                <g key={i}>
+                                  {/* C bar */}
+                                  <rect x={groupX} y={pad.t + plotH - cH} width={h4BarW} height={cH} fill="#2563EB" rx={2} opacity={0.75} />
+                                  <text x={groupX + h4BarW / 2} y={pad.t + plotH - cH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#2563EB">{m.cNorm}%</text>
+                                  {/* Brand bar */}
+                                  <rect x={groupX + h4BarW + 2} y={pad.t + plotH - bH} width={h4BarW} height={bH} fill="#D97706" rx={2} opacity={0.75} />
+                                  <text x={groupX + h4BarW + 2 + h4BarW / 2} y={pad.t + plotH - bH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#D97706">{m.brandRate}%</text>
+                                  {/* X label */}
+                                  <text x={groupX + h4BarW} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#6B7280" transform={`rotate(-35 ${groupX + h4BarW} ${chartH - pad.b + 12})`}>{m.name}</text>
+                                </g>
+                              );
+                            })}
+                            {/* Legend */}
+                            <rect x={pad.l + 10} y={chartH + 26} width={12} height={6} fill="#2563EB" rx={1} opacity={0.75} />
+                            <text x={pad.l + 26} y={chartH + 32} fontSize={9} fontWeight={600} fill="#2563EB">C formula (normalizat 0-100%)</text>
+                            <rect x={pad.l + 230} y={chartH + 26} width={12} height={6} fill="#D97706" rx={1} opacity={0.75} />
+                            <text x={pad.l + 246} y={chartH + 32} fontSize={9} fontWeight={600} fill="#D97706">Brand familiar %</text>
+                          </svg>
+                        </div>
+                      ) : (
+                        <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu exista suficiente date brand_familiar pentru acest grafic.</div>
+                      )}
+                      <div style={{ ...cardStyle, marginTop: 8, borderLeft: "3px solid #6B7280", color: "#6B7280", fontSize: 11 }}>
+                        Brand_familiar% este folosit ca proxy pentru recognoscibilitate. Scala portocalie: 0-100% convertita la 0-100 pentru comparabilitate cu C normalizat.
+                      </div>
+                      <div style={cardStyle}>
+                        <strong>H4 — Claritate si recognoscibilitate:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului. Comparati bara albastra (C formulat) cu bara portocalie (% care cunosc brandul). O corelatie pozitiva intre inaltimile barelor confirma H4.
+                        {h4Materials.length > 0 && (() => {
+                          const corr = linReg(h4Materials.map(m => ({ x: m.cNorm, y: m.brandRate })));
+                          const corrR = _pearsonR(h4Materials.map(m => m.cNorm), h4Materials.map(m => m.brandRate));
+                          return <> Pearson r={corrR.toFixed(3)}, r&sup2;={corr.r2.toFixed(3)}.{" "}
+                            {corr.slope > 0 && corr.r2 > 0.05
+                              ? <strong style={{ color: "#059669" }}>Tendinta pozitiva — materialele cu C mai mare au si brand recognition mai mare.</strong>
+                              : <strong style={{ color: "#D97706" }}>Corelatie slaba — brand recognition pare independent de scorul C in acest esantion.</strong>}
+                          </>;
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* ── GRAFIC H5 — Multiplicativ vs Aditiv (DELTA) ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Ipoteza H5: Justificarea matematica I×F <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Model Comparison — Multiplicativ vs Aditiv)</span></div>
+                        <InterpBtn k="h5" title="H5 — Multiplicativ vs Aditiv" val="0" />
+                      </div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #059669" }}>
+                        <strong>Ce testeaza:</strong> De ce formula foloseste I×F si nu I+F? Ipoteza spune ca Interesul si Forma se amplifica reciproc (model multiplicativ) — un continut interesant dar prost prezentat pierde forta.{" "}
+                        <strong>Metoda:</strong> Se compara Delta medie (eroarea absoluta) a doua modele: R+(I×F)/11 vs (R+I+F)/30, ambele fata de C perceput normalizat.{" "}
+                        <strong>Interpretare:</strong> Castig &gt; 10% = multiplicativ justificat, 0-10% = similar, &lt; 0% = aditivul e mai bun.
+                      </div>
+                      {(() => {
+                        const h5Data = scatter.filter(d => d.c_computed > 0 && d.c_score != null && d.c_score > 0);
+                        if (h5Data.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente pentru H5.</div>;
+                        // Cf_mult = (r + i*f)/11, Cf_adit = (r + i + f)/30, Cp_norm = c_score/10
+                        const h5Mult = h5Data.map(d => ({ cf: (d.r + d.i * d.f) / 11, cp: d.c_score! / 10 }));
+                        const h5Adit = h5Data.map(d => ({ cf: (d.r + d.i + d.f) / 30, cp: d.c_score! / 10 }));
+                        const deltaMult = h5Mult.map(d => Math.abs(d.cf - d.cp));
+                        const deltaAdit = h5Adit.map(d => Math.abs(d.cf - d.cp));
+                        const deltaMultMean = _mean(deltaMult);
+                        const deltaAditMean = _mean(deltaAdit);
+                        const castigPct = deltaAditMean > 0 ? Math.round(((deltaAditMean - deltaMultMean) / deltaAditMean) * 1000) / 10 : 0;
+                        const multWins = castigPct > 0;
+                        const h5MultReg = linReg(h5Mult.map(d => ({ x: d.cf, y: d.cp })));
+                        const h5AditReg = linReg(h5Adit.map(d => ({ x: d.cf, y: d.cp })));
+                        const halfW = Math.floor(chartW / 2) - 4;
+                        // Both charts on 0-1 scale
+                        const xMin = 0, xMax = 1, yMin = 0, yMax = 1;
+                        return (
+                          <>
+                            {/* Stats banner */}
+                            <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #d1fae5" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Delta medie Multiplicativ</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{deltaMultMean.toFixed(3)}</div>
+                                </div>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fee2e2" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Delta medie Aditiv</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{deltaAditMean.toFixed(3)}</div>
+                                </div>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${multWins ? "#d1fae5" : "#fee2e2"}` }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Castig {multWins ? "multiplicativ" : "aditiv"}</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: multWins ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{Math.abs(castigPct).toFixed(1)}%</div>
+                                </div>
+                              </div>
+                              <div style={{ textAlign: "right" as const, fontWeight: 800, color: castigPct > 10 ? "#059669" : castigPct >= 0 ? "#D97706" : "#DC2626", fontSize: 11 }}>
+                                {castigPct > 10 ? "\u2705 H5 CONFIRMATA" : castigPct >= 0 ? "\u26A0\uFE0F H5 PARTIAL" : "\u274C H5 NECONFIRMATA"}
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 8, overflowX: "auto" as const }}>
+                              {/* Multiplicative panel */}
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: multWins ? "#059669" : "#6B7280", textAlign: "center" as const, marginBottom: 4 }}>
+                                  R+(I×F)/11 (Multiplicativ) — &Delta;={deltaMultMean.toFixed(3)} {multWins && " \u2605"}
+                                </div>
+                                <svg width={halfW} height={chartH + 10} style={{ display: "block" }}>
+                                  {(() => {
+                                    const pw = halfW - pad.l - pad.r; const ph = chartH - pad.t - pad.b;
+                                    const tx = (v: number) => pad.l + ((v - xMin) / (xMax - xMin || 1)) * pw;
+                                    const ty = (v: number) => pad.t + ph - ((v - yMin) / (yMax - yMin || 1)) * ph;
+                                    return (
+                                      <>
+                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <g key={v}><line x1={pad.l} y1={ty(v)} x2={halfW - pad.r} y2={ty(v)} stroke="#f3f4f6" strokeWidth={0.5} /><text x={pad.l - 3} y={ty(v) + 3} textAnchor="end" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text></g>)}
+                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <text key={v} x={tx(v)} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text>)}
+                                        <rect x={pad.l} y={pad.t} width={pw} height={ph} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                                        {/* Diagonal reference line (perfect prediction) */}
+                                        <line x1={tx(xMin)} y1={ty(yMin)} x2={tx(xMax)} y2={ty(yMax)} stroke="#9CA3AF" strokeWidth={1} strokeDasharray="4 2" opacity={0.4} />
+                                        {/* Trend line */}
+                                        {h5Mult.length >= 2 && (() => {
+                                          const y1v = Math.max(yMin, Math.min(yMax, h5MultReg.slope * xMin + h5MultReg.intercept));
+                                          const y2v = Math.max(yMin, Math.min(yMax, h5MultReg.slope * xMax + h5MultReg.intercept));
+                                          return <line x1={tx(xMin)} y1={ty(y1v)} x2={tx(xMax)} y2={ty(y2v)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
+                                        })()}
+                                        {h5Mult.map((d, i) => <circle key={i} cx={tx(d.cf)} cy={ty(d.cp)} r={2.5} fill="#059669" opacity={0.45} />)}
+                                        <text x={halfW / 2} y={chartH - 2} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">Cf mult (norm.)</text>
+                                      </>
+                                    );
+                                  })()}
+                                </svg>
+                              </div>
+                              {/* Additive panel */}
+                              <div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: !multWins ? "#DC2626" : "#6B7280", textAlign: "center" as const, marginBottom: 4 }}>
+                                  (R+I+F)/30 (Aditiv) — &Delta;={deltaAditMean.toFixed(3)} {!multWins && " \u2605"}
+                                </div>
+                                <svg width={halfW} height={chartH + 10} style={{ display: "block" }}>
+                                  {(() => {
+                                    const pw = halfW - pad.l - pad.r; const ph = chartH - pad.t - pad.b;
+                                    const tx = (v: number) => pad.l + ((v - xMin) / (xMax - xMin || 1)) * pw;
+                                    const ty = (v: number) => pad.t + ph - ((v - yMin) / (yMax - yMin || 1)) * ph;
+                                    return (
+                                      <>
+                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <g key={v}><line x1={pad.l} y1={ty(v)} x2={halfW - pad.r} y2={ty(v)} stroke="#f3f4f6" strokeWidth={0.5} /><text x={pad.l - 3} y={ty(v) + 3} textAnchor="end" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text></g>)}
+                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <text key={v} x={tx(v)} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text>)}
+                                        <rect x={pad.l} y={pad.t} width={pw} height={ph} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                                        {/* Diagonal reference line */}
+                                        <line x1={tx(xMin)} y1={ty(yMin)} x2={tx(xMax)} y2={ty(yMax)} stroke="#9CA3AF" strokeWidth={1} strokeDasharray="4 2" opacity={0.4} />
+                                        {/* Trend line */}
+                                        {h5Adit.length >= 2 && (() => {
+                                          const y1v = Math.max(yMin, Math.min(yMax, h5AditReg.slope * xMin + h5AditReg.intercept));
+                                          const y2v = Math.max(yMin, Math.min(yMax, h5AditReg.slope * xMax + h5AditReg.intercept));
+                                          return <line x1={tx(xMin)} y1={ty(y1v)} x2={tx(xMax)} y2={ty(y2v)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
+                                        })()}
+                                        {h5Adit.map((d, i) => <circle key={i} cx={tx(d.cf)} cy={ty(d.cp)} r={2.5} fill="#DC2626" opacity={0.45} />)}
+                                        <text x={halfW / 2} y={chartH - 2} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">Cf adit (norm.)</text>
+                                      </>
+                                    );
+                                  })()}
+                                </svg>
+                              </div>
+                            </div>
+                            <div style={cardStyle}>
+                              <strong>H5 — Justificarea I×F:</strong> De ce inmultim Interesul cu Forma si nu le adunam? Ipoteza spune ca ele se potenteaza reciproc — un continut foarte interesant dar prost prezentat pierde forta, si invers. Modelul aditiv nu captureaza aceasta interdependenta.{" "}
+                              {castigPct > 10
+                                ? <strong style={{ color: "#059669" }}>Modelul multiplicativ prezice cu {castigPct.toFixed(1)}% mai precis. I×F justificat matematic.</strong>
+                                : castigPct >= 0
+                                  ? <strong style={{ color: "#D97706" }}>Diferenta mica ({castigPct.toFixed(1)}%). Ambele modele similare.</strong>
+                                  : <strong style={{ color: "#DC2626" }}>Modelul aditiv performeaza mai bine ({Math.abs(castigPct).toFixed(1)}%). Reconsidera structura formulei.</strong>}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    {/* ── GRAFIC H6 — Irelevanta I×F cand R < Gate ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Ipoteza H6: Gate real — I×F irelevant sub prag <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Sub-threshold Correlation Test)</span></div>
+                        <InterpBtn k="h6" title={`H6 — Irelevanta I×F cand R < ${GATE}`} val="0" />
+                      </div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #DC2626" }}>
+                        <strong>Ce testeaza:</strong> Cand R &lt; {GATE}, I si F devin complet irelevante — nu mai influenteaza C deloc. Aceasta e afirmatie mai puternica decat H1 (care spune doar ca C e mic).{" "}
+                        <strong>Metoda:</strong> Pearson r intre I×F si C<sub>norm</sub>, calculat doar pe subsetul raspunsurilor cu R &lt; {GATE}.{" "}
+                        <strong>Interpretare:</strong> |r| &lt; 0.2 = confirmat (gate real), 0.2-0.4 = partial, &gt; 0.4 = neconfirmat (pragul nu functioneaza).
+                      </div>
+                      {(() => {
+                        const h6All = scatter.filter(d => d.c_computed > 0);
+                        const h6Below = h6All.filter(d => d.r < GATE);
+                        const h6NSubprag = h6Below.length;
+                        if (h6All.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente pentru H6.</div>;
+                        if (h6NSubprag < 2) return <div style={{ padding: 20, textAlign: "center" as const, color: "#D97706", fontSize: 12 }}>Prea putine raspunsuri cu R&lt;{GATE} (n={h6NSubprag}). Sunt necesare minim 10 pentru analiza valida.</div>;
+                        const h6Pts = h6Below.map(d => ({ x: d.i * d.f, y: d.c_computed / 11 }));
+                        const h6Reg = linReg(h6Pts);
+                        const h6R = _pearsonR(h6Pts.map(p => p.x), h6Pts.map(p => p.y));
+                        const absR = Math.abs(h6R);
+                        const verdict = absR < 0.2 ? "H6 CONFIRMATA" : absR <= 0.4 ? "H6 PARTIAL" : "H6 NECONFIRMATA";
+                        const verdColor = absR < 0.2 ? "#059669" : absR <= 0.4 ? "#D97706" : "#DC2626";
+                        const verdIcon = absR < 0.2 ? "\u2705" : absR <= 0.4 ? "\u26A0\uFE0F" : "\u274C";
+                        const xMin = 0, xMax = 100, yMin = 0, yMax = 10;
+                        return (
+                          <>
+                            {/* Stats banner */}
+                            <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${verdColor}30` }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Corelatie I×F → C (R&lt;{GATE})</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: verdColor, fontFamily: "JetBrains Mono, monospace" }}>{h6R.toFixed(3)}</div>
+                                </div>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>N raspunsuri sub prag</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h6NSubprag}{h6NSubprag < 10 ? <span style={{ fontSize: 10, color: "#D97706" }}> (limitat)</span> : ""}</div>
+                                </div>
+                              </div>
+                              <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                            </div>
+                            <div style={{ overflowX: "auto" as const }}>
+                              <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
+                                {renderGrid(xMin, xMax, yMin, yMax, "I × F (produs)", "C formula (norm. 0-10)")}
+                                {/* Trend line */}
+                                {h6Pts.length >= 2 && (() => {
+                                  const y1v = Math.max(yMin, Math.min(yMax, h6Reg.slope * xMin + h6Reg.intercept));
+                                  const y2v = Math.max(yMin, Math.min(yMax, h6Reg.slope * xMax + h6Reg.intercept));
+                                  return <line x1={toX(xMin, xMin, xMax)} y1={toY(y1v, yMin, yMax)} x2={toX(xMax, xMin, xMax)} y2={toY(y2v, yMin, yMax)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
+                                })()}
+                                {/* All dots red (danger zone) */}
+                                {h6Pts.map((p, i) => <circle key={i} cx={toX(p.x, xMin, xMax)} cy={toY(p.y, yMin, yMax)} r={3} fill="#DC2626" opacity={0.5} />)}
+                                {/* Legend */}
+                                <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
+                                <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} (zona sub-prag, n={h6NSubprag})</text>
+                                <text x={chartW - pad.r - 5} y={pad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill="#DC2626">r = {h6R.toFixed(3)}</text>
+                              </svg>
+                            </div>
+                            <div style={cardStyle}>
+                              <strong>H6 — Gate real vs variabila aditiva:</strong> Daca R&lt;{GATE} si totusi I×F coreleaza cu C, inseamna ca R e doar o variabila obisnuita, nu un gate. Daca corelatia e ~0 (haos), inseamna ca sub prag, oricat investesti in Interes si Forma, nu produci Claritate. Aceasta ar fi cea mai puternica confirmare a originalitatii RIFC fata de alte framework-uri.{" "}
+                              {absR < 0.2
+                                ? <strong style={{ color: "#059669" }}>Sub R={GATE}, I×F nu influenteaza C. Poarta Relevantei functioneaza ca gate real.</strong>
+                                : absR <= 0.4
+                                  ? <strong style={{ color: "#D97706" }}>Influenta slaba reziduala a I×F sub prag (r={h6R.toFixed(3)}). Pragul de {GATE} poate necesita ajustare.</strong>
+                                  : <strong style={{ color: "#DC2626" }}>I×F influenteaza C chiar sub R={GATE} (r={h6R.toFixed(3)}). Pragul de {GATE} poate fi incorect sau gate-ul nu functioneaza.</strong>}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    {/* ═══════════════════════════════════════════════════════════════
+                        VALIDARE INSTRUMENT — V1 (Cronbach Alpha) + V2 (Distributii)
+                        ═══════════════════════════════════════════════════════════════ */}
+                    <div style={{ marginTop: 32, borderTop: "2px solid #e5e7eb", paddingTop: 24 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                        <div style={{ width: 4, height: 24, borderRadius: 2, background: "#7C3AED" }} />
+                        <div>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Validare Instrument</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>Consistenta interna si distributia scorurilor pe {scatter.length} raspunsuri</div>
+                        </div>
+                      </div>
+
+                      {/* ── V1 — Cronbach Alpha ── */}
+                      <div style={{ ...S.configItem, marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Validare V1: Consistenta Interna a Instrumentului <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Cronbach&apos;s Alpha)</span></div>
+                          <InterpBtn k="v1" title="V1 — Cronbach Alpha" val="0" />
+                        </div>
+                        <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
+                          <strong>Ce masoara:</strong> Daca cele 4 dimensiuni (R, I, F, C<sub>norm</sub>) functioneaza ca un instrument coerent — respondentii care dau note mari pe o dimensiune tind sa dea note mari si pe celelalte.{" "}
+                          <strong>Metoda:</strong> Alpha de Cronbach — standard obligatoriu in orice articol de dezvoltare instrument. Fara Alpha, reviewerii resping articolul.{" "}
+                          <strong>Interpretare:</strong> &alpha; &ge; 0.9 = Excelent, &ge; 0.8 = Bun, &ge; 0.7 = Acceptabil (prag minim publicare), &ge; 0.6 = Discutabil, &lt; 0.6 = Slab.
+                        </div>
+                        {(() => {
+                          const vData = scatter.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_computed > 0);
+                          if (vData.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente.</div>;
+                          const rScores = vData.map(d => d.r);
+                          const iScores = vData.map(d => d.i);
+                          const fScores = vData.map(d => d.f);
+                          const cNormScores = vData.map(d => d.c_computed / 11);
+                          const alpha = _cronbachAlpha([rScores, iScores, fScores, cNormScores]);
+                          const alphaLabel = alpha >= 0.9 ? "Excelent" : alpha >= 0.8 ? "Bun" : alpha >= 0.7 ? "Acceptabil" : alpha >= 0.6 ? "Discutabil" : "Slab";
+                          const alphaColor = alpha >= 0.8 ? "#059669" : alpha >= 0.7 ? "#D97706" : "#DC2626";
+                          // Inter-item correlation matrix
+                          const dims = [
+                            { label: "R", data: rScores },
+                            { label: "I", data: iScores },
+                            { label: "F", data: fScores },
+                            { label: "C\u2099", data: cNormScores },
+                          ];
+                          const matrix = dims.map((d1) => dims.map((d2) => d1.label === d2.label ? 1 : _pearsonR(d1.data, d2.data)));
+                          // Variance per dimension
+                          const dimVars = dims.map(d => _variance(d.data));
+                          const sumVars = dimVars.reduce((a, v) => a + v, 0);
+                          const totals = Array.from({ length: vData.length }, (_, i) => dims.reduce((a, d) => a + d.data[i], 0));
+                          const totalVar = _variance(totals);
+                          return (
+                            <>
+                              <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16, flexWrap: "wrap" as const }}>
+                                <div style={{ textAlign: "center" as const }}>
+                                  <div style={{ fontSize: 36, fontWeight: 900, color: alphaColor, fontFamily: "JetBrains Mono, monospace" }}>{alpha.toFixed(3)}</div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: alphaColor }}>{alphaLabel}</div>
+                                  <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 2 }}>Cronbach α (k=4, n={vData.length})</div>
+                                </div>
+                                {/* Variance per dimension */}
+                                <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "8px 14px" }}>
+                                  <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", marginBottom: 6, letterSpacing: 0.5, textTransform: "uppercase" as const }}>Variante per dimensiune</div>
+                                  <div style={{ display: "flex", gap: 12, fontSize: 11 }}>
+                                    {dims.map((d, di) => (
+                                      <span key={d.label}>{d.label}: <strong style={{ fontFamily: "JetBrains Mono, monospace" }}>{dimVars[di].toFixed(2)}</strong></span>
+                                    ))}
+                                  </div>
+                                  <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 4 }}>
+                                    &Sigma;σ&sup2;<sub>i</sub> = {sumVars.toFixed(2)} | σ&sup2;<sub>total</sub> = {totalVar.toFixed(2)}
+                                  </div>
+                                </div>
+                                {/* Correlation matrix */}
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6 }}>Matrice Corelatii Inter-Item (Pearson r)</div>
+                                  <table style={{ borderCollapse: "collapse" as const, fontSize: 10 }}>
+                                    <thead>
+                                      <tr>
+                                        <th style={{ padding: "3px 8px", border: "1px solid #e5e7eb", background: "#f9fafb" }}></th>
+                                        {dims.map(d => <th key={d.label} style={{ padding: "3px 8px", border: "1px solid #e5e7eb", background: "#f9fafb", fontWeight: 700 }}>{d.label}</th>)}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {dims.map((d, ri) => (
+                                        <tr key={d.label}>
+                                          <td style={{ padding: "3px 8px", border: "1px solid #e5e7eb", fontWeight: 700, background: "#f9fafb" }}>{d.label}</td>
+                                          {matrix[ri].map((val, ci) => (
+                                            <td key={ci} style={{
+                                              padding: "3px 8px", border: "1px solid #e5e7eb", textAlign: "center" as const,
+                                              fontFamily: "JetBrains Mono, monospace",
+                                              fontWeight: ri === ci ? 400 : 700,
+                                              color: ri === ci ? "#9CA3AF" : val >= 0.5 ? "#059669" : val >= 0.3 ? "#D97706" : "#DC2626",
+                                              background: ri === ci ? "#f9fafb" : "transparent",
+                                            }}>
+                                              {ri === ci ? "1.00" : val.toFixed(2)}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                              <div style={cardStyle}>
+                                <strong>V1 — Cronbach Alpha = {alpha.toFixed(3)} ({alphaLabel}):</strong>{" "}
+                                {alpha >= 0.7
+                                  ? `Consistenta interna este adecvata (α ≥ 0.7). Cele 4 dimensiuni R, I, F si C masoara un construct coerent, ceea ce sustine validitatea instrumentului RIFC.`
+                                  : `Consistenta interna este sub pragul de 0.7. Dimensiunile pot masura constructe diferite, ceea ce necesita investigare suplimentara.`}
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+
+                      {/* ── V2 — Distributia Scorurilor ── */}
+                      <div style={{ ...S.configItem, marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Validare V2: Normalitatea Distributiilor <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Skewness &amp; Kurtosis Analysis)</span></div>
+                          <InterpBtn k="v2" title="V2 — Distributia Scorurilor" val="0" />
+                        </div>
+                        <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
+                          <strong>Ce masoara:</strong> Distributia scorurilor pe fiecare dimensiune — sunt datele aproximativ normale? Normalitatea permite utilizarea testelor statistice parametrice (t-test, regresie).{" "}
+                          <strong>Metoda:</strong> Histograme cu 10 bin-uri (1-10), plus indicatorii Skewness (asimetrie) si Kurtosis (aplatizare). Linia verticala = media.{" "}
+                          <strong>Interpretare:</strong> |Skewness| &lt; 1 si |Kurtosis| &lt; 2 = distributie aproximativ normala (permite statistici parametrice).
+                        </div>
+                        {(() => {
+                          const vData = scatter.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_computed > 0);
+                          if (vData.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente.</div>;
+                          const histDims = [
+                            { label: "R", color: "#DC2626", data: vData.map(d => d.r) },
+                            { label: "I", color: "#D97706", data: vData.map(d => d.i) },
+                            { label: "F", color: "#7C3AED", data: vData.map(d => d.f) },
+                            { label: "C\u2099", color: "#111827", data: vData.map(d => d.c_computed / 11) },
+                          ];
+                          const histW = 125; const histH = 100;
+                          const hPad = { l: 22, r: 4, t: 4, b: 18 };
+                          return (
+                            <>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, overflowX: "auto" as const }}>
+                                {histDims.map((dim) => {
+                                  const m = _mean(dim.data);
+                                  const sk = _skewness(dim.data);
+                                  const ku = _kurtosis(dim.data);
+                                  // Build 10 bins (1-10)
+                                  const bins = Array.from({ length: 10 }, (_, i) => ({ bin: i + 1, count: 0 }));
+                                  for (const v of dim.data) {
+                                    const idx = Math.max(0, Math.min(9, Math.floor(v) - 1));
+                                    bins[idx].count++;
+                                  }
+                                  const maxCount = Math.max(...bins.map(b => b.count), 1);
+                                  const pw = histW - hPad.l - hPad.r;
+                                  const ph = histH - hPad.t - hPad.b;
+                                  const barW = pw / 10 - 1;
+                                  return (
+                                    <div key={dim.label}>
+                                      <svg width={histW} height={histH} style={{ display: "block" }}>
+                                        <rect x={hPad.l} y={hPad.t} width={pw} height={ph} fill="#f9fafb" stroke="#e5e7eb" strokeWidth={0.5} />
+                                        {bins.map((b, i) => {
+                                          const bh = (b.count / maxCount) * ph;
+                                          const bx = hPad.l + i * (pw / 10) + 0.5;
+                                          return (
+                                            <g key={i}>
+                                              <rect x={bx} y={hPad.t + ph - bh} width={barW} height={bh} fill={dim.color} opacity={0.65} rx={1} />
+                                              {b.count > 0 && <text x={bx + barW / 2} y={hPad.t + ph - bh - 2} textAnchor="middle" fontSize={6} fill={dim.color} fontWeight={700}>{b.count}</text>}
+                                              <text x={bx + barW / 2} y={histH - hPad.b + 10} textAnchor="middle" fontSize={6} fill="#9CA3AF">{b.bin}</text>
+                                            </g>
+                                          );
+                                        })}
+                                        {/* Mean line */}
+                                        {(() => {
+                                          const mx = hPad.l + ((m - 1) / 9) * pw;
+                                          return <line x1={mx} y1={hPad.t} x2={mx} y2={hPad.t + ph} stroke={dim.color} strokeWidth={1.5} strokeDasharray="3 2" />;
+                                        })()}
+                                      </svg>
+                                      <div style={{ textAlign: "center" as const, fontSize: 9, fontWeight: 700, color: dim.color }}>{dim.label}</div>
+                                      <div style={{ textAlign: "center" as const, fontSize: 8, color: "#6B7280" }}>
+                                        x&#772;={m.toFixed(1)} sk={sk.toFixed(2)} ku={ku.toFixed(2)}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <div style={cardStyle}>
+                                <strong>V2 — Normalitatea distributiilor:</strong>{" "}
+                                {histDims.map(dim => {
+                                  const sk = Math.abs(_skewness(dim.data));
+                                  const ku = Math.abs(_kurtosis(dim.data));
+                                  const normal = sk < 1 && ku < 2;
+                                  return `${dim.label}: ${normal ? "≈ normal" : "non-normal"} (sk=${_skewness(dim.data).toFixed(2)}, ku=${_kurtosis(dim.data).toFixed(2)})`;
+                                }).join("; ")}.{" "}
+                                Distributii aproximativ normale (|skewness| &lt; 1, |kurtosis| &lt; 2) permit utilizarea testelor parametrice.
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* ═══════════════════════════════════════════════════════════════
+                        CALIBRARE SI FACTOR DE CORECTIE
+                        ═══════════════════════════════════════════════════════════════ */}
+                    <div style={{ marginTop: 32, borderTop: "2px solid #e5e7eb", paddingTop: 24 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                        <div style={{ width: 4, height: 24, borderRadius: 2, background: "#D97706" }} />
+                        <div>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Calibrare si Factor de Corectie <span style={{ fontSize: 11, fontWeight: 600, color: "#6B7280" }}>(Bias Correction Analysis)</span></div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>Analiza discrepantei sistematice intre formula si perceptia reala</div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 16, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
+                        <strong>Ce testeaza:</strong> Masoara diferenta sistematica (bias) intre scorul prezis de formula RIFC (C_formula normalizat la 0-10) si perceptia reala a respondentilor (C_perceput, 1-10).{" "}
+                        <strong>Metoda:</strong> Se calculeaza raportul Cp_mediu / Cf_norm_mediu. Un factor de 1.0 inseamna formula perfect calibrata.{" "}
+                        <strong>Interpretare:</strong> Factor 1.0-1.2 = <span style={{ color: "#059669", fontWeight: 700 }}>calibrat excelent</span>; 1.2-1.5 = <span style={{ color: "#D97706", fontWeight: 700 }}>subestimare moderata</span>; &gt;1.5 = <span style={{ color: "#DC2626", fontWeight: 700 }}>subestimare semnificativa</span>; &lt;1.0 = formula supraestimeaza.
+                      </div>
+                      {(() => {
+                        const calData = scatter.filter(d => d.c_computed > 0 && d.c_score != null && d.c_score > 0);
+                        if (calData.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente pentru calibrare.</div>;
+                        const cfNormMean = _mean(calData.map(d => d.c_computed / 11));
+                        const cpMean = _mean(calData.map(d => d.c_score!));
+                        const factor = cfNormMean > 0 ? cpMean / cfNormMean : 0;
+                        const factorLabel = factor >= 1.0 && factor <= 1.2 ? "Formula calibrata excelent"
+                          : factor <= 1.5 ? "Subestimare moderata — ajustare recomandata"
+                          : factor <= 2.0 ? "Subestimare semnificativa — factor de calibrare necesar"
+                          : factor > 2.0 ? "Discrepanta mare — verifica datele"
+                          : factor < 1.0 ? "Formula supraestimeaza — Cf_norm > Cp" : "";
+                        const factorColor = factor >= 1.0 && factor <= 1.2 ? "#059669" : factor <= 1.5 ? "#D97706" : "#DC2626";
+                        return (
+                          <>
+                            <div style={{ ...S.configItem, marginBottom: 20 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Factor de Corectie RIFC <span style={{ fontSize: 10, color: "#6B7280", fontWeight: 600 }}>(Cp_mediu / Cf_norm_mediu)</span></div>
+                                <InterpBtn k="calibrare" title="Calibrare RIFC" val={factor.toFixed(2)} />
+                              </div>
+                              {/* 3-value card */}
+                              <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" as const }}>
+                                <div style={{ flex: 1, minWidth: 140, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 16px", textAlign: "center" as const }}>
+                                  <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>C Formula mediu (norm)</div>
+                                  <div style={{ fontSize: 24, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{cfNormMean.toFixed(2)}</div>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 140, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 16px", textAlign: "center" as const }}>
+                                  <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>C Perceput mediu</div>
+                                  <div style={{ fontSize: 24, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{cpMean.toFixed(2)}</div>
+                                </div>
+                                <div style={{ flex: 1, minWidth: 140, background: "#f9fafb", border: `2px solid ${factorColor}`, borderRadius: 8, padding: "12px 16px", textAlign: "center" as const }}>
+                                  <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Factor Corectie</div>
+                                  <div style={{ fontSize: 24, fontWeight: 900, color: factorColor, fontFamily: "JetBrains Mono, monospace" }}>{factor.toFixed(2)}×</div>
+                                </div>
+                              </div>
+                              <div style={{ padding: "6px 12px", background: `${factorColor}10`, border: `1px solid ${factorColor}30`, borderRadius: 6, fontSize: 11, fontWeight: 700, color: factorColor, marginBottom: 10 }}>
+                                {factorLabel}
+                              </div>
+                              <div style={cardStyle}>
+                                <strong>Factorul de corectie RIFC</strong> arata cu cat subestimeaza formula perceptia reala a respondentilor.
+                                {factor > 1 && <> Un factor de <strong>{factor.toFixed(2)}</strong> inseamna ca perceptia reala e cu <strong>{Math.round((factor - 1) * 100)}%</strong> mai pozitiva decat prezice formula in starea actuala.</>}
+                                {factor <= 1 && <> Un factor de <strong>{factor.toFixed(2)}</strong> indica faptul ca formula supraestimeaza perceptia — respondentii percep mesajele mai slab decat prezice modelul.</>}
+                                {" "}Aceasta nu este o eroare — este o descoperire academica care sugereaza ca exista factori (brand, emotie, context cultural) neinclusi in formula actuala. Justifica cercetarea continua.
+                                <div style={{ marginTop: 6, fontSize: 10, color: "#9CA3AF" }}>Bazat pe N={calData.length} raspunsuri cu Cf &gt; 0 si Cp &gt; 0.</div>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                );
+              })()}
+
             </div>
           );
         })()}

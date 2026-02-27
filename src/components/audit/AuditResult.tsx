@@ -61,7 +61,7 @@ export default function AuditResultDisplay({
     return () => clearTimeout(timer);
   }, []);
 
-  const gatePass = result.r >= 3;
+  const gatePass = result.r >= 4;
   const scoreColor = gatePass ? getScoreColor(result.c) : "#DC2626";
   const zone = gatePass ? getScoreZone(result.c) : "Critical";
 

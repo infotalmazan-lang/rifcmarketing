@@ -58,12 +58,14 @@ export async function PUT(request: Request) {
         .eq("id", respondentId);
     } else if (type === "stimulus") {
       // Upsert stimulus response (5 dimensions: R, I, F, C, CTA + brand familiarity)
+      // NOTE: c_computed is a GENERATED column in PostgreSQL (auto: r_score + i_score * f_score)
+      // Do NOT include it in upsert — DB computes it automatically
       const upsertData: Record<string, unknown> = {
         respondent_id: respondentId,
         stimulus_id: data.stimulusId,
-        r_score: data.rScore,
-        i_score: data.iScore,
-        f_score: data.fScore,
+        r_score: Number(data.rScore) || 0,
+        i_score: Number(data.iScore) || 0,
+        f_score: Number(data.fScore) || 0,
         c_score: data.cScore || null,
         cta_score: data.ctaScore || null,
         time_spent_seconds: data.timeSpentSeconds || 0,

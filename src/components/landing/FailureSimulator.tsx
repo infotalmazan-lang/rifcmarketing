@@ -28,7 +28,7 @@ export default function FailureSimulator() {
 
   const c = r + i * f;
   const cColor = getScoreColor(c);
-  const gateActive = r < 3;
+  const gateActive = r < 4;
   const detected = detectArchetype(r, i, f, c, t);
 
   const applyPreset = useCallback((preset: { r: number; i: number; f: number }) => {

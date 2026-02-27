@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, type, industry, description, image_url, video_url, audio_url, text_content, pdf_url, site_url, display_order, variant_label, execution_quality } = body;
+    const { name, type, industry, description, image_url, video_url, audio_url, text_content, pdf_url, site_url, display_order, variant_label, execution_quality, marketing_objective } = body;
 
     if (!name || !type) {
       return NextResponse.json(
@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
         display_order: display_order || 0,
         variant_label: variant_label || null,
         execution_quality: execution_quality || null,
+        marketing_objective: marketing_objective || "conversie",
         is_active: true,
       })
       .select()
@@ -125,7 +126,7 @@ export async function PUT(req: NextRequest) {
     const supabase = createServiceRole();
 
     const updates: Record<string, unknown> = {};
-    const allowed = ["name", "type", "industry", "description", "image_url", "video_url", "audio_url", "text_content", "pdf_url", "site_url", "display_order", "is_active", "variant_label", "execution_quality"];
+    const allowed = ["name", "type", "industry", "description", "image_url", "video_url", "audio_url", "text_content", "pdf_url", "site_url", "display_order", "is_active", "variant_label", "execution_quality", "marketing_objective"];
     for (const key of allowed) {
       if (fields[key] !== undefined) updates[key] = fields[key];
     }

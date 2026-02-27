@@ -10,26 +10,52 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const showArchived = searchParams.get("archived") === "1";
 
-    // Fetch respondents — active or archived
-    let query = supabase.from("survey_respondents").select("*").range(0, 9999);
+    // ── Step 1: Fetch respondent IDs (lightweight — no JSONB, no truncation) ──
+    // CRITICAL: PostgREST silently truncates rows when JSONB columns make payload
+    // too large. FIX: get IDs first, then fetch full data in small batches.
+    let idQuery = supabase.from("survey_respondents")
+      .select("id")
+      .range(0, 9999);
     if (showArchived) {
-      query = query.eq("is_archived", true);
+      idQuery = idQuery.eq("is_archived", true);
     } else {
-      // Show non-archived: is_archived = false OR is_archived IS NULL (for old rows before migration)
-      query = query.or("is_archived.eq.false,is_archived.is.null");
+      idQuery = idQuery.or("is_archived.eq.false,is_archived.is.null");
     }
 
-    const { data: respondents, error: respError } = await query;
+    const { data: idData, error: idError } = await idQuery;
+    if (idError) {
+      return NextResponse.json({ error: idError.message, hint: "respondent ID query failed" }, { status: 500 });
+    }
+    const allIds = (idData || []).map((r: any) => r.id as string);
 
-    if (respError) {
-      return NextResponse.json({ error: respError.message, hint: "respondents query failed" }, { status: 500 });
+    // ── Step 2: Fetch full respondent data in BATCHES to prevent PostgREST truncation ──
+    const LOG_BATCH_SIZE = 15;
+    let respondents: any[] = [];
+    for (let i = 0; i < allIds.length; i += LOG_BATCH_SIZE) {
+      const batchIds = allIds.slice(i, i + LOG_BATCH_SIZE);
+      const { data: batchData, error: batchError } = await supabase
+        .from("survey_respondents")
+        .select("id, started_at, completed_at, step_completed, distribution_id, ip_address, ip_hash, browser_fingerprint, user_agent, device_type, locale, is_flagged, flag_reason, is_archived, archived_at, demographics, behavioral, psychographic")
+        .in("id", batchIds);
+      if (batchError) {
+        return NextResponse.json({ error: batchError.message, hint: "respondent batch query failed" }, { status: 500 });
+      }
+      respondents = respondents.concat(batchData || []);
     }
 
-    // Get full response data per respondent (scores + stimulus info)
-    const { data: responses } = await supabase
-      .from("survey_responses")
-      .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_score, cta_score, brand_familiar, time_spent_seconds")
-      .range(0, 99999);
+    // Get full response data per respondent in BATCHES (avoid PostgREST truncation)
+    let responses: any[] = [];
+    if (allIds.length > 0) {
+      const RESP_BATCH = 15;
+      for (let i = 0; i < allIds.length; i += RESP_BATCH) {
+        const batchIds = allIds.slice(i, i + RESP_BATCH);
+        const { data: batchResp } = await supabase
+          .from("survey_responses")
+          .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_score, cta_score, brand_familiar, time_spent_seconds")
+          .in("respondent_id", batchIds);
+        responses = responses.concat(batchResp || []);
+      }
+    }
 
     // Also get stimuli names for display
     const { data: stimuliData } = await supabase

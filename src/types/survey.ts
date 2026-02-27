@@ -10,6 +10,8 @@ export type StimulusType =
   | "RadioTV"
   | "Influencer";
 
+export type MarketingObjective = "awareness" | "considerare" | "conversie";
+
 export interface SurveyStimulus {
   id: string;
   name: string;
@@ -23,6 +25,7 @@ export interface SurveyStimulus {
   site_url: string | null;
   display_order: number;
   is_active: boolean;
+  marketing_objective?: MarketingObjective | null;
 }
 
 export interface DemographicData {

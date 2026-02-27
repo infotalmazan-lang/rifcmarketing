@@ -831,7 +831,7 @@ const ROADMAP_SCRIPT = `
         C: { name: "Conversie", items: 7, maxScore: 35 }
       },
       formula: "C_predicted = R_gate * (I_mean * F_mean)",
-      scoring: { R_gate: "If R_mean >= 3 then 1, else 0", composite: "I_mean * F_mean", C_observed: "Mean of C1-C7" }
+      scoring: { R_gate: "If R_mean >= 4 then 1, else 0", composite: "I_mean * F_mean", C_observed: "Mean of C1-C7" }
     }, null, 2);
     allBlocks[k2] = [
       { id: genId(), type: "text-short", value: { ro: "Scoring Rubric R IF C — Ancore 1/3/5", en: "RIFC Scoring Rubric — Anchors 1/3/5", ru: "Scoring Rubric R IF C — Якоря 1/3/5" } },

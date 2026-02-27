@@ -132,7 +132,7 @@ function getStepLabel(stepNum: number, profileSteps: number, stepsPerStim: numbe
     const stimOffset = stepNum - profileSteps;
     const stimIdx = Math.floor(stimOffset / stepsPerStim);
     const subStep = stimOffset % stepsPerStim;
-    const dims = ["r", "i", "f", "c", "cta", "brand"];
+    const dims = ["c", "r", "i", "f", "cta", "brand"];
     return `stimulus_${stimIdx + 1}_${dims[subStep] || "unknown"}`;
   }
   return `step_${stepNum}`;
@@ -1216,7 +1216,7 @@ function StudiuWizardInner() {
   const currentStimGroupIdx = step >= firstStimulusStep && step <= lastStimulusStep
     ? Math.floor((step - firstStimulusStep) / stepsPerStimulus) : -1;
   const currentStimSubStep = step >= firstStimulusStep && step <= lastStimulusStep
-    ? (step - firstStimulusStep) % stepsPerStimulus : -1; // 0=R, 1=I, 2=F, 3=C, 4=CTA, 5=BRAND
+    ? (step - firstStimulusStep) % stepsPerStimulus : -1; // 0=C, 1=R, 2=I, 3=F, 4=CTA, 5=BRAND
   const currentStim = currentStimGroupIdx >= 0 && currentStimGroupIdx < sessionSafe.stimuli.length
     ? sessionSafe.stimuli[currentStimGroupIdx]
     : null;
@@ -1878,9 +1878,17 @@ function StudiuWizardInner() {
             );
           })()}
 
-          {/* ═══ Stimulus evaluation steps (6 per stimulus: R, I, F, C, CTA, BRAND) ═══ */}
+          {/* ═══ Stimulus evaluation steps (6 per stimulus: C, R, I, F, CTA, BRAND) ═══ */}
           {step >= firstStimulusStep && step <= lastStimulusStep && currentStim && !showInterstitialForGroup && (() => {
-            const dimensions: { key: "r" | "i" | "f" | "c" | "cta"; question: string; anchorLow: string; anchorHigh: string; color: string; shortLabel: string }[] = [
+            const dimensions: { key: "r" | "i" | "f" | "c" | "cta"; question: string; anchorLow: string; anchorHigh: string; color: string; shortLabel: string; hint?: string }[] = [
+              {
+                key: "c", shortLabel: "C",
+                question: w.cQuestion,
+                anchorLow: w.cLow,
+                anchorHigh: w.cHigh,
+                color: "#059669",
+                hint: "Prima impresie — raspunde instinctiv, fara sa analizezi.",
+              },
               {
                 key: "r", shortLabel: "R",
                 question: w.rQuestion,
@@ -1901,13 +1909,6 @@ function StudiuWizardInner() {
                 anchorLow: w.fLow,
                 anchorHigh: w.fHigh,
                 color: "#7C3AED",
-              },
-              {
-                key: "c", shortLabel: "C",
-                question: w.cQuestion,
-                anchorLow: w.cLow,
-                anchorHigh: w.cHigh,
-                color: "#059669",
               },
               {
                 key: "cta", shortLabel: "CTA",
@@ -2142,6 +2143,11 @@ function StudiuWizardInner() {
                           "--flash-color": `${dim.color}40`,
                         }}>
                         {dim.question}
+                        {dim.hint && (
+                          <div style={{ fontSize: m ? 10 : 11, fontWeight: 400, color: "#9CA3AF", marginTop: 4, fontStyle: "italic" }}>
+                            {dim.hint}
+                          </div>
+                        )}
                       </div>
 
                       {/* 1-10 buttons — 2 rows of 5, well-spaced */}

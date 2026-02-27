@@ -10,39 +10,79 @@ export async function GET(request: Request) {
     const distributionId = searchParams.get("distribution_id");
     const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
-    // ── Step 1: Fetch respondents — IDENTICAL approach to LOG API ──
-    // CRITICAL: Use .range(0, 9999) to override Supabase default row limit.
-    // Without explicit range, PostgREST may truncate large payloads silently.
-    let respondentQuery = supabase
+    // ── Step 1: Fetch ALL respondent IDs with lightweight columns ──
+    // CRITICAL FIX: Do NOT use PostgREST .or() filter for is_archived — it can
+    // silently return fewer rows than expected. Instead, fetch ALL IDs with
+    // is_archived + distribution_id, then filter in JavaScript.
+    // This guarantees the same respondent set as the LOG API.
+    const { data: allIdData, error: idError } = await supabase
       .from("survey_respondents")
-      .select("*")
-      .or("is_archived.eq.false,is_archived.is.null")
+      .select("id, is_archived, distribution_id")
       .range(0, 9999);
 
-    if (distributionId === "__none__") {
-      respondentQuery = respondentQuery.is("distribution_id", null);
-    } else if (distributionId) {
-      respondentQuery = respondentQuery.eq("distribution_id", distributionId);
+    if (idError) {
+      return NextResponse.json({ error: "Respondent ID query failed", message: idError.message }, { status: 500 });
     }
 
-    const { data: respondentData, error: respError } = await respondentQuery;
-    if (respError) {
-      return NextResponse.json({ error: "Respondent query failed", message: respError.message }, { status: 500 });
+    // Filter out archived respondents in JavaScript (same logic as .or() but reliable)
+    let filteredIdData = (allIdData || []).filter((r: any) =>
+      r.is_archived === false || r.is_archived === null || r.is_archived === undefined
+    );
+
+    // Apply optional distribution filter in JavaScript
+    if (distributionId === "__none__") {
+      filteredIdData = filteredIdData.filter((r: any) => r.distribution_id === null || r.distribution_id === undefined);
+    } else if (distributionId) {
+      filteredIdData = filteredIdData.filter((r: any) => r.distribution_id === distributionId);
     }
-    const respondents = respondentData || [];
+
+    const allIds = filteredIdData.map((r: any) => r.id as string);
+
+    // ── Step 1b: Fetch full respondent data in BATCHES to prevent PostgREST truncation ──
+    // CRITICAL: Even with known IDs, JSONB columns (demographics, behavioral, psychographic)
+    // can make the response payload too large, causing PostgREST to silently drop rows.
+    // FIX: Fetch in small batches (15 IDs per batch) so each query payload stays within limits.
+    const RESP_BATCH_SIZE = 15;
+    let respondents: any[] = [];
+    if (allIds.length > 0) {
+      for (let i = 0; i < allIds.length; i += RESP_BATCH_SIZE) {
+        const batchIds = allIds.slice(i, i + RESP_BATCH_SIZE);
+        const { data: batchData, error: batchError } = await supabase
+          .from("survey_respondents")
+          .select("id, started_at, completed_at, demographics, behavioral, psychographic, locale, distribution_id, step_completed")
+          .in("id", batchIds);
+        if (batchError) {
+          return NextResponse.json({ error: "Respondent batch query failed", message: batchError.message }, { status: 500 });
+        }
+        respondents = respondents.concat(batchData || []);
+      }
+    }
+
     const respondentIds = respondents.map((r: any) => r.id);
     const totalRespondents = respondents.length;
 
-    // ── Step 2: Fetch ALL responses — SAME approach as LOG API (proven reliable) ──
-    // Single query, no pagination, no .in() filter. Filter by respondent IDs in JS.
-    // CRITICAL: Use .range(0, 99999) to ensure ALL responses are returned.
-    const { data: allResponseData } = await supabase
-      .from("survey_responses")
-      .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_computed, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
-      .range(0, 99999);
-
-    const respondentIdSet = new Set(respondentIds);
-    let allFilteredResponses = (allResponseData || []).filter((r: any) => respondentIdSet.has(r.respondent_id));
+    // ── Step 2: Fetch responses in BATCHES by respondent IDs ──
+    // CRITICAL FIX: Do NOT use .range(0, 99999) to fetch ALL responses — PostgREST
+    // silently truncates large payloads. Instead, batch by respondent IDs to guarantee
+    // all responses are fetched (same approach as respondent data fetch).
+    // NOTE: c_computed is a GENERATED column in DB — omit from SELECT, compute in JS.
+    const RESP_FETCH_BATCH = 15; // same batch size as respondent fetch
+    let allFilteredResponses: any[] = [];
+    if (allIds.length > 0) {
+      for (let i = 0; i < allIds.length; i += RESP_FETCH_BATCH) {
+        const batchIds = allIds.slice(i, i + RESP_FETCH_BATCH);
+        const { data: batchResp } = await supabase
+          .from("survey_responses")
+          .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
+          .in("respondent_id", batchIds);
+        allFilteredResponses = allFilteredResponses.concat(
+          (batchResp || []).map((r: any) => ({
+            ...r,
+            c_computed: (r.r_score || 0) + (r.i_score || 0) * (r.f_score || 0),
+          }))
+        );
+      }
+    }
 
     // Optional month filter: filter responses by created_at month
     if (monthParam && monthParam !== "all") {
@@ -65,7 +105,7 @@ export async function GET(request: Request) {
     // Fetch stimuli count early (for completion detection)
     const { data: stimuli } = await supabase
       .from("survey_stimuli")
-      .select("id, name, type, industry, variant_label, execution_quality")
+      .select("id, name, type, industry, variant_label, execution_quality, marketing_objective")
       .eq("is_active", true)
       .order("display_order");
     const expectedResponseCount = (stimuli || []).length;
@@ -602,22 +642,24 @@ export async function GET(request: Request) {
       };
     })();
 
-    return NextResponse.json({
+    // ── Raw scatter data for H1-H4 hypothesis charts ──────────
+    // Lightweight per-response data points (only the fields needed for scatter plots)
+    const hypothesisScatterData = allFilteredResponses
+      .filter((r: any) => r.r_score != null && r.i_score != null && r.f_score != null)
+      .map((r: any) => ({
+        r: r.r_score,
+        i: r.i_score,
+        f: r.f_score,
+        c_computed: r.c_computed,
+        c_score: r.c_score ?? null,
+        cta: r.cta_score ?? null,
+        brand: r.brand_familiar ?? null,
+        stimulus_id: r.stimulus_id,
+      }));
+
+    const response = NextResponse.json({
       totalRespondents,
       completedRespondents,
-      // Temporary debug — remove after verifying sync
-      _syncDebug: {
-        respondentsLength: respondents.length,
-        respondentQueryHadError: !!respError,
-        allResponsesFromDB: (allResponseData || []).length,
-        filteredResponses: allFilteredResponses.length,
-        expectedResponseCount,
-        completedByCompletedAt: respondents.filter((r: any) => r.completed_at != null).length,
-        completedByRespCount: respondents.filter((r: any) => expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount).length,
-        distributionFilter: distributionId || "none",
-        monthFilter: monthParam || "none",
-        rangeUsed: "0-9999",
-      },
       completionRate: totalRespondents > 0 ? Math.round((completedRespondents / totalRespondents) * 100) : 0,
       totalResponses,
       completedToday,
@@ -634,7 +676,10 @@ export async function GET(request: Request) {
       perStimulusBreakdowns,
       fatigueAnalysis,
       completionFunnel,
+      hypothesisScatterData,
     });
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    return response;
   } catch (err: any) {
     return NextResponse.json(
       { error: "Internal error", message: err?.message || "Unknown" },
