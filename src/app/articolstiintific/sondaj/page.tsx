@@ -3573,6 +3573,11 @@ export default function StudiuAdminPage() {
                     ? { text: "Oboseala cognitiva minora", color: "#D97706", bg: "#fefce8", border: "#fde68a", icon: "~" }
                     : { text: "Fara oboseala cognitiva semnificativa", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", icon: "+" };
 
+                  // Completed respondents from LOG (single source of truth)
+                  const _fatActiveN = stimuli.filter(s => s.is_active).length;
+                  const _fatIsDone = (l: any) => !!l.completed_at || (_fatActiveN > 0 && (l.responseCount || 0) >= _fatActiveN);
+                  const _fatCompleted = logData.length > 0 ? logData.filter(_fatIsDone).length : fa.completedRespondentsAnalyzed;
+
                   return (
                     <div>
                       {/* ── FISA EXPLICATIVA ── */}
@@ -3633,7 +3638,7 @@ export default function StudiuAdminPage() {
                       {/* Header info + verdict */}
                       <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" as const, alignItems: "center" }}>
                         <div style={{ padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 12 }}>
-                          <span style={{ fontWeight: 700, color: "#166534" }}>{fa.completedRespondentsAnalyzed}</span>
+                          <span style={{ fontWeight: 700, color: "#166534" }}>{_fatCompleted}</span>
                           <span style={{ color: "#6B7280" }}> respondenti analizati</span>
                         </div>
                         <div style={{ padding: "10px 16px", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 8, fontSize: 12 }}>
