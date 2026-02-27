@@ -6004,7 +6004,9 @@ export default function StudiuAdminPage() {
             : logData.filter((l: any) => l.distribution_id === interpSource);
           const _interpCompleted = logData.length > 0 ? _interpFilteredLog.filter(_interpDone).length : results.completedRespondents;
           const _interpTotal = logData.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
-          const _interpResponses = logData.length > 0 ? _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0) : results.totalResponses;
+          // Use Results API N (matches table TOTAL row and scatter data)
+          const _interpTableN = results.stimuliResults.reduce((s: number, st: any) => s + (st.response_count || 0), 0);
+          const _interpResponses = _interpTableN;
 
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
@@ -6118,7 +6120,7 @@ export default function StudiuAdminPage() {
                     background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — TOTAL</div>
-                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{_interpCompleted}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{_interpTotal}</strong> pornite ({_interpResponses} raspunsuri individuale)</div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{_interpCompleted}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{_interpTotal}</strong> pornite (N={_interpResponses} evaluari individuale)</div>
                     <div style={{ fontSize: 48, fontWeight: 900, color: getValidationColor(grandHypPct), lineHeight: 1 }}>{grandHypPct}%</div>
                     <div style={{
                       display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
@@ -6169,7 +6171,7 @@ export default function StudiuAdminPage() {
                     <div style={{ ...S.configItem, textAlign: "center" as const }}>
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>MATERIALE ANALIZATE</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{n}</div>
-                      <div style={{ fontSize: 11, color: "#6B7280" }}>{_interpResponses} raspunsuri totale</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>N={_interpResponses} evaluari totale</div>
                       <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: _interpResponses }} /></div>
                     </div>
                   </div>
@@ -6566,7 +6568,7 @@ export default function StudiuAdminPage() {
                       <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
                       <div>
                         <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H6)</div>
-                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {scatter.length} raspunsuri individuale.</div>
+                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe N={scatter.length} evaluari individuale din {results.stimuliResults.filter((s: any) => s.response_count > 0).length} materiale ({results.completedRespondents} respondenti).</div>
                       </div>
                     </div>
 
@@ -7176,7 +7178,7 @@ export default function StudiuAdminPage() {
                         <div style={{ width: 4, height: 24, borderRadius: 2, background: "#7C3AED" }} />
                         <div>
                           <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Validare Instrument</div>
-                          <div style={{ fontSize: 11, color: "#6B7280" }}>Consistenta interna si distributia scorurilor pe {scatter.length} raspunsuri</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>Consistenta interna si distributia scorurilor pe N={scatter.length} evaluari ({results.completedRespondents} respondenti)</div>
                         </div>
                       </div>
 
