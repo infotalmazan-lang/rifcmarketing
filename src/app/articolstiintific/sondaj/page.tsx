@@ -2619,7 +2619,7 @@ export default function StudiuAdminPage() {
                       {isFiltered && (() => {
                         const activeDist = distributions.find(d => d.id === resultsSegment);
                         const plan = activeDist?.estimated_completions || 0;
-                        const planPct = plan > 0 ? Math.round((results.completedRespondents / plan) * 100) : 0;
+                        const planPct = plan > 0 ? Math.round((segStats.completed / plan) * 100) : 0;
                         return (
                           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #334155", position: "relative" as const, zIndex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
@@ -2628,11 +2628,11 @@ export default function StudiuAdminPage() {
                                 {resultsSegment === "general" ? "General (fara tag)" : (activeDist?.name || resultsSegment)}
                               </span>
                               <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                                — {results.completedRespondents} completari din {results.totalRespondents} porniti ({results.completionRate}%)
+                                — {segStats.completed} completari din {segStats.total} porniti ({segStats.rate}%)
                               </span>
                               {plan > 0 && (
                                 <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 8, background: planPct >= 100 ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.15)", color: planPct >= 100 ? "#34d399" : "#fbbf24" }}>
-                                  {results.completedRespondents}/{plan} plan · {planPct}%
+                                  {segStats.completed}/{plan} plan · {planPct}%
                                 </span>
                               )}
                             </div>
@@ -5855,6 +5855,16 @@ export default function StudiuAdminPage() {
           const zoneMatchCount = withData.filter(s => getZone(s.avg_c) === getZoneCp(s.avg_c_score)).length;
           const zoneMatchRate = Math.round((zoneMatchCount / n) * 100);
 
+          // ── Interp header stats from LOG data (single source of truth) ──
+          const _interpActiveN = stimuli.filter(s => s.is_active).length;
+          const _interpDone = (l: any) => !!l.completed_at || (_interpActiveN > 0 && (l.responseCount || 0) >= _interpActiveN);
+          const _interpFilteredLog = interpSource === "all" ? logData
+            : interpSource === "general" ? logData.filter((l: any) => !l.distribution_id)
+            : logData.filter((l: any) => l.distribution_id === interpSource);
+          const _interpCompleted = logData.length > 0 ? _interpFilteredLog.filter(_interpDone).length : results.completedRespondents;
+          const _interpTotal = logData.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
+          const _interpResponses = logData.length > 0 ? _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0) : results.totalResponses;
+
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
           const zones = ["Critical", "Noise", "Medium", "Supreme"];
@@ -5967,7 +5977,7 @@ export default function StudiuAdminPage() {
                     background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — TOTAL</div>
-                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{results.completedRespondents}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{results.totalRespondents}</strong> pornite ({results.totalResponses} raspunsuri individuale)</div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{_interpCompleted}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{_interpTotal}</strong> pornite ({_interpResponses} raspunsuri individuale)</div>
                     <div style={{ fontSize: 48, fontWeight: 900, color: getValidationColor(grandHypPct), lineHeight: 1 }}>{grandHypPct}%</div>
                     <div style={{
                       display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
@@ -6018,8 +6028,8 @@ export default function StudiuAdminPage() {
                     <div style={{ ...S.configItem, textAlign: "center" as const }}>
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>MATERIALE ANALIZATE</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{n}</div>
-                      <div style={{ fontSize: 11, color: "#6B7280" }}>{results.totalResponses} raspunsuri totale</div>
-                      <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: results.totalResponses }} /></div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>{_interpResponses} raspunsuri totale</div>
+                      <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: _interpResponses }} /></div>
                     </div>
                   </div>
 
