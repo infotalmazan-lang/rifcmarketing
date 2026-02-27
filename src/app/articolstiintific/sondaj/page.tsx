@@ -2832,7 +2832,7 @@ export default function StudiuAdminPage() {
                                       Sumar Validare Academica
                                     </div>
                                     <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>
-                                      Indicatori cheie: Cronbach \u03B1={alpha.toFixed(2)}, Validare={gValPct}%, Gate={gatePct}%, Zone Match={zonePct}%
+                                      Indicatori cheie: Cronbach {"\u03B1"}={alpha.toFixed(2)}, Validare={gValPct}%, Gate={gatePct}%, Zone Match={zonePct}% — N={sc.length} din {withData.length} materiale
                                     </div>
                                   </div>
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 12, transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
@@ -2847,11 +2847,11 @@ export default function StudiuAdminPage() {
                                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 16px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                   <div>
                                     <div style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>Dimensiunea esantionului</div>
-                                    <div style={{ fontSize: 9, color: "#9CA3AF" }}>Numarul total de raspunsuri individuale analizate in studiu</div>
+                                    <div style={{ fontSize: 9, color: "#9CA3AF" }}>Evaluari individuale (cate un scor R·I·F·C per respondent per material)</div>
                                   </div>
                                   <div style={{ textAlign: "right" as const }}>
-                                    <span style={{ fontSize: 22, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{sc.length}</span>
-                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>raspunsuri din {withData.length} materiale</span>
+                                    <span style={{ fontSize: 22, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>N={sc.length}</span>
+                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>din {withData.length} materiale ({results.completedRespondents} respondenti)</span>
                                   </div>
                                 </div>
 
