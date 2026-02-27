@@ -2685,14 +2685,17 @@ export default function StudiuAdminPage() {
                   const _ibMaterials = results.stimuliResults.filter((s: any) => s.response_count > 0).length;
                   const _ibTotalMaterials = results.stimuliResults.length;
 
+                  // Common stats line used in every tab description
+                  const _ibStats = `N=${_ibTableN.toLocaleString("ro-RO")} evaluari · ${_ibMaterials}/${_ibTotalMaterials} materiale · ${_ibCompleted} completati / ${_ibTotal} inscrisi`;
+
                   const tabDescriptions: Record<string, string> = {
-                    scoruri: `Scorurile R, I, F, C si CTA pe fiecare material — calculate din N=${_ibTableN.toLocaleString("ro-RO")} evaluari individuale pe ${_ibMaterials} materiale (din ${_ibTotalMaterials} total). Respondenti: ${_ibCompleted} completati din ${_ibTotal} inscrisi.`,
-                    profil: `Profilul demografic si comportamental — calculat din ${_ibCompleted} formulare completate (din ${_ibTotal} respondenti inscrisi).`,
-                    psihografic: `Medii pe dimensiunile psihografice (scala 1-10) — calculate din ${_ibCompleted} formulare completate (din ${_ibTotal} respondenti inscrisi).`,
-                    canale: `Agregare scoruri per canal (tip material) — din N=${_ibTableN.toLocaleString("ro-RO")} evaluari pe ${_ibMaterials} materiale. Respondenti: ${_ibCompleted} completati din ${_ibTotal} inscrisi.`,
-                    industrii: `Segmentare pe industrii — din N=${_ibTableN.toLocaleString("ro-RO")} evaluari (${_ibCompleted} respondenti completati din ${_ibTotal} total).`,
-                    fatigue: `Analiza oboselii (fatigue) — cum variaza scorurile pe pozitia stimulului — din ${_ibCompleted} respondenti completati.`,
-                    funnel: `Funnel de completare — progresul tuturor ${_ibTotal} respondentilor de la inceput pana la finalizare.`,
+                    scoruri: `Scorurile R, I, F, C si CTA pe fiecare material. ${_ibStats}.`,
+                    profil: `Profilul demografic si comportamental al respondentilor. ${_ibStats}.`,
+                    psihografic: `Medii pe dimensiunile psihografice (scala 1-10). ${_ibStats}.`,
+                    canale: `Agregare scoruri per canal (tip material). ${_ibStats}.`,
+                    industrii: `Segmentare pe industrii. ${_ibStats}.`,
+                    fatigue: `Analiza oboselii (fatigue) — cum variaza scorurile pe pozitia stimulului. ${_ibStats}.`,
+                    funnel: `Funnel de completare — progresul respondentilor de la inceput pana la finalizare. ${_ibStats}.`,
                   };
 
                   return (
