@@ -6115,6 +6115,27 @@ export default function StudiuAdminPage() {
                 {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
               </div>
 
+              {/* ── Info banner (same format as Rezultate) ── */}
+              {(() => {
+                const _iiStats = `${_interpResponses.toLocaleString("ro-RO")} raspunsuri · ${n}/${results.stimuliResults.length} materiale · ${_interpCompleted} completati / ${_interpTotal} inscrisi`;
+                const _iiDescriptions: Record<string, string> = {
+                  total: `Interpretare globala — validare ipoteza, scoruri medii R/I/F/C, zone, gates. ${_iiStats}.`,
+                  industrie: `Interpretare segmentata pe industrii — comparatie scoruri si validare per industrie. ${_iiStats}.`,
+                  brand: `Interpretare segmentata pe branduri — comparatie scoruri si validare per brand. ${_iiStats}.`,
+                };
+                return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", marginBottom: 16, background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, fontSize: 12, color: "#0369a1" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0369a1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <div>
+                      <span style={{ fontWeight: 700 }}>Sursa date:</span>{" "}
+                      <span style={{ fontWeight: 600, color: "#0c4a6e" }}>{interpSource === "all" ? "Toate sursele" : activeSourceLabel}</span>
+                      {" — "}
+                      {_iiDescriptions[interpSubTab] || _iiStats}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ═══ TOTAL ═══ */}
               {interpSubTab === "total" && (
                 <div>
