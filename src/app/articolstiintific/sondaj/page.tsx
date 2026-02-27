@@ -2680,13 +2680,13 @@ export default function StudiuAdminPage() {
                     ? (resultsSegment === "general" ? "General (fara link)" : (distributions.find((d: any) => d.id === resultsSegment)?.name || resultsSegment))
                     : "Toate segmentele";
 
-                  // Results API stats (matches the table N column)
-                  const _ibTableN = results.stimuliResults.reduce((s: number, st: any) => s + (st.response_count || 0), 0);
+                  // Response count from LOG data (single source of truth — matches LOG tab header "RASPUNSURI")
+                  const _ibResponses = _ibLogs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
                   const _ibMaterials = results.stimuliResults.filter((s: any) => s.response_count > 0).length;
                   const _ibTotalMaterials = results.stimuliResults.length;
 
                   // Common stats line used in every tab description
-                  const _ibStats = `N=${_ibTableN.toLocaleString("ro-RO")} evaluari · ${_ibMaterials}/${_ibTotalMaterials} materiale · ${_ibCompleted} completati / ${_ibTotal} inscrisi`;
+                  const _ibStats = `${_ibResponses.toLocaleString("ro-RO")} raspunsuri · ${_ibMaterials}/${_ibTotalMaterials} materiale · ${_ibCompleted} completati / ${_ibTotal} inscrisi`;
 
                   const tabDescriptions: Record<string, string> = {
                     scoruri: `Scorurile R, I, F, C si CTA pe fiecare material. ${_ibStats}.`,
@@ -2705,7 +2705,7 @@ export default function StudiuAdminPage() {
                         <span style={{ fontWeight: 700 }}>Sursa date:</span>{" "}
                         <span style={{ fontWeight: 600, color: "#0c4a6e" }}>{_ibSegLabel}</span>
                         {" — "}
-                        {tabDescriptions[resultsSubTab] || `${_ibTotal} respondenti, ${_ibCompleted} completati, N=${_ibTableN.toLocaleString("ro-RO")} evaluari.`}
+                        {tabDescriptions[resultsSubTab] || `${_ibResponses.toLocaleString("ro-RO")} raspunsuri · ${_ibMaterials}/${_ibTotalMaterials} materiale · ${_ibCompleted} completati / ${_ibTotal} inscrisi.`}
                       </div>
                     </div>
                   );
@@ -6008,9 +6008,8 @@ export default function StudiuAdminPage() {
             : logData.filter((l: any) => l.distribution_id === interpSource);
           const _interpCompleted = logData.length > 0 ? _interpFilteredLog.filter(_interpDone).length : results.completedRespondents;
           const _interpTotal = logData.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
-          // Use Results API N (matches table TOTAL row and scatter data)
-          const _interpTableN = results.stimuliResults.reduce((s: number, st: any) => s + (st.response_count || 0), 0);
-          const _interpResponses = _interpTableN;
+          // Use LOG data for response count (matches header RASPUNSURI)
+          const _interpResponses = _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
 
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
