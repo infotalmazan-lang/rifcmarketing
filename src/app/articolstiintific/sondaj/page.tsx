@@ -782,6 +782,7 @@ export default function StudiuAdminPage() {
   const [logLoading, setLogLoading] = useState(false);
   const [logDateFrom, setLogDateFrom] = useState("");
   const [logDateTo, setLogDateTo] = useState("");
+  const [logStatusFilter, setLogStatusFilter] = useState<"all" | "completed" | "started">("all");
   const [logSelected, setLogSelected] = useState<Set<string>>(new Set());
   const [logSegment, setLogSegment] = useState<string>("all");
   const [logExpandedId, setLogExpandedId] = useState<string | null>(null);
@@ -8295,14 +8296,18 @@ export default function StudiuAdminPage() {
             if (logDateTo && d > new Date(logDateTo + "T23:59:59")) return false;
             return true;
           });
-          const filtered = segFiltered;
-          const allFilteredIds = filtered.map((l: any) => l.id);
-          const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => logSelected.has(id));
 
           // Completion detection — mirrors backend isEffectivelyCompleted():
           // completed_at is set OR respondent evaluated all active stimuli
           const expectedLogResponses = stimuli.filter(s => s.is_active).length;
           const isLogCompleted = (l: any) => !!l.completed_at || (expectedLogResponses > 0 && (l.responseCount || 0) >= expectedLogResponses);
+
+          // Status filter: all / completed / started (incomplete)
+          const filtered = logStatusFilter === "all" ? segFiltered
+            : logStatusFilter === "completed" ? segFiltered.filter(isLogCompleted)
+            : segFiltered.filter((l: any) => !isLogCompleted(l));
+          const allFilteredIds = filtered.map((l: any) => l.id);
+          const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => logSelected.has(id));
 
           // Stats
           const completedCount = filtered.filter((l: any) => isLogCompleted(l)).length;
@@ -8463,8 +8468,8 @@ export default function StudiuAdminPage() {
                     );
                   })}
                 </div>
-                {/* Date filters compact */}
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {/* Date filters + Status filter compact */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" as const }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF" }}>FILTRU:</span>
                   <input type="date" value={logDateFrom} onChange={(e) => setLogDateFrom(e.target.value)} style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 11, color: "#374151", background: "#fff" }} />
                   <span style={{ fontSize: 10, color: "#9CA3AF" }}>—</span>
@@ -8474,6 +8479,19 @@ export default function StudiuAdminPage() {
                       <X size={10} />
                     </button>
                   )}
+                  <div style={{ width: 1, height: 18, background: "#e5e7eb", margin: "0 4px" }} />
+                  {([
+                    { key: "all" as const, label: "Toate" },
+                    { key: "completed" as const, label: "Completat" },
+                    { key: "started" as const, label: "Inceput" },
+                  ]).map(sf => (
+                    <button key={sf.key} onClick={() => setLogStatusFilter(sf.key)} style={{
+                      padding: "4px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: "pointer",
+                      border: logStatusFilter === sf.key ? "1px solid #111827" : "1px solid #d1d5db",
+                      background: logStatusFilter === sf.key ? "#111827" : "#fff",
+                      color: logStatusFilter === sf.key ? "#fff" : "#6B7280",
+                    }}>{sf.label}</button>
+                  ))}
                 </div>
               </div>
 
