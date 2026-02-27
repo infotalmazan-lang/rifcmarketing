@@ -2819,14 +2819,23 @@ export default function StudiuAdminPage() {
                             );
 
                             return (
-                              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderLeft: "4px solid #7C3AED", borderRadius: 10, padding: "20px 24px", marginBottom: 20 }}>
-                                {/* Header */}
-                                <div style={{ marginBottom: 16 }}>
-                                  <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4 }}>Sumar Validare Academica</div>
-                                  <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>
+                              <details style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderLeft: "4px solid #7C3AED", borderRadius: 10, marginBottom: 20, overflow: "hidden" }}>
+                                <summary style={{ cursor: "pointer", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" as const }}>
+                                  <div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                      Sumar Validare Academica
+                                    </div>
+                                    <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>
+                                      Indicatori cheie: Cronbach \u03B1={alpha.toFixed(2)}, Validare={gValPct}%, Gate={gatePct}%, Zone Match={zonePct}%
+                                    </div>
+                                  </div>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 12, transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                                </summary>
+                                <div style={{ padding: "0 24px 20px 24px" }}>
+                                <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5, marginBottom: 16 }}>
                                     Aceasta sectiune rezuma indicatorii cheie care demonstreaza validitatea stiintifica a modelului RIFC.
                                     Fiecare metric explica un aspect diferit: de la fiabilitatea instrumentului pana la acuratetea predictiei.
-                                  </div>
                                 </div>
 
                                 {/* Sample size bar */}
@@ -2915,7 +2924,8 @@ export default function StudiuAdminPage() {
                                     </div>
                                   ))}
                                 </div>
-                              </div>
+                                </div>
+                              </details>
                             );
                           })()}
 
