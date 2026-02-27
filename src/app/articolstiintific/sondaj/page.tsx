@@ -2663,6 +2663,45 @@ export default function StudiuAdminPage() {
                   ))}
                 </div>
 
+                {/* ── INFO BANNER: sursa datelor per sub-tab ── */}
+                {(() => {
+                  const _ibActiveStimN = stimuli.filter((s: any) => s.is_active).length;
+                  const _ibIsDone = (l: any) => !!l.completed_at || (_ibActiveStimN > 0 && (l.responseCount || 0) >= _ibActiveStimN);
+                  const _ibIsFiltered = resultsSegment !== "all";
+                  const _ibLogs = _ibIsFiltered ? logData.filter((l: any) => {
+                    if (resultsSegment === "general") return !l.distribution_id;
+                    return l.distribution_id === resultsSegment;
+                  }) : logData;
+                  const _ibTotal = _ibLogs.length;
+                  const _ibCompleted = _ibLogs.filter(_ibIsDone).length;
+                  const _ibResponses = _ibLogs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+                  const _ibSegLabel = _ibIsFiltered
+                    ? (resultsSegment === "general" ? "General (fara link)" : (distributions.find((d: any) => d.id === resultsSegment)?.name || resultsSegment))
+                    : "Toate segmentele";
+
+                  const tabDescriptions: Record<string, string> = {
+                    scoruri: `Scorurile R, I, F, C si CTA pe fiecare material — calculate din ${_ibResponses.toLocaleString("ro-RO")} raspunsuri date de ${_ibCompleted} respondenti completati (din ${_ibTotal} total).`,
+                    profil: `Profilul demografic si comportamental — calculat din ${_ibCompleted} formulare completate (din ${_ibTotal} respondenti inscrisi).`,
+                    psihografic: `Medii pe dimensiunile psihografice (scala 1-10) — calculate din ${_ibCompleted} formulare completate.`,
+                    canale: `Agregare scoruri per canal (tip material) — din ${_ibResponses.toLocaleString("ro-RO")} raspunsuri (${_ibCompleted} respondenti completati).`,
+                    industrii: `Segmentare pe industrii — din ${_ibResponses.toLocaleString("ro-RO")} raspunsuri (${_ibCompleted} respondenti completati din ${_ibTotal} total).`,
+                    fatigue: `Analiza oboselii (fatigue) — cum variaza scorurile pe pozitia stimulului — din ${_ibCompleted} respondenti completati.`,
+                    funnel: `Funnel de completare — progresul tuturor ${_ibTotal} respondentilor de la inceput pana la finalizare.`,
+                  };
+
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", marginBottom: 16, background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, fontSize: 12, color: "#0369a1" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0369a1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                      <div>
+                        <span style={{ fontWeight: 700 }}>Sursa date:</span>{" "}
+                        <span style={{ fontWeight: 600, color: "#0c4a6e" }}>{_ibSegLabel}</span>
+                        {" — "}
+                        {tabDescriptions[resultsSubTab] || `${_ibTotal} respondenti, ${_ibCompleted} completati, ${_ibResponses} raspunsuri.`}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* ── SUB-TAB: SCORURI ── */}
                 {resultsSubTab === "scoruri" && (
                   <>
@@ -3801,8 +3840,8 @@ export default function StudiuAdminPage() {
 
                 {/* ── SUB-TAB: COMPLETION FUNNEL ── */}
                 {resultsSubTab === "funnel" && (() => {
-                  const cf = results.completionFunnel;
-                  if (!cf || cf.funnelSteps.length === 0) {
+                  const cfRaw = results.completionFunnel;
+                  if ((!cfRaw || cfRaw.funnelSteps.length === 0) && logData.length === 0) {
                     return (
                       <div style={S.placeholderTab}>
                         <BarChart3 size={48} style={{ color: "#d1d5db" }} />
@@ -3810,6 +3849,93 @@ export default function StudiuAdminPage() {
                       </div>
                     );
                   }
+
+                  // ── Derive funnel from logData (single source of truth, matches header) ──
+                  const _fActiveStimN = stimuli.filter((s: any) => s.is_active).length;
+                  const _fIsDone = (l: any) => !!l.completed_at || (_fActiveStimN > 0 && (l.responseCount || 0) >= _fActiveStimN);
+                  const _fIsFiltered = resultsSegment !== "all";
+                  const _fLogs = _fIsFiltered ? logData.filter((l: any) => {
+                    if (resultsSegment === "general") return !l.distribution_id;
+                    return l.distribution_id === resultsSegment;
+                  }) : logData;
+                  const _fTotal = _fLogs.length;
+                  const _fCompleted = _fLogs.filter(_fIsDone).length;
+                  const _fRate = _fTotal > 0 ? Math.round((_fCompleted / _fTotal) * 100) : 0;
+
+                  // Rebuild funnelSteps from logData step_completed
+                  const _fMilestones: { step: number; label: string }[] = [
+                    { step: 0, label: "Inceput (Welcome)" },
+                    { step: 1, label: "Demografie" },
+                    { step: 2, label: "Comportament" },
+                    { step: 3, label: "Psihografic" },
+                  ];
+                  const _fStimuliCount = cfRaw?.funnelSteps
+                    ? cfRaw.funnelSteps.filter(fs => fs.label.startsWith("Stimul")).length
+                    : Math.max(..._fLogs.map((l: any) => (l.step_completed || 0) - 3), _fActiveStimN, 0);
+                  for (let s = 0; s < _fStimuliCount; s++) {
+                    _fMilestones.push({ step: 4 + s, label: `Stimul ${s + 1}` });
+                  }
+                  _fMilestones.push({ step: 9999, label: "Completat" });
+
+                  const _fSteps: { step: number; label: string; reached: number; rate: number; dropped: number }[] = [];
+                  for (let i = 0; i < _fMilestones.length; i++) {
+                    const ms = _fMilestones[i];
+                    let reached: number;
+                    if (ms.step === 9999) {
+                      reached = _fCompleted;
+                    } else {
+                      reached = _fLogs.filter((l: any) => (l.step_completed || 0) >= ms.step).length;
+                    }
+                    const prevReached = i > 0 ? _fSteps[i - 1].reached : _fTotal;
+                    _fSteps.push({
+                      step: ms.step,
+                      label: ms.label,
+                      reached,
+                      rate: _fTotal > 0 ? Math.round((reached / _fTotal) * 100) : 0,
+                      dropped: prevReached - reached,
+                    });
+                  }
+
+                  // Worst dropout
+                  let _fWorst = { step: 0, label: "", dropped: 0, dropRate: 0 };
+                  for (let i = 1; i < _fSteps.length; i++) {
+                    const prev = _fSteps[i - 1];
+                    const curr = _fSteps[i];
+                    const dropRate = prev.reached > 0 ? Math.round(((prev.reached - curr.reached) / prev.reached) * 100) : 0;
+                    if (curr.dropped > _fWorst.dropped) {
+                      _fWorst = { step: curr.step, label: curr.label, dropped: curr.dropped, dropRate };
+                    }
+                  }
+
+                  // Session times from logData
+                  const _fDurations = _fLogs
+                    .filter((l: any) => _fIsDone(l) && l.completed_at && l.started_at)
+                    .map((l: any) => Math.round((new Date(l.completed_at).getTime() - new Date(l.started_at).getTime()) / 1000))
+                    .filter((s: number) => s > 0 && s < 7200);
+                  const _fSorted = [..._fDurations].sort((a, b) => a - b);
+                  const _fMedian = _fSorted.length > 0 ? _fSorted[Math.floor(_fSorted.length / 2)] : 0;
+                  const _fAvg = _fDurations.length > 0 ? Math.round(_fDurations.reduce((a: number, b: number) => a + b, 0) / _fDurations.length) : 0;
+
+                  // Time buckets
+                  const _fBuckets = { under5m: 0, m5to15: 0, m15to30: 0, m30to60: 0, over60m: 0 };
+                  for (const d of _fDurations) {
+                    if (d < 300) _fBuckets.under5m++;
+                    else if (d < 900) _fBuckets.m5to15++;
+                    else if (d < 1800) _fBuckets.m15to30++;
+                    else if (d < 3600) _fBuckets.m30to60++;
+                    else _fBuckets.over60m++;
+                  }
+
+                  const cf: CompletionFunnel = {
+                    totalStarted: _fTotal,
+                    totalCompleted: _fCompleted,
+                    overallRate: _fRate,
+                    funnelSteps: _fSteps,
+                    worstDropout: _fWorst,
+                    medianSessionTime: _fMedian,
+                    avgSessionTime: _fAvg,
+                    timeBuckets: _fBuckets,
+                  };
 
                   const fmtTime = (sec: number) => sec >= 60 ? `${Math.floor(sec / 60)}m ${sec % 60}s` : `${sec}s`;
                   const maxReached = cf.funnelSteps[0]?.reached || 1;
