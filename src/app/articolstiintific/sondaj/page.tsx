@@ -2665,6 +2665,7 @@ export default function StudiuAdminPage() {
 
                 {/* ── INFO BANNER: sursa datelor per sub-tab ── */}
                 {(() => {
+                  // LOG-based stats (matches header hero — single source of truth for respondent counts)
                   const _ibActiveStimN = stimuli.filter((s: any) => s.is_active).length;
                   const _ibIsDone = (l: any) => !!l.completed_at || (_ibActiveStimN > 0 && (l.responseCount || 0) >= _ibActiveStimN);
                   const _ibIsFiltered = resultsSegment !== "all";
@@ -2674,17 +2675,21 @@ export default function StudiuAdminPage() {
                   }) : logData;
                   const _ibTotal = _ibLogs.length;
                   const _ibCompleted = _ibLogs.filter(_ibIsDone).length;
-                  const _ibResponses = _ibLogs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
                   const _ibSegLabel = _ibIsFiltered
                     ? (resultsSegment === "general" ? "General (fara link)" : (distributions.find((d: any) => d.id === resultsSegment)?.name || resultsSegment))
                     : "Toate segmentele";
 
+                  // Results API stats (matches the table N column)
+                  const _ibTableN = results.stimuliResults.reduce((s: number, st: any) => s + (st.response_count || 0), 0);
+                  const _ibMaterials = results.stimuliResults.filter((s: any) => s.response_count > 0).length;
+                  const _ibTotalMaterials = results.stimuliResults.length;
+
                   const tabDescriptions: Record<string, string> = {
-                    scoruri: `Scorurile R, I, F, C si CTA pe fiecare material — calculate din ${_ibResponses.toLocaleString("ro-RO")} raspunsuri date de ${_ibCompleted} respondenti completati (din ${_ibTotal} total).`,
+                    scoruri: `Scorurile R, I, F, C si CTA pe fiecare material — calculate din N=${_ibTableN.toLocaleString("ro-RO")} evaluari individuale pe ${_ibMaterials} materiale (din ${_ibTotalMaterials} total). Respondenti: ${_ibCompleted} completati din ${_ibTotal} inscrisi.`,
                     profil: `Profilul demografic si comportamental — calculat din ${_ibCompleted} formulare completate (din ${_ibTotal} respondenti inscrisi).`,
-                    psihografic: `Medii pe dimensiunile psihografice (scala 1-10) — calculate din ${_ibCompleted} formulare completate.`,
-                    canale: `Agregare scoruri per canal (tip material) — din ${_ibResponses.toLocaleString("ro-RO")} raspunsuri (${_ibCompleted} respondenti completati).`,
-                    industrii: `Segmentare pe industrii — din ${_ibResponses.toLocaleString("ro-RO")} raspunsuri (${_ibCompleted} respondenti completati din ${_ibTotal} total).`,
+                    psihografic: `Medii pe dimensiunile psihografice (scala 1-10) — calculate din ${_ibCompleted} formulare completate (din ${_ibTotal} respondenti inscrisi).`,
+                    canale: `Agregare scoruri per canal (tip material) — din N=${_ibTableN.toLocaleString("ro-RO")} evaluari pe ${_ibMaterials} materiale. Respondenti: ${_ibCompleted} completati din ${_ibTotal} inscrisi.`,
+                    industrii: `Segmentare pe industrii — din N=${_ibTableN.toLocaleString("ro-RO")} evaluari (${_ibCompleted} respondenti completati din ${_ibTotal} total).`,
                     fatigue: `Analiza oboselii (fatigue) — cum variaza scorurile pe pozitia stimulului — din ${_ibCompleted} respondenti completati.`,
                     funnel: `Funnel de completare — progresul tuturor ${_ibTotal} respondentilor de la inceput pana la finalizare.`,
                   };
@@ -2696,7 +2701,7 @@ export default function StudiuAdminPage() {
                         <span style={{ fontWeight: 700 }}>Sursa date:</span>{" "}
                         <span style={{ fontWeight: 600, color: "#0c4a6e" }}>{_ibSegLabel}</span>
                         {" — "}
-                        {tabDescriptions[resultsSubTab] || `${_ibTotal} respondenti, ${_ibCompleted} completati, ${_ibResponses} raspunsuri.`}
+                        {tabDescriptions[resultsSubTab] || `${_ibTotal} respondenti, ${_ibCompleted} completati, N=${_ibTableN.toLocaleString("ro-RO")} evaluari.`}
                       </div>
                     </div>
                   );
