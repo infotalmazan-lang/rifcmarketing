@@ -815,9 +815,9 @@ export default function StudiuAdminPage() {
       if (json.ok) {
         setLogData((prev) => prev.filter((l) => !ids.includes(l.id)));
         setLogSelected((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
-        // Refresh results (archived entries excluded from results)
+        // Refresh LOG data (single source of truth) + results
+        fetchLog();
         fetchResults(resultsSegment);
-        fetchGlobalStats();
       }
     } catch { /* ignore */ }
   };
@@ -846,9 +846,8 @@ export default function StudiuAdminPage() {
       if (json.ok) {
         setArchiveData((prev) => prev.filter((l) => !ids.includes(l.id)));
         setArchiveSelected((prev) => { const n = new Set(prev); ids.forEach((id) => n.delete(id)); return n; });
-        fetchLog(); // Refresh main log
+        fetchLog(); // Refresh main log (single source of truth)
         fetchResults(resultsSegment);
-        fetchGlobalStats();
       }
     } catch { /* ignore */ }
   };
@@ -1098,17 +1097,17 @@ export default function StudiuAdminPage() {
 
   useEffect(() => {
     if (activeTab === "rezultate") {
+      fetchLog(); // Always fetch LOG data — single source of truth for respondent counts
       fetchResults(resultsSegment);
-      fetchGlobalStats();
     }
     if (activeTab === "interpretare") {
+      fetchLog();
       fetchResults(resultsSegment, interpMonth);
-      fetchGlobalStats();
     }
     if (activeTab === "distributie") {
-      fetchGlobalStats();
+      fetchLog();
     }
-  }, [activeTab, resultsSegment, interpMonth, fetchResults, fetchGlobalStats]);
+  }, [activeTab, resultsSegment, interpMonth, fetchResults, fetchLog]);
 
   // ── Expert data ──────────────────────────────────────────
   const fetchExperts = useCallback(async () => {
@@ -1134,7 +1133,7 @@ export default function StudiuAdminPage() {
   }, [activeTab, fetchExperts, fetchExpertEvals]);
 
   useEffect(() => {
-    if (activeTab === "log") fetchLog();
+    if (activeTab === "log") fetchLog(); // LOG tab also refreshes on enter
   }, [activeTab, fetchLog]);
 
   // CVI data fetching
@@ -1535,9 +1534,8 @@ export default function StudiuAdminPage() {
       );
       // Invalidate + force re-fetch results so all tabs show updated names
       setResults(null);
-      setGlobalStats(null);
+      fetchLog();
       fetchResults(resultsSegment);
-      fetchGlobalStats();
     }
     setEditingStimId(null);
     setSaving(false);
@@ -2287,7 +2285,15 @@ export default function StudiuAdminPage() {
 
           return (
           <div>
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0, marginBottom: 4 }}>Rezultate Sondaj</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Rezultate Sondaj</h2>
+              <button
+                onClick={() => { fetchLog(); fetchResults(resultsSegment); }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", color: "#374151", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              >
+                <RotateCcw size={13} /> Reincarca
+              </button>
+            </div>
             <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
               Scoruri agregate R, I, F, C, CTA pe fiecare material + profil demografic respondenți.
             </p>
@@ -2313,14 +2319,59 @@ export default function StudiuAdminPage() {
               </div>
             ) : (
               <>
-                {/* ═══ KPI Hero — ALWAYS global totals ═══ */}
+                {/* ═══ KPI Hero — Stats derived from LOG data (single source of truth) ═══ */}
                 {(() => {
                   const TARGET = 10000;
-                  const g = globalStats || { total: results.totalRespondents, completed: results.completedRespondents, rate: results.completionRate, responses: results.totalResponses, today: results.completedToday || 0, month: results.completedMonth || 0, avgTime: results.avgSessionTime || 0, perDist: [] };
+                  const isFiltered = resultsSegment !== "all";
+
+                  // ── Compute stats from LOG data — matches LOG tab exactly ──
+                  const _activeStimN = stimuli.filter(s => s.is_active).length;
+                  const _isDone = (l: any) => !!l.completed_at || (_activeStimN > 0 && (l.responseCount || 0) >= _activeStimN);
+                  const _now = new Date();
+                  const _todayStr = _now.toISOString().slice(0, 10);
+                  const _monthStr = _now.toISOString().slice(0, 7);
+
+                  const _computeStats = (logs: any[]) => {
+                    const completed = logs.filter(_isDone).length;
+                    const responses = logs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+                    const today = logs.filter((l: any) => _isDone(l) && l.completed_at?.slice(0, 10) === _todayStr).length;
+                    const month = logs.filter((l: any) => _isDone(l) && l.completed_at?.slice(0, 7) === _monthStr).length;
+                    const durs = logs.filter((l: any) => _isDone(l) && l.completed_at && l.started_at)
+                      .map((l: any) => Math.round((new Date(l.completed_at).getTime() - new Date(l.started_at).getTime()) / 1000))
+                      .filter((s: number) => s > 0 && s < 7200);
+                    const avgTime = durs.length > 0 ? Math.round(durs.reduce((a: number, v: number) => a + v, 0) / durs.length) : 0;
+                    return { total: logs.length, completed, rate: logs.length > 0 ? Math.round((completed / logs.length) * 100) : 0, responses, today, month, avgTime };
+                  };
+
+                  // Global stats (all respondents)
+                  const gStats = _computeStats(logData);
+
+                  // Per-distribution breakdown from logData
+                  const _dg: Record<string, { name: string; tag: string; total: number; completed: number }> = {};
+                  let _ndT = 0, _ndC = 0;
+                  for (const l of logData) {
+                    if (l.distribution_id) {
+                      if (!_dg[l.distribution_id]) _dg[l.distribution_id] = { name: (l as any).distribution_name || "?", tag: (l as any).distribution_tag || "", total: 0, completed: 0 };
+                      _dg[l.distribution_id].total++;
+                      if (_isDone(l)) _dg[l.distribution_id].completed++;
+                    } else { _ndT++; if (_isDone(l)) _ndC++; }
+                  }
+                  const _pd: any[] = Object.entries(_dg).map(([id, d]) => ({ id, ...d }));
+                  if (_ndT > 0) _pd.unshift({ id: "__none__", name: "Fara link", tag: "", total: _ndT, completed: _ndC });
+
+                  const g = { ...gStats, perDist: _pd };
+
+                  // Per-segment stats (filtered by current resultsSegment)
+                  const segLogs = logData.filter((l: any) => {
+                    if (resultsSegment === "general") return !l.distribution_id;
+                    if (resultsSegment !== "all") return l.distribution_id === resultsSegment;
+                    return true;
+                  });
+                  const segStats = isFiltered ? _computeStats(segLogs) : gStats;
+
                   const current = g.completed;
                   const pct = Math.min(Math.round((current / TARGET) * 100), 100);
                   const remaining = Math.max(TARGET - current, 0);
-                  const isFiltered = resultsSegment !== "all";
                   return (
                     <div style={{
                       background: "linear-gradient(135deg, #111827 0%, #1e293b 100%)",
@@ -2351,11 +2402,9 @@ export default function StudiuAdminPage() {
                           </div>
                         </div>
 
-                        {/* Mini stat pills — adapt to segment */}
+                        {/* Mini stat pills — derived from LOG data (single source of truth) */}
                         {(() => {
-                          const segData = isFiltered
-                            ? { total: results.totalRespondents, completed: results.completedRespondents, rate: results.completionRate, responses: results.totalResponses, today: results.completedToday || 0, month: results.completedMonth || 0, avgTime: results.avgSessionTime || 0 }
-                            : { total: g.total, completed: g.completed, rate: g.rate, responses: g.responses, today: g.today, month: g.month, avgTime: g.avgTime };
+                          const segData = segStats;
                           const avgT = segData.avgTime;
                           const avgTStr = avgT >= 60 ? `${Math.floor(avgT / 60)}m ${avgT % 60}s` : `${avgT}s`;
                           return (
@@ -2464,7 +2513,7 @@ export default function StudiuAdminPage() {
                       {isFiltered && (() => {
                         const activeDist = distributions.find(d => d.id === resultsSegment);
                         const plan = activeDist?.estimated_completions || 0;
-                        const planPct = plan > 0 ? Math.round((results.completedRespondents / plan) * 100) : 0;
+                        const planPct = plan > 0 ? Math.round((segStats.completed / plan) * 100) : 0;
                         return (
                           <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #334155", position: "relative" as const, zIndex: 1 }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
@@ -2473,11 +2522,11 @@ export default function StudiuAdminPage() {
                                 {resultsSegment === "general" ? "General (fara tag)" : (activeDist?.name || resultsSegment)}
                               </span>
                               <span style={{ fontSize: 11, color: "#9CA3AF" }}>
-                                — {results.completedRespondents} completari din {results.totalRespondents} porniti ({results.completionRate}%)
+                                — {segStats.completed} completari din {segStats.total} porniti ({segStats.rate}%)
                               </span>
                               {plan > 0 && (
                                 <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 8, background: planPct >= 100 ? "rgba(16,185,129,0.2)" : "rgba(245,158,11,0.15)", color: planPct >= 100 ? "#34d399" : "#fbbf24" }}>
-                                  {results.completedRespondents}/{plan} plan · {planPct}%
+                                  {segStats.completed}/{plan} plan · {planPct}%
                                 </span>
                               )}
                             </div>
@@ -3928,11 +3977,16 @@ export default function StudiuAdminPage() {
               const distCompletions = distributions.reduce((sum, d) => sum + (d.completions || 0), 0);
               // Sum estimated KPI from all individual distribution links
               const distEstimated = distributions.reduce((sum, d) => sum + (d.estimated_completions || 0), 0);
-              // Get general link completions from globalStats
-              const generalCompleted = globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0;
-              const totalCompleted = distCompletions + generalCompleted;
-              // Also check globalStats.completed if available (more reliable)
-              const kpiCompleted = globalStats ? globalStats.completed : totalCompleted;
+
+              // Derive completion counts from logData (single source of truth)
+              const _activeN = stimuli.filter(s => s.is_active).length;
+              const _done = (l: any) => !!l.completed_at || (_activeN > 0 && (l.responseCount || 0) >= _activeN);
+              const logCompleted = logData.filter(_done).length;
+              const logGeneralCompleted = logData.filter((l: any) => !l.distribution_id && _done(l)).length;
+
+              const generalCompleted = logData.length > 0 ? logGeneralCompleted : (globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0);
+              const totalCompleted = logData.length > 0 ? logCompleted : (distCompletions + generalCompleted);
+              const kpiCompleted = totalCompleted;
               const kpiRemaining = Math.max(TARGET - kpiCompleted, 0);
               // Percentage with decimals: show 2 decimals when < 1%, whole number when >= 1%
               const kpiPctRaw = TARGET > 0 ? Math.min((kpiCompleted / TARGET) * 100, 100) : 0;
@@ -5531,7 +5585,11 @@ export default function StudiuAdminPage() {
                     background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — TOTAL</div>
-                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{results.completedRespondents}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{results.totalRespondents}</strong> pornite ({results.totalResponses} raspunsuri individuale)</div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{results.completedRespondents}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{results.totalRespondents}</strong> pornite ({results.totalResponses} raspunsuri individuale)
+                      {logData.length > 0 && results.totalRespondents !== logData.length && (
+                        <span style={{ color: "#f59e0b", fontWeight: 700 }}> (LOG: {logData.length} resp.)</span>
+                      )}
+                    </div>
                     <div style={{ fontSize: 48, fontWeight: 900, color: getValidationColor(grandHypPct), lineHeight: 1 }}>{grandHypPct}%</div>
                     <div style={{
                       display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
