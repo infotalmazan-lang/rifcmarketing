@@ -2855,7 +2855,7 @@ export default function StudiuAdminPage() {
                                   </div>
                                   <div style={{ textAlign: "right" as const }}>
                                     <span style={{ fontSize: 22, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>N={sc.length}</span>
-                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>din {withData.length} materiale ({results.completedRespondents} respondenti)</span>
+                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>din {withData.length} materiale ({(() => { const _an = stimuli.filter((s: any) => s.is_active).length; const _ad = (l: any) => !!l.completed_at || (_an > 0 && (l.responseCount || 0) >= _an); return `${logData.filter(_ad).length} completati / ${logData.length} inscrisi`; })()})</span>
                                   </div>
                                 </div>
 
@@ -7207,7 +7207,7 @@ export default function StudiuAdminPage() {
                         <div style={{ width: 4, height: 24, borderRadius: 2, background: "#7C3AED" }} />
                         <div>
                           <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Validare Instrument</div>
-                          <div style={{ fontSize: 11, color: "#6B7280" }}>Consistenta interna si distributia scorurilor pe N={scatter.length} evaluari ({results.completedRespondents} respondenti)</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>Consistenta interna si distributia scorurilor — {_interpResponses.toLocaleString("ro-RO")} raspunsuri ({_interpCompleted} completati / {_interpTotal} inscrisi)</div>
                         </div>
                       </div>
 
