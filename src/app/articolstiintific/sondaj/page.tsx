@@ -175,6 +175,39 @@ const _fisherZTest = (r1: number, r2: number, n1: number, n2: number): { z: numb
   const p = 2 * (1 - _normalCDF(Math.abs(z)));
   return { z, p };
 };
+// Rank array — average ranks for ties (used by Spearman)
+const _rankArray = (arr: number[]): number[] => {
+  const sorted = arr.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
+  const ranks = new Array(arr.length);
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j < sorted.length && sorted[j].v === sorted[i].v) j++;
+    const avgRank = (i + j + 1) / 2;
+    for (let k = i; k < j; k++) ranks[sorted[k].i] = avgRank;
+    i = j;
+  }
+  return ranks;
+};
+// Spearman rank correlation — Pearson on ranks
+const _spearmanRho = (xs: number[], ys: number[]): number => {
+  if (xs.length !== ys.length || xs.length < 3) return 0;
+  return _pearsonR(_rankArray(xs), _rankArray(ys));
+};
+// Simple linear regression — returns slope, intercept, r²
+const _linReg = (xs: number[], ys: number[]): { slope: number; intercept: number; r2: number } => {
+  const n = xs.length;
+  if (n < 2) return { slope: 0, intercept: 0, r2: 0 };
+  const mx = _mean(xs), my = _mean(ys);
+  const sxy = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0);
+  const sx2 = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  const slope = sx2 > 0 ? sxy / sx2 : 0;
+  const intercept = my - slope * mx;
+  const ssTot = ys.reduce((a, y) => a + (y - my) ** 2, 0);
+  const ssRes = ys.reduce((a, y, i) => a + (y - (slope * xs[i] + intercept)) ** 2, 0);
+  const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+  return { slope, intercept, r2 };
+};
 
 // ── Shared constants & zone helpers (used by both Rezultate + Interpretare) ──
 const GATE = 3;
@@ -2875,6 +2908,25 @@ export default function StudiuAdminPage() {
                             const dAdit = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i + d.f) / 30 - d.c_score! / 10))) : 0;
                             const h5CastigPct = dAdit > 0 ? Math.round(((dAdit - dMult) / dAdit) * 1000) / 10 : 0;
 
+                            // H7 — Scale-Independent Interaction Test (Spearman + Partial Correlation)
+                            const h7D = scValid.filter(d => d.c_score != null && d.c_score > 0);
+                            const h7MultPreds = h7D.map(d => d.r + d.i * d.f);
+                            const h7AditPreds = h7D.map(d => d.r + d.i + d.f);
+                            const h7Cps = h7D.map(d => d.c_score!);
+                            const h7SpearmanMult = h7D.length >= 3 ? _spearmanRho(h7MultPreds, h7Cps) : 0;
+                            const h7SpearmanAdit = h7D.length >= 3 ? _spearmanRho(h7AditPreds, h7Cps) : 0;
+                            const h7DeltaRho = h7SpearmanMult - h7SpearmanAdit;
+                            const h7FisherZ = _fisherZTest(h7SpearmanMult, h7SpearmanAdit, h7D.length, h7D.length);
+                            const h7AditReg = _linReg(h7D.map(d => d.r + d.i + d.f), h7Cps);
+                            const h7Residuals = h7Cps.map((cp, i) => cp - (h7AditReg.slope * (h7D[i].r + h7D[i].i + h7D[i].f) + h7AditReg.intercept));
+                            const h7IxF = h7D.map(d => d.i * d.f);
+                            const h7PartialR = h7D.length >= 3 ? _pearsonR(h7Residuals, h7IxF) : 0;
+                            const h7PartialP = _pValuePearson(h7PartialR, h7D.length);
+                            const h7SpearmanSig = h7FisherZ.p < 0.05 && h7DeltaRho > 0;
+                            const h7PartialSig = h7PartialP < 0.05 && Math.abs(h7PartialR) > 0.1;
+                            const h7Verdict = h7SpearmanSig && h7PartialSig ? "CONFIRMATA" : (h7SpearmanSig || h7PartialSig) ? "PARTIAL" : "NECONFIRMATA";
+                            const h7VerdictColor = h7Verdict === "CONFIRMATA" ? "#059669" : h7Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
+
                             // Metric card builder
                             const metricCard = (icon: string, title: string, value: string, color: string, explanation: string, thresholds: string) => (
                               <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "14px 16px", borderTop: `3px solid ${color}` }}>
@@ -2998,6 +3050,7 @@ export default function StudiuAdminPage() {
                                     { code: "H4", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul H4 — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
                                     { code: "H5", name: "Multiplicativ vs Aditiv (Model Comparison)", verdict: `${h5CastigPct > 0 ? "Modelul multiplicativ (I\u00D7F) este superior" : "Modelul aditiv (I+F) este superior"} cu ${Math.abs(h5CastigPct)}% eroare mai mica. \u0394mult=${dMult.toFixed(2)}, \u0394adit=${dAdit.toFixed(2)}.`, color: h5CastigPct > 10 ? "#059669" : h5CastigPct >= 0 ? "#D97706" : "#DC2626" },
                                     { code: "H6", name: "I\u00D7F irelevant sub prag (Sub-threshold Test)", verdict: `Sub R<${GATE}: r=${h6BR.toFixed(2)} — ${Math.abs(h6BR) < 0.2 ? "Gate confirmat. Sub prag, I\u00D7F nu influenteaza C." : Math.abs(h6BR) <= 0.4 ? "Partial confirmat. Exista o corelatie slaba sub prag." : "Neconfirmat. I\u00D7F inca influenteaza sub prag."}`, color: Math.abs(h6BR) < 0.2 ? "#059669" : Math.abs(h6BR) <= 0.4 ? "#D97706" : "#DC2626" },
+                                    { code: "H7", name: "Test Scale-Independent al Interactiei I\u00D7F", verdict: h7Verdict === "CONFIRMATA" ? `Spearman \u03C1mult=${h7SpearmanMult.toFixed(3)} > \u03C1adit=${h7SpearmanAdit.toFixed(3)} (Fisher Z p=${h7FisherZ.p.toFixed(3)}) + Partial r(I\u00D7F|R+I+F)=${h7PartialR.toFixed(3)} (p=${h7PartialP.toFixed(3)}). Sinergia I\u00D7F confirmata fara artefact de scala.` : h7Verdict === "PARTIAL" ? `${h7SpearmanSig ? `Spearman favorizeaza multiplicativ (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)})` : `Spearman nesemnificativ (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)})`}. ${h7PartialSig ? `Partial r=${h7PartialR.toFixed(3)} semnificativ.` : `Partial r=${h7PartialR.toFixed(3)} nesemnificativ.`} Evidenta mixta.` : `Nici Spearman (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)}) nici Partial r=${h7PartialR.toFixed(3)} (p=${h7PartialP.toFixed(3)}) nu confirma sinergia I\u00D7F.`, color: h7VerdictColor },
                                   ].map(h => (
                                     <div key={h.code} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 10, padding: "8px 12px", background: "#fff", borderRadius: 6, border: "1px solid #f3f4f6", borderLeft: `3px solid ${h.color}` }}>
                                       <div style={{ minWidth: 24 }}>
@@ -6097,6 +6150,14 @@ export default function StudiuAdminPage() {
                 { heading: "De ce conteaza", text: `Daca R < ${GATE} si totusi I×F coreleaza cu C, inseamna ca R e doar o variabila obisnuita, nu un gate. Daca corelatia e ~0 (haos), inseamna ca sub prag, oricat investesti in Interes si Forma, nu produci Claritate. Aceasta ar fi cea mai puternica confirmare a originalitatii RIFC.` },
                 { heading: "Concluzie", text: `Un r aproape de 0 sub gate confirma puternic rolul de "poarta" al Relevantei — cel mai distinctiv element al formulei RIFC fata de alte framework-uri de marketing.` },
               ]};
+              case "h7": return { sections: [
+                { heading: "Ce testeaza H7", text: "H7 testeaza daca sinergia I×F este reala prin metode care NU depind de scala de normalizare. H5 compara erori absolute (Delta), dar normalizarea /110 vs /30 introduce un artefact: comprima valorile multiplicative in range 0.1-0.5, facand comparatia inechitabila. H7 elimina complet acest artefact." },
+                { heading: "Analiza 1 — Spearman Rank Correlation", text: "Converteste predictiile si C perceput in RANGURI (pozitii relative 1, 2, 3...). Rangurile ignora magnitudinea — conteaza doar daca ordinea predictiilor e corecta. Se calculeaza Spearman rho pentru modelul multiplicativ (R+I×F) si cel aditiv (R+I+F). Modelul cu rho mai mare prezice mai corect ORDINEA perceptiei." },
+                { heading: "Analiza 2 — Partial Correlation", text: "Se face regresie liniara C ~ (R+I+F) si se obtin reziduurile — ce NU poate explica modelul aditiv. Apoi se coreleaza reziduurile cu I×F. Daca corelatia e semnificativa, inseamna ca I×F aduce informatie SUPLIMENTARA pe care aditivul nu o capteaza. Aceasta e dovada directa a sinergiei." },
+                { heading: "De ce corecteaza H5", text: "H5 normalizeaza: mult/110, adit/30, Cp/10. Dar max(R+I×F) = 110 produce valori in 0.1-0.5, in timp ce Cp/10 e in 0.5-0.9. Aditivul (/30) produce valori in 0.3-0.8, natural mai apropiate. Deci aditivul castiga prin artefact de scala, nu prin acuratete superioara. H7 testeaza acelasi lucru fara aceste probleme." },
+                { heading: "Cum se interpreteaza", text: "Spearman: rho_mult > rho_adit + Fisher Z p<0.05 = multiplicativul prezice ordinea mai bine. Partial: |r(I×F|R+I+F)| > 0.1 + p<0.05 = sinergia aduce informatie extra. Ambele → CONFIRMATA. Una → PARTIAL. Niciuna → NECONFIRMATA." },
+                { heading: "Concluzie", text: "H7 ofera raspunsul definitiv la intrebarea 'Este sinergia I×F reala sau un artefact al normalizarii?' Rezultatul este independent de orice alegere de scala, normalizare sau range de valori." },
+              ]};
               case "v1": return { sections: [
                 { heading: "Ce masoara Cronbach Alpha", text: "Cronbach Alpha (α) masoara consistenta interna a instrumentului de masurare. In cazul RIFC, verifica daca cele 4 dimensiuni (R, I, F, C normalizat) masoara un construct coerent — adica daca respondentii care dau scoruri mari pe o dimensiune tind sa dea scoruri mari si pe celelalte." },
                 { heading: "Formula", text: "α = (k/(k-1)) × (1 - Σσ²ᵢ / σ²total), unde k = numarul de dimensiuni (4), σ²ᵢ = varianta fiecarei dimensiuni, σ²total = varianta sumei tuturor dimensiunilor. Valori mai mari indica consistenta mai buna." },
@@ -6769,7 +6830,7 @@ export default function StudiuAdminPage() {
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                       <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H6)</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H7)</div>
                         <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {_interpResponses.toLocaleString("ro-RO")} raspunsuri din {n} materiale ({_interpCompleted} completati / {_interpTotal} inscrisi).</div>
                       </div>
                     </div>
@@ -7538,6 +7599,173 @@ export default function StudiuAdminPage() {
                       })()}
                     </div>
 
+                    {/* ═══ GRAFIC H7 — Test Scale-Independent al Interactiei I×F ═══ */}
+                    {(() => {
+                      const sc = results.hypothesisScatterData || [];
+                      const valid = sc.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_score != null && d.c_score > 0);
+                      if (valid.length < 3) return null;
+
+                      const multPreds = valid.map(d => d.r + d.i * d.f);
+                      const aditPreds = valid.map(d => d.r + d.i + d.f);
+                      const cps = valid.map(d => d.c_score!);
+
+                      const rhoMult = _spearmanRho(multPreds, cps);
+                      const rhoAdit = _spearmanRho(aditPreds, cps);
+                      const deltaRho = rhoMult - rhoAdit;
+                      const fisherZ = _fisherZTest(rhoMult, rhoAdit, valid.length, valid.length);
+
+                      const aditReg = _linReg(valid.map(d => d.r + d.i + d.f), cps);
+                      const residuals = cps.map((cp, i) => cp - (aditReg.slope * (valid[i].r + valid[i].i + valid[i].f) + aditReg.intercept));
+                      const ixf = valid.map(d => d.i * d.f);
+                      const partialR = _pearsonR(residuals, ixf);
+                      const partialP = _pValuePearson(partialR, valid.length);
+
+                      const spearmanSig = fisherZ.p < 0.05 && deltaRho > 0;
+                      const partialSig = partialP < 0.05 && Math.abs(partialR) > 0.1;
+                      const verdict = spearmanSig && partialSig ? "CONFIRMATA" : (spearmanSig || partialSig) ? "PARTIAL" : "NECONFIRMATA";
+                      const verdictColor = verdict === "CONFIRMATA" ? "#059669" : verdict === "PARTIAL" ? "#D97706" : "#DC2626";
+
+                      // Rank data for scatter plots
+                      const rankMult = _rankArray(multPreds);
+                      const rankAdit = _rankArray(aditPreds);
+                      const rankCp = _rankArray(cps);
+
+                      const chartW = 340, chartH = 220;
+                      const pad = { t: 25, r: 15, b: 35, l: 40 };
+                      const pw = chartW - pad.l - pad.r, ph = chartH - pad.t - pad.b;
+                      const maxRank = valid.length;
+                      const cardStyle: React.CSSProperties = { fontSize: 11, color: "#374151", lineHeight: 1.5, padding: "12px 14px", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" };
+
+                      const scatterSVG = (xRanks: number[], yRanks: number[], label: string, rho: number, color: string) => (
+                        <svg width={chartW} height={chartH} style={{ background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                          <text x={chartW / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">{label}</text>
+                          {[0.25, 0.5, 0.75, 1].map(f => {
+                            const y = pad.t + ph * (1 - f);
+                            return <g key={f}><line x1={pad.l} y1={y} x2={pad.l + pw} y2={y} stroke="#f3f4f6" /><text x={pad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{Math.round(f * maxRank)}</text></g>;
+                          })}
+                          {xRanks.map((xr, i) => {
+                            const cx = pad.l + (xr / maxRank) * pw;
+                            const cy = pad.t + ph * (1 - yRanks[i] / maxRank);
+                            return <circle key={i} cx={cx} cy={cy} r={3} fill={color} opacity={0.5} />;
+                          })}
+                          {/* trend line */}
+                          {(() => {
+                            const reg = _linReg(xRanks, yRanks);
+                            const x1v = 1, x2v = maxRank;
+                            const y1v = reg.slope * x1v + reg.intercept, y2v = reg.slope * x2v + reg.intercept;
+                            const sx1 = pad.l + (x1v / maxRank) * pw, sx2 = pad.l + (x2v / maxRank) * pw;
+                            const sy1 = pad.t + ph * (1 - y1v / maxRank), sy2 = pad.t + ph * (1 - y2v / maxRank);
+                            return <line x1={sx1} y1={sy1} x2={sx2} y2={sy2} stroke={color} strokeWidth={1.5} strokeDasharray="4,3" />;
+                          })()}
+                          <text x={pad.l + 4} y={pad.t + 12} fontSize={8} fill="#6B7280">Rank Predictor</text>
+                          <text x={chartW - pad.r - 5} y={pad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill={color}>{"\u03C1"} = {rho.toFixed(3)}</text>
+                          <text x={chartW / 2} y={chartH - 4} textAnchor="middle" fontSize={8} fill="#6B7280">Rang predictor</text>
+                          <text x={10} y={chartH / 2} textAnchor="middle" fontSize={8} fill="#6B7280" transform={`rotate(-90, 10, ${chartH / 2})`}>Rang C perceput</text>
+                        </svg>
+                      );
+
+                      return (
+                        <>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 28, marginBottom: 8 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>H7 — Test Scale-Independent al Interactiei I×F</span>
+                            <InterpBtn k="h7" title="H7 — Scale-Independent" val={verdict} />
+                          </div>
+                          <div style={{ ...cardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
+                            <strong>De ce H7?</strong> H5 compara erori absolute normalizate (/110 vs /30) — dar normalizarea comprima valorile multiplicative in range 0.1-0.5 (vs Cp 0.5-0.9), facand aditivul sa para mai precis prin artefact de scala. H7 elimina complet acest artefact prin doua analize complementare care nu depind de scala.
+                          </div>
+
+                          {/* Stats banner */}
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+                            {[
+                              { label: "\u03C1 Multiplicativ", value: rhoMult.toFixed(3), sub: "Spearman R+(I×F)", color: "#2563EB" },
+                              { label: "\u03C1 Aditiv", value: rhoAdit.toFixed(3), sub: "Spearman R+I+F", color: "#D97706" },
+                              { label: "\u0394\u03C1 (Fisher Z)", value: `${deltaRho >= 0 ? "+" : ""}${deltaRho.toFixed(3)}`, sub: `Z=${fisherZ.z.toFixed(2)}, p=${_fmtP(fisherZ.p)}`, color: spearmanSig ? "#059669" : "#DC2626" },
+                              { label: "Partial r(I×F)", value: partialR.toFixed(3), sub: `p=${_fmtP(partialP)}`, color: partialSig ? "#059669" : "#DC2626" },
+                            ].map((s, i) => (
+                              <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", borderTop: `3px solid ${s.color}`, textAlign: "center" as const }}>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: s.color }}>{s.value}</div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginTop: 2 }}>{s.label}</div>
+                                <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 1 }}>{s.sub}</div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Dual scatter plots — Spearman rank */}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                            {scatterSVG(rankMult, rankCp, "Rang Multiplicativ vs Rang C perceput", rhoMult, "#2563EB")}
+                            {scatterSVG(rankAdit, rankCp, "Rang Aditiv vs Rang C perceput", rhoAdit, "#D97706")}
+                          </div>
+
+                          {/* Residual scatter — Partial correlation */}
+                          <div style={{ marginBottom: 12 }}>
+                            <svg width={chartW * 2 + 10} height={chartH} style={{ background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb", maxWidth: "100%" }}>
+                              <text x={(chartW * 2 + 10) / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">Partial Correlation: I×F vs Rezidual din C ~ (R+I+F)</text>
+                              {(() => {
+                                const fullW = chartW * 2 + 10;
+                                const rPad = { t: 25, r: 20, b: 35, l: 50 };
+                                const rW = fullW - rPad.l - rPad.r, rH = chartH - rPad.t - rPad.b;
+                                const minIxF = Math.min(...ixf), maxIxF = Math.max(...ixf);
+                                const minRes = Math.min(...residuals), maxRes = Math.max(...residuals);
+                                const rangeIxF = maxIxF - minIxF || 1, rangeRes = maxRes - minRes || 1;
+                                const reg = _linReg(ixf, residuals);
+                                return (
+                                  <g>
+                                    {[-0.5, 0, 0.5, 1].map(f => {
+                                      const val = minRes + (f + 0.5) / 2 * rangeRes;
+                                      const y = rPad.t + rH * (1 - (val - minRes) / rangeRes);
+                                      return <g key={f}><line x1={rPad.l} y1={y} x2={rPad.l + rW} y2={y} stroke={f === 0 ? "#d1d5db" : "#f3f4f6"} strokeDasharray={f === 0 ? "4,2" : "0"} /><text x={rPad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{val.toFixed(1)}</text></g>;
+                                    })}
+                                    {ixf.map((x, i) => {
+                                      const cx = rPad.l + ((x - minIxF) / rangeIxF) * rW;
+                                      const cy = rPad.t + rH * (1 - (residuals[i] - minRes) / rangeRes);
+                                      return <circle key={i} cx={cx} cy={cy} r={3} fill="#7C3AED" opacity={0.5} />;
+                                    })}
+                                    {(() => {
+                                      const x1v = minIxF, x2v = maxIxF;
+                                      const y1v = reg.slope * x1v + reg.intercept, y2v = reg.slope * x2v + reg.intercept;
+                                      return <line x1={rPad.l} y1={rPad.t + rH * (1 - (y1v - minRes) / rangeRes)} x2={rPad.l + rW} y2={rPad.t + rH * (1 - (y2v - minRes) / rangeRes)} stroke="#7C3AED" strokeWidth={1.5} strokeDasharray="4,3" />;
+                                    })()}
+                                    <text x={rPad.l + 4} y={rPad.t + 12} fontSize={8} fill="#6B7280">r = {partialR.toFixed(3)}, p = {_fmtP(partialP)}</text>
+                                    <text x={fullW / 2} y={chartH - 4} textAnchor="middle" fontSize={8} fill="#6B7280">I × F (produs brut)</text>
+                                    <text x={14} y={chartH / 2} textAnchor="middle" fontSize={8} fill="#6B7280" transform={`rotate(-90, 14, ${chartH / 2})`}>Rezidual (C - predictat de R+I+F)</text>
+                                  </g>
+                                );
+                              })()}
+                            </svg>
+                          </div>
+
+                          {/* Explanation cards */}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                            <div style={cardStyle}>
+                              <strong style={{ color: "#2563EB" }}>Analiza 1 — Spearman Rank:</strong> Converteste valorile in ranguri (pozitii). Ignora magnitudinea, testeaza doar daca ordinea predictiilor e corecta. {"\u03C1"}mult={rhoMult.toFixed(3)} vs {"\u03C1"}adit={rhoAdit.toFixed(3)}{" "}
+                              {deltaRho > 0 ? <span style={{ color: "#059669" }}>Multiplicativul prezice ordinea mai bine.</span> : <span style={{ color: "#DC2626" }}>Aditivul prezice ordinea mai bine.</span>}
+                            </div>
+                            <div style={cardStyle}>
+                              <strong style={{ color: "#7C3AED" }}>Analiza 2 — Partial Correlation:</strong> Dupa ce R+I+F explica tot ce poate, rezidualul coreleaza cu I×F? r={partialR.toFixed(3)}, p={_fmtP(partialP)}.{" "}
+                              {partialSig ? <span style={{ color: "#059669" }}>Da — I×F aduce informatie suplimentara pe care aditivul nu o capteaza.</span> : <span style={{ color: "#DC2626" }}>Nu — I×F nu adauga informatie dincolo de R+I+F.</span>}
+                            </div>
+                            <div style={cardStyle}>
+                              <strong style={{ color: "#374151" }}>De ce e superior H5:</strong> H5 compara |Cf_mult/110 - Cp/10| vs |Cf_adit/30 - Cp/10|. Normalizarea /110 comprima in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. H7 elimina artefactul complet — raspunsul e definitiv.
+                            </div>
+                          </div>
+
+                          {/* Verdict card */}
+                          <div style={{ ...cardStyle, borderLeft: `4px solid ${verdictColor}`, background: verdict === "CONFIRMATA" ? "#f0fdf4" : verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2" }}>
+                            <strong>H7 — Verdict: <span style={{ color: verdictColor }}>{verdict}</span></strong>
+                            <div style={{ marginTop: 4 }}>
+                              {verdict === "CONFIRMATA"
+                                ? `Ambele analize confirma: sinergia I×F este reala si nu e un artefact de scala. Multiplicativul prezice mai bine ordinea (\u0394\u03C1=${deltaRho.toFixed(3)}, p=${_fmtP(fisherZ.p)}) si I×F aduce informatie suplimentara (partial r=${partialR.toFixed(3)}, p=${_fmtP(partialP)}).`
+                                : verdict === "PARTIAL"
+                                  ? `Evidenta mixta: ${spearmanSig ? "Spearman favorizeaza multiplicativul" : "Spearman nu diferentiaza modelele"}, ${partialSig ? "dar partial correlation confirma sinergia" : "iar partial correlation nu detecteaza sinergie suplimentara"}. Rezultatul necesita N mai mare pentru concluzie definitiva.`
+                                  : `Niciuna din analize nu confirma superioritatea sinergiei I×F. Modelul aditiv (R+I+F) explica la fel de bine ca multiplicativul, iar I×F nu aduce informatie suplimentara. Sinergia nu e sustinuta de date.`}
+                            </div>
+                            <div style={{ marginTop: 4, fontSize: 10, color: "#9CA3AF" }}>N={valid.length} raspunsuri. Spearman rho: mult={rhoMult.toFixed(3)}, adit={rhoAdit.toFixed(3)}. Fisher Z={fisherZ.z.toFixed(2)}, p={_fmtP(fisherZ.p)}. Partial r={partialR.toFixed(3)}, p={_fmtP(partialP)}.</div>
+                          </div>
+                        </>
+                      );
+                    })()}
+
                     {/* ═══════════════════════════════════════════════════════════════
                         VALIDARE INSTRUMENT — V1 (Cronbach Alpha) + V2 (Distributii)
                         ═══════════════════════════════════════════════════════════════ */}
@@ -7796,7 +8024,7 @@ export default function StudiuAdminPage() {
                       })()}
                     </div>
 
-                    {/* ═══ TABEL SUMAR H1-H6 (Academic Summary) ═══ */}
+                    {/* ═══ TABEL SUMAR H1-H7 (Academic Summary) ═══ */}
                     {(() => {
                       // Recompute summary data from scatter
                       const _sc = results.hypothesisScatterData || [];
@@ -7831,6 +8059,19 @@ export default function StudiuAdminPage() {
                       const _h6P = _pValuePearson(_h6R, _h6B.length);
                       const _h6Ab = _scV.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
                       const _h6Rab = _h6Ab.length >= 2 ? _pearsonR(_h6Ab.map(d => d.i * d.f), _h6Ab.map(d => d.c_score!)) : 0;
+                      // H7
+                      const _h7V = _scV.filter(d => d.c_score != null && d.c_score > 0);
+                      const _h7RhoM = _h7V.length >= 3 ? _spearmanRho(_h7V.map(d => d.r + d.i * d.f), _h7V.map(d => d.c_score!)) : 0;
+                      const _h7RhoA = _h7V.length >= 3 ? _spearmanRho(_h7V.map(d => d.r + d.i + d.f), _h7V.map(d => d.c_score!)) : 0;
+                      const _h7Fz = _fisherZTest(_h7RhoM, _h7RhoA, _h7V.length, _h7V.length);
+                      const _h7Reg = _linReg(_h7V.map(d => d.r + d.i + d.f), _h7V.map(d => d.c_score!));
+                      const _h7Res = _h7V.map((d, i) => d.c_score! - (_h7Reg.slope * (d.r + d.i + d.f) + _h7Reg.intercept));
+                      const _h7PartR = _h7V.length >= 3 ? _pearsonR(_h7Res, _h7V.map(d => d.i * d.f)) : 0;
+                      const _h7PartP = _pValuePearson(_h7PartR, _h7V.length);
+                      const _h7SpSig = _h7Fz.p < 0.05 && (_h7RhoM - _h7RhoA) > 0;
+                      const _h7PaSig = _h7PartP < 0.05 && Math.abs(_h7PartR) > 0.1;
+                      const _h7Verd = _h7SpSig && _h7PaSig ? "CONFIRMATA" : (_h7SpSig || _h7PaSig) ? "PARTIAL" : "NECONFIRMATA";
+                      const _h7VerdColor = _h7Verd === "CONFIRMATA" ? "#059669" : _h7Verd === "PARTIAL" ? "#D97706" : "#DC2626";
 
                       const rows: { code: string; name: string; metric: string; n: string; pVal: string; verdict: string; color: string }[] = [
                         { code: "H1", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "—", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
@@ -7838,6 +8079,7 @@ export default function StudiuAdminPage() {
                         { code: "H3", name: "Brand modereaza C→CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
                         { code: "H5", name: "Multiplicativ vs Aditiv", metric: `\u0394mult=${_dM.toFixed(3)}, \u0394adit=${_dA.toFixed(3)}`, n: `${_h5V.length}`, pVal: "—", verdict: _h5Pct > 10 ? "CONFIRMATA" : _h5Pct >= 0 ? "PARTIAL" : "NECONFIRMATA", color: _h5Pct > 10 ? "#059669" : _h5Pct >= 0 ? "#D97706" : "#DC2626" },
                         { code: "H6", name: `Gate real (I×F irelevant sub R<${GATE})`, metric: `r\u2098\u2092\u2097=${_h6R.toFixed(3)}, r\u2090\u2097=${_h6Rab.toFixed(3)}`, n: `${_h6B.length} / ${_h6Ab.length}`, pVal: _fmtP(_h6P), verdict: Math.abs(_h6R) < 0.2 ? "CONFIRMATA" : Math.abs(_h6R) <= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h6R) < 0.2 ? "#059669" : Math.abs(_h6R) <= 0.4 ? "#D97706" : "#DC2626" },
+                        { code: "H7", name: "Scale-Independent I×F", metric: `\u03C1m=${_h7RhoM.toFixed(3)}, \u03C1a=${_h7RhoA.toFixed(3)}, pr=${_h7PartR.toFixed(3)}`, n: `${_h7V.length}`, pVal: `Z=${_h7Fz.z.toFixed(2)}, ${_fmtP(_h7Fz.p)}; pr ${_fmtP(_h7PartP)}`, verdict: _h7Verd, color: _h7VerdColor },
                       ];
                       return (
                         <div style={{ marginTop: 30 }}>
