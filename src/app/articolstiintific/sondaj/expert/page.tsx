@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 /* ═══════════════════════════════════════════════════════════
@@ -112,6 +112,33 @@ function ExpertPageContent() {
 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Autosave state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<Record<string, "saved" | "saving" | "draft" | "error">>({});
+  const autoSaveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const formsRef = useRef(forms);
+  formsRef.current = forms; // Always keep ref in sync
+  const DRAFT_KEY = token ? `rifc_expert_draft_${token}` : null;
+
+  // localStorage helpers
+  const saveDraft = useCallback((formsData: typeof forms) => {
+    if (!DRAFT_KEY) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(formsData)); } catch { /* quota */ }
+  }, [DRAFT_KEY]);
+
+  const loadDraft = useCallback((): typeof forms | null => {
+    if (!DRAFT_KEY) return null;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }, [DRAFT_KEY]);
+
+  const clearDraftForStimulus = useCallback((stimId: string) => {
+    // Mark stimulus as saved in draft (not removed, just synced)
+    // We keep the draft but it matches server data now
+  }, []);
 
   // Profile modal state
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -151,27 +178,46 @@ function ExpertPageContent() {
         marketing_roles: data.expert.marketing_roles || [],
       });
 
-      // Initialize forms from existing evaluations
+      // Initialize forms from existing evaluations + merge localStorage drafts
+      const draft = loadDraft();
       const initForms: typeof forms = {};
+      const initStatus: typeof autoSaveStatus = {};
       for (const stim of data.stimuli) {
         const existing = (data.evaluations as Evaluation[]).find((e: Evaluation) => e.stimulus_id === stim.id);
-        initForms[stim.id] = {
-          r_score: existing?.r_score || 5,
-          i_score: existing?.i_score || 5,
-          f_score: existing?.f_score || 5,
-          c_score: existing?.c_score || 5,
-          cta_score: existing?.cta_score || 5,
-          r_justification: existing?.r_justification || "",
-          i_justification: existing?.i_justification || "",
-          f_justification: existing?.f_justification || "",
-          c_justification: existing?.c_justification || "",
-          cta_justification: existing?.cta_justification || "",
-          brand_familiar: existing?.brand_familiar ?? null,
-          brand_justification: existing?.brand_justification || "",
-          notes: existing?.notes || "",
-        };
+        const draftForm = draft?.[stim.id];
+        // Priority: server data (saved) > localStorage draft (unsaved) > defaults
+        if (existing) {
+          initForms[stim.id] = {
+            r_score: existing.r_score || 5,
+            i_score: existing.i_score || 5,
+            f_score: existing.f_score || 5,
+            c_score: existing.c_score || 5,
+            cta_score: existing.cta_score || 5,
+            r_justification: existing.r_justification || "",
+            i_justification: existing.i_justification || "",
+            f_justification: existing.f_justification || "",
+            c_justification: existing.c_justification || "",
+            cta_justification: existing.cta_justification || "",
+            brand_familiar: existing.brand_familiar ?? null,
+            brand_justification: existing.brand_justification || "",
+            notes: existing.notes || "",
+          };
+          initStatus[stim.id] = "saved";
+        } else if (draftForm) {
+          // Recover unsaved draft from localStorage
+          initForms[stim.id] = draftForm;
+          initStatus[stim.id] = "draft";
+        } else {
+          initForms[stim.id] = {
+            r_score: 5, i_score: 5, f_score: 5, c_score: 5, cta_score: 5,
+            r_justification: "", i_justification: "", f_justification: "",
+            c_justification: "", cta_justification: "",
+            brand_familiar: null, brand_justification: "", notes: "",
+          };
+        }
       }
       setForms(initForms);
+      setAutoSaveStatus(initStatus);
       if (data.stimuli.length > 0) setActiveStimulus(data.stimuli[0].id);
     } catch {
       setError("Eroare de conexiune");
@@ -181,14 +227,26 @@ function ExpertPageContent() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Save evaluation for a stimulus
+  // Cleanup autosave timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(autoSaveTimers.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  // Save evaluation for a stimulus (explicit button click)
   const saveEvaluation = async (stimulusId: string) => {
     if (!token || !expert) return;
     const form = forms[stimulusId];
     if (!form) return;
 
+    // Cancel any pending autosave for this stimulus
+    if (autoSaveTimers.current[stimulusId]) clearTimeout(autoSaveTimers.current[stimulusId]);
+
     setSaving(true);
     setSaveSuccess(null);
+    setSaveError(null);
+    setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "saving" }));
     try {
       const res = await fetch("/api/survey/expert-evaluations", {
         method: "POST",
@@ -214,6 +272,7 @@ function ExpertPageContent() {
       const data = await res.json();
       if (data.success) {
         setSaveSuccess(stimulusId);
+        setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "saved" }));
         setEvaluations((prev) => {
           const existing = prev.findIndex((e) => e.stimulus_id === stimulusId);
           if (existing >= 0) {
@@ -223,14 +282,74 @@ function ExpertPageContent() {
           }
           return [data.evaluation, ...prev];
         });
-        setTimeout(() => setSaveSuccess(null), 2000);
+        setTimeout(() => setSaveSuccess(null), 3000);
+      } else {
+        setSaveError(data.error || "Eroare la salvare. Incearca din nou.");
+        setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "error" }));
       }
-    } catch { /* ignore */ }
+    } catch {
+      setSaveError("Eroare de conexiune. Datele sunt salvate local — incearca din nou.");
+      setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "error" }));
+    }
     setSaving(false);
   };
 
   const updateForm = (stimId: string, field: string, value: unknown) => {
-    setForms((prev) => ({ ...prev, [stimId]: { ...prev[stimId], [field]: value } }));
+    setForms((prev) => {
+      const updated = { ...prev, [stimId]: { ...prev[stimId], [field]: value } };
+      // Persist to localStorage immediately (survives refresh)
+      saveDraft(updated);
+      return updated;
+    });
+    // Mark as draft (unsaved to server)
+    setAutoSaveStatus((prev) => ({ ...prev, [stimId]: "draft" }));
+    // Debounced autosave to server (3 seconds after last change)
+    if (autoSaveTimers.current[stimId]) clearTimeout(autoSaveTimers.current[stimId]);
+    autoSaveTimers.current[stimId] = setTimeout(() => {
+      autoSaveToServer(stimId);
+    }, 3000);
+  };
+
+  // Autosave to server (debounced) — uses ref to get latest form data
+  const autoSaveToServer = async (stimulusId: string) => {
+    if (!token || !expert) return;
+    const form = formsRef.current[stimulusId];
+    if (!form) return;
+    // Check if there's any actual content (not just defaults)
+    const hasContent = form.r_justification || form.i_justification || form.f_justification ||
+      form.c_justification || form.cta_justification || form.brand_justification || form.notes ||
+      form.brand_familiar !== null ||
+      form.r_score !== 5 || form.i_score !== 5 || form.f_score !== 5 || form.c_score !== 5 || form.cta_score !== 5;
+    if (!hasContent) return; // Don't autosave empty forms
+    setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "saving" }));
+    try {
+      const res = await fetch("/api/survey/expert-evaluations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token, stimulus_id: stimulusId,
+          r_score: form.r_score, i_score: form.i_score, f_score: form.f_score,
+          c_score: form.c_score, cta_score: form.cta_score,
+          r_justification: form.r_justification, i_justification: form.i_justification,
+          f_justification: form.f_justification, c_justification: form.c_justification,
+          cta_justification: form.cta_justification, brand_familiar: form.brand_familiar,
+          brand_justification: form.brand_justification, notes: form.notes,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "saved" }));
+        setEvaluations((prev) => {
+          const idx = prev.findIndex((e) => e.stimulus_id === stimulusId);
+          if (idx >= 0) { const u = [...prev]; u[idx] = data.evaluation; return u; }
+          return [data.evaluation, ...prev];
+        });
+      } else {
+        setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "error" }));
+      }
+    } catch {
+      setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "error" }));
+    }
   };
 
   // Save expert profile (professional fields)
@@ -630,14 +749,16 @@ function ExpertPageContent() {
           {stimuli.map((stim, idx) => {
             const done = isCompleted(stim.id);
             const isActive = activeStimulus === stim.id;
+            const status = autoSaveStatus[stim.id];
+            const hasDraft = status === "draft" || status === "error";
             return (
               <button
                 key={stim.id}
                 onClick={() => setActiveStimulus(stim.id)}
                 style={{
                   ...P.stimCard,
-                  background: isActive ? "#fef3c7" : done ? "#f0fdf4" : "#fff",
-                  borderLeft: isActive ? "3px solid #D97706" : done ? "3px solid #059669" : "3px solid transparent",
+                  background: isActive ? "#fef3c7" : done ? "#f0fdf4" : hasDraft ? "#fffbeb" : "#fff",
+                  borderLeft: isActive ? "3px solid #D97706" : done ? "3px solid #059669" : hasDraft ? "3px solid #D97706" : "3px solid transparent",
                   fontWeight: isActive ? 700 : 400,
                 }}
               >
@@ -645,16 +766,20 @@ function ExpertPageContent() {
                   <span style={{
                     width: 22, height: 22, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
                     fontSize: 10, fontWeight: 700,
-                    background: done ? "#059669" : "#e5e7eb",
-                    color: done ? "#fff" : "#6B7280",
+                    background: done ? "#059669" : hasDraft ? "#D97706" : "#e5e7eb",
+                    color: done ? "#fff" : hasDraft ? "#fff" : "#6B7280",
                   }}>
                     {done ? (
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    ) : status === "saving" ? (
+                      <div style={{ width: 10, height: 10, border: "2px solid #D97706", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                     ) : (idx + 1)}
                   </span>
                   <div style={{ textAlign: "left" }}>
                     <div style={{ fontSize: 13, color: "#111827", lineHeight: 1.3 }}>{stim.name}</div>
-                    <div style={{ fontSize: 10, color: "#9CA3AF" }}>{stim.type}</div>
+                    <div style={{ fontSize: 10, color: status === "error" ? "#DC2626" : "#9CA3AF" }}>
+                      {stim.type}{status === "draft" ? " — draft" : status === "error" ? " — eroare!" : status === "saving" ? " — se salveaza..." : ""}
+                    </div>
                   </div>
                 </div>
               </button>
@@ -842,26 +967,59 @@ function ExpertPageContent() {
                   />
                 </div>
 
-                {/* Save button */}
-                <div style={{ display: "flex", gap: 12, marginTop: 20, alignItems: "center" }}>
+                {/* Save button + autosave status */}
+                <div style={{ marginTop: 20, padding: "16px 20px", background: "#f0fdf4", borderRadius: 10, border: "2px solid #059669" }}>
+                  {/* Autosave status indicator */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, fontSize: 12 }}>
+                    {autoSaveStatus[activeStim.id] === "saved" && (
+                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669", display: "inline-block" }} /><span style={{ color: "#059669", fontWeight: 600 }}>Salvat pe server</span></>
+                    )}
+                    {autoSaveStatus[activeStim.id] === "saving" && (
+                      <><div style={{ width: 10, height: 10, border: "2px solid #D97706", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", display: "inline-block" }} /><span style={{ color: "#D97706", fontWeight: 600 }}>Se salveaza automat...</span></>
+                    )}
+                    {autoSaveStatus[activeStim.id] === "draft" && (
+                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#D97706", display: "inline-block" }} /><span style={{ color: "#D97706", fontWeight: 600 }}>Draft nesalvat (salvat local, se trimite in 3s...)</span></>
+                    )}
+                    {autoSaveStatus[activeStim.id] === "error" && (
+                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#DC2626", display: "inline-block" }} /><span style={{ color: "#DC2626", fontWeight: 600 }}>Eroare salvare — datele sunt salvate local, apasa butonul pentru a retrimite</span></>
+                    )}
+                    {!autoSaveStatus[activeStim.id] && (
+                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9CA3AF", display: "inline-block" }} /><span style={{ color: "#9CA3AF" }}>Nesalvat</span></>
+                    )}
+                  </div>
+                  {/* Big save button */}
                   <button
                     onClick={() => saveEvaluation(activeStim.id)}
                     disabled={saving}
                     style={{
                       ...P.saveBtn,
+                      width: "100%",
+                      padding: "14px 24px",
+                      fontSize: 15,
+                      fontWeight: 800,
                       opacity: saving ? 0.6 : 1,
                     }}
                   >
                     {saving ? (
-                      <div style={{ width: 16, height: 16, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                      <div style={{ width: 18, height: 18, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
                     ) : (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                     )}
-                    {saving ? "Se salveaza..." : isCompleted(activeStim.id) ? "Actualizeaza evaluarea" : "Salveaza evaluarea"}
+                    {saving ? "SE SALVEAZA..." : isCompleted(activeStim.id) ? "ACTUALIZEAZA EVALUAREA" : "SALVEAZA EVALUAREA"}
                   </button>
                   {saveSuccess === activeStim.id && (
-                    <span style={{ fontSize: 13, color: "#059669", fontWeight: 600 }}>Salvat cu succes!</span>
+                    <div style={{ marginTop: 8, padding: "8px 12px", background: "#dcfce7", borderRadius: 6, textAlign: "center", fontSize: 13, color: "#059669", fontWeight: 700 }}>
+                      Salvat cu succes pe server!
+                    </div>
                   )}
+                  {saveError && (
+                    <div style={{ marginTop: 8, padding: "8px 12px", background: "#fef2f2", borderRadius: 6, textAlign: "center", fontSize: 12, color: "#DC2626", fontWeight: 600 }}>
+                      {saveError}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280", textAlign: "center" }}>
+                    Datele se salveaza automat dupa 3 secunde. Apasa butonul pentru salvare imediata.
+                  </div>
                 </div>
               </div>
             </>

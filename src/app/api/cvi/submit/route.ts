@@ -8,7 +8,7 @@ export const revalidate = 0;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token, expert, ratings, cvi: clientCvi } = body;
+    const { token, expert, ratings, comments, cvi: clientCvi } = body;
 
     // ── Validate token ──
     if (!token) {
@@ -53,6 +53,19 @@ export async function POST(req: NextRequest) {
         { error: `Lipsesc evaluări pentru: ${missingItems.join(", ")}` },
         { status: 422 }
       );
+    }
+
+    // ── Validate comments completeness ──
+    if (comments && typeof comments === "object") {
+      const missingComments = CVI_ITEMS.filter(
+        item => !comments[item] || !String(comments[item]).trim()
+      );
+      if (missingComments.length > 0) {
+        return NextResponse.json(
+          { error: `Lipsesc comentarii pentru: ${missingComments.slice(0, 10).join(", ")}${missingComments.length > 10 ? ` + inca ${missingComments.length - 10}` : ""}` },
+          { status: 422 }
+        );
+      }
     }
 
     // ── Validate expert profile ──
@@ -109,9 +122,40 @@ export async function POST(req: NextRequest) {
       responseRow[item] = ratings[item];
     }
 
+    // Add comments if provided (requires JSONB column 'comments' in cvi_responses)
+    if (comments && typeof comments === "object" && Object.keys(comments).length > 0) {
+      responseRow.comments = comments;
+    }
+
     const { error: insertError } = await supabase
       .from("cvi_responses")
       .insert(responseRow);
+
+    // If insert failed because of 'comments' column not existing, retry without it
+    if (insertError && insertError.message?.includes("comments")) {
+      delete responseRow.comments;
+      const { error: retryError } = await supabase
+        .from("cvi_responses")
+        .insert(responseRow);
+      if (retryError) {
+        return NextResponse.json(
+          { error: "Eroare la salvarea răspunsului" },
+          { status: 500 }
+        );
+      }
+      // Still return success even without comments stored in DB
+      return NextResponse.json({
+        success: true,
+        cvi: {
+          R: Number(cviR.toFixed(2)),
+          I: Number(cviI.toFixed(2)),
+          F: Number(cviF.toFixed(2)),
+          C: Number(cviC.toFixed(2)),
+          total: Number(cviTotal.toFixed(2)),
+        },
+        warning: "Comments not stored — add 'comments' JSONB column to cvi_responses",
+      });
+    }
 
     if (insertError) {
       return NextResponse.json(

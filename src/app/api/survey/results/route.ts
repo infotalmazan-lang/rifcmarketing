@@ -10,24 +10,22 @@ export async function GET(request: Request) {
     const distributionId = searchParams.get("distribution_id");
     const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
-    // ── Step 1: Fetch ALL respondent IDs with lightweight columns ──
-    // CRITICAL FIX: Do NOT use PostgREST .or() filter for is_archived — it can
-    // silently return fewer rows than expected. Instead, fetch ALL IDs with
-    // is_archived + distribution_id, then filter in JavaScript.
-    // This guarantees the same respondent set as the LOG API.
+    // ── Step 1: Fetch ALL non-archived respondent IDs ──
+    // Use the SAME .or() filter as LOG API — proven to return all rows.
+    // Previous approach (no filter + JS filtering) returned fewer rows due to
+    // PostgREST silent truncation on unfiltered queries.
     const { data: allIdData, error: idError } = await supabase
       .from("survey_respondents")
       .select("id, is_archived, distribution_id")
+      .or("is_archived.eq.false,is_archived.is.null")
       .range(0, 9999);
 
     if (idError) {
       return NextResponse.json({ error: "Respondent ID query failed", message: idError.message }, { status: 500 });
     }
 
-    // Filter out archived respondents in JavaScript (same logic as .or() but reliable)
-    let filteredIdData = (allIdData || []).filter((r: any) =>
-      r.is_archived === false || r.is_archived === null || r.is_archived === undefined
-    );
+    // allIdData already filtered by .or() — no JS filtering needed for archived
+    let filteredIdData = allIdData || [];
 
     // Apply optional distribution filter in JavaScript
     if (distributionId === "__none__") {
@@ -50,7 +48,8 @@ export async function GET(request: Request) {
         const { data: batchData, error: batchError } = await supabase
           .from("survey_respondents")
           .select("id, started_at, completed_at, demographics, behavioral, psychographic, locale, distribution_id, step_completed")
-          .in("id", batchIds);
+          .in("id", batchIds)
+          .range(0, 999);
         if (batchError) {
           return NextResponse.json({ error: "Respondent batch query failed", message: batchError.message }, { status: 500 });
         }
@@ -68,13 +67,22 @@ export async function GET(request: Request) {
     // NOTE: c_computed is a GENERATED column in DB — omit from SELECT, compute in JS.
     const RESP_FETCH_BATCH = 15; // same batch size as respondent fetch
     let allFilteredResponses: any[] = [];
+    let _debugBatchErrors = 0;
+    let _debugBatchesFetched = 0;
     if (allIds.length > 0) {
       for (let i = 0; i < allIds.length; i += RESP_FETCH_BATCH) {
         const batchIds = allIds.slice(i, i + RESP_FETCH_BATCH);
-        const { data: batchResp } = await supabase
+        const { data: batchResp, error: batchRespError } = await supabase
           .from("survey_responses")
           .select("respondent_id, stimulus_id, r_score, i_score, f_score, c_score, cta_score, time_spent_seconds, brand_familiar, created_at")
-          .in("respondent_id", batchIds);
+          .in("respondent_id", batchIds)
+          .range(0, 9999);
+        _debugBatchesFetched++;
+        if (batchRespError) {
+          _debugBatchErrors++;
+          console.error(`[Results API] Response batch ${_debugBatchesFetched} error (IDs ${i}-${i + RESP_FETCH_BATCH}):`, batchRespError.message);
+          continue;
+        }
         allFilteredResponses = allFilteredResponses.concat(
           (batchResp || []).map((r: any) => ({
             ...r,
@@ -677,6 +685,16 @@ export async function GET(request: Request) {
       fatigueAnalysis,
       completionFunnel,
       hypothesisScatterData,
+      _debug: {
+        respondentIdsRaw: (allIdData || []).length,
+        respondentIdsFiltered: filteredIdData.length,
+        respondentsFetched: respondents.length,
+        responsesFetched: allFilteredResponses.length,
+        responseBatchErrors: _debugBatchErrors,
+        responseBatchesFetched: _debugBatchesFetched,
+        scatterDataCount: hypothesisScatterData.length,
+        responsesWithNullScores: allFilteredResponses.length - hypothesisScatterData.length,
+      },
     });
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
     return response;

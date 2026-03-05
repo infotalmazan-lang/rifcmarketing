@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 /* ═══════════════════════════════════════════════════════════
@@ -100,11 +100,57 @@ function CviForm() {
     isInfoPage ? "info" : isPreview ? "valid" : "loading"
   );
   const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [comments, setComments] = useState<Record<string, string>>({});
   const [expert, setExpert] = useState({ name: "", org: "", role: "", experience: "", email: "" });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [success, setSuccess] = useState(false);
   const [cviResult, setCviResult] = useState<Record<string, number> | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  // localStorage draft keys
+  const DRAFT_KEY = token ? `rifc_cvi_draft_${token}` : isPreview ? "rifc_cvi_draft_preview" : null;
+
+  // Save draft to localStorage
+  const saveDraft = useCallback((r: Record<string, number>, c: Record<string, string>, e: typeof expert) => {
+    if (!DRAFT_KEY) return;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ratings: r, comments: c, expert: e, savedAt: Date.now() })); } catch { /* quota */ }
+  }, [DRAFT_KEY]);
+
+  // Clear draft after successful submission
+  const clearDraft = useCallback(() => {
+    if (!DRAFT_KEY) return;
+    try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+  }, [DRAFT_KEY]);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    if (!DRAFT_KEY || success) return;
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const draft = JSON.parse(raw);
+        if (draft.ratings && Object.keys(draft.ratings).length > 0) {
+          setRatings(draft.ratings);
+          setDraftRestored(true);
+          setTimeout(() => setDraftRestored(false), 5000);
+        }
+        if (draft.comments && Object.keys(draft.comments).length > 0) {
+          setComments(draft.comments);
+        }
+        if (draft.expert) {
+          setExpert(prev => ({
+            name: draft.expert.name || prev.name,
+            org: draft.expert.org || prev.org,
+            role: draft.expert.role || prev.role,
+            experience: draft.expert.experience || prev.experience,
+            email: draft.expert.email || prev.email,
+          }));
+        }
+      }
+    } catch { /* corrupt data, ignore */ }
+  }, [DRAFT_KEY, success]);
 
   // Validate token on load (skip in preview mode and info page)
   useEffect(() => {
@@ -120,16 +166,61 @@ function CviForm() {
       .catch(() => setStatus("error"));
   }, [token, isPreview, isInfoPage]);
 
+  // Auto-save changes to localStorage
+  const expertRef = useRef(expert);
+  expertRef.current = expert;
+  useEffect(() => {
+    if (Object.keys(ratings).length > 0 || Object.keys(comments).length > 0 || expert.name) {
+      saveDraft(ratings, comments, expert);
+    }
+  }, [expert, ratings, comments, saveDraft]);
+
+  // Warn on page leave if there are unsaved ratings
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (Object.keys(ratings).length > 0 && !success) {
+        e.preventDefault();
+        e.returnValue = "Ai evaluari nesalvate. Datele sunt salvate local si vor fi recuperate.";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [ratings, success]);
+
   const ratedCount = Object.keys(ratings).length;
-  const pct = Math.round((ratedCount / TOTAL) * 100);
-  const canSubmit = ratedCount === TOTAL && expert.name.trim() && expert.role && expert.experience && !submitting;
+  const commentedCount = ALL_ITEMS.filter(i => (comments[i.id] || "").trim().length > 0).length;
+  const pct = Math.round(((ratedCount + commentedCount) / (TOTAL * 2)) * 100);
+  const canSubmit = ratedCount === TOTAL && commentedCount === TOTAL && expert.name.trim() && expert.role && expert.experience && !submitting;
+  const missingRatings = ALL_ITEMS.filter(i => !ratings[i.id]);
+  const missingComments = ALL_ITEMS.filter(i => !(comments[i.id] || "").trim());
 
   const handleRate = useCallback((itemId: string, value: number) => {
-    setRatings(prev => ({ ...prev, [itemId]: value }));
-  }, []);
+    setRatings(prev => {
+      const updated = { ...prev, [itemId]: value };
+      saveDraft(updated, comments, expert);
+      return updated;
+    });
+  }, [comments, expert, saveDraft]);
+
+  const handleComment = useCallback((itemId: string, value: string) => {
+    setComments(prev => {
+      const updated = { ...prev, [itemId]: value };
+      saveDraft(ratings, updated, expert);
+      return updated;
+    });
+  }, [ratings, expert, saveDraft]);
 
   const handleSubmit = async () => {
-    if (!canSubmit) return;
+    setAttemptedSubmit(true);
+    if (!canSubmit) {
+      // Scroll to first incomplete item
+      const firstMissing = missingRatings[0] || missingComments[0];
+      if (firstMissing) {
+        const el = document.getElementById(`cvi-item-${firstMissing.id}`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
     setSubmitting(true);
     setSubmitError("");
 
@@ -150,6 +241,7 @@ function CviForm() {
     if (isPreview) {
       setCviResult(cvi);
       setSuccess(true);
+      clearDraft();
       window.scrollTo({ top: 0, behavior: "smooth" });
       setSubmitting(false);
       return;
@@ -159,12 +251,13 @@ function CviForm() {
       const res = await fetch("/api/cvi/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, expert, ratings, cvi }),
+        body: JSON.stringify({ token, expert, ratings, comments, cvi }),
       });
       const data = await res.json();
       if (data.success) {
         setCviResult(data.cvi);
         setSuccess(true);
+        clearDraft(); // Remove draft after successful submission
         window.scrollTo({ top: 0, behavior: "smooth" });
       } else {
         setSubmitError(data.error || "Eroare la trimitere");
@@ -379,6 +472,15 @@ function CviForm() {
         </div>
       )}
 
+      {/* Draft restored banner */}
+      {draftRestored && (
+        <div style={{ background: "#DCFCE7", borderBottom: "2px solid #22C55E", padding: "8px 32px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E" }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#166534", letterSpacing: 0.5 }}>Evaluarile anterioare au fost recuperate automat ({Object.keys(ratings).length}/{TOTAL} itemi)</span>
+          <button onClick={() => setDraftRestored(false)} style={{ marginLeft: 12, background: "none", border: "none", color: "#166534", cursor: "pointer", fontSize: 16, fontWeight: 700 }}>&times;</button>
+        </div>
+      )}
+
       {/* Header */}
       <header style={{ background: "white", borderBottom: `1px solid ${border}`, padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: isPreview ? 0 : 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -388,7 +490,14 @@ function CviForm() {
           <span style={{ color: border, fontSize: 18 }}>|</span>
           <span style={{ fontSize: 13, color: muted, fontWeight: 500 }}>Panel CVI · Validare Conținut</span>
         </div>
-        <span style={{ fontSize: 13, color: muted, fontWeight: 500 }}>{ratedCount} / {TOTAL} completate</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 13, color: muted, fontWeight: 500 }}>{ratedCount}/{TOTAL} scoruri · {commentedCount}/{TOTAL} comentarii</span>
+          {ratedCount > 0 && !success && (
+            <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#DCFCE7", color: "#166534", border: "1px solid #BBF7D0" }}>
+              salvat local
+            </span>
+          )}
+        </div>
       </header>
 
       {/* Hero */}
@@ -513,14 +622,16 @@ function CviForm() {
             {/* Items */}
             {items.map(item => {
               const rated = ratings[item.id];
-              const borderColor = rated === 1 ? "#FECACA" : rated === 2 ? "#FED7AA" : rated === 3 ? "#FEF08A" : rated === 4 ? "#BBF7D0" : border;
+              const commented = (comments[item.id] || "").trim().length > 0;
+              const isIncomplete = attemptedSubmit && (!rated || !commented);
+              const borderColor = isIncomplete ? "#EF4444" : rated === 1 ? "#FECACA" : rated === 2 ? "#FED7AA" : rated === 3 ? "#FEF08A" : rated === 4 ? "#BBF7D0" : border;
               return (
-                <div key={item.id} style={{ background: "white", border: `1.5px solid ${borderColor}`, borderRadius: 10, marginBottom: 12, overflow: "hidden", transition: "border-color .2s, box-shadow .2s" }}>
+                <div id={`cvi-item-${item.id}`} key={item.id} style={{ background: "white", border: `2px solid ${borderColor}`, borderRadius: 10, marginBottom: 12, overflow: "hidden", transition: "border-color .2s, box-shadow .2s", boxShadow: isIncomplete ? "0 0 0 2px rgba(239,68,68,.15)" : "none" }}>
                   <div style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "16px 20px 12px" }}>
                     <span style={{
                       fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 4, flexShrink: 0, marginTop: 2,
-                      background: dim === "R" ? "#FEF2F2" : dim === "I" ? "#EFF6FF" : dim === "F" ? "#ECFDF5" : "#FFFBEB",
-                      color: meta.color,
+                      background: isIncomplete ? "#FEF2F2" : dim === "R" ? "#FEF2F2" : dim === "I" ? "#EFF6FF" : dim === "F" ? "#ECFDF5" : "#FFFBEB",
+                      color: isIncomplete ? "#EF4444" : meta.color,
                     }}>
                       {item.id}
                     </span>
@@ -528,10 +639,15 @@ function CviForm() {
                       <div style={{ fontSize: 14.5, lineHeight: 1.5 }}>„{item.text}"</div>
                       <div style={{ fontSize: 11, color: muted, marginTop: 3, fontStyle: "italic" }}>Sub-factor: {item.sub}</div>
                     </div>
+                    {isIncomplete && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "#FEF2F2", color: "#EF4444", flexShrink: 0, whiteSpace: "nowrap" }}>
+                        {!rated && !commented ? "Selecteaza scorul + comentariu" : !rated ? "Selecteaza scorul" : "Adauga comentariu"}
+                      </span>
+                    )}
                   </div>
-                  <div style={{ padding: "8px 20px 16px" }}>
-                    <div style={{ fontSize: 12, color: muted, fontWeight: 600, marginBottom: 8 }}>
-                      Cât de relevant este acest item pentru măsurarea constructului {meta.label}?
+                  <div style={{ padding: "8px 20px 6px" }}>
+                    <div style={{ fontSize: 12, color: attemptedSubmit && !rated ? "#EF4444" : muted, fontWeight: 600, marginBottom: 8 }}>
+                      Cât de relevant este acest item pentru măsurarea constructului {meta.label}? *
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
                       {SCALE.map(s => {
@@ -539,7 +655,7 @@ function CviForm() {
                         return (
                           <label key={s.v} onClick={() => handleRate(item.id, s.v)} style={{
                             flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                            padding: "10px 6px", border: `1.5px solid ${isChecked ? "transparent" : border}`,
+                            padding: "10px 6px", border: `1.5px solid ${isChecked ? "transparent" : attemptedSubmit && !rated ? "#FECACA" : border}`,
                             borderRadius: 8, cursor: "pointer", transition: "all .15s",
                             background: isChecked ? s.color : "white",
                             color: isChecked ? "white" : "inherit",
@@ -551,6 +667,26 @@ function CviForm() {
                       })}
                     </div>
                   </div>
+                  {/* Comment textarea */}
+                  <div style={{ padding: "8px 20px 16px" }}>
+                    <div style={{ fontSize: 12, color: attemptedSubmit && !commented ? "#EF4444" : muted, fontWeight: 600, marginBottom: 6 }}>
+                      Comentariu / Justificare *
+                    </div>
+                    <textarea
+                      value={comments[item.id] || ""}
+                      onChange={e => handleComment(item.id, e.target.value)}
+                      placeholder="Explicati de ce ati ales acest scor (obligatoriu)..."
+                      rows={2}
+                      style={{
+                        width: "100%", border: `1.5px solid ${attemptedSubmit && !commented ? "#EF4444" : border}`,
+                        borderRadius: 8, padding: "10px 14px", fontSize: 13, outline: "none",
+                        fontFamily: "inherit", resize: "vertical", lineHeight: 1.5,
+                        background: attemptedSubmit && !commented ? "#FEF2F2" : "white",
+                        transition: "border-color .2s, background .2s",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
                 </div>
               );
             })}
@@ -560,26 +696,59 @@ function CviForm() {
 
       {/* Submit section */}
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "24px 32px 60px" }}>
-        <div style={{ background: "white", border: `1px solid ${border}`, borderRadius: 12, padding: 28, textAlign: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 20 }}>
-            <span style={{ fontSize: 36, fontWeight: 800 }}>{ratedCount}</span>
-            <span style={{ fontSize: 16, color: muted }}>/ {TOTAL} itemi evaluați</span>
+        <div style={{ background: "white", border: `1px solid ${attemptedSubmit && !canSubmit ? "#EF4444" : border}`, borderRadius: 12, padding: 28, textAlign: "center" }}>
+          {/* Progress counters */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 24, marginBottom: 16 }}>
+            <div>
+              <span style={{ fontSize: 28, fontWeight: 800, color: ratedCount === TOTAL ? "#22C55E" : textDark }}>{ratedCount}</span>
+              <span style={{ fontSize: 14, color: muted }}>/{TOTAL}</span>
+              <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>scoruri</div>
+            </div>
+            <div style={{ width: 1, height: 40, background: border }} />
+            <div>
+              <span style={{ fontSize: 28, fontWeight: 800, color: commentedCount === TOTAL ? "#22C55E" : textDark }}>{commentedCount}</span>
+              <span style={{ fontSize: 14, color: muted }}>/{TOTAL}</span>
+              <div style={{ fontSize: 11, color: muted, marginTop: 2 }}>comentarii</div>
+            </div>
           </div>
+
+          {/* Missing items warning */}
+          {attemptedSubmit && !canSubmit && (
+            <div style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "14px 20px", marginBottom: 16, textAlign: "left" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#DC2626", marginBottom: 8 }}>
+                Completati toate campurile obligatorii:
+              </div>
+              {!expert.name.trim() && <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 4 }}>• Prenume si Nume (profil)</div>}
+              {!expert.role && <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 4 }}>• Rol profesional (profil)</div>}
+              {!expert.experience && <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 4 }}>• Ani experienta (profil)</div>}
+              {missingRatings.length > 0 && (
+                <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 4 }}>
+                  • {missingRatings.length} itemi fara scor: {missingRatings.slice(0, 8).map(i => i.id).join(", ")}{missingRatings.length > 8 ? ` + inca ${missingRatings.length - 8}` : ""}
+                </div>
+              )}
+              {missingComments.length > 0 && (
+                <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 4 }}>
+                  • {missingComments.length} itemi fara comentariu: {missingComments.slice(0, 8).map(i => i.id).join(", ")}{missingComments.length > 8 ? ` + inca ${missingComments.length - 8}` : ""}
+                </div>
+              )}
+            </div>
+          )}
+
           <p style={{ color: muted, fontSize: 14, marginBottom: 20 }}>
-            Completați toți cei {TOTAL} de itemi și profilul profesional pentru a putea trimite evaluarea.
+            Completati scorurile si comentariile pentru toti cei {TOTAL} de itemi + profilul profesional.
           </p>
           {submitError && <p style={{ color: "#DC2626", fontSize: 14, marginBottom: 16 }}>{submitError}</p>}
           <button
             onClick={handleSubmit}
-            disabled={!canSubmit}
             style={{
-              background: canSubmit ? textDark : "#D6D3D1",
+              background: canSubmit ? textDark : attemptedSubmit ? "#DC2626" : "#D6D3D1",
               color: "white", border: "none", borderRadius: 10, padding: "14px 40px",
-              fontFamily: "inherit", fontSize: 15, fontWeight: 700, cursor: canSubmit ? "pointer" : "not-allowed",
+              fontFamily: "inherit", fontSize: 15, fontWeight: 700, cursor: "pointer",
               letterSpacing: .3, transition: "all .2s",
+              width: "100%", maxWidth: 400,
             }}
           >
-            {submitting ? "Se trimite..." : "Trimite Evaluarea →"}
+            {submitting ? "Se trimite..." : canSubmit ? "Trimite Evaluarea →" : `Completati (${TOTAL - ratedCount} scoruri + ${TOTAL - commentedCount} comentarii lipsesc)`}
           </button>
           <p style={{ fontSize: 12, color: muted, marginTop: 12 }}>
             Datele sunt transmise securizat și utilizate exclusiv în scopuri de cercetare academică.<br />
@@ -591,14 +760,20 @@ function CviForm() {
       {/* Sticky counter */}
       <div style={{
         position: "fixed", bottom: 24, right: 24,
-        background: ratedCount === TOTAL ? "#22C55E" : textDark,
-        color: "white", borderRadius: 50, padding: "10px 20px",
-        fontSize: 14, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,.2)",
-        zIndex: 100, display: "flex", alignItems: "center", gap: 8,
+        background: canSubmit ? "#22C55E" : textDark,
+        color: "white", borderRadius: 12, padding: "10px 16px",
+        fontSize: 12, fontWeight: 700, boxShadow: "0 8px 32px rgba(0,0,0,.2)",
+        zIndex: 100, display: "flex", flexDirection: "column", gap: 4,
         transition: "all .3s",
       }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: ratedCount === TOTAL ? "#86EFAC" : "rgba(255,255,255,.4)" }} />
-        {ratedCount} / {TOTAL} completate
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: ratedCount === TOTAL ? "#86EFAC" : "rgba(255,255,255,.4)" }} />
+          Scoruri: {ratedCount}/{TOTAL}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: commentedCount === TOTAL ? "#86EFAC" : "rgba(255,255,255,.4)" }} />
+          Comentarii: {commentedCount}/{TOTAL}
+        </div>
       </div>
     </div>
   );

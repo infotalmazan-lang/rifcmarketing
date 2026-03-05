@@ -65,6 +65,7 @@ import {
   ChevronRight,
   ImageIcon,
   PartyPopper,
+  CheckCircle2,
 } from "lucide-react";
 import * as tus from "tus-js-client";
 
@@ -134,8 +135,49 @@ const _cronbachAlpha = (items: number[][]): number => {
   return (k / (k - 1)) * (1 - itemVars.reduce((a, v) => a + v, 0) / totalVar);
 };
 
+// ── Advanced statistical helpers (p-value, Cohen's d, Fisher Z) ──
+// Approximate t-distribution CDF using normal approximation (good for n > 30)
+const _normalCDF = (z: number): number => {
+  // Abramowitz & Stegun approximation 26.2.17
+  if (z < -8) return 0;
+  if (z > 8) return 1;
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+  const p = 0.3275911;
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.sqrt(2);
+  const t = 1 / (1 + p * x);
+  const erf = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return 0.5 * (1 + sign * erf);
+};
+// p-value for Pearson r (two-tailed), using t-distribution approximated by normal for large n
+const _pValuePearson = (r: number, n: number): number => {
+  if (n < 3 || Math.abs(r) >= 1) return 1;
+  const t = r * Math.sqrt((n - 2) / (1 - r * r));
+  return 2 * (1 - _normalCDF(Math.abs(t)));
+};
+// Format p-value for display
+const _fmtP = (p: number): string => p < 0.001 ? "p<0.001" : p < 0.01 ? "p<0.01" : p < 0.05 ? `p=${p.toFixed(3)}` : `p=${p.toFixed(3)} (n.s.)`;
+// Cohen's d — standardized effect size between two groups
+const _cohensD = (group1: number[], group2: number[]): number => {
+  if (group1.length < 2 || group2.length < 2) return 0;
+  const m1 = _mean(group1), m2 = _mean(group2);
+  const v1 = _variance(group1), v2 = _variance(group2);
+  const pooledSD = Math.sqrt(((group1.length - 1) * v1 + (group2.length - 1) * v2) / (group1.length + group2.length - 2));
+  return pooledSD > 0 ? (m2 - m1) / pooledSD : 0;
+};
+// Fisher Z-test — test if two Pearson correlations are significantly different
+const _fisherZTest = (r1: number, r2: number, n1: number, n2: number): { z: number; p: number } => {
+  if (n1 < 4 || n2 < 4) return { z: 0, p: 1 };
+  const z1 = 0.5 * Math.log((1 + r1) / (1 - r1)); // Fisher Z transform
+  const z2 = 0.5 * Math.log((1 + r2) / (1 - r2));
+  const se = Math.sqrt(1 / (n1 - 3) + 1 / (n2 - 3));
+  const z = se > 0 ? (z1 - z2) / se : 0;
+  const p = 2 * (1 - _normalCDF(Math.abs(z)));
+  return { z, p };
+};
+
 // ── Shared constants & zone helpers (used by both Rezultate + Interpretare) ──
-const GATE = 4;
+const GATE = 3;
 const getZone = (score: number): string => { if (score <= 20) return "Critical"; if (score <= 50) return "Noise"; if (score <= 80) return "Medium"; return "Supreme"; };
 const getZoneCp = (score: number): string => { if (score <= 2) return "Critical"; if (score <= 5) return "Noise"; if (score <= 8) return "Medium"; return "Supreme"; };
 
@@ -758,6 +800,7 @@ export default function StudiuAdminPage() {
     hypothesisScatterData?: { r: number; i: number; f: number; c_computed: number; c_score: number | null; cta: number | null; brand: boolean | null; stimulus_id: string }[];
 
     distributionSummary?: { id: string; name: string; total: number; completed: number }[];
+    _debug?: { respondentIdsRaw: number; respondentIdsFiltered: number; respondentsFetched: number; responsesFetched: number; responseBatchErrors: number; responseBatchesFetched: number; scatterDataCount: number; responsesWithNullScores: number };
   }
   const [results, setResults] = useState<ResultsData | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -774,7 +817,7 @@ export default function StudiuAdminPage() {
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
-  const [h2ObjFilter, setH2ObjFilter] = useState<string[]>(["conversie", "considerare"]);
+  const [h2ObjFilter, setH2ObjFilter] = useState<string[]>(["awareness", "considerare", "conversie"]);
   const [objExplainOpen, setObjExplainOpen] = useState<string | null>(null); // which stimulus_id shows objective explanation card
 
   // Log panel state
@@ -782,6 +825,7 @@ export default function StudiuAdminPage() {
   const [logLoading, setLogLoading] = useState(false);
   const [logDateFrom, setLogDateFrom] = useState("");
   const [logDateTo, setLogDateTo] = useState("");
+  const [logStatusFilter, setLogStatusFilter] = useState<"all" | "completed" | "started">("all");
   const [logSelected, setLogSelected] = useState<Set<string>>(new Set());
   const [logSegment, setLogSegment] = useState<string>("all");
   const [logExpandedId, setLogExpandedId] = useState<string | null>(null);
@@ -2663,6 +2707,53 @@ export default function StudiuAdminPage() {
                   ))}
                 </div>
 
+                {/* ── INFO BANNER: sursa datelor per sub-tab ── */}
+                {(() => {
+                  // LOG-based stats (matches header hero — single source of truth for respondent counts)
+                  const _ibActiveStimN = stimuli.filter((s: any) => s.is_active).length;
+                  const _ibIsDone = (l: any) => !!l.completed_at || (_ibActiveStimN > 0 && (l.responseCount || 0) >= _ibActiveStimN);
+                  const _ibIsFiltered = resultsSegment !== "all";
+                  const _ibLogs = _ibIsFiltered ? logData.filter((l: any) => {
+                    if (resultsSegment === "general") return !l.distribution_id;
+                    return l.distribution_id === resultsSegment;
+                  }) : logData;
+                  const _ibTotal = _ibLogs.length;
+                  const _ibCompleted = _ibLogs.filter(_ibIsDone).length;
+                  const _ibSegLabel = _ibIsFiltered
+                    ? (resultsSegment === "general" ? "General (fara link)" : (distributions.find((d: any) => d.id === resultsSegment)?.name || resultsSegment))
+                    : "Toate segmentele";
+
+                  // Response count from LOG data (single source of truth — matches LOG tab header "RASPUNSURI")
+                  const _ibResponses = _ibLogs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+                  const _ibMaterials = results.stimuliResults.filter((s: any) => s.response_count > 0).length;
+                  const _ibTotalMaterials = results.stimuliResults.length;
+
+                  // Common stats line used in every tab description
+                  const _ibStats = `${_ibResponses.toLocaleString("ro-RO")} raspunsuri · ${_ibMaterials}/${_ibTotalMaterials} materiale · ${_ibCompleted} completati / ${_ibTotal} inscrisi`;
+
+                  const tabDescriptions: Record<string, string> = {
+                    scoruri: `Scorurile R, I, F, C si CTA pe fiecare material. ${_ibStats}.`,
+                    profil: `Profilul demografic si comportamental al respondentilor. ${_ibStats}.`,
+                    psihografic: `Medii pe dimensiunile psihografice (scala 1-10). ${_ibStats}.`,
+                    canale: `Agregare scoruri per canal (tip material). ${_ibStats}.`,
+                    industrii: `Segmentare pe industrii. ${_ibStats}.`,
+                    fatigue: `Analiza oboselii (fatigue) — cum variaza scorurile pe pozitia stimulului. ${_ibStats}.`,
+                    funnel: `Funnel de completare — progresul respondentilor de la inceput pana la finalizare. ${_ibStats}.`,
+                  };
+
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", marginBottom: 16, background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, fontSize: 12, color: "#0369a1" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0369a1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                      <div>
+                        <span style={{ fontWeight: 700 }}>Sursa date:</span>{" "}
+                        <span style={{ fontWeight: 600, color: "#0c4a6e" }}>{_ibSegLabel}</span>
+                        {" — "}
+                        {tabDescriptions[resultsSubTab] || `${_ibResponses.toLocaleString("ro-RO")} raspunsuri · ${_ibMaterials}/${_ibTotalMaterials} materiale · ${_ibCompleted} completati / ${_ibTotal} inscrisi.`}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* ── SUB-TAB: SCORURI ── */}
                 {resultsSubTab === "scoruri" && (
                   <>
@@ -2727,9 +2818,12 @@ export default function StudiuAdminPage() {
                             const alpha = scValid.length >= 3 ? _cronbachAlpha([rArr, iArr, fArr, cNArr]) : 0;
                             const alphaLabel = alpha >= 0.9 ? "Excelent" : alpha >= 0.8 ? "Bun" : alpha >= 0.7 ? "Acceptabil" : alpha >= 0.6 ? "Discutabil" : "Slab";
                             const alphaColor = alpha >= 0.8 ? "#059669" : alpha >= 0.7 ? "#D97706" : "#DC2626";
-                            // C formula vs C perceived correlation
+                            // C formula vs C perceived correlation (used for Validare metric card)
                             const scWithCp = scValid.filter(d => d.c_score != null && d.c_score > 0);
                             const cfCpR = scWithCp.length >= 3 ? _pearsonR(scWithCp.map(d => d.c_computed / 11), scWithCp.map(d => d.c_score!)) : 0;
+                            // C formula vs CTA correlation (used for H2 verdict — "formula prezice actiunea")
+                            const scWithCta = scValid.filter(d => d.cta != null && d.cta > 0);
+                            const cfCtaR = scWithCta.length >= 3 ? _pearsonR(scWithCta.map(d => d.c_computed / 11), scWithCta.map(d => d.cta!)) : 0;
                             // Gate pass rate
                             const gatePass = withData.filter(s => s.avg_r >= GATE).length;
                             const gatePct = withData.length > 0 ? Math.round((gatePass / withData.length) * 100) : 0;
@@ -2742,15 +2836,27 @@ export default function StudiuAdminPage() {
                             const gCp = _mean(withData.map(s => s.avg_c_score));
                             const gDelta = Math.abs(gCf / 11 - gCp);
                             const gValPct = Math.round(Math.max(0, (1 - gDelta / 10) * 100));
+                            // H1 threshold effect — uses c_score (perceput) and CTA, NOT c_computed (tautologic)
+                            const h1BelowCp = scValid.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0);
+                            const h1AboveCp = scValid.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
+                            const h1BelowCpAvg = h1BelowCp.length > 0 ? _mean(h1BelowCp.map(d => d.c_score!)) : 0;
+                            const h1AboveCpAvg = h1AboveCp.length > 0 ? _mean(h1AboveCp.map(d => d.c_score!)) : 0;
+                            const h1DiffCp = Math.abs(h1AboveCpAvg - h1BelowCpAvg);
+                            const h1BelowCta = scValid.filter(d => d.r < GATE && d.cta != null && d.cta > 0);
+                            const h1AboveCta = scValid.filter(d => d.r >= GATE && d.cta != null && d.cta > 0);
+                            const h1BelowCtaAvg = h1BelowCta.length > 0 ? _mean(h1BelowCta.map(d => d.cta!)) : 0;
+                            const h1AboveCtaAvg = h1AboveCta.length > 0 ? _mean(h1AboveCta.map(d => d.cta!)) : 0;
+                            const h1DiffCta = Math.abs(h1AboveCtaAvg - h1BelowCtaAvg);
+                            const h1Diff = h1DiffCta; // verdict bazat pe CTA
                             // H5 winner
                             const h5D = scValid.filter(d => d.c_score != null && d.c_score > 0);
                             const h5MultR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i * d.f), h5D.map(d => d.c_score!)) : 0;
                             const h5AddR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i + d.f), h5D.map(d => d.c_score!)) : 0;
-                            // H6 gate effect
-                            const h6Below = scValid.filter(d => d.r < GATE);
-                            const h6Above = scValid.filter(d => d.r >= GATE);
-                            const h6BR = h6Below.length >= 2 ? _pearsonR(h6Below.map(d => d.i * d.f), h6Below.map(d => d.c_computed / 11)) : 0;
-                            const h6AR = h6Above.length >= 2 ? _pearsonR(h6Above.map(d => d.i * d.f), h6Above.map(d => d.c_computed / 11)) : 0;
+                            // H6 gate effect — use c_score (perceived) NOT c_computed (which contains I*F → tautology)
+                            const h6Below = scValid.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0);
+                            const h6Above = scValid.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
+                            const h6BR = h6Below.length >= 2 ? _pearsonR(h6Below.map(d => d.i * d.f), h6Below.map(d => d.c_score!)) : 0;
+                            const h6AR = h6Above.length >= 2 ? _pearsonR(h6Above.map(d => d.i * d.f), h6Above.map(d => d.c_score!)) : 0;
 
                             // Compute Factor Calibrare
                             const calD = scValid.filter(d => d.c_score != null && d.c_score > 0);
@@ -2760,11 +2866,14 @@ export default function StudiuAdminPage() {
                             const fcColor = fc >= 1.0 && fc <= 1.2 ? "#059669" : fc <= 1.5 ? "#D97706" : "#DC2626";
                             const fcLabel = fc >= 1.0 && fc <= 1.2 ? "Calibrat excelent" : fc <= 1.5 ? "Subestimare moderata" : fc <= 2.0 ? "Subestimare semnificativa" : "Discrepanta mare";
 
-                            // H5 deltas
+                            // H5 deltas — both models normalized to 0-1 scale
+                            // Multiplicativ: max(R + I*F) = 10 + 100 = 110, so /110 → 0-1
+                            // Aditiv: max(R + I + F) = 30, so /30 → 0-1
+                            // Cp: max(c_score) = 10, so /10 → 0-1
                             const h5Valid = scValid.filter(d => d.c_score != null && d.c_score > 0);
                             const dMult = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i * d.f) / 110 - d.c_score! / 10))) : 0;
                             const dAdit = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i + d.f) / 30 - d.c_score! / 10))) : 0;
-                            const h5CastigPct = dAdit > 0 ? Math.round(((dAdit - dMult) / dAdit) * 100) : 0;
+                            const h5CastigPct = dAdit > 0 ? Math.round(((dAdit - dMult) / dAdit) * 1000) / 10 : 0;
 
                             // Metric card builder
                             const metricCard = (icon: string, title: string, value: string, color: string, explanation: string, thresholds: string) => (
@@ -2780,25 +2889,50 @@ export default function StudiuAdminPage() {
                             );
 
                             return (
-                              <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderLeft: "4px solid #7C3AED", borderRadius: 10, padding: "20px 24px", marginBottom: 20 }}>
-                                {/* Header */}
-                                <div style={{ marginBottom: 16 }}>
-                                  <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4 }}>Sumar Validare Academica</div>
-                                  <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>
+                              <details style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderLeft: "4px solid #7C3AED", borderRadius: 10, marginBottom: 20, overflow: "hidden" }}>
+                                <summary style={{ cursor: "pointer", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", userSelect: "none" as const }}>
+                                  <div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                      Sumar Validare Academica
+                                    </div>
+                                    <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>
+                                      Indicatori cheie: Cronbach {"\u03B1"}={alpha.toFixed(2)}, Validare={gValPct}%, Gate={gatePct}%, Zone Match={zonePct}% — N={sc.length} din {withData.length} materiale
+                                    </div>
+                                  </div>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 12, transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
+                                </summary>
+                                <div style={{ padding: "0 24px 20px 24px" }}>
+                                <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5, marginBottom: 16 }}>
                                     Aceasta sectiune rezuma indicatorii cheie care demonstreaza validitatea stiintifica a modelului RIFC.
                                     Fiecare metric explica un aspect diferit: de la fiabilitatea instrumentului pana la acuratetea predictiei.
-                                  </div>
                                 </div>
+
+                                {/* Debug: data pipeline diagnosis */}
+                                {results._debug && (() => {
+                                  const d = results._debug;
+                                  const logResponses = logData.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+                                  const mismatch = logResponses > 0 && d.responsesFetched < logResponses * 0.9;
+                                  return mismatch ? (
+                                    <div style={{ background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 8, padding: "10px 16px", marginBottom: 10, fontSize: 10, color: "#92400E", lineHeight: 1.5 }}>
+                                      <strong>Atentie:</strong> Results API a returnat {d.responsesFetched} raspunsuri, dar LOG indica {logResponses}.
+                                      {d.responseBatchErrors > 0 && <> <strong>{d.responseBatchErrors} batch-uri au esuat</strong> din {d.responseBatchesFetched} totale.</>}
+                                      {d.responsesWithNullScores > 0 && <> {d.responsesWithNullScores} raspunsuri au scoruri null (filtrate din scatter data).</>}
+                                      {" "}Respondenti: {d.respondentIdsRaw} raw / {d.respondentIdsFiltered} dupa filtrare / {d.respondentsFetched} fetch-uiti.
+                                      {" "}Scatter data: {d.scatterDataCount} (folosit pt Cronbach, Pearson, Bias).
+                                    </div>
+                                  ) : null;
+                                })()}
 
                                 {/* Sample size bar */}
                                 <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 16px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                   <div>
                                     <div style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>Dimensiunea esantionului</div>
-                                    <div style={{ fontSize: 9, color: "#9CA3AF" }}>Numarul total de raspunsuri individuale analizate in studiu</div>
+                                    <div style={{ fontSize: 9, color: "#9CA3AF" }}>Evaluari individuale (cate un scor R·I·F·C per respondent per material)</div>
                                   </div>
                                   <div style={{ textAlign: "right" as const }}>
-                                    <span style={{ fontSize: 22, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{sc.length}</span>
-                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>raspunsuri din {withData.length} materiale</span>
+                                    <span style={{ fontSize: 22, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>N={sc.length}</span>
+                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>din {withData.length} materiale ({(() => { const _an = stimuli.filter((s: any) => s.is_active).length; const _ad = (l: any) => !!l.completed_at || (_an > 0 && (l.responseCount || 0) >= _an); return `${logData.filter(_ad).length} completati / ${logData.length} inscrisi`; })()})</span>
                                   </div>
                                 </div>
 
@@ -2858,8 +2992,8 @@ export default function StudiuAdminPage() {
                                 <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, letterSpacing: 0.3, borderBottom: "1px solid #e5e7eb", paddingBottom: 6 }}>VERDICT IPOTEZE</div>
                                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                                   {[
-                                    { code: "H1", name: "Poarta Relevantei (Threshold Effect)", verdict: gR >= GATE ? `Confirmata — R mediu = ${gR.toFixed(1)} depaseste pragul de ${GATE}. Mesajele sunt percepute ca relevante.` : `Neconfirmata — R mediu = ${gR.toFixed(1)} sub pragul ${GATE}. Mesajele nu ating pragul de relevanta.`, color: gR >= GATE ? "#059669" : "#DC2626" },
-                                    { code: "H2", name: "Formula prezice actiunea reala (Pearson Correlation)", verdict: `r = ${cfCpR.toFixed(2)} — ${Math.abs(cfCpR) >= 0.5 ? "Corelatie puternica. Formula prezice cu succes comportamentul real." : Math.abs(cfCpR) >= 0.3 ? "Corelatie moderata. Formula are putere predictiva, dar exista si alti factori." : "Corelatie slaba. Formula necesita ajustari suplimentare."}`, color: Math.abs(cfCpR) >= 0.3 ? "#059669" : "#D97706" },
+                                    { code: "H1", name: "Poarta Relevantei (Threshold Effect)", verdict: h1Diff > 2 ? `Confirmata — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}, ΔCp=${h1DiffCp.toFixed(1)}). Poarta Relevantei functioneaza.` : h1Diff >= 1 ? `Partial — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}). Efect moderat al pragului.` : `Neconfirmata — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}). Pragul nu produce efect semnificativ.`, color: h1Diff > 2 ? "#059669" : h1Diff >= 1 ? "#D97706" : "#DC2626" },
+                                    { code: "H2", name: "Formula prezice actiunea reala (C→CTA Correlation)", verdict: `r(C,CTA) = ${cfCtaR.toFixed(2)} — ${Math.abs(cfCtaR) >= 0.5 ? "Corelatie puternica. Formula prezice cu succes intentia de actiune." : Math.abs(cfCtaR) >= 0.3 ? "Corelatie moderata. Formula are putere predictiva, dar exista si alti factori." : "Corelatie slaba. Formula necesita ajustari suplimentare."}`, color: Math.abs(cfCtaR) >= 0.3 ? "#059669" : "#D97706" },
                                     { code: "H3", name: "Brandul modereaza C (Moderation Analysis)", verdict: "Vezi graficul H3 — analiza compara corelatia C→CTA intre brand cunoscut vs necunoscut.", color: "#6B7280" },
                                     { code: "H4", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul H4 — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
                                     { code: "H5", name: "Multiplicativ vs Aditiv (Model Comparison)", verdict: `${h5CastigPct > 0 ? "Modelul multiplicativ (I\u00D7F) este superior" : "Modelul aditiv (I+F) este superior"} cu ${Math.abs(h5CastigPct)}% eroare mai mica. \u0394mult=${dMult.toFixed(2)}, \u0394adit=${dAdit.toFixed(2)}.`, color: h5CastigPct > 10 ? "#059669" : h5CastigPct >= 0 ? "#D97706" : "#DC2626" },
@@ -2876,7 +3010,8 @@ export default function StudiuAdminPage() {
                                     </div>
                                   ))}
                                 </div>
-                              </div>
+                                </div>
+                              </details>
                             );
                           })()}
 
@@ -3515,6 +3650,11 @@ export default function StudiuAdminPage() {
                     ? { text: "Oboseala cognitiva minora", color: "#D97706", bg: "#fefce8", border: "#fde68a", icon: "~" }
                     : { text: "Fara oboseala cognitiva semnificativa", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", icon: "+" };
 
+                  // Completed respondents from LOG (single source of truth)
+                  const _fatActiveN = stimuli.filter(s => s.is_active).length;
+                  const _fatIsDone = (l: any) => !!l.completed_at || (_fatActiveN > 0 && (l.responseCount || 0) >= _fatActiveN);
+                  const _fatCompleted = logData.length > 0 ? logData.filter(_fatIsDone).length : fa.completedRespondentsAnalyzed;
+
                   return (
                     <div>
                       {/* ── FISA EXPLICATIVA ── */}
@@ -3575,7 +3715,7 @@ export default function StudiuAdminPage() {
                       {/* Header info + verdict */}
                       <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" as const, alignItems: "center" }}>
                         <div style={{ padding: "10px 16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 12 }}>
-                          <span style={{ fontWeight: 700, color: "#166534" }}>{fa.completedRespondentsAnalyzed}</span>
+                          <span style={{ fontWeight: 700, color: "#166534" }}>{_fatCompleted}</span>
                           <span style={{ color: "#6B7280" }}> respondenti analizati</span>
                         </div>
                         <div style={{ padding: "10px 16px", background: "#fefce8", border: "1px solid #fde68a", borderRadius: 8, fontSize: 12 }}>
@@ -3801,8 +3941,8 @@ export default function StudiuAdminPage() {
 
                 {/* ── SUB-TAB: COMPLETION FUNNEL ── */}
                 {resultsSubTab === "funnel" && (() => {
-                  const cf = results.completionFunnel;
-                  if (!cf || cf.funnelSteps.length === 0) {
+                  const cfRaw = results.completionFunnel;
+                  if ((!cfRaw || cfRaw.funnelSteps.length === 0) && logData.length === 0) {
                     return (
                       <div style={S.placeholderTab}>
                         <BarChart3 size={48} style={{ color: "#d1d5db" }} />
@@ -3810,6 +3950,93 @@ export default function StudiuAdminPage() {
                       </div>
                     );
                   }
+
+                  // ── Derive funnel from logData (single source of truth, matches header) ──
+                  const _fActiveStimN = stimuli.filter((s: any) => s.is_active).length;
+                  const _fIsDone = (l: any) => !!l.completed_at || (_fActiveStimN > 0 && (l.responseCount || 0) >= _fActiveStimN);
+                  const _fIsFiltered = resultsSegment !== "all";
+                  const _fLogs = _fIsFiltered ? logData.filter((l: any) => {
+                    if (resultsSegment === "general") return !l.distribution_id;
+                    return l.distribution_id === resultsSegment;
+                  }) : logData;
+                  const _fTotal = _fLogs.length;
+                  const _fCompleted = _fLogs.filter(_fIsDone).length;
+                  const _fRate = _fTotal > 0 ? Math.round((_fCompleted / _fTotal) * 100) : 0;
+
+                  // Rebuild funnelSteps from logData step_completed
+                  const _fMilestones: { step: number; label: string }[] = [
+                    { step: 0, label: "Inceput (Welcome)" },
+                    { step: 1, label: "Demografie" },
+                    { step: 2, label: "Comportament" },
+                    { step: 3, label: "Psihografic" },
+                  ];
+                  const _fStimuliCount = cfRaw?.funnelSteps
+                    ? cfRaw.funnelSteps.filter(fs => fs.label.startsWith("Stimul")).length
+                    : Math.max(..._fLogs.map((l: any) => (l.step_completed || 0) - 3), _fActiveStimN, 0);
+                  for (let s = 0; s < _fStimuliCount; s++) {
+                    _fMilestones.push({ step: 4 + s, label: `Stimul ${s + 1}` });
+                  }
+                  _fMilestones.push({ step: 9999, label: "Completat" });
+
+                  const _fSteps: { step: number; label: string; reached: number; rate: number; dropped: number }[] = [];
+                  for (let i = 0; i < _fMilestones.length; i++) {
+                    const ms = _fMilestones[i];
+                    let reached: number;
+                    if (ms.step === 9999) {
+                      reached = _fCompleted;
+                    } else {
+                      reached = _fLogs.filter((l: any) => (l.step_completed || 0) >= ms.step).length;
+                    }
+                    const prevReached = i > 0 ? _fSteps[i - 1].reached : _fTotal;
+                    _fSteps.push({
+                      step: ms.step,
+                      label: ms.label,
+                      reached,
+                      rate: _fTotal > 0 ? Math.round((reached / _fTotal) * 100) : 0,
+                      dropped: prevReached - reached,
+                    });
+                  }
+
+                  // Worst dropout
+                  let _fWorst = { step: 0, label: "", dropped: 0, dropRate: 0 };
+                  for (let i = 1; i < _fSteps.length; i++) {
+                    const prev = _fSteps[i - 1];
+                    const curr = _fSteps[i];
+                    const dropRate = prev.reached > 0 ? Math.round(((prev.reached - curr.reached) / prev.reached) * 100) : 0;
+                    if (curr.dropped > _fWorst.dropped) {
+                      _fWorst = { step: curr.step, label: curr.label, dropped: curr.dropped, dropRate };
+                    }
+                  }
+
+                  // Session times from logData
+                  const _fDurations = _fLogs
+                    .filter((l: any) => _fIsDone(l) && l.completed_at && l.started_at)
+                    .map((l: any) => Math.round((new Date(l.completed_at).getTime() - new Date(l.started_at).getTime()) / 1000))
+                    .filter((s: number) => s > 0 && s < 7200);
+                  const _fSorted = [..._fDurations].sort((a, b) => a - b);
+                  const _fMedian = _fSorted.length > 0 ? _fSorted[Math.floor(_fSorted.length / 2)] : 0;
+                  const _fAvg = _fDurations.length > 0 ? Math.round(_fDurations.reduce((a: number, b: number) => a + b, 0) / _fDurations.length) : 0;
+
+                  // Time buckets
+                  const _fBuckets = { under5m: 0, m5to15: 0, m15to30: 0, m30to60: 0, over60m: 0 };
+                  for (const d of _fDurations) {
+                    if (d < 300) _fBuckets.under5m++;
+                    else if (d < 900) _fBuckets.m5to15++;
+                    else if (d < 1800) _fBuckets.m15to30++;
+                    else if (d < 3600) _fBuckets.m30to60++;
+                    else _fBuckets.over60m++;
+                  }
+
+                  const cf: CompletionFunnel = {
+                    totalStarted: _fTotal,
+                    totalCompleted: _fCompleted,
+                    overallRate: _fRate,
+                    funnelSteps: _fSteps,
+                    worstDropout: _fWorst,
+                    medianSessionTime: _fMedian,
+                    avgSessionTime: _fAvg,
+                    timeBuckets: _fBuckets,
+                  };
 
                   const fmtTime = (sec: number) => sec >= 60 ? `${Math.floor(sec / 60)}m ${sec % 60}s` : `${sec}s`;
                   const maxReached = cf.funnelSteps[0]?.reached || 1;
@@ -4770,6 +4997,88 @@ export default function StudiuAdminPage() {
               </button>
             </div>
 
+            {/* ═══ HERO KPI BANNER ═══ */}
+            {(() => {
+              const TARGET_EXPERTS = 350;
+              const activeExp = experts.filter(e => e.is_active);
+              const totalActive = activeExp.length;
+              const totalStim = stimuli.filter(s => s.is_active).length;
+              const expertProgress = activeExp.map(exp => {
+                const cnt = expertEvals.filter(e => e.expert_id === exp.id).length;
+                return { ...exp, evalsCount: cnt, pct: totalStim > 0 ? cnt / totalStim : 0 };
+              });
+              const completedCount = expertProgress.filter(ep => totalStim > 0 && ep.evalsCount >= totalStim).length;
+              const startedCount = expertProgress.filter(ep => ep.evalsCount > 0 && ep.evalsCount < totalStim).length;
+              const notStartedCount = expertProgress.filter(ep => ep.evalsCount === 0).length;
+              const completionPct = totalActive > 0 ? Math.round((completedCount / totalActive) * 100) : 0;
+              const targetPct = Math.min(100, Math.round((totalActive / TARGET_EXPERTS) * 100));
+              const totalEvals = expertEvals.length;
+              const maxEvals = totalActive * totalStim;
+              const evalsPct = maxEvals > 0 ? Math.round((totalEvals / maxEvals) * 100) : 0;
+
+              return (
+                <div style={{ marginBottom: 24 }}>
+                  {/* Target progress bar */}
+                  <div style={{ background: "#f0fdf4", border: "2px solid #059669", borderRadius: 12, padding: "20px 24px", marginBottom: 16 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <Target size={18} style={{ color: "#059669" }} />
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#059669", letterSpacing: 1 }}>OBIECTIV PANEL EXPERTI</span>
+                      </div>
+                      <span style={{ fontSize: 22, fontWeight: 800, color: "#059669" }}>
+                        {totalActive} <span style={{ fontSize: 14, fontWeight: 600, color: "#6B7280" }}>/ {TARGET_EXPERTS} experti</span>
+                      </span>
+                    </div>
+                    <div style={{ height: 10, background: "#dcfce7", borderRadius: 5, overflow: "hidden", position: "relative" as const }}>
+                      <div style={{ height: "100%", background: "linear-gradient(90deg, #059669, #10b981)", borderRadius: 5, width: `${targetPct}%`, transition: "width 0.5s ease" }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+                      <span style={{ fontSize: 11, color: "#6B7280" }}>{targetPct}% din obiectiv</span>
+                      <span style={{ fontSize: 11, color: "#6B7280" }}>Necesari inca: <strong style={{ color: "#059669" }}>{Math.max(0, TARGET_EXPERTS - totalActive)}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* KPI Cards Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12 }}>
+                    {/* KPI 1: Total Activi */}
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 14px", textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 8 }}>TOTAL ACTIVI</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#111827", lineHeight: 1 }}>{totalActive}</div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4 }}>din {experts.length} inregistrati</div>
+                    </div>
+
+                    {/* KPI 2: Au Completat */}
+                    <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "16px 14px", textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#059669", marginBottom: 8 }}>AU COMPLETAT</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#059669", lineHeight: 1 }}>{completedCount}</div>
+                      <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>{completionPct}% rata completare</div>
+                    </div>
+
+                    {/* KPI 3: Au Inceput */}
+                    <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 10, padding: "16px 14px", textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#D97706", marginBottom: 8 }}>AU INCEPUT</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#D97706", lineHeight: 1 }}>{startedCount}</div>
+                      <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>in progres</div>
+                    </div>
+
+                    {/* KPI 4: Nu Au Inceput */}
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 14px", textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#9CA3AF", marginBottom: 8 }}>NU AU INCEPUT</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#9CA3AF", lineHeight: 1 }}>{notStartedCount}</div>
+                      <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 4 }}>neinceputi</div>
+                    </div>
+
+                    {/* KPI 5: Evaluari Total */}
+                    <div style={{ background: "#eef2ff", border: "1px solid #c7d2fe", borderRadius: 10, padding: "16px 14px", textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#4338ca", marginBottom: 8 }}>EVALUARI TOTAL</div>
+                      <div style={{ fontSize: 32, fontWeight: 800, color: "#4338ca", lineHeight: 1 }}>{totalEvals}</div>
+                      <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>{evalsPct}% din {maxEvals} posibile</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Add/Edit expert form */}
             {showAddExpert && (
               <div style={{ ...S.configCard, borderColor: "#059669", borderWidth: 2, marginBottom: 20 }}>
@@ -5607,7 +5916,7 @@ export default function StudiuAdminPage() {
           }
 
           // ── Helper functions ──
-          const GATE = 4;
+          const GATE = 3;
           const getZone = (score: number): string => {
             if (score <= 20) return "Critical";
             if (score <= 50) return "Noise";
@@ -5683,8 +5992,8 @@ export default function StudiuAdminPage() {
               case "score_r": return { sections: [
                 { heading: "Ce reprezinta R (Relevanta)", text: `Scorul R = ${val} masoara cat de relevant percepe respondentul mesajul de marketing in raport cu nevoile, interesele sau contextul sau personal. Se evalueaza pe o scala de la 1 la 10 (1 = complet irelevant, 10 = foarte relevant).` },
                 { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, R este componenta aditionala de baza. Relevanta actioneaza ca un "gate" (prag): daca R < ${GATE}, formula prezice ca materialul va avea impact scazut, indiferent cat de interesant sau bine executat este. R se aduna direct la produsul I×F.` },
-                { heading: "De ce arata acest rezultat", text: v >= 4 ? `R = ${val} indica o relevanta ridicata. Respondentii considera ca mesajul se adreseaza direct nevoilor lor. Aceasta baza solida permite amplificarea prin I×F.` : v >= GATE ? `R = ${val} indica o relevanta acceptabila. Mesajul trece Relevance Gate (>= ${GATE}), dar exista spatiu de imbunatatire a targetarii.` : `R = ${val} indica relevanta scazuta, sub pragul Gate de ${GATE}. Mesajul nu rezoneza cu audienta tinta, ceea ce diminueaza drastic eficacitatea, indiferent de calitatea executiei (F) sau interesul generat (I).` },
-                { heading: "Cum se interpreteaza", text: `R >= 4: Excelent — mesajul este foarte relevant. R >= ${GATE}: Acceptabil — formula poate functiona. R < ${GATE}: Gate Fail — materialul necesita re-targetare sau reformulare fundamentala a mesajului.` },
+                { heading: "De ce arata acest rezultat", text: v >= 7 ? `R = ${val} indica o relevanta ridicata. Respondentii considera ca mesajul se adreseaza direct nevoilor lor. Aceasta baza solida permite amplificarea prin I×F.` : v >= GATE ? `R = ${val} indica o relevanta acceptabila. Mesajul trece Relevance Gate (>= ${GATE}), dar exista spatiu de imbunatatire a targetarii.` : `R = ${val} indica relevanta scazuta, sub pragul Gate de ${GATE}. Mesajul nu rezoneza cu audienta tinta, ceea ce diminueaza drastic eficacitatea, indiferent de calitatea executiei (F) sau interesul generat (I).` },
+                { heading: "Cum se interpreteaza", text: `R >= 7: Excelent — mesajul este foarte relevant. R >= ${GATE}: Acceptabil — formula poate functiona. R < ${GATE}: Gate Fail — materialul necesita re-targetare sau reformulare fundamentala a mesajului.` },
                 { heading: "Concluzie", text: `Cu R = ${val}, ${v >= GATE ? `materialul depaseste Relevance Gate si poate beneficia de amplificarea I×F.` : `materialul nu depaseste Relevance Gate — prioritatea este imbunatatirea relevantei inainte de a optimiza Interesul sau Forma.`}` },
               ]};
               case "score_i": return { sections: [
@@ -5776,14 +6085,14 @@ export default function StudiuAdminPage() {
               }
               case "h5": return { sections: [
                 { heading: "Ce testeaza H5", text: "Ipoteza H5 compara doua modele de combinare a Interesului (I) si Formei (F): modelul multiplicativ (I×F) din RIFC versus un model aditiv alternativ (I+F). Se compara Delta medie (eroarea de predictie absoluta) a fiecarui model fata de C perceput normalizat." },
-                { heading: "Cum se calculeaza", text: "Cf_mult = (R + I×F) / 110, Cf_adit = (R + I + F) / 30, Cp_norm = C_score / 10. Toate pe scala 0-1. Delta_mult = |Cf_mult - Cp_norm|, Delta_adit = |Cf_adit - Cp_norm|. Castigul % = ((Delta_adit - Delta_mult) / Delta_adit) × 100." },
+                { heading: "Cum se calculeaza", text: "Cf_mult = (R + I×F) / 110, Cf_adit = (R + I + F) / 30, Cp_norm = C_score / 10. Toate trei pe scala 0-1 (max R+I×F = 110, max R+I+F = 30, max C_score = 10). Delta_mult = |Cf_mult - Cp_norm|, Delta_adit = |Cf_adit - Cp_norm|. Castigul % = ((Delta_adit - Delta_mult) / Delta_adit) × 100." },
                 { heading: "De ce conteaza", text: "Formula RIFC postuleaza ca I si F se amplifica reciproc — un continut foarte interesant dar prost prezentat pierde forta. Modelul aditiv nu capteaza aceasta interdependenta. Daca Delta multiplicativ < Delta aditiv, formula R+(I×F)=C este matematic superioara fata de R+I+F=C." },
                 { heading: "Cum se interpreteaza", text: "Castig > 10%: H5 confirmata — modelul multiplicativ prezice semnificativ mai precis. Castig 0-10%: Diferenta mica, ambele modele similare. Castig < 0%: Modelul aditiv performeaza mai bine — reconsidera structura formulei." },
                 { heading: "Concluzie", text: "Daca modelul multiplicativ castiga, formula RIFC este justificata matematic — sinergia I×F este reala si captureaza interdependenta intre calitatea continutului si calitatea executiei." },
               ]};
               case "h6": return { sections: [
                 { heading: "Ce testeaza H6", text: `Ipoteza H6 testeaza ca atunci cand R (Relevanta) este sub pragul Gate de ${GATE}, produsul I×F devine complet irelevant — C nu mai raspunde la I×F. Aceasta diferentiaza H6 de H1: H1 spune ca R mic = C mic, H6 spune ca sub R=${GATE}, I si F devin irelevante.` },
-                { heading: "Cum se calculeaza", text: `Se filtreaza DOAR raspunsurile cu r_score < ${GATE}. Pe acest subset se calculeaza corelatia Pearson intre I×F (produsul) si C_norm (c_computed/110). Daca |r| ≈ 0, I×F nu influenteaza C sub prag.` },
+                { heading: "Cum se calculeaza", text: `Se filtreaza DOAR raspunsurile cu r_score < ${GATE} si care au c_score (C perceput). Pe acest subset se calculeaza corelatia Pearson intre I×F (produsul) si c_score (perceptia reala a consumatorului). Daca |r| ≈ 0, I×F nu influenteaza perceptia sub prag.` },
                 { heading: "Cum se interpreteaza", text: `|r| < 0.2: H6 confirmata — sub R=${GATE}, I×F nu influenteaza C. Poarta Relevantei functioneaza ca gate real. |r| 0.2-0.4: Influenta slaba reziduala a I×F sub prag. |r| > 0.4: H6 neconfirmata — I×F influenteaza C chiar sub R=${GATE}. Pragul poate fi incorect.` },
                 { heading: "De ce conteaza", text: `Daca R < ${GATE} si totusi I×F coreleaza cu C, inseamna ca R e doar o variabila obisnuita, nu un gate. Daca corelatia e ~0 (haos), inseamna ca sub prag, oricat investesti in Interes si Forma, nu produci Claritate. Aceasta ar fi cea mai puternica confirmare a originalitatii RIFC.` },
                 { heading: "Concluzie", text: `Un r aproape de 0 sub gate confirma puternic rolul de "poarta" al Relevantei — cel mai distinctiv element al formulei RIFC fata de alte framework-uri de marketing.` },
@@ -5863,7 +6172,8 @@ export default function StudiuAdminPage() {
             : logData.filter((l: any) => l.distribution_id === interpSource);
           const _interpCompleted = logData.length > 0 ? _interpFilteredLog.filter(_interpDone).length : results.completedRespondents;
           const _interpTotal = logData.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
-          const _interpResponses = logData.length > 0 ? _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0) : results.totalResponses;
+          // Use LOG data for response count (matches header RASPUNSURI)
+          const _interpResponses = _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
 
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
@@ -5969,6 +6279,27 @@ export default function StudiuAdminPage() {
                 {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
               </div>
 
+              {/* ── Info banner (same format as Rezultate) ── */}
+              {(() => {
+                const _iiStats = `${_interpResponses.toLocaleString("ro-RO")} raspunsuri · ${n}/${results.stimuliResults.length} materiale · ${_interpCompleted} completati / ${_interpTotal} inscrisi`;
+                const _iiDescriptions: Record<string, string> = {
+                  total: `Interpretare globala — validare ipoteza, scoruri medii R/I/F/C, zone, gates. ${_iiStats}.`,
+                  industrie: `Interpretare segmentata pe industrii — comparatie scoruri si validare per industrie. ${_iiStats}.`,
+                  brand: `Interpretare segmentata pe branduri — comparatie scoruri si validare per brand. ${_iiStats}.`,
+                };
+                return (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", marginBottom: 16, background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, fontSize: 12, color: "#0369a1" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0369a1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                    <div>
+                      <span style={{ fontWeight: 700 }}>Sursa date:</span>{" "}
+                      <span style={{ fontWeight: 600, color: "#0c4a6e" }}>{interpSource === "all" ? "Toate sursele" : activeSourceLabel}</span>
+                      {" — "}
+                      {_iiDescriptions[interpSubTab] || _iiStats}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ═══ TOTAL ═══ */}
               {interpSubTab === "total" && (
                 <div>
@@ -5977,7 +6308,7 @@ export default function StudiuAdminPage() {
                     background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
                   }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — TOTAL</div>
-                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{_interpCompleted}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{_interpTotal}</strong> pornite ({_interpResponses} raspunsuri individuale)</div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{_interpCompleted}</strong> chestionare completate din <strong style={{ color: "#374151" }}>{_interpTotal}</strong> pornite (N={_interpResponses} evaluari individuale)</div>
                     <div style={{ fontSize: 48, fontWeight: 900, color: getValidationColor(grandHypPct), lineHeight: 1 }}>{grandHypPct}%</div>
                     <div style={{
                       display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
@@ -6028,7 +6359,7 @@ export default function StudiuAdminPage() {
                     <div style={{ ...S.configItem, textAlign: "center" as const }}>
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>MATERIALE ANALIZATE</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{n}</div>
-                      <div style={{ fontSize: 11, color: "#6B7280" }}>{_interpResponses} raspunsuri totale</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>N={_interpResponses} evaluari totale</div>
                       <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: _interpResponses }} /></div>
                     </div>
                   </div>
@@ -6362,13 +6693,27 @@ export default function StudiuAdminPage() {
                   fontSize: 12, color: "#374151", lineHeight: 1.6, marginTop: 10,
                 };
 
-                // ── H1: R vs C scatter (normalized 0-10) ──
-                const h1Data = scatter.filter(d => d.c_computed > 0).map(d => ({ ...d, cNorm: Math.round((d.c_computed / 11) * 100) / 100 }));
+                // ── H1: R vs C_perceput scatter (c_score 1-10) ──
+                // Metrica A: C perceput (elimină tautologia c_computed care conține R)
+                const h1Data = scatter.filter(d => d.c_score != null && d.c_score > 0);
                 const h1XMin = 0, h1XMax = 11, h1YMin = 0, h1YMax = 10;
                 const h1BelowGate = h1Data.filter(d => d.r < GATE);
                 const h1AboveGate = h1Data.filter(d => d.r >= GATE);
-                const h1BelowAvgC = h1BelowGate.length > 0 ? Math.round((h1BelowGate.reduce((a, d) => a + d.cNorm, 0) / h1BelowGate.length) * 100) / 100 : 0;
-                const h1AboveAvgC = h1AboveGate.length > 0 ? Math.round((h1AboveGate.reduce((a, d) => a + d.cNorm, 0) / h1AboveGate.length) * 100) / 100 : 0;
+                const h1BelowAvgC = h1BelowGate.length > 0 ? Math.round(_mean(h1BelowGate.map(d => d.c_score!)) * 100) / 100 : 0;
+                const h1AboveAvgC = h1AboveGate.length > 0 ? Math.round(_mean(h1AboveGate.map(d => d.c_score!)) * 100) / 100 : 0;
+                const h1CohenDCp = _cohensD(h1BelowGate.map(d => d.c_score!), h1AboveGate.map(d => d.c_score!));
+                const h1N = h1Data.length;
+                // Metrica B: CTA (intenția de acțiune — validare directă a narativei)
+                const h1CtaData = scatter.filter(d => d.cta != null && d.cta > 0);
+                const h1CtaBelow = h1CtaData.filter(d => d.r < GATE);
+                const h1CtaAbove = h1CtaData.filter(d => d.r >= GATE);
+                const h1BelowAvgCta = h1CtaBelow.length > 0 ? Math.round(_mean(h1CtaBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                const h1AboveAvgCta = h1CtaAbove.length > 0 ? Math.round(_mean(h1CtaAbove.map(d => d.cta!)) * 100) / 100 : 0;
+                const h1CohenDCta = _cohensD(h1CtaBelow.map(d => d.cta!), h1CtaAbove.map(d => d.cta!));
+                // Metrica C: Gate puternic (I≥5, F≥5 dar R sub/peste prag)
+                const h1StrongData = h1CtaData.filter(d => d.i >= 5 && d.f >= 5);
+                const h1StrongBelow = h1StrongData.filter(d => d.r < GATE);
+                const h1StrongAbove = h1StrongData.filter(d => d.r >= GATE);
 
                 // ── H2: C vs CTA scatter (filtered by marketing_objective, normalized X) ──
                 const h2DataAll = scatter.filter(d => d.c_computed > 0 && d.cta != null && d.cta > 0);
@@ -6425,7 +6770,7 @@ export default function StudiuAdminPage() {
                       <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
                       <div>
                         <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H6)</div>
-                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {scatter.length} raspunsuri individuale.</div>
+                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {_interpResponses.toLocaleString("ro-RO")} raspunsuri din {n} materiale ({_interpCompleted} completati / {_interpTotal} inscrisi).</div>
                       </div>
                     </div>
 
@@ -6433,45 +6778,119 @@ export default function StudiuAdminPage() {
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
                       <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H1: Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
-                        <strong>Ce testeaza:</strong> Relevanta (R) functioneaza ca un prag minim — sub R={GATE}, formula prezice ca mesajul nu produce Claritate, indiferent de Interes sau Forma.{" "}
-                        <strong>Metoda:</strong> Scatter plot cu comparatie medii pe doua grupuri (R&lt;{GATE} vs R&ge;{GATE}).{" "}
-                        <strong>Interpretare:</strong> Diferenta &gt; 2 puncte = confirmat, 1-2 = partial, &lt; 1 = neconfirmat.
+                        <strong>Ce testeaza:</strong> Relevanta (R) functioneaza ca un prag minim — sub R={GATE}, mesajul nu produce nici Claritate perceputa, nici intentie de actiune (CTA), indiferent de Interes sau Forma.{" "}
+                        <strong>Metoda:</strong> Comparatie medii C<sub>perceput</sub> si CTA pe doua grupuri (R&lt;{GATE} vs R&ge;{GATE}). Testul foloseste c_score (perceptia consumatorului), nu C din formula (care contine R si ar fi tautologic).{" "}
+                        <strong>Interpretare:</strong> ΔCTA &gt; 2 = confirmat, 1-2 = partial, &lt; 1 = neconfirmat.
                       </div>
-                      {/* Stats banner */}
+                      {/* Stats banner — 3 rows: C_perceput, CTA, Gate puternic */}
                       {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
-                        const diff = Math.round((h1AboveAvgC - h1BelowAvgC) * 100) / 100;
-                        const verdict = diff > 2 ? "H1 CONFIRMATA" : diff >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
-                        const verdColor = diff > 2 ? "#059669" : diff >= 1 ? "#D97706" : "#DC2626";
-                        const verdIcon = diff > 2 ? "\u2705" : diff >= 1 ? "\u26A0\uFE0F" : "\u274C";
+                        const diffCp = Math.round((h1AboveAvgC - h1BelowAvgC) * 100) / 100;
+                        const diffCta = Math.round((h1AboveAvgCta - h1BelowAvgCta) * 100) / 100;
+                        const strongBelowCta = h1StrongBelow.length > 0 ? Math.round(_mean(h1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                        const strongAboveCta = h1StrongAbove.length > 0 ? Math.round(_mean(h1StrongAbove.map(d => d.cta!)) * 100) / 100 : 0;
+                        const diffStrong = Math.round((strongAboveCta - strongBelowCta) * 100) / 100;
+                        const verdict = diffCta > 2 ? "H1 CONFIRMATA" : diffCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
+                        const verdColor = diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626";
+                        const verdIcon = diffCta > 2 ? "\u2705" : diffCta >= 1 ? "\u26A0\uFE0F" : "\u274C";
+                        const rowLbl: React.CSSProperties = { fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: 0.5, padding: "4px 0 2px", gridColumn: "1 / -1" };
+                        const cellStyle = (border: string): React.CSSProperties => ({ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${border}` });
                         return (
                           <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fee2e2" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Media C cand R&lt;{GATE}</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgC}</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                              {/* ROW A: C perceput */}
+                              <div style={rowLbl}>A. Claritate perceputa (c_score)</div>
+                              <div style={cellStyle("#fee2e2")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&lt;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgC}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1BelowGate.length}</div>
                               </div>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #d1fae5" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Media C cand R&ge;{GATE}</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgC}</div>
+                              <div style={cellStyle("#d1fae5")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&ge;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgC}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1AboveGate.length}</div>
                               </div>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Diferenta</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{diff.toFixed(2)}</div>
+                              <div style={cellStyle("#e5e7eb")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;C<sub>perceput</sub></div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{diffCp.toFixed(2)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={h1CohenDCp.toFixed(2)}</div>
                               </div>
+                              {/* Annotation A */}
+                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fef2f2", borderRadius: 4, borderLeft: "3px solid #DC2626", margin: "2px 0 6px" }}>
+                                <strong style={{ color: diffCp >= 2 ? "#059669" : diffCp >= 1 ? "#D97706" : "#DC2626" }}>{diffCp >= 2 ? "\u2705 CONFIRMAT" : diffCp >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                Claritate perceputa (c_score 1-10): cat de clar a inteles consumatorul mesajul. Media {h1BelowAvgC} sub prag vs {h1AboveAvgC} peste prag = &Delta;{diffCp.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={h1CohenDCp.toFixed(2)} ({Math.abs(h1CohenDCp) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCp) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                <span style={{ color: "#6B7280" }}>n={h1BelowGate.length}+{h1AboveGate.length} = raspunsuri cu c_score valid.</span>
+                              </div>
+                              {/* ROW B: CTA */}
+                              <div style={rowLbl}>B. Intentie de actiune (CTA)</div>
+                              <div style={cellStyle("#fee2e2")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&lt;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgCta}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1CtaBelow.length}</div>
+                              </div>
+                              <div style={cellStyle("#d1fae5")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&ge;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgCta}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1CtaAbove.length}</div>
+                              </div>
+                              <div style={cellStyle("#e5e7eb")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffCta.toFixed(2)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={h1CohenDCta.toFixed(2)}</div>
+                              </div>
+                              {/* Annotation B */}
+                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#eff6ff", borderRadius: 4, borderLeft: "3px solid #2563EB", margin: "2px 0 6px" }}>
+                                <strong style={{ color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626" }}>{diffCta > 2 ? "\u2705 CONFIRMAT" : diffCta >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                <strong>METRICA DECISIVA.</strong> Intentia de cumparare (CTA 1-10): ar cumpara consumatorul sau nu? CTA {h1BelowAvgCta} sub prag vs {h1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={h1CohenDCta.toFixed(2)} ({Math.abs(h1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, consumatorul NU cumpara.</strong>}{" "}
+                                <span style={{ color: "#6B7280" }}>n={h1CtaBelow.length}+{h1CtaAbove.length} = raspunsuri cu CTA valid.</span>
+                              </div>
+                              {/* ROW C: Gate puternic */}
+                              {h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 && (<>
+                                <div style={rowLbl}>C. Gate puternic (I&ge;5, F&ge;5 — continut excelent)</div>
+                                <div style={cellStyle("#fef3c7")}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 dar R&lt;{GATE}</div>
+                                  <div style={{ fontSize: 16, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>{strongBelowCta}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1StrongBelow.length}</div>
+                                </div>
+                                <div style={cellStyle("#d1fae5")}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 si R&ge;{GATE}</div>
+                                  <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{strongAboveCta}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1StrongAbove.length}</div>
+                                </div>
+                                <div style={cellStyle("#e5e7eb")}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA (gate)</div>
+                                  <div style={{ fontSize: 16, fontWeight: 900, color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffStrong.toFixed(2)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>chiar cu I,F excelente</div>
+                                </div>
+                                {/* Annotation C */}
+                                <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fefce8", borderRadius: 4, borderLeft: "3px solid #D97706", margin: "2px 0 4px" }}>
+                                  <strong style={{ color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626" }}>{diffStrong > 2 ? "\u2705 CONFIRMAT" : diffStrong >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                  <strong>TEST MAXIM.</strong> Doar cazuri cu I&ge;5 SI F&ge;5 (continut+forma excelente). CTA {strongBelowCta} fara relevanta vs {strongAboveCta} cu relevanta = &Delta;{diffStrong.toFixed(2)}.{" "}
+                                  {diffStrong > 2 ? <strong style={{ color: "#059669" }}>&quot;Chiar super frumos si chiar am prins, dar fara relevanta — nu cumpar.&quot;</strong> : diffStrong >= 1 ? <strong style={{ color: "#D97706" }}>Calitatea compenseaza partial dar nu suficient.</strong> : <strong style={{ color: "#DC2626" }}>Calitatea compenseaza lipsa relevantei.</strong>}{" "}
+                                  <span style={{ color: "#6B7280" }}>n={h1StrongBelow.length}+{h1StrongAbove.length} = subset cu I&ge;5, F&ge;5 (din {h1CtaData.length} total).</span>
+                                </div>
+                              </>)}
                             </div>
-                            <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                            {/* N explanation */}
+                            <div style={{ marginTop: 6, padding: "4px 10px", background: "#f9fafb", borderRadius: 4, fontSize: 9, color: "#6B7280", lineHeight: 1.4 }}>
+                              <strong>De ce N difera intre metrici?</strong> Fiecare rand filtreaza raspunsurile care au valoarea respectiva completata: A = {h1BelowGate.length}+{h1AboveGate.length} cu c_score valid, B = {h1CtaBelow.length}+{h1CtaAbove.length} cu CTA valid, C = {h1StrongBelow.length}+{h1StrongAbove.length} (subset I&ge;5, F&ge;5). N nu e &quot;date lipsa&quot; — e cate formulare au acea valoare completata.
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                              <div style={{ fontSize: 9, color: "#6B7280" }}>Cohen&apos;s d(CTA)={h1CohenDCta.toFixed(2)} ({Math.abs(h1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}) &middot; N(Cp)={h1N} &middot; N(CTA)={h1CtaData.length}</div>
+                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                            </div>
                           </div>
                         );
                       })()}
                       <div style={{ overflowX: "auto" as const }}>
                         <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
-                          {renderGrid(h1XMin, h1XMax, h1YMin, h1YMax, "R (Relevanta)", "C formula (norm. 0-10)")}
+                          {renderGrid(h1XMin, h1XMax, h1YMin, h1YMax, "R (Relevanta)", "C perceput (c_score 1-10)")}
                           {/* Gate line */}
                           <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
                           <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">Prag R={GATE}</text>
-                          {/* Dots — red below gate, green above */}
+                          {/* Dots — red below gate, green above — using c_score (perceput) */}
                           {h1Data.map((d, i) => (
-                            <circle key={i} cx={toX(d.r, h1XMin, h1XMax)} cy={toY(d.cNorm, h1YMin, h1YMax)} r={3} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.55} />
+                            <circle key={i} cx={toX(d.r, h1XMin, h1XMax)} cy={toY(d.c_score!, h1YMin, h1YMax)} r={3} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.55} />
                           ))}
                           {/* Legend */}
                           <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
@@ -6480,16 +6899,55 @@ export default function StudiuAdminPage() {
                           <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1AboveGate.length})</text>
                         </svg>
                       </div>
-                      <div style={cardStyle}>
-                        <strong>H1 — Poarta Relevantei:</strong> Ipoteza centrala a RIFC sustine ca Relevanta functioneaza ca un prag minim, nu ca o variabila obisnuita. Sub R={GATE}, indiferent cat de interesant e continutul sau cat de bine e prezentat, mesajul nu produce Claritate. Zona rosie din grafic (R&lt;{GATE}) ar trebui sa arate C sistematic mai mic decat zona verde (R&ge;{GATE}).
-                        {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
-                          const diff = h1AboveAvgC - h1BelowAvgC;
-                          return diff > 2
-                            ? <> <strong style={{ color: "#059669" }}>Poarta Relevantei functioneaza — diferenta de {diff.toFixed(2)} puncte confirma ipoteza.</strong></>
-                            : diff >= 1
-                              ? <> <strong style={{ color: "#D97706" }}>Efect prezent dar moderat (diferenta {diff.toFixed(2)}) — date suplimentare necesare.</strong></>
-                              : <> <strong style={{ color: "#DC2626" }}>R nu actioneaza ca gate in acest esantion (diferenta {diff.toFixed(2)}).</strong></>;
-                        })()}
+                      {/* ═══ INTERPRETARE H1 ═══ */}
+                      <div style={{ marginTop: 10, padding: "14px 16px", background: "#f0fdf4", borderRadius: 8, border: "2px solid #059669" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                          <CheckCircle2 size={16} style={{ color: "#059669" }} />
+                          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE H1</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#111827", lineHeight: 1.7 }}>
+                          <strong>Formula e validata?</strong>{" "}
+                          {(() => {
+                            const diffCta = h1AboveAvgCta - h1BelowAvgCta;
+                            const diffCp = h1AboveAvgC - h1BelowAvgC;
+                            const strongN = h1StrongBelow.length;
+                            const strongBelowCta = strongN > 0 ? Math.round(_mean(h1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                            return (<>
+                              {diffCta > 2
+                                ? <strong style={{ color: "#059669" }}>DA — Poarta Relevantei functioneaza.</strong>
+                                : diffCta >= 1
+                                  ? <strong style={{ color: "#D97706" }}>PARTIAL — efect prezent dar moderat.</strong>
+                                  : <strong style={{ color: "#DC2626" }}>NU — R nu actioneaza ca gate.</strong>}
+                              <br />
+                              <span style={{ fontSize: 11 }}>
+                                Testul A (perceptie): Cand R&lt;{GATE}, claritatea perceputa scade cu {diffCp.toFixed(2)} puncte ({h1BelowAvgC} vs {h1AboveAvgC}).{" "}
+                                <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({h1BelowAvgCta} vs {h1AboveAvgCta}) — consumatorul nu cumpara.</strong>{" "}
+                                {strongN >= 3 && <>Testul C (test maxim): Chiar cu I&ge;5, F&ge;5, CTA ramane {strongBelowCta} fara relevanta vs {h1AboveAvgCta} cu relevanta. <strong>Calitatea NU compenseaza lipsa relevantei.</strong></>}
+                              </span>
+                            </>);
+                          })()}
+                        </div>
+                        <div style={{ marginTop: 8, fontSize: 11, color: "#374151", padding: "6px 10px", background: "#dcfce7", borderRadius: 4 }}>
+                          <strong>Concluzie:</strong> R (relevanta) e conditia de baza a formulei RIFC. Sub pragul R&lt;{GATE}, indiferent cat de bun e continutul (I) sau prezentarea (F), consumatorul nu percepe claritate suficienta si <strong>nu va cumpara</strong>. Formula se valideaza empiric.
+                        </div>
+                      </div>
+
+                      {/* ═══ DILEMA H1 vs H6 — Interpretare combinata ═══ */}
+                      <div style={{ marginTop: 12, padding: "12px 16px", background: "linear-gradient(135deg, #fef3c7 0%, #fef9c3 100%)", borderRadius: 8, border: "1px solid #fde68a", borderLeft: "4px solid #D97706" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                          <AlertTriangle size={14} style={{ color: "#D97706" }} />
+                          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: "#92400e" }}>DILEMA STIINTIFICA: H1 CONFIRMATA vs H6 NECONFIRMATA</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.6 }}>
+                          <strong>H1 confirma:</strong> Sub R&lt;{GATE}, CTA scade dramatic (de la {h1AboveAvgCta} la {h1BelowAvgCta}). Gate-ul functioneaza ca <em>nivel</em> — baza scade.{" "}
+                          <strong>H6 infirma:</strong> Sub R&lt;{GATE}, corelatia I&times;F → C<sub>perceput</sub> ramane identica cu cea de deasupra pragului. I&times;F nu devine irelevant — ramane la fel de influent.
+                        </div>
+                        <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.6, marginTop: 6, padding: "8px 10px", background: "#fffbeb", borderRadius: 4 }}>
+                          <strong>Concluzie stiintifica:</strong> R functioneaza ca un <strong>&quot;level-shifter&quot;</strong> (coboara etajul de baza), nu ca un <strong>&quot;switch&quot;</strong> (care ar opri mecanismul I&times;F). Analogia: I&times;F e motorul unui lift — functioneaza la fel indiferent de etaj. Dar R seteaza etajul de plecare. Cand R&lt;{GATE}, etajul e atat de jos incat nici I&times;F maxim nu atinge un CTA functional.
+                        </div>
+                        <div style={{ fontSize: 10, color: "#92400e", marginTop: 6, fontWeight: 600 }}>
+                          Ipoteza noua generata: <em>&quot;R modereaza nivelul absolut al CTA (baseline), nu mecanismul I&times;F→C. Influenta I&times;F asupra C ramane constanta indiferent de R, dar fara R suficient, nivelul de baza e sub pragul de actiune.&quot;</em>
+                        </div>
                       </div>
                     </div>
 
@@ -6523,7 +6981,10 @@ export default function StudiuAdminPage() {
                                 <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h2Reg.r2.toFixed(3)}</div>
                               </div>
                             </div>
-                            <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} H2 {verdict}</div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ fontSize: 9, color: "#6B7280" }}>{_fmtP(_pValuePearson(h2PearsonR, h2Data.length))}</div>
+                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} H2 {verdict}</div>
+                            </div>
                           </div>
                         );
                       })()}
@@ -6731,22 +7192,32 @@ export default function StudiuAdminPage() {
                       {h3Known.length > 0 && h3Unknown.length > 0 && (() => {
                         const unknownStronger = Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown);
                         const diff = Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown));
-                        const verdict = unknownStronger ? "H3 CONFIRMATA" : diff < 0.05 ? "H3 NEUTRA" : "H3 INVERSATA";
-                        const verdColor = unknownStronger ? "#059669" : diff < 0.05 ? "#D97706" : "#2563EB";
-                        const verdIcon = unknownStronger ? "\u2705" : diff < 0.05 ? "\u26A0\uFE0F" : "\u21C4";
+                        const fisherZ = _fisherZTest(h3PearsonKnown, h3PearsonUnknown, h3Known.length, h3Unknown.length);
+                        // Use Fisher Z-test p-value for rigorous verdict (p < 0.05 = significant difference)
+                        const sigDiff = fisherZ.p < 0.05;
+                        const verdict = !sigDiff ? "H3 NEUTRA" : unknownStronger ? "H3 CONFIRMATA" : "H3 INVERSATA";
+                        const verdColor = !sigDiff ? "#D97706" : unknownStronger ? "#059669" : "#2563EB";
+                        const verdIcon = !sigDiff ? "\u26A0\uFE0F" : unknownStronger ? "\u2705" : "\u21C4";
+                        const pK = _pValuePearson(h3PearsonKnown, h3Known.length);
+                        const pU = _pValuePearson(h3PearsonUnknown, h3Unknown.length);
                         return (
                           <div style={{ marginBottom: 0, marginTop: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                               <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
                                 <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={h3Known.length})</div>
                                 <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonKnown.toFixed(3)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pK)}</div>
                               </div>
                               <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
                                 <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={h3Unknown.length})</div>
                                 <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonUnknown.toFixed(3)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pU)}</div>
                               </div>
                             </div>
-                            <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ fontSize: 9, color: "#6B7280" }}>Fisher Z={fisherZ.z.toFixed(2)}, {_fmtP(fisherZ.p)} &middot; &Delta;r={diff.toFixed(3)}</div>
+                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                            </div>
                           </div>
                         );
                       })()}
@@ -6964,18 +7435,24 @@ export default function StudiuAdminPage() {
                       </div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #DC2626" }}>
                         <strong>Ce testeaza:</strong> Cand R &lt; {GATE}, I si F devin complet irelevante — nu mai influenteaza C deloc. Aceasta e afirmatie mai puternica decat H1 (care spune doar ca C e mic).{" "}
-                        <strong>Metoda:</strong> Pearson r intre I×F si C<sub>norm</sub>, calculat doar pe subsetul raspunsurilor cu R &lt; {GATE}.{" "}
+                        <strong>Metoda:</strong> Pearson r intre I×F si C<sub>perceput</sub> (c_score), calculat doar pe subsetul raspunsurilor cu R &lt; {GATE}.{" "}
                         <strong>Interpretare:</strong> |r| &lt; 0.2 = confirmat (gate real), 0.2-0.4 = partial, &gt; 0.4 = neconfirmat (pragul nu functioneaza).
                       </div>
                       {(() => {
-                        const h6All = scatter.filter(d => d.c_computed > 0);
+                        // Use c_score (perceived) NOT c_computed (which contains I*F → tautological correlation)
+                        const h6All = scatter.filter(d => d.c_score != null && d.c_score > 0);
                         const h6Below = h6All.filter(d => d.r < GATE);
                         const h6NSubprag = h6Below.length;
                         if (h6All.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente pentru H6.</div>;
                         if (h6NSubprag < 2) return <div style={{ padding: 20, textAlign: "center" as const, color: "#D97706", fontSize: 12 }}>Prea putine raspunsuri cu R&lt;{GATE} (n={h6NSubprag}). Sunt necesare minim 10 pentru analiza valida.</div>;
-                        const h6Pts = h6Below.map(d => ({ x: d.i * d.f, y: d.c_computed / 11 }));
+                        const h6Pts = h6Below.map(d => ({ x: d.i * d.f, y: d.c_score! }));
                         const h6Reg = linReg(h6Pts);
                         const h6R = _pearsonR(h6Pts.map(p => p.x), h6Pts.map(p => p.y));
+                        const h6PVal = _pValuePearson(h6R, h6NSubprag);
+                        // Above-gate contrast
+                        const h6Above = h6All.filter(d => d.r >= GATE);
+                        const h6AboveR = h6Above.length >= 2 ? _pearsonR(h6Above.map(d => d.i * d.f), h6Above.map(d => d.c_score!)) : 0;
+                        const h6AbovePVal = _pValuePearson(h6AboveR, h6Above.length);
                         const absR = Math.abs(h6R);
                         const verdict = absR < 0.2 ? "H6 CONFIRMATA" : absR <= 0.4 ? "H6 PARTIAL" : "H6 NECONFIRMATA";
                         const verdColor = absR < 0.2 ? "#059669" : absR <= 0.4 ? "#D97706" : "#DC2626";
@@ -6985,21 +7462,55 @@ export default function StudiuAdminPage() {
                           <>
                             {/* Stats banner */}
                             <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
                                 <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${verdColor}30` }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Corelatie I×F → C (R&lt;{GATE})</div>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>r sub prag (R&lt;{GATE})</div>
                                   <div style={{ fontSize: 18, fontWeight: 900, color: verdColor, fontFamily: "JetBrains Mono, monospace" }}>{h6R.toFixed(3)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(h6PVal)} &middot; n={h6NSubprag}</div>
+                                </div>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #d1fae5" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>r peste prag (R&ge;{GATE})</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h6AboveR.toFixed(3)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(h6AbovePVal)} &middot; n={h6Above.length}</div>
                                 </div>
                                 <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>N raspunsuri sub prag</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h6NSubprag}{h6NSubprag < 10 ? <span style={{ fontSize: 10, color: "#D97706" }}> (limitat)</span> : ""}</div>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Contrast (&Delta;r)</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{Math.abs(h6AboveR - h6R).toFixed(3)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>r&sup2; sub={Math.round(h6R * h6R * 1000) / 1000}</div>
                                 </div>
                               </div>
-                              <div style={{ textAlign: "right" as const, fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280" }}>Daca gate functioneaza: r sub prag &asymp; 0 si r peste prag semnificativ</div>
+                                <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                              </div>
+                              {/* H6 Card annotations */}
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 8 }}>
+                                <div style={{ fontSize: 9, color: "#374151", lineHeight: 1.4, padding: "5px 8px", background: "#fef2f2", borderRadius: 4, borderLeft: "2px solid #DC2626" }}>
+                                  <strong>Ce e:</strong> Corelatia Pearson intre I&times;F si C<sub>perceput</sub> doar pe respondentii cu R&lt;{GATE}. <strong>Citire:</strong> r&asymp;0 = I&times;F nu influenteaza C (gate absolut). r&gt;0.4 = influenteaza puternic (gate nu functioneaza). <strong>Aici:</strong> r={h6R.toFixed(3)} — {absR < 0.2 ? "influenta zero, gate absolut" : absR <= 0.4 ? "influenta slaba, gate partial" : "I\u00d7F inca influenteaza C sub prag"}
+                                </div>
+                                <div style={{ fontSize: 9, color: "#374151", lineHeight: 1.4, padding: "5px 8px", background: "#f0fdf4", borderRadius: 4, borderLeft: "2px solid #059669" }}>
+                                  <strong>Ce e:</strong> Aceeasi corelatie dar pe respondentii cu R&ge;{GATE} (grup de contrast). <strong>Citire:</strong> Peste prag, ne asteptam ca I&times;F sa coreleze puternic cu C. <strong>Comparatie:</strong> r sub ({h6R.toFixed(3)}) vs r supra ({h6AboveR.toFixed(3)}) — {Math.abs(h6AboveR - h6R) < 0.1 ? "aproape identice = gate NU opreste mecanismul I\u00d7F" : Math.abs(h6AboveR - h6R) < 0.3 ? "diferenta moderata" : "diferenta mare = gate functioneaza"}
+                                </div>
+                                <div style={{ fontSize: 9, color: "#374151", lineHeight: 1.4, padding: "5px 8px", background: "#f9fafb", borderRadius: 4, borderLeft: "2px solid #6B7280" }}>
+                                  <strong>Ce e:</strong> Diferenta absoluta intre cele doua corelatii. r&sup2;={Math.round(h6R * h6R * 1000) / 1000} = I&times;F explica {Math.round(h6R * h6R * 100)}% din varianta C sub prag. <strong>Ideal:</strong> &Delta;r mare (semnificativ diferit) = gate modifica mecanismul. <strong>Aici:</strong> &Delta;r={Math.abs(h6AboveR - h6R).toFixed(3)} — {Math.abs(h6AboveR - h6R) < 0.1 ? "diferenta neglijabila, mecanismul e identic pe ambele parti ale pragului" : "diferenta prezenta"}
+                                </div>
+                              </div>
+                            </div>
+                            {/* Interpretare globala H6 */}
+                            <div style={{ marginBottom: 12, padding: "8px 12px", background: absR >= 0.4 ? "#fef3c7" : "#f0fdf4", borderRadius: 6, border: `1px solid ${absR >= 0.4 ? "#fde68a" : "#bbf7d0"}`, borderLeft: `3px solid ${verdColor}` }}>
+                              <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                                <strong>Interpretare pentru formula RIFC:</strong>{" "}
+                                {absR < 0.2
+                                  ? "Gate-ul functioneaza absolut — sub R=" + GATE + ", I\u00d7F nu produce Claritate. R e conditia sine qua non. RIFC are originalitate fata de alte framework-uri."
+                                  : absR <= 0.4
+                                    ? "Gate partial — I\u00d7F are influenta slaba sub prag. R e important dar nu opreste complet mecanismul."
+                                    : "R functioneaza ca un \"level-shifter\" nu ca un \"switch\". I\u00d7F influenteaza C la fel sub si peste prag, dar R coboara nivelul de baza. Aceasta nu invalideaza narativa RIFC (CTA tot scade dramatic sub prag — vezi H1), ci o nuanteaza: R nu opreste motorul, ci coboara etajul."}{" "}
+                                <strong>Ipoteza noua:</strong> <em>R modereaza nivelul absolut (baseline) nu mecanismul intern. I&times;F tot produce C proportional, dar dintr-un nivel de baza prea jos pentru a genera actiune.</em>
+                              </div>
                             </div>
                             <div style={{ overflowX: "auto" as const }}>
                               <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
-                                {renderGrid(xMin, xMax, yMin, yMax, "I × F (produs)", "C formula (norm. 0-10)")}
+                                {renderGrid(xMin, xMax, yMin, yMax, "I × F (produs)", "C perceput (c_score 1-10)")}
                                 {/* Trend line */}
                                 {h6Pts.length >= 2 && (() => {
                                   const y1v = Math.max(yMin, Math.min(yMax, h6Reg.slope * xMin + h6Reg.intercept));
@@ -7035,7 +7546,7 @@ export default function StudiuAdminPage() {
                         <div style={{ width: 4, height: 24, borderRadius: 2, background: "#7C3AED" }} />
                         <div>
                           <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Validare Instrument</div>
-                          <div style={{ fontSize: 11, color: "#6B7280" }}>Consistenta interna si distributia scorurilor pe {scatter.length} raspunsuri</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>Consistenta interna si distributia scorurilor — {_interpResponses.toLocaleString("ro-RO")} raspunsuri ({_interpCompleted} completati / {_interpTotal} inscrisi)</div>
                         </div>
                       </div>
 
@@ -7284,6 +7795,90 @@ export default function StudiuAdminPage() {
                         );
                       })()}
                     </div>
+
+                    {/* ═══ TABEL SUMAR H1-H6 (Academic Summary) ═══ */}
+                    {(() => {
+                      // Recompute summary data from scatter
+                      const _sc = results.hypothesisScatterData || [];
+                      const _scV = _sc.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_computed > 0);
+                      // H1 — uses c_score (perceput) + CTA, NOT c_computed (tautologic)
+                      const _h1BcpArr = _scV.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0).map(d => d.c_score!);
+                      const _h1AcpArr = _scV.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0).map(d => d.c_score!);
+                      const _h1DiffCp = _h1AcpArr.length > 0 && _h1BcpArr.length > 0 ? _mean(_h1AcpArr) - _mean(_h1BcpArr) : 0;
+                      const _h1BctaArr = _scV.filter(d => d.r < GATE && d.cta != null && d.cta > 0).map(d => d.cta!);
+                      const _h1ActaArr = _scV.filter(d => d.r >= GATE && d.cta != null && d.cta > 0).map(d => d.cta!);
+                      const _h1DiffCta = _h1ActaArr.length > 0 && _h1BctaArr.length > 0 ? _mean(_h1ActaArr) - _mean(_h1BctaArr) : 0;
+                      const _h1D = _cohensD(_h1BctaArr, _h1ActaArr);
+                      const _h1Diff = _h1DiffCta; // verdict bazat pe CTA
+                      // H2
+                      const _h2D = _scV.filter(d => d.cta != null && d.cta > 0);
+                      const _h2R = _h2D.length >= 3 ? _pearsonR(_h2D.map(d => d.c_computed / 11), _h2D.map(d => d.cta!)) : 0;
+                      const _h2P = _pValuePearson(_h2R, _h2D.length);
+                      // H3
+                      const _h3K = _scV.filter(d => d.cta != null && d.cta > 0 && d.brand === true);
+                      const _h3U = _scV.filter(d => d.cta != null && d.cta > 0 && d.brand === false);
+                      const _h3Rk = _h3K.length >= 3 ? _pearsonR(_h3K.map(d => d.c_computed / 11), _h3K.map(d => d.cta!)) : 0;
+                      const _h3Ru = _h3U.length >= 3 ? _pearsonR(_h3U.map(d => d.c_computed / 11), _h3U.map(d => d.cta!)) : 0;
+                      const _h3Fz = _fisherZTest(_h3Rk, _h3Ru, _h3K.length, _h3U.length);
+                      // H5
+                      const _h5V = _scV.filter(d => d.c_score != null && d.c_score > 0);
+                      const _dM = _h5V.length >= 2 ? _mean(_h5V.map(d => Math.abs((d.r + d.i * d.f) / 110 - d.c_score! / 10))) : 0;
+                      const _dA = _h5V.length >= 2 ? _mean(_h5V.map(d => Math.abs((d.r + d.i + d.f) / 30 - d.c_score! / 10))) : 0;
+                      const _h5Pct = _dA > 0 ? Math.round(((_dA - _dM) / _dA) * 1000) / 10 : 0;
+                      // H6
+                      const _h6B = _scV.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0);
+                      const _h6R = _h6B.length >= 2 ? _pearsonR(_h6B.map(d => d.i * d.f), _h6B.map(d => d.c_score!)) : 0;
+                      const _h6P = _pValuePearson(_h6R, _h6B.length);
+                      const _h6Ab = _scV.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
+                      const _h6Rab = _h6Ab.length >= 2 ? _pearsonR(_h6Ab.map(d => d.i * d.f), _h6Ab.map(d => d.c_score!)) : 0;
+
+                      const rows: { code: string; name: string; metric: string; n: string; pVal: string; verdict: string; color: string }[] = [
+                        { code: "H1", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "—", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
+                        { code: "H2", name: "C prezice CTA", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
+                        { code: "H3", name: "Brand modereaza C→CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
+                        { code: "H5", name: "Multiplicativ vs Aditiv", metric: `\u0394mult=${_dM.toFixed(3)}, \u0394adit=${_dA.toFixed(3)}`, n: `${_h5V.length}`, pVal: "—", verdict: _h5Pct > 10 ? "CONFIRMATA" : _h5Pct >= 0 ? "PARTIAL" : "NECONFIRMATA", color: _h5Pct > 10 ? "#059669" : _h5Pct >= 0 ? "#D97706" : "#DC2626" },
+                        { code: "H6", name: `Gate real (I×F irelevant sub R<${GATE})`, metric: `r\u2098\u2092\u2097=${_h6R.toFixed(3)}, r\u2090\u2097=${_h6Rab.toFixed(3)}`, n: `${_h6B.length} / ${_h6Ab.length}`, pVal: _fmtP(_h6P), verdict: Math.abs(_h6R) < 0.2 ? "CONFIRMATA" : Math.abs(_h6R) <= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h6R) < 0.2 ? "#059669" : Math.abs(_h6R) <= 0.4 ? "#D97706" : "#DC2626" },
+                      ];
+                      return (
+                        <div style={{ marginTop: 30 }}>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+                            Sumar Ipoteze (Tabel Academic)
+                          </div>
+                          <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Rezumatul tuturor ipotezelor testate, cu metrici principale, dimensiunea esantionului si semnificatia statistica.</div>
+                          <div style={{ overflowX: "auto" as const }}>
+                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                              <thead>
+                                <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Ipoteza</th>
+                                  <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Descriere</th>
+                                  <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Metric</th>
+                                  <th style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>N</th>
+                                  <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Semnificatie</th>
+                                  <th style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>Verdict</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((r, i) => (
+                                  <tr key={r.code} style={{ borderBottom: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                    <td style={{ padding: "8px 10px", fontWeight: 800, color: r.color, fontFamily: "JetBrains Mono, monospace" }}>{r.code}</td>
+                                    <td style={{ padding: "8px 10px", color: "#374151" }}>{r.name}</td>
+                                    <td style={{ padding: "8px 10px", fontFamily: "JetBrains Mono, monospace", fontSize: 10, color: "#111827" }}>{r.metric}</td>
+                                    <td style={{ padding: "8px 10px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#6B7280" }}>{r.n}</td>
+                                    <td style={{ padding: "8px 10px", fontSize: 10, color: "#6B7280" }}>{r.pVal}</td>
+                                    <td style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 800, color: r.color, fontSize: 10 }}>{r.verdict}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
+                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). Ipoteza H4 este calitativa (bar chart) si nu apare in tabel.
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                   </div>
                 );
               })()}
@@ -8152,14 +8747,18 @@ export default function StudiuAdminPage() {
             if (logDateTo && d > new Date(logDateTo + "T23:59:59")) return false;
             return true;
           });
-          const filtered = segFiltered;
-          const allFilteredIds = filtered.map((l: any) => l.id);
-          const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => logSelected.has(id));
 
           // Completion detection — mirrors backend isEffectivelyCompleted():
           // completed_at is set OR respondent evaluated all active stimuli
           const expectedLogResponses = stimuli.filter(s => s.is_active).length;
           const isLogCompleted = (l: any) => !!l.completed_at || (expectedLogResponses > 0 && (l.responseCount || 0) >= expectedLogResponses);
+
+          // Status filter: all / completed / started (incomplete)
+          const filtered = logStatusFilter === "all" ? segFiltered
+            : logStatusFilter === "completed" ? segFiltered.filter(isLogCompleted)
+            : segFiltered.filter((l: any) => !isLogCompleted(l));
+          const allFilteredIds = filtered.map((l: any) => l.id);
+          const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id: string) => logSelected.has(id));
 
           // Stats
           const completedCount = filtered.filter((l: any) => isLogCompleted(l)).length;
@@ -8320,8 +8919,8 @@ export default function StudiuAdminPage() {
                     );
                   })}
                 </div>
-                {/* Date filters compact */}
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {/* Date filters + Status filter compact */}
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" as const }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: "#9CA3AF" }}>FILTRU:</span>
                   <input type="date" value={logDateFrom} onChange={(e) => setLogDateFrom(e.target.value)} style={{ padding: "4px 8px", borderRadius: 4, border: "1px solid #d1d5db", fontSize: 11, color: "#374151", background: "#fff" }} />
                   <span style={{ fontSize: 10, color: "#9CA3AF" }}>—</span>
@@ -8331,6 +8930,19 @@ export default function StudiuAdminPage() {
                       <X size={10} />
                     </button>
                   )}
+                  <div style={{ width: 1, height: 18, background: "#e5e7eb", margin: "0 4px" }} />
+                  {([
+                    { key: "all" as const, label: "Toate" },
+                    { key: "completed" as const, label: "Completat" },
+                    { key: "started" as const, label: "Inceput" },
+                  ]).map(sf => (
+                    <button key={sf.key} onClick={() => setLogStatusFilter(sf.key)} style={{
+                      padding: "4px 10px", borderRadius: 4, fontSize: 10, fontWeight: 700, cursor: "pointer",
+                      border: logStatusFilter === sf.key ? "1px solid #111827" : "1px solid #d1d5db",
+                      background: logStatusFilter === sf.key ? "#111827" : "#fff",
+                      color: logStatusFilter === sf.key ? "#fff" : "#6B7280",
+                    }}>{sf.label}</button>
+                  ))}
                 </div>
               </div>
 
