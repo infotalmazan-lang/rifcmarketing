@@ -6110,19 +6110,28 @@ export default function StudiuAdminPage() {
                 { heading: "Concluzie", text: `Sinergia I×F = ${val} (din maxim 100) ${v > 60 ? "contribuie semnificativ la claritatea mesajului. Ambii factori sunt puternici si se amplifica reciproc." : v > 35 ? "contribuie moderat — optimizarea factorului mai slab (I sau F) poate creste substantial scorul C." : "necesita imbunatatire pe ambii fronti. Factorul bottleneck trebuie identificat si tratat prioritar."}` },
               ]};
               case "gate": return { sections: [
-                { heading: "Ce reprezinta Relevance Gate", text: `Relevance Gate arata ca ${_ctx.pass || 0} din ${_ctx.total || 0} materiale (${val}%) au un scor R (Relevanta) >= ${GATE}. Acest prag este conditia minima pentru ca formula RIFC sa poata functiona — fara relevanta, nici Interesul nici Forma nu conteaza.` },
-                { heading: "Cum functioneaza in formula", text: `Gate-ul de Relevanta este un pre-filtru conceptual: daca R < ${GATE}, materialul nu trece pragul minim de relevanta pentru audienta. Chiar daca I = 5 si F = 5, un R de 1 sau 2 inseamna ca mesajul nu se adreseaza nevoilor reale ale respondentului, iar formula prezice un C scazut.` },
-                { heading: "De ce arata acest rezultat", text: `${val}% din materiale trec Gate-ul. ${v >= 80 ? "Aceasta rata ridicata indica ca materialele testate sunt relevante pentru audienta — premisa fundamentala a studiului este indeplinita." : v >= 50 ? "Rata moderata sugereaza ca o parte din materiale nu sunt relevante pentru audienta testata — fie targetarea a fost imprecisa, fie unele materiale necesita reformulare." : "Rata scazuta indica o problema fundamentala de targetare — materialele nu sunt relevante pentru audienta care le-a evaluat."}` },
-                { heading: "Cum se interpreteaza", text: `>= 80% Gate Pass: Excelent — esantionul si materialele sunt bine aliniate. 50-80%: Acceptabil — dar rezultatele pot fi distorsionate de materialele sub-gate. < 50%: Problematic — concluziile studiului sunt compromise de lipsa de relevanta.` },
-                { heading: "Concluzie", text: `Cu ${val}% materiale trecand Gate-ul, ${v >= 70 ? "premisa de relevanta este indeplinita si rezultatele formulei sunt fiabile." : v >= 40 ? "rezultatele trebuie interpretate cu prudenta, separand materialele sub-gate de cele peste prag." : "studiul necesita fie o alta audienta tinta, fie materiale cu relevanta mai mare."}` },
+                { heading: "Ce reprezinta Relevance Gate", text: `Relevance Gate arata ca ${_ctx.pass || 0} din ${_ctx.total || 0} materiale (${val}%) au un scor R (Relevanta) >= ${GATE}. Aceasta este conditia minima pentru ca formula RIFC sa functioneze: fara relevanta, nici Interesul nici Forma nu conteaza.` },
+                { heading: "Analogia RIFC", text: `Gate-ul de Relevanta functioneaza ca un pre-filtru: imagineaza-ti o reclama la roti de schimb de vara aratata cuiva care nu are masina. Poate fi cea mai frumoasa (F=10) si interesanta (I=10) reclama — dar este complet irelevanta (R=1). Persoana nu va cumpara niciodata. Acesta e principiul Gate: daca R < ${GATE}, materialul este irelevant pentru audienta, indiferent de calitatea executiei.` },
+                { heading: "Valorile concrete", text: `${_ctx.pass || 0} din ${_ctx.total || 0} materiale trec Gate-ul (${val}%). R minim = ${_ctx.rMin || "?"}, R mediu = ${_ctx.rMean || "?"}, R maxim = ${_ctx.rMax || "?"}. ${Number(_ctx.rMin || 0) >= GATE ? `Chiar si cel mai slab material (R=${_ctx.rMin}) depaseste pragul — esantionul este solid aliniat cu audienta.` : `Cel mai slab material (R=${_ctx.rMin}) nu trece Gate-ul — exista materiale irelevante in esantion.`}` },
+                { heading: "Legatura cu CTA", text: `Gate-ul este direct legat de actiune (CTA): fara relevanta, nu exista intentie de cumparare. Un material cu R < ${GATE} are sanse aproape zero de conversie, indiferent de claritatea mesajului (C). Gate-ul protejeaza contra "falsei performante" — un material poate avea C ridicat matematic dar sa nu genereze actiune daca nu e relevant.` },
+                { heading: "Cum se interpreteaza", text: `>= 80% Gate Pass: Excelent — materialele sunt relevante, formula poate functiona. 50-80%: Acceptabil — dar materialele sub-gate distorsioneaza media. < 50%: Problematic — concluziile studiului sunt compromise. Cu ${val}%, ${v >= 80 ? "premisa de relevanta este excelent indeplinita." : v >= 50 ? "majoritatea materialelor sunt relevante, dar atentie la cele sub-prag." : "studiul necesita re-targetare."}` },
+                { heading: "Concluzie", text: `Cu ${val}% Gate Pass (R min=${_ctx.rMin || "?"}, mediu=${_ctx.rMean || "?"}, max=${_ctx.rMax || "?"}), ${v >= 80 ? "esantionul este solid aliniat cu audienta — formula RIFC poate prezice corect claritatea si, implicit, probabilitatea de actiune (CTA)." : v >= 50 ? "esantionul este partial aliniat — se recomanda analiza separata a materialelor sub-gate." : "esantionul necesita re-evaluare — materialele nu sunt relevante pentru audienta testata."}` },
               ]};
-              case "zonematch": return { sections: [
-                { heading: "Ce reprezinta Zone Match", text: `Zone Match = ${val}% arata ca ${_ctx.match || 0} din ${_ctx.total || 0} materiale au C formula si C perceput in aceeasi zona de performanta (Critical/Noise/Medium/Supreme). Aceasta este o masura calitativa a preciziei formulei.` },
-                { heading: "Cum functioneaza", text: `Fiecare scala are propriile zone proportionale. Cf (0-110): Critical (0-20), Noise (21-50), Medium (51-80), Supreme (81-110). Cp (1-10): Critical (1-2), Noise (2.1-5), Medium (5.1-8), Supreme (8.1-10). Daca formula plaseaza un material in zona Medium si respondentul il percepe tot in Medium pe scala sa, avem un Zone Match — formula prezice corect "categoria" de impact.` },
-                { heading: "De ce arata acest rezultat", text: `${val}% Zone Match ${v >= 80 ? "arata ca formula clasifica corect materialele in categorii de impact — chiar daca scorurile exacte difera usor, directia este corecta." : v >= 50 ? "arata o clasificare partiala corecta — formula nimeresste zona in jumatate din cazuri, dar exista materiale unde predictia si realitatea sunt in zone diferite." : "arata o clasificare slaba — formula plaseaza materialele in zone diferite fata de perceptia reala, ceea ce indica o problema de calibrare."}` },
-                { heading: "Cum se interpreteaza", text: `>= 80%: Formula clasifica corect — nivel inalt de incredere. 50-80%: Clasificare partiala — formula functioneaza dar nu pentru toate tipurile de materiale. < 50%: Clasificare slaba — formula necesita recalibrare sau factori suplimentari.` },
-                { heading: "Concluzie", text: `Un Zone Match de ${val}% ${v >= 70 ? "confirma ca formula RIFC are o capacitate solida de clasificare a materialelor in categorii de impact." : v >= 40 ? "sugereaza ca formula are potentialul de clasificare, dar necesita raffinare pentru anumite tipuri de materiale sau industrii." : "indica nevoia de a reconsidera structura formulei sau factorii inclusi."}` },
-              ]};
+              case "zonematch": {
+                const _zmBreakdown = _ctx.breakdown ? (() => { try { return JSON.parse(String(_ctx.breakdown)); } catch { return {}; } })() : {};
+                const _zmDetails = ["Critical", "Noise", "Medium", "Supreme"].map(z => {
+                  const zb = _zmBreakdown[z] || { matched: 0, total: 0 };
+                  return zb.total > 0 ? `${z}: ${zb.matched}/${zb.total}` : null;
+                }).filter(Boolean).join(", ");
+                return { sections: [
+                  { heading: "Ce reprezinta Zone Match", text: `Zone Match = ${val}% arata ca ${_ctx.match || 0} din ${_ctx.total || 0} materiale au C formula si C perceput in aceeasi zona de performanta (Critical/Noise/Medium/Supreme). Este o masura calitativa a preciziei formulei — nu cat de exact prezice, ci daca prezice corect "categoria" de impact.` },
+                  { heading: "Cum functioneaza zonele", text: `Fiecare scala are zone proportionale: Cf (0-110): Critical (0-20), Noise (21-50), Medium (51-80), Supreme (81-110). Cp (1-10): Critical (1-2), Noise (2.1-5), Medium (5.1-8), Supreme (8.1-10). Daca formula plaseaza un material in Medium si respondentul il percepe tot in Medium, avem Zone Match — formula prezice corect categoria de impact.` },
+                  { heading: "Breakdown per zona", text: `${_zmDetails || "Date indisponibile"}. ${Number(_ctx.match || 0) > Number(_ctx.total || 0) / 2 ? "Majoritatea match-urilor sunt in zonele centrale (Noise/Medium), ceea ce e tipic — materialele extreme (Critical/Supreme) sunt mai greu de prezis." : "Discrepantele se concentreaza in zonele extreme."}` },
+                  { heading: "Legatura cu Claritatea si CTA", text: `Zone Match testeaza daca formula prezice corect NIVELUL de claritate. Daca formula plaseaza un material in Supreme dar respondentul il percepe ca Noise, predictia de actiune (CTA) ar fi complet gresita — am prezice conversie mare dar in realitate materialul nu convinge. Un Zone Match de ${val}% inseamna ca in ${val}% din cazuri, predictia RIFC de claritate (si implicit de CTA) este in categoria corecta. Factori care pot cauza mismatch: Brand (poate muta un material din Noise in Medium), context de consum, experienta anterioara.` },
+                  { heading: "Cum se interpreteaza", text: `>= 70%: Formula clasifica corect — nivel solid de incredere in predictia CTA. 50-70%: Clasificare partiala — formula functioneaza in majoritate dar nu pentru toate materialele. < 50%: Clasificare sub sansa (50%) — formula necesita recalibrare sau factori suplimentari (ex: Brand, context).` },
+                  { heading: "Concluzie", text: `Cu Zone Match de ${val}% (${_ctx.match || 0}/${_ctx.total || 0}), ${v >= 70 ? "formula RIFC clasifica corect materialele — predictia de claritate si actiune este fiabila." : v >= 50 ? "formula clasifica corect in majoritatea cazurilor, dar exista materiale unde predictia si realitatea sunt in zone diferite — investigatia per canal/industrie poate identifica cauza." : "formula necesita factori suplimentari pentru a clasifica corect — R+(I×F) nu surprinde toate elementele care influenteaza perceptia."}` },
+                ]};
+              }
               case "val_channel": {
                 const _vLabel = String(_ctx.label || "");
                 const _vCfN = Number(_ctx.cfNorm || 0);
@@ -6165,10 +6174,12 @@ export default function StudiuAdminPage() {
                 ]};
               }
               case "materials": return { sections: [
-                { heading: "Ce reprezinta", text: `Au fost analizate ${val} materiale de marketing care au primit cel putin un raspuns de la respondenti. Totalul de ${_ctx.responses || 0} raspunsuri ofera baza statistica pentru calculul mediilor R, I, F si C.` },
-                { heading: "De ce conteaza numarul", text: `Cu cat numarul de materiale analizate este mai mare, cu atat validarea formulei este mai robusta statistic. Fiecare material reprezinta un "test" independent al formulei — daca formula functioneaza pe multe materiale diverse, evidenta este mai puternica.` },
-                { heading: "Cum se interpreteaza", text: `${v >= 20 ? `${val} materiale ofera un esantion solid pentru concluzii statistice.` : v >= 10 ? `${val} materiale ofera un esantion acceptabil, dar concluziile trebuie tratate cu prudenta.` : `${val} materiale reprezinta un esantion mic — rezultatele sunt preliminare si orientative.`}` },
-                { heading: "Concluzie", text: `Analiza pe ${val} materiale si ${_ctx.responses || 0} raspunsuri ${v >= 15 ? "ofera o baza suficienta pentru concluzii semnificative despre validitatea formulei RIFC." : "ofera o indicatie preliminara — se recomanda extinderea esantionului pentru concluzii definitive."}` },
+                { heading: "Ce reprezinta", text: `Au fost analizate ${val} materiale de marketing care au primit cel putin un raspuns. Totalul de ${_ctx.responses ? Number(_ctx.responses).toLocaleString("ro-RO") : 0} evaluari individuale (medie ${_ctx.avgPerMaterial || "?"} evaluari/material) ofera baza statistica pentru calculul mediilor R, I, F si C.` },
+                { heading: "Diversitatea esantionului", text: `Materialele analizate acopera ${_ctx.channels || "?"} canale distincte (tipuri de media) si ${_ctx.industries || "?"} industrii diferite, evaluate de ${_ctx.respondents || "?"} respondenti care au completat chestionarul. Diversitatea este esentiala: formula RIFC trebuie sa functioneze pe canale si industrii variate pentru a fi un instrument universal de predictie a claritatii.` },
+                { heading: "Puterea statistica", text: `Cu ${_ctx.avgPerMaterial || "?"} evaluari medii per material, fiecare scor R/I/F/C este o medie stabila (nu o evaluare individuala). ${Number(_ctx.avgPerMaterial || 0) >= 100 ? "Peste 100 evaluari/material ofera o medie foarte stabila — eroarea standard este mica." : Number(_ctx.avgPerMaterial || 0) >= 30 ? "30+ evaluari/material depasesc pragul Central Limit Theorem — mediile sunt distribuite normal." : "Sub 30 evaluari/material — mediile pot fi instabile, concluziile sunt orientative."}` },
+                { heading: "De ce conteaza pentru RIFC", text: `Fiecare material este un "test" independent al formulei R+(I×F)=C. Cu ${val} materiale, testam daca formula prezice corect Claritatea (C) in ${val} situatii diferite. Daca formula functioneaza pe materiale din canale si industrii variate, evidenta ca R+(I×F) prezice C (si implicit CTA) este mult mai puternica decat daca functioneaza pe un singur tip.` },
+                { heading: "Cum se interpreteaza", text: `>= 30 materiale: Esantion solid — suficient pentru teste statistice parametrice si concluzii robuste. 15-30: Esantion acceptabil — concluzii fiabile dar cu prudenta. < 15: Esantion mic — rezultate preliminare, se recomanda extindere. Cu ${val} materiale, esantionul este ${v >= 30 ? "solid." : v >= 15 ? "acceptabil." : "mic — necesita extindere."}` },
+                { heading: "Concluzie", text: `Analiza pe ${val} materiale, ${_ctx.responses ? Number(_ctx.responses).toLocaleString("ro-RO") : 0} evaluari, ${_ctx.channels || "?"} canale si ${_ctx.industries || "?"} industrii ${v >= 20 ? "ofera o baza robusta pentru validarea formulei RIFC ca predictor al claritatii si actiunii (CTA)." : "ofera o baza acceptabila — se recomanda extinderea pentru concluzii definitive."}` },
               ]};
               case "zones": return { sections: [
                 { heading: "Ce reprezinta distributia pe zone", text: `Graficul compara cum sunt distribuite materialele pe cele 4 zone de performanta (Critical, Noise, Medium, Supreme) — o data calculat prin formula (C formula) si o data perceput de respondenti (C perceput).` },
@@ -6292,6 +6303,19 @@ export default function StudiuAdminPage() {
           const gatePassRate = Math.round((gatePassCount / n) * 100);
           const zoneMatchCount = withData.filter(s => getZone(s.avg_c) === getZoneCp(s.avg_c_score)).length;
           const zoneMatchRate = Math.round((zoneMatchCount / n) * 100);
+          // ── Gate & diversity stats ──
+          const rMin = Math.round(Math.min(...withData.map(s => s.avg_r)) * 100) / 100;
+          const rMax = Math.round(Math.max(...withData.map(s => s.avg_r)) * 100) / 100;
+          const avgEvalPerMaterial = Math.round(_interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0) / n);
+          const uniqueChannels = Array.from(new Set(withData.map(s => s.type))).length;
+          const uniqueIndustries = Array.from(new Set(withData.map((s: any) => s.industry).filter(Boolean))).length;
+          const zoneMatchBreakdown = zones.reduce((acc, z) => {
+            const inZone = withData.filter(s => getZone(s.avg_c) === z || getZoneCp(s.avg_c_score) === z);
+            const matched = inZone.filter(s => getZone(s.avg_c) === z && getZoneCp(s.avg_c_score) === z).length;
+            const total = withData.filter(s => getZone(s.avg_c) === z).length;
+            acc[z] = { matched, total };
+            return acc;
+          }, {} as Record<string, { matched: number; total: number }>);
 
           // ── Interp header stats from LOG data (single source of truth) ──
           const _interpActiveN = stimuli.filter(s => s.is_active).length;
@@ -6622,25 +6646,58 @@ export default function StudiuAdminPage() {
                     );
                   })()}
 
-                  {/* Gate + Zone match stats */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
-                    <div style={{ ...S.configItem, textAlign: "center" as const }}>
+                  {/* Gate + Zone match + Materials stats */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, marginBottom: 20 }}>
+                    {/* Relevance Gate */}
+                    <div style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
+                      <div style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: gatePassRate >= 80 ? "#059669" : gatePassRate >= 50 ? "#D97706" : "#DC2626", color: "#fff" }}>{gatePassRate >= 80 ? "EXCELENT" : gatePassRate >= 50 ? "ACCEPTABIL" : "PROBLEMATIC"}</div>
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>RELEVANCE GATE (R &ge; {GATE})</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: gatePassRate >= 70 ? "#059669" : gatePassRate >= 40 ? "#D97706" : "#DC2626" }}>{gatePassRate}%</div>
                       <div style={{ fontSize: 11, color: "#6B7280" }}>{gatePassCount} din {n} materiale</div>
-                      <div style={{ marginTop: 6 }}><InterpBtn k="gate" title="Relevance Gate" val={String(gatePassRate)} ctx={{ pass: gatePassCount, total: n }} /></div>
+                      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 4, flexWrap: "wrap" as const }}>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>R min={rMin}</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>R med={grandR}</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>R max={rMax}</span>
+                      </div>
+                      <div style={{ margin: "6px auto 0", width: "80%", height: 4, borderRadius: 2, background: "#e5e7eb" }}>
+                        <div style={{ width: `${gatePassRate}%`, height: "100%", borderRadius: 2, background: gatePassRate >= 70 ? "#059669" : gatePassRate >= 40 ? "#D97706" : "#DC2626", transition: "width 0.3s" }} />
+                      </div>
+                      <div style={{ marginTop: 6 }}><InterpBtn k="gate" title="Relevance Gate" val={String(gatePassRate)} ctx={{ pass: gatePassCount, total: n, rMin, rMax, rMean: grandR }} /></div>
                     </div>
-                    <div style={{ ...S.configItem, textAlign: "center" as const }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>ZONE MATCH (Cf = Cp)</div>
+                    {/* Zone Match */}
+                    <div style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
+                      <div style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: zoneMatchRate >= 70 ? "#059669" : zoneMatchRate >= 40 ? "#D97706" : "#DC2626", color: "#fff" }}>{zoneMatchRate >= 70 ? "SOLID" : zoneMatchRate >= 40 ? "PARTIAL" : "SLAB"}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>ZONE MATCH (Cf ≈ Cp)</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: zoneMatchRate >= 70 ? "#059669" : zoneMatchRate >= 40 ? "#D97706" : "#DC2626" }}>{zoneMatchRate}%</div>
                       <div style={{ fontSize: 11, color: "#6B7280" }}>{zoneMatchCount} din {n} materiale in aceeasi zona</div>
-                      <div style={{ marginTop: 6 }}><InterpBtn k="zonematch" title="Zone Match" val={String(zoneMatchRate)} ctx={{ match: zoneMatchCount, total: n }} /></div>
+                      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 4, flexWrap: "wrap" as const }}>
+                        {zones.map(z => {
+                          const zb = zoneMatchBreakdown[z];
+                          return zb && zb.total > 0 ? (
+                            <span key={z} style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${getZoneColor(z)}15`, color: getZoneColor(z), fontWeight: 600 }}>{z.charAt(0)}: {zb.matched}/{zb.total}</span>
+                          ) : null;
+                        })}
+                      </div>
+                      <div style={{ margin: "6px auto 0", width: "80%", height: 4, borderRadius: 2, background: "#e5e7eb" }}>
+                        <div style={{ width: `${zoneMatchRate}%`, height: "100%", borderRadius: 2, background: zoneMatchRate >= 70 ? "#059669" : zoneMatchRate >= 40 ? "#D97706" : "#DC2626", transition: "width 0.3s" }} />
+                      </div>
+                      <div style={{ marginTop: 6 }}><InterpBtn k="zonematch" title="Zone Match" val={String(zoneMatchRate)} ctx={{ match: zoneMatchCount, total: n, breakdown: JSON.stringify(zoneMatchBreakdown) }} /></div>
                     </div>
-                    <div style={{ ...S.configItem, textAlign: "center" as const }}>
+                    {/* Materiale Analizate */}
+                    <div style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
+                      <div style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: "#2563EB", color: "#fff" }}>{n >= 20 ? "SOLID" : n >= 10 ? "ACCEPTABIL" : "MIC"}</div>
                       <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>MATERIALE ANALIZATE</div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: "#111827" }}>{n}</div>
-                      <div style={{ fontSize: 11, color: "#6B7280" }}>N={_interpResponses} evaluari totale</div>
-                      <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: _interpResponses }} /></div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "#2563EB" }}>{n}</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>N={_interpResponses.toLocaleString("ro-RO")} evaluari ({avgEvalPerMaterial} eval/material)</div>
+                      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 4, flexWrap: "wrap" as const }}>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{uniqueChannels} canale</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{uniqueIndustries} industrii</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{_interpCompleted} respondenti</span>
+                      </div>
+                      <div style={{ margin: "6px auto 0", width: "80%", height: 4, borderRadius: 2, background: "#e5e7eb" }}>
+                        <div style={{ width: `${Math.min((n / 50) * 100, 100)}%`, height: "100%", borderRadius: 2, background: "#2563EB", transition: "width 0.3s" }} />
+                      </div>
+                      <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: _interpResponses, avgPerMaterial: avgEvalPerMaterial, channels: uniqueChannels, industries: uniqueIndustries, respondents: _interpCompleted }} /></div>
                     </div>
                   </div>
 
