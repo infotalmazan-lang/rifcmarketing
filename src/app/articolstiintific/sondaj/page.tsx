@@ -7228,6 +7228,91 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
+                    {/* ── CHENAR EXPLICATIV RIFC ── */}
+                    <div style={{ padding: "16px 18px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB", marginBottom: 24 }}>
+
+                      {/* S1: Header + Formula */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#1e40af" }}>MODELUL RIFC</span>
+                        <span style={{ fontSize: 10, color: "#6B7280", fontStyle: "italic" }}>Ipoteza centrala a studiului</span>
+                      </div>
+
+                      <div style={{ textAlign: "center" as const, padding: "14px 0", marginBottom: 12, background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                        <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "JetBrains Mono, monospace", letterSpacing: 2 }}>
+                          <span style={{ color: "#059669" }}>C</span>
+                          <span style={{ color: "#6B7280", margin: "0 6px" }}>=</span>
+                          <span style={{ color: "#DC2626" }}>R</span>
+                          <span style={{ color: "#6B7280", margin: "0 6px" }}>+</span>
+                          <span style={{ color: "#6B7280" }}>(</span>
+                          <span style={{ color: "#D97706" }}>I</span>
+                          <span style={{ color: "#6B7280", margin: "0 4px" }}>{"\u00D7"}</span>
+                          <span style={{ color: "#7C3AED" }}>F</span>
+                          <span style={{ color: "#6B7280" }}>)</span>
+                        </div>
+                        <div style={{ fontSize: 10, color: "#6B7280", marginTop: 4, fontStyle: "italic" }}>
+                          <span style={{ color: "#059669", fontWeight: 700 }}>Claritatea</span> = <span style={{ color: "#DC2626", fontWeight: 700 }}>Relevanta</span> + <span style={{ color: "#D97706", fontWeight: 700 }}>Interesul</span> {"\u00D7"} <span style={{ color: "#7C3AED", fontWeight: 700 }}>Forma</span>
+                        </div>
+                      </div>
+
+                      {/* S2: Ce inseamna — grid 2x2 */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                        <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #DC2626` }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: "#DC2626", marginBottom: 3 }}>R — Relevanta (cheia de contact)</div>
+                          <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>~10% din magnitudinea C, dar 100% conditie de activare. Sub R &lt; {GATE} (Gate), audienta se dezangajeaza si CTA scade ~58%. R nu opreste formula — opreste audienta din a actiona.</div>
+                        </div>
+                        <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #D97706` }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: "#D97706", marginBottom: 3 }}>I — Interesul (continut)</div>
+                          <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>Cat de captivant si interesant este mesajul pentru audienta. Impreuna cu F formeaza motorul I{"\u00D7"}F — produce ~90% din magnitudinea Claritatii (C).</div>
+                        </div>
+                        <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #7C3AED` }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: "#7C3AED", marginBottom: 3 }}>F — Forma (executie)</div>
+                          <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>Calitatea executiei vizuale si creative. I{"\u00D7"}F se amplifica multiplicativ: I=8, F=2 = 16, dar I=8, F=8 = 64 (4{"\u00D7"} mai mult, nu 1.6{"\u00D7"} ca la adunare).</div>
+                        </div>
+                        <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #059669` }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: "#059669", marginBottom: 3 }}>C — Claritatea (output)</div>
+                          <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>Rezultatul formulei: cat de clar este mesajul pentru consumator. C {"\u2260"} CTA — claritatea prezice actiunea, dar sunt pasi separati. H2 valideaza ca C{"\u2192"}CTA functioneaza.</div>
+                        </div>
+                      </div>
+
+                      {/* S3: Ce testam */}
+                      <div style={{ marginBottom: 14 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.5, color: "#1e40af", marginBottom: 6 }}>CE TESTAM</div>
+                        <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 8, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
+                          <em>Formula R + (I {"\u00D7"} F) = C prezice cu adevarat claritatea perceputa de consumator? Si daca da, aceasta claritate duce la actiune (CTA)?</em>
+                        </div>
+                        <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 8 }}>
+                          <strong>Lantul cauzal testat:</strong> R activeaza {"\u2192"} I{"\u00D7"}F produce C (Claritate) {"\u2192"} C coreleaza cu CTA (H2) {"\u2192"} Brand modereaza C{"\u2192"}CTA (H3)
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", fontSize: 10, color: "#374151" }}>
+                          <div><strong style={{ color: "#059669" }}>H1:</strong> Poarta Relevantei — R &lt; {GATE} = audienta se dezangajeaza</div>
+                          <div><strong style={{ color: "#059669" }}>H2:</strong> C {"\u2192"} CTA — claritatea prezice actiunea</div>
+                          <div><strong style={{ color: "#D97706" }}>H3:</strong> Brand modereaza legatura C {"\u2192"} CTA</div>
+                          <div><strong style={{ color: "#7C3AED" }}>H4:</strong> Scale-Independent — sinergia I{"\u00D7"}F e reala</div>
+                          <div><strong style={{ color: "#6B7280" }}>H5:</strong> Claritate si recognoscibilitate (calitativa)</div>
+                        </div>
+                      </div>
+
+                      {/* S4: Cum analizam */}
+                      <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, color: "#1e40af", marginBottom: 4 }}>CUM ANALIZAM</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 10, color: "#374151" }}>
+                          <div>
+                            <div style={{ fontWeight: 700, marginBottom: 2 }}>Esantion</div>
+                            <div style={{ color: "#6B7280", lineHeight: 1.4 }}>{_interpResponses.toLocaleString("ro-RO")} raspunsuri, {n} materiale, {_interpCompleted} completati</div>
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, marginBottom: 2 }}>Metode statistice</div>
+                            <div style={{ color: "#6B7280", lineHeight: 1.4 }}>Pearson r, Fisher Z-test, Spearman rank, Partial correlation, Cohen&apos;s d</div>
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: 700, marginBottom: 2 }}>Praguri</div>
+                            <div style={{ color: "#6B7280", lineHeight: 1.4 }}>p &lt; 0.05 = semnificativ, r &gt; 0.7 = puternic, d &gt; 0.8 = efect mare</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* ── GRAFIC H1 — Poarta Relevanței ── */}
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
