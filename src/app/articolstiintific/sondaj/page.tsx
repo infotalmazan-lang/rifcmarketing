@@ -6084,7 +6084,7 @@ export default function StudiuAdminPage() {
                 { heading: "De ce arata acest rezultat", text: `C formula = ${val} (zona ${getZone(v)}) reflecta combinatia celor trei factori. R = ${_ctx.r || "?"} contribuie aditivitiv, iar I×F = ${_ctx.i && _ctx.f ? (Number(_ctx.i) * Number(_ctx.f)).toFixed(1) : "?"} contribuie multiplicativ. ${v > 80 ? "Scorul ridicat indica ca toate cele trei componente sunt puternice." : v > 50 ? "Scorul mediu sugereaza ca cel putin una dintre componente limiteaza rezultatul." : "Scorul scazut indica slabiciuni in mai multe componente."}` },
                 { heading: "Zone de performanta", text: `0-20 (Critical): Materialul nu comunica eficient. 21-50 (Noise): Materialul exista dar nu se diferentiaza. 51-80 (Medium): Materialul comunica acceptabil. 81-110 (Supreme): Materialul are impact maxim. C formula = ${val} se afla in zona ${getZone(v)}.` },
                 { heading: "C = Claritate → CTA", text: `C (Clarity) reprezinta cat de clar este mesajul de marketing. Formula RIFC prezice claritatea pe baza a 3 factori: daca mesajul e relevant (R), interesant (I) si bine executat (F), atunci e CLAR. Daca e clar, respondentul actioneaza — CTA (Call to Action): cumpara, da click, se inscrie. Cu Cf = ${val} (normalizat ${_ctx.cf ? (Number(_ctx.cf) / 11).toFixed(2) : "?"}/10), formula prezice o claritate ${v > 80 ? "ridicata — probabilitate mare de actiune" : v > 50 ? "moderata — actiunea depinde de factori suplimentari" : "scazuta — probabilitate redusa de actiune"}.` },
-                { heading: "Concluzie", text: `Scorul predictiv de ${val} (${getZone(v)}, normalizat ${_ctx.cf ? (Number(_ctx.cf) / 11).toFixed(2) : "?"}/10) ${v > 80 ? "prezice un impact puternic. Daca C perceput confirma, formula RIFC este validata ca predictor al claritatii si, implicit, al actiunii (CTA)." : v > 50 ? "prezice un impact moderat. Comparatia cu C perceput (${_ctx.cp || "?"}) va indica daca modelul e calibrat corect." : "prezice un impact scazut — necesita interventie pe factorii cu scoruri mici."}` },
+                { heading: "Concluzie", text: `Scorul predictiv de ${val} (${getZone(v)}, normalizat ${_ctx.cf ? (Number(_ctx.cf) / 11).toFixed(2) : "?"}/10) ${v > 80 ? "prezice un impact puternic. Daca C perceput confirma, formula RIFC este validata ca predictor al claritatii si, implicit, al actiunii (CTA)." : v > 50 ? ("prezice un impact moderat. Comparatia cu C perceput (" + (_ctx.cp || "?") + ") va indica daca modelul e calibrat corect.") : "prezice un impact scazut — necesita interventie pe factorii cu scoruri mici."}` },
               ]};
               case "score_cp": return { sections: [
                 { heading: "Ce reprezinta C perceput", text: `Scorul C perceput = ${val} este evaluarea directa a respondentului: cat de clar, convingator si memorabil percepe mesajul materialului de marketing. Este masurat independent de R, I si F, pe scala 1-10. Aceasta este "realitatea" — perceptia reala a audientei.` },
@@ -6306,7 +6306,6 @@ export default function StudiuAdminPage() {
           // ── Gate & diversity stats ──
           const rMin = Math.round(Math.min(...withData.map(s => s.avg_r)) * 100) / 100;
           const rMax = Math.round(Math.max(...withData.map(s => s.avg_r)) * 100) / 100;
-          const avgEvalPerMaterial = Math.round(_interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0) / n);
           const uniqueChannels = Array.from(new Set(withData.map(s => s.type))).length;
           const uniqueIndustries = Array.from(new Set(withData.map((s: any) => s.industry).filter(Boolean))).length;
           const zoneMatchBreakdown = zones.reduce((acc, z) => {
@@ -6327,6 +6326,7 @@ export default function StudiuAdminPage() {
           const _interpTotal = logData.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
           // Use LOG data for response count (matches header RASPUNSURI)
           const _interpResponses = _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+          const avgEvalPerMaterial = Math.round(_interpResponses / n);
 
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
