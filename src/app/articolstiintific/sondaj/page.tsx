@@ -6035,13 +6035,25 @@ export default function StudiuAdminPage() {
             const v = parseFloat(val) || 0;
             const _ctx = ctx || {};
             switch (key) {
-              case "hypothesis_total": return { sections: [
-                { heading: "Ce reprezinta acest rezultat", text: `Procentul de ${val}% indica gradul de acuratete cu care formula RIFC R+(I×F)=C prezice scorul de Claritate (C) perceput de respondenti. Este calculat ca diferenta relativa intre C formula (calculat matematic din R, I si F) si C perceput (evaluat direct de respondent), raportata la scala maxima de 110 puncte.` },
-                { heading: "Cum se aplica formula", text: `Formula R+(I×F)=C combina trei componente: R (Relevanta) ca baza aditionala, iar I (Interesul) inmultit cu F (Forma/Calitatea Executiei) ca amplificator multiplicativ. Scorul final C formula este comparat cu scorul C perceput — evaluarea directa a respondentului privind cat de clar si convingator este mesajul.` },
-                { heading: "De ce arata formula acest rezultat", text: v >= 80 ? `Rezultatul de ${val}% indica o aliniere puternica intre modelul matematic si perceptia reala. Factorii R, I si F explica in mare masura variabilitatea scorului de Claritate, ceea ce sustine ipoteza RIFC.` : v >= 50 ? `Rezultatul de ${val}% arata o aliniere partiala. Exista factori externi (context cultural, experienta anterioara cu brandul, starea emotionala) care influenteaza perceptia C dincolo de ce surprinde formula.` : `Rezultatul de ${val}% indica o discrepanta semnificativa. Factorii R, I si F nu explica suficient perceptia C in acest context — sunt necesari factori suplimentari sau recalibrare.` },
-                { heading: "Cum se interpreteaza", text: `Peste 80% = ipoteza puternic validata. 50-80% = partial validata, necesita investigare suplimentara. Sub 50% = nevalidata, formula nu prezice comportamentul in acest context. Rezultatul trebuie corelat cu Relevance Gate si Zone Match pentru o imagine completa.` },
-                { heading: "Concluzie", text: `${v >= 80 ? "Formula RIFC demonstreaza capacitate predictiva solida." : v >= 50 ? "Formula RIFC are potentialul de a prezice, dar necesita refinare." : "Formula RIFC nu reuseste sa prezica in acest context."} Acest scor de ${val}% ${v >= 80 ? "sustine publicarea rezultatelor ca evidenta pentru validarea ipotezei." : v >= 50 ? "justifica continuarea cercetarii cu un esantion mai mare sau ajustari metodologice." : "sugereaza revizuirea modelului teoretic sau a instrumentului de masurare."}` },
+              case "hypothesis_total": {
+                const _cfNorm = _ctx.cfNorm as number || 0;
+                const _cpVal = _ctx.cp as number || 0;
+                const _deltaVal = _ctx.delta as number || 0;
+                const _gatePass = _ctx.gatePass as number || 0;
+                const _gateTotal = _ctx.gateTotal as number || 0;
+                const _gateRate = _ctx.gateRate as number || 0;
+                const _direction = _cfNorm < _cpVal ? "subestimeaza" : _cfNorm > _cpVal ? "supraevalueaza" : "coincide cu";
+                const _dirFactor = _cpVal > 0 && _cfNorm > 0 ? (_cpVal / _cfNorm) : 1;
+                return { sections: [
+                { heading: "Ce masoara acest procent", text: `Procentul de ${val}% masoara cat de precis prezice formula RIFC scorul de Claritate (C). Se compara C formula normalizat cu C perceput — ambele pe scala 1-10. Formula de calcul: Validare % = 100 - (|Cf_norm - Cp| / 10) × 100.` },
+                { heading: "Valorile concrete", text: `C formula brut (R + I×F) = ${(_ctx.cf as number || 0).toFixed(2)} (scala 0-110). Normalizat: Cf / 11 = ${_cfNorm.toFixed(2)} (scala 0-10). C perceput (evaluat direct de respondent) = ${_cpVal.toFixed(2)} (scala 1-10). Delta = |${_cfNorm.toFixed(2)} - ${_cpVal.toFixed(2)}| = ${_deltaVal.toFixed(2)}. Validare = 100 - (${_deltaVal.toFixed(2)} / 10 × 100) = ${val}%.` },
+                { heading: "Directia erorii", text: `Formula ${_direction} Claritatea perceputa. Cf_norm = ${_cfNorm.toFixed(2)} vs Cp = ${_cpVal.toFixed(2)}. ${_cfNorm < _cpVal ? `Respondentii percep mai multa claritate decat prezice formula (factor ×${_dirFactor.toFixed(2)}). Aceasta sugereaza ca exista factori pozitivi (brand, emotie, context) neinclusi in R+(I×F).` : _cfNorm > _cpVal ? `Formula prezice mai multa claritate decat percep respondentii. Posibil ca executia (F) sau interesul (I) nu se traduc complet in perceptia de claritate.` : `Aliniere perfecta intre predictie si perceptie.`}` },
+                { heading: "Relevance Gate", text: `Din ${_gateTotal} materiale, ${_gatePass} trec Gate-ul (R >= ${GATE}) — rata de ${_gateRate}%. Materialele cu R < ${GATE} sunt "irelevante" — respondentul nu va cumpara indiferent cat de interesant sau bine executat e materialul. ${_gateRate >= 80 ? "Majoritatea materialelor sunt relevante pentru audienta." : _gateRate >= 50 ? "Jumatate din materiale nu trec pragul de relevanta — formula e penalizata de targetare." : "Majoritatea materialelor nu sunt relevante — problema de targetare, nu de formula."}` },
+                { heading: "Cum se interpreteaza", text: `>= 90%: Foarte puternic validata — formula prezice excelent. 80-90%: Puternic validata — aliniere solida. 70-80%: Validata — discrepanta mica, formula functioneaza dar cu spatiu de imbunatatire. 50-70%: Partial validata — factori externi semnificativi. < 50%: Nevalidata — formula nu surprinde perceptia in acest context.` },
+                { heading: "Ce inseamna pentru RIFC", text: `Claritatea (C) este masura in care mesajul este inteles si convingator. Daca C e mare, respondentul actioneaza (CTA) — aceasta legatura se testeaza separat in H2. Formula R+(I×F)=C spune: Relevanta e fundatia, iar Interesul amplificat de Forma de executie produce Claritate. ${v >= 70 ? `Cu ${val}% validare, formula prezice cu succes claritatea perceputa, sustinand modelul teoretic RIFC.` : `Cu ${val}% validare, formula necesita investigare suplimentara a factorilor care influenteaza perceptia de claritate.`}` },
+                { heading: "Concluzie", text: `${v >= 80 ? "Formula RIFC demonstreaza capacitate predictiva solida." : v >= 50 ? "Formula RIFC are potential predictiv, dar exista factori externi care influenteaza perceptia." : "Formula RIFC nu reuseste sa prezica in acest context."} Cf_norm = ${_cfNorm.toFixed(2)}, Cp = ${_cpVal.toFixed(2)}, Delta = ${_deltaVal.toFixed(2)} → ${val}%. ${_gatePass < _gateTotal ? `Atentie: ${_gateTotal - _gatePass} materiale nu trec Relevance Gate (R < ${GATE}).` : "Toate materialele trec Relevance Gate."}` },
               ]};
+              }
               case "score_r": return { sections: [
                 { heading: "Ce reprezinta R (Relevanta)", text: `Scorul R = ${val} masoara cat de relevant percepe respondentul mesajul de marketing in raport cu nevoile, interesele sau contextul sau personal. Se evalueaza pe o scala de la 1 la 10 (1 = complet irelevant, 10 = foarte relevant).` },
                 { heading: "Cum se aplica in formula", text: `In formula R+(I×F)=C, R este componenta aditionala de baza. Relevanta actioneaza ca un "gate" (prag): daca R < ${GATE}, formula prezice ca materialul va avea impact scazut, indiferent cat de interesant sau bine executat este. R se aduna direct la produsul I×F.` },
@@ -6365,6 +6377,11 @@ export default function StudiuAdminPage() {
               {interpSubTab === "total" && (
                 <div>
                   {/* Hypothesis validation hero */}
+                  {(() => {
+                    const _grandCfNorm = Math.round((grandCf / 11) * 100) / 100;
+                    const _grandDirection = _grandCfNorm < grandCp ? "subestimeaza" : _grandCfNorm > grandCp ? "supraevalueaza" : "coincide cu";
+                    const _grandDirColor = _grandCfNorm < grandCp ? "#D97706" : _grandCfNorm > grandCp ? "#DC2626" : "#059669";
+                    return (
                   <div style={{
                     background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
                   }}>
@@ -6378,10 +6395,45 @@ export default function StudiuAdminPage() {
                     <div style={{ fontSize: 12, color: "#6B7280", marginTop: 12, maxWidth: 500, margin: "12px auto 0" }}>
                       Formula <strong>R+(I&times;F)=C</strong> prezice scorul de claritate cu o acuratete de <strong>{grandHypPct}%</strong> fata de perceptia respondentilor.
                     </div>
+
+                    {/* Cf_norm vs Cp comparison */}
+                    <div style={{ marginTop: 14, display: "flex", justifyContent: "center", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 6, background: "#f9fafb", border: "1px solid #e5e7eb", fontSize: 11 }}>
+                        <span style={{ color: "#6B7280" }}>C<sub>f</sub>/11 =</span>
+                        <strong style={{ color: "#111827", fontSize: 13 }}>{_grandCfNorm.toFixed(2)}</strong>
+                      </div>
+                      <span style={{ fontSize: 12, color: "#9CA3AF" }}>vs</span>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 6, background: "#f9fafb", border: "1px solid #e5e7eb", fontSize: 11 }}>
+                        <span style={{ color: "#6B7280" }}>C<sub>p</sub> =</span>
+                        <strong style={{ color: "#059669", fontSize: 13 }}>{grandCp.toFixed(2)}</strong>
+                      </div>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 6, background: "#f9fafb", border: "1px solid #e5e7eb", fontSize: 11 }}>
+                        <span style={{ color: "#6B7280" }}>&Delta; =</span>
+                        <strong style={{ color: "#374151", fontSize: 13 }}>{grandDelta.toFixed(2)}</strong>
+                      </div>
+                    </div>
+
+                    {/* Error direction + Gate pass */}
+                    <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: _grandDirColor, fontWeight: 600 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          {_grandCfNorm < grandCp ? <><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></> : _grandCfNorm > grandCp ? <><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></> : <path d="M5 12h14"/>}
+                        </svg>
+                        Formula {_grandDirection} ({_grandCfNorm < grandCp ? `×${(grandCp / _grandCfNorm).toFixed(2)}` : _grandCfNorm > grandCp ? `×${(_grandCfNorm / grandCp).toFixed(2)}` : "="})
+                      </div>
+                      <div style={{ width: 1, height: 14, background: "#e5e7eb" }} />
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: gatePassRate >= 80 ? "#059669" : gatePassRate >= 50 ? "#D97706" : "#DC2626", fontWeight: 600 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Gate R&ge;{GATE}: {gatePassCount}/{n} materiale ({gatePassRate}%)
+                      </div>
+                    </div>
+
                     <div style={{ marginTop: 12 }}>
-                      <InterpBtn k="hypothesis_total" title="Validare Ipoteza — Total" val={String(grandHypPct)} />
+                      <InterpBtn k="hypothesis_total" title="Validare Ipoteza — Total" val={String(grandHypPct)} ctx={{ cf: grandCf, cfNorm: _grandCfNorm, cp: grandCp, delta: grandDelta, gatePass: gatePassCount, gateTotal: n, gateRate: gatePassRate, r: grandR, i: grandI, f: grandF }} />
                     </div>
                   </div>
+                    );
+                  })()}
 
                   {/* Score comparison cards */}
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 12, marginBottom: 20 }}>
