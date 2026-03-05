@@ -6202,6 +6202,33 @@ export default function StudiuAdminPage() {
                   { heading: "Concluzie", text: `Din ${_zn} materiale: ${_zMatch}% sunt clasificate identic pe formula si perceptie. Shift-ul este "${_zShift}". ${_zShift === "aliniata" ? "Formula RIFC R+(IxF)=C este calibrata corect pentru acest set de materiale — predictia se aliniaza cu perceptia." : "Diferenta de distributie sugereaza ca formula necesita un factor de corectie (probabil Brand sau context) pentru a se alinia complet cu perceptia. H3 investigheaza exact acest efect moderator."}` },
                 ]};
               }
+              case "h1": {
+                const _h1dCp = Number(_ctx.diffCp || 0);
+                const _h1dCta = Number(_ctx.diffCta || 0);
+                const _h1dStrong = Number(_ctx.diffStrong || 0);
+                const _h1dCpD = Number(_ctx.cohenDCp || 0);
+                const _h1dCtaD = Number(_ctx.cohenDCta || 0);
+                const _h1nBelow = Number(_ctx.nBelow || 0);
+                const _h1nAbove = Number(_ctx.nAbove || 0);
+                const _h1nTotal = _h1nBelow + _h1nAbove;
+                const _h1gatePct = _h1nTotal > 0 ? Math.round(_h1nBelow / _h1nTotal * 100 * 10) / 10 : 0;
+                const _h1cpBelow = Number(_ctx.cpBelow || 0);
+                const _h1cpAbove = Number(_ctx.cpAbove || 0);
+                const _h1ctaBelow = Number(_ctx.ctaBelow || 0);
+                const _h1ctaAbove = Number(_ctx.ctaAbove || 0);
+                const _h1brandCtaBelow = Number(_ctx.brandCtaBelow || 0);
+                const _h1brandCtaNoBrand = Number(_ctx.brandCtaNoBrand || 0);
+                const _h1nBrandBelow = Number(_ctx.nBrandBelow || 0);
+                const _h1nNoBrandBelow = Number(_ctx.nNoBrandBelow || 0);
+                return { sections: [
+                  { heading: "Ce testeaza H1 — Poarta Relevantei", text: `H1 investigheaza daca Relevanta (R) functioneaza ca un prag obligatoriu (Gate) in formula RIFC R+(IxF)=C. Ipoteza: sub R < ${GATE}, mesajul nu produce nici Claritate perceputa (C), nici intentie de actiune (CTA), indiferent cat de interesant (I) sau bine executat (F) este. Analogia: o reclama la anvelope pentru cineva fara masina — poate fi spectaculoasa, dar irelevanta si ignorata.` },
+                  { heading: "Rezultatele concrete", text: `Din ${_h1nTotal} raspunsuri: ${_h1nBelow} (${_h1gatePct}%) au R < ${GATE} (sub Gate), ${_h1nAbove} (${(100 - _h1gatePct).toFixed(1)}%) au R >= ${GATE} (peste Gate).\n\nA. Claritate perceputa: Cp sub prag = ${_h1cpBelow}, Cp peste prag = ${_h1cpAbove}, Delta = ${_h1dCp.toFixed(2)} (Cohen d = ${_h1dCpD.toFixed(2)}, ${Math.abs(_h1dCpD) >= 0.8 ? "efect mare" : Math.abs(_h1dCpD) >= 0.5 ? "efect mediu" : "efect mic"}). ${_h1dCp >= 2 ? "CONFIRMAT" : _h1dCp >= 1 ? "PARTIAL" : "NECONFIRMAT"} (prag: Delta > 2 = confirmat).\n\nB. CTA (metrica decisiva): CTA sub prag = ${_h1ctaBelow}, CTA peste prag = ${_h1ctaAbove}, Delta = ${_h1dCta.toFixed(2)} (Cohen d = ${_h1dCtaD.toFixed(2)}, ${Math.abs(_h1dCtaD) >= 0.8 ? "efect mare" : Math.abs(_h1dCtaD) >= 0.5 ? "efect mediu" : "efect mic"}). ${_h1dCta > 2 ? "CONFIRMAT" : _h1dCta >= 1 ? "PARTIAL" : "NECONFIRMAT"}.\n\nC. Gate puternic (I>=5, F>=5): Delta CTA = ${_h1dStrong.toFixed(2)} — chiar cu continut si forma excelente, fara relevanta CTA ramane scazut.` },
+                  { heading: "De ce R functioneaza ca Gate", text: `Relevanta este conditia de baza a formulei RIFC. In logica de marketing: daca produsul nu e relevant pentru consumator (nu am masina → nu cumpar anvelope), niciun nivel de executie creativa nu va compensa. Mecanismul: R sub ${GATE} inseamna ca respondentul nu se identifica cu nevoia/problema — procesarea cognitiva se opreste, mesajul e "filtrat". ${_h1dCta > 2 ? "Datele confirma puternic: CTA scade cu " + _h1dCta.toFixed(2) + " puncte sub prag — diferenta de " + Math.round(_h1dCta / _h1ctaAbove * 100) + "% din CTA-ul de baza." : "Datele arata un efect " + (_h1dCta >= 1 ? "partial" : "slab") + " al Gate-ului."}` },
+                  { heading: "Brand x Gate — protejeaza brandul?", text: _h1nBrandBelow >= 3 && _h1nNoBrandBelow >= 3 ? `Sub R < ${GATE}, daca respondentul cunoaste brandul: CTA = ${_h1brandCtaBelow.toFixed(2)} (n=${_h1nBrandBelow}). Daca NU cunoaste brandul: CTA = ${_h1brandCtaNoBrand.toFixed(2)} (n=${_h1nNoBrandBelow}). Diferenta = ${(_h1brandCtaBelow - _h1brandCtaNoBrand).toFixed(2)}. ${_h1brandCtaBelow > _h1brandCtaNoBrand + 0.5 ? "Brandul ofera o protectie partiala — chiar sub Gate, familiaritatea cu brandul ridica putin CTA. Dar Gate-ul ramane dominant: chiar cu brand, CTA-ul sub prag e mult sub CTA-ul peste prag." : "Brandul NU protejeaza semnificativ — sub Gate, CTA ramane scazut indiferent de recunoasterea brandului. Gate-ul R este absolut."}` : `Date insuficiente pentru analiza Brand x Gate (sub ${GATE}: brand familiar n=${_h1nBrandBelow}, brand necunoscut n=${_h1nNoBrandBelow}). Sunt necesare minim 3 observatii in fiecare grup.` },
+                  { heading: "Legatura cu Claritate si CTA", text: `In cadrul RIFC: C (Claritate) = cat de clar e mesajul. CTA = actiunea (cumpar, dau click, ma inscriu). H2 testeaza direct C → CTA. H1 testeaza precondita: daca R < ${GATE}, C si CTA scad simultan. Rezultatul concret: sub Gate, Cp = ${_h1cpBelow} si CTA = ${_h1ctaBelow}. Peste Gate, Cp = ${_h1cpAbove} si CTA = ${_h1ctaAbove}. ${_h1dCta > 2 ? "Poarta functioneaza: fara R suficient, nici claritate nici actiune." : "Efectul Gate-ului este moderat — R influenteaza dar nu blocheaza complet."}` },
+                  { heading: "Concluzie H1", text: `${_h1dCta > 2 ? "H1 CONFIRMATA" : _h1dCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA"}. Relevanta (R) ${_h1dCta > 2 ? "este conditia de baza a formulei RIFC. Sub R < " + GATE + ", consumatorul nu percepe claritate si nu actioneaza — Gate-ul functioneaza. Formula R+(IxF)=C se valideaza: R seteaza nivelul de baza, iar I×F amplifica doar daca R e suficient." : _h1dCta >= 1 ? "are un efect de prag partial — scade CTA dar nu il blocheaza complet. Posibil ca pragul optim e diferit de " + GATE + " sau ca alti factori (Brand, context) compenseaza partial." : "nu blocheaza CTA asa cum prezice formula. Fie pragul " + GATE + " nu e corect, fie R nu actioneaza ca gate in acest context."}` },
+                ]};
+              }
               case "industry": {
                 const nm = String(_ctx.name || "");
                 const iN = Number(_ctx.count || 0);
@@ -7080,6 +7107,14 @@ export default function StudiuAdminPage() {
                 const h1StrongData = h1CtaData.filter(d => d.i >= 5 && d.f >= 5);
                 const h1StrongBelow = h1StrongData.filter(d => d.r < GATE);
                 const h1StrongAbove = h1StrongData.filter(d => d.r >= GATE);
+                // Gate proportion + Brand×Gate
+                const h1GatePct = h1CtaData.length > 0 ? Math.round(h1CtaBelow.length / h1CtaData.length * 1000) / 10 : 0;
+                const h1BrandBelowYes = h1CtaBelow.filter(d => d.brand === true);
+                const h1BrandBelowNo = h1CtaBelow.filter(d => d.brand === false);
+                const h1BrandCtaBelowYes = h1BrandBelowYes.length >= 3 ? Math.round(_mean(h1BrandBelowYes.map(d => d.cta!)) * 100) / 100 : 0;
+                const h1BrandCtaBelowNo = h1BrandBelowNo.length >= 3 ? Math.round(_mean(h1BrandBelowNo.map(d => d.cta!)) * 100) / 100 : 0;
+                // CTA scatter data (R vs CTA)
+                const h1CtaScatterData = scatter.filter(d => d.cta != null && d.cta > 0 && d.r > 0);
 
                 // ── H2: C vs CTA scatter (filtered by marketing_objective, normalized X) ──
                 const h2DataAll = scatter.filter(d => d.c_computed > 0 && d.cta != null && d.cta > 0);
@@ -7142,11 +7177,15 @@ export default function StudiuAdminPage() {
 
                     {/* ── GRAFIC H1 — Poarta Relevanței ── */}
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H1: Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>Ipoteza H1: Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
+                        <InterpBtn k="h1" title="H1 — Poarta Relevantei" val={`ΔCTA=${(h1AboveAvgCta - h1BelowAvgCta).toFixed(2)}`} ctx={{ diffCp: h1AboveAvgC - h1BelowAvgC, diffCta: h1AboveAvgCta - h1BelowAvgCta, diffStrong: h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 ? _mean(h1StrongAbove.map(d => d.cta!)) - _mean(h1StrongBelow.map(d => d.cta!)) : 0, cohenDCp: h1CohenDCp, cohenDCta: h1CohenDCta, nBelow: h1CtaBelow.length, nAbove: h1CtaAbove.length, cpBelow: h1BelowAvgC, cpAbove: h1AboveAvgC, ctaBelow: h1BelowAvgCta, ctaAbove: h1AboveAvgCta, brandCtaBelow: h1BrandCtaBelowYes, brandCtaNoBrand: h1BrandCtaBelowNo, nBrandBelow: h1BrandBelowYes.length, nNoBrandBelow: h1BrandBelowNo.length }} />
+                      </div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
                         <strong>Ce testeaza:</strong> Relevanta (R) functioneaza ca un prag minim — sub R={GATE}, mesajul nu produce nici Claritate perceputa, nici intentie de actiune (CTA), indiferent de Interes sau Forma.{" "}
                         <strong>Metoda:</strong> Comparatie medii C<sub>perceput</sub> si CTA pe doua grupuri (R&lt;{GATE} vs R&ge;{GATE}). Testul foloseste c_score (perceptia consumatorului), nu C din formula (care contine R si ar fi tautologic).{" "}
                         <strong>Interpretare:</strong> ΔCTA &gt; 2 = confirmat, 1-2 = partial, &lt; 1 = neconfirmat.
+                        <span style={{ marginLeft: 8, padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 700, background: "#f3f4f6", color: "#6B7280" }}>{h1GatePct}% sub Gate ({h1CtaBelow.length}/{h1CtaData.length})</span>
                       </div>
                       {/* Stats banner — 3 rows: C_perceput, CTA, Gate puternic */}
                       {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
@@ -7248,22 +7287,60 @@ export default function StudiuAdminPage() {
                           </div>
                         );
                       })()}
-                      <div style={{ overflowX: "auto" as const }}>
-                        <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
-                          {renderGrid(h1XMin, h1XMax, h1YMin, h1YMax, "R (Relevanta)", "C perceput (c_score 1-10)")}
-                          {/* Gate line */}
-                          <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
-                          <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">Prag R={GATE}</text>
-                          {/* Dots — red below gate, green above — using c_score (perceput) */}
-                          {h1Data.map((d, i) => (
-                            <circle key={i} cx={toX(d.r, h1XMin, h1XMax)} cy={toY(d.c_score!, h1YMin, h1YMax)} r={3} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.55} />
-                          ))}
-                          {/* Legend */}
-                          <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
-                          <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1BelowGate.length})</text>
-                          <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
-                          <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1AboveGate.length})</text>
-                        </svg>
+                      {/* ═══ DUAL SCATTER: R vs Cp + R vs CTA ═══ */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {/* Scatter 1: R vs C perceput */}
+                        <div style={{ overflowX: "auto" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs C perceput (Claritate)</div>
+                          <svg width={chartW / 2} height={chartH + 10} viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ display: "block", width: "100%" }}>
+                            {renderGrid(h1XMin, h1XMax, h1YMin, h1YMax, "R (Relevanta)", "C perceput (c_score 1-10)")}
+                            {/* Gate line */}
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
+                            <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={GATE}</text>
+                            {/* Mean lines */}
+                            <line x1={pad.l} y1={toY(h1BelowAvgC, h1YMin, h1YMax)} x2={toX(GATE, h1XMin, h1XMax)} y2={toY(h1BelowAvgC, h1YMin, h1YMax)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={pad.l + 4} y={toY(h1BelowAvgC, h1YMin, h1YMax) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={h1BelowAvgC}</text>
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={toY(h1AboveAvgC, h1YMin, h1YMax)} x2={chartW - pad.r} y2={toY(h1AboveAvgC, h1YMin, h1YMax)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={chartW - pad.r - 50} y={toY(h1AboveAvgC, h1YMin, h1YMax) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={h1AboveAvgC}</text>
+                            {/* Dots with jitter */}
+                            {h1Data.map((d, i) => {
+                              const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
+                              const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
+                              return <circle key={i} cx={toX(d.r, h1XMin, h1XMax) + jx} cy={toY(d.c_score!, h1YMin, h1YMax) + jy} r={2.5} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
+                            })}
+                            {/* Legend */}
+                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
+                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1BelowGate.length})</text>
+                            <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
+                            <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1AboveGate.length})</text>
+                          </svg>
+                        </div>
+                        {/* Scatter 2: R vs CTA */}
+                        <div style={{ overflowX: "auto" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs CTA (Intentie de actiune)</div>
+                          <svg width={chartW / 2} height={chartH + 10} viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ display: "block", width: "100%" }}>
+                            {renderGrid(h1XMin, h1XMax, 0, 10, "R (Relevanta)", "CTA (1-10)")}
+                            {/* Gate line */}
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
+                            <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={GATE}</text>
+                            {/* Mean lines */}
+                            <line x1={pad.l} y1={toY(h1BelowAvgCta, 0, 10)} x2={toX(GATE, h1XMin, h1XMax)} y2={toY(h1BelowAvgCta, 0, 10)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={pad.l + 4} y={toY(h1BelowAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={h1BelowAvgCta}</text>
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={toY(h1AboveAvgCta, 0, 10)} x2={chartW - pad.r} y2={toY(h1AboveAvgCta, 0, 10)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={chartW - pad.r - 50} y={toY(h1AboveAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={h1AboveAvgCta}</text>
+                            {/* Dots with jitter */}
+                            {h1CtaScatterData.map((d, i) => {
+                              const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
+                              const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
+                              return <circle key={i} cx={toX(d.r, h1XMin, h1XMax) + jx} cy={toY(d.cta!, 0, 10) + jy} r={2.5} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
+                            })}
+                            {/* Legend */}
+                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
+                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1CtaBelow.length})</text>
+                            <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
+                            <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1CtaAbove.length})</text>
+                          </svg>
+                        </div>
                       </div>
                       {/* ═══ INTERPRETARE H1 ═══ */}
                       <div style={{ marginTop: 10, padding: "14px 16px", background: "#f0fdf4", borderRadius: 8, border: "2px solid #059669" }}>
@@ -7311,6 +7388,15 @@ export default function StudiuAdminPage() {
                         <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.6, marginTop: 6, padding: "8px 10px", background: "#fffbeb", borderRadius: 4 }}>
                           <strong>Concluzie stiintifica:</strong> R functioneaza ca un <strong>&quot;level-shifter&quot;</strong> (coboara etajul de baza), nu ca un <strong>&quot;switch&quot;</strong> (care ar opri mecanismul I&times;F). Analogia: I&times;F e motorul unui lift — functioneaza la fel indiferent de etaj. Dar R seteaza etajul de plecare. Cand R&lt;{GATE}, etajul e atat de jos incat nici I&times;F maxim nu atinge un CTA functional.
                         </div>
+                        {/* Brand × Gate */}
+                        {h1BrandBelowYes.length >= 3 && h1BrandBelowNo.length >= 3 && (
+                          <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.6, marginTop: 6, padding: "8px 10px", background: "#fef9c3", borderRadius: 4, borderLeft: "3px solid #D97706" }}>
+                            <strong>Brand &times; Gate:</strong> Sub R&lt;{GATE}, cand respondentul cunoaste brandul: CTA = {h1BrandCtaBelowYes} (n={h1BrandBelowYes.length}). Cand NU cunoaste: CTA = {h1BrandCtaBelowNo} (n={h1BrandBelowNo.length}).{" "}
+                            {h1BrandCtaBelowYes > h1BrandCtaBelowNo + 0.5
+                              ? <strong>Brandul ofera protectie partiala sub Gate (+{(h1BrandCtaBelowYes - h1BrandCtaBelowNo).toFixed(2)}), dar Gate-ul ramane dominant.</strong>
+                              : <strong>Brandul NU protejeaza sub Gate — irelevanta domina indiferent de recunoastere.</strong>}
+                          </div>
+                        )}
                         <div style={{ fontSize: 10, color: "#92400e", marginTop: 6, fontWeight: 600 }}>
                           Ipoteza noua generata: <em>&quot;R modereaza nivelul absolut al CTA (baseline), nu mecanismul I&times;F→C. Influenta I&times;F asupra C ramane constanta indiferent de R, dar fara R suficient, nivelul de baza e sub pragul de actiune.&quot;</em>
                         </div>
