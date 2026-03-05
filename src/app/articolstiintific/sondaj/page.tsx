@@ -9358,7 +9358,11 @@ export default function StudiuAdminPage() {
                 {cviSubTab === "interpretare" && cviResults && (() => {
                   const summary: any[] = cviResults.summary || [];
                   const nExperts = cviResults.stats?.completed || 0;
-                  const exportData: number[][] = cviResults.exportData || [];
+                  // Convert exportData from objects {R1:3, R2:4,...} to number[][] for heatmap
+                  const _itemOrder = ["R1","R2","R3","R4","R5","R6","R7","I1","I2","I3","I4","I5","I6","I7","I8","I9","I10","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","C1","C2","C3","C4","C5","C6","C7"];
+                  const exportData: number[][] = (cviResults.exportData || []).map((row: any) =>
+                    Array.isArray(row) ? row : _itemOrder.map(id => Number(row[id]) || 0)
+                  );
                   const fleissK = cviResults.fleissKappa || 0;
                   const dimCvi = cviResults.dimensionCvi || { R: 0, I: 0, F: 0, C: 0 };
 
