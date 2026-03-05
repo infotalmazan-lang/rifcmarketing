@@ -106,7 +106,7 @@ interface Stimulus {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// STATISTICAL HELPERS — used by H5, H6, V1, V2, Sumar
+// STATISTICAL HELPERS — used by IPOTEZE, V1, V2, Sumar
 // ═══════════════════════════════════════════════════════════════
 const _mean = (arr: number[]): number => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const _variance = (arr: number[]): number => { const m = _mean(arr); return _mean(arr.map(x => (x - m) ** 2)); };
@@ -2881,11 +2881,6 @@ export default function StudiuAdminPage() {
                             const h1AboveCtaAvg = h1AboveCta.length > 0 ? _mean(h1AboveCta.map(d => d.cta!)) : 0;
                             const h1DiffCta = Math.abs(h1AboveCtaAvg - h1BelowCtaAvg);
                             const h1Diff = h1DiffCta; // verdict bazat pe CTA
-                            // H5 winner
-                            const h5D = scValid.filter(d => d.c_score != null && d.c_score > 0);
-                            const h5MultR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i * d.f), h5D.map(d => d.c_score!)) : 0;
-                            const h5AddR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i + d.f), h5D.map(d => d.c_score!)) : 0;
-
                             // Compute Factor Calibrare
                             const calD = scValid.filter(d => d.c_score != null && d.c_score > 0);
                             const cfN = calD.length >= 2 ? _mean(calD.map(d => d.c_computed / 11)) : 0;
@@ -2895,24 +2890,24 @@ export default function StudiuAdminPage() {
                             const fcLabel = fc >= 1.0 && fc <= 1.2 ? "Calibrat excelent" : fc <= 1.5 ? "Subestimare moderata" : fc <= 2.0 ? "Subestimare semnificativa" : "Discrepanta mare";
 
 
-                            // H7 — Scale-Independent Interaction Test (Spearman + Partial Correlation)
-                            const h7D = scValid.filter(d => d.c_score != null && d.c_score > 0);
-                            const h7MultPreds = h7D.map(d => d.r + d.i * d.f);
-                            const h7AditPreds = h7D.map(d => d.r + d.i + d.f);
-                            const h7Cps = h7D.map(d => d.c_score!);
-                            const h7SpearmanMult = h7D.length >= 3 ? _spearmanRho(h7MultPreds, h7Cps) : 0;
-                            const h7SpearmanAdit = h7D.length >= 3 ? _spearmanRho(h7AditPreds, h7Cps) : 0;
-                            const h7DeltaRho = h7SpearmanMult - h7SpearmanAdit;
-                            const h7FisherZ = _fisherZTest(h7SpearmanMult, h7SpearmanAdit, h7D.length, h7D.length);
-                            const h7AditReg = _linReg(h7D.map(d => d.r + d.i + d.f), h7Cps);
-                            const h7Residuals = h7Cps.map((cp, i) => cp - (h7AditReg.slope * (h7D[i].r + h7D[i].i + h7D[i].f) + h7AditReg.intercept));
-                            const h7IxF = h7D.map(d => d.i * d.f);
-                            const h7PartialR = h7D.length >= 3 ? _pearsonR(h7Residuals, h7IxF) : 0;
-                            const h7PartialP = _pValuePearson(h7PartialR, h7D.length);
-                            const h7SpearmanSig = h7FisherZ.p < 0.05 && h7DeltaRho > 0;
-                            const h7PartialSig = h7PartialP < 0.05 && Math.abs(h7PartialR) > 0.1;
-                            const h7Verdict = h7SpearmanSig && h7PartialSig ? "CONFIRMATA" : (h7SpearmanSig || h7PartialSig) ? "PARTIAL" : "NECONFIRMATA";
-                            const h7VerdictColor = h7Verdict === "CONFIRMATA" ? "#059669" : h7Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
+                            // H4 — Scale-Independent Interaction Test (Spearman + Partial Correlation)
+                            const h4D = scValid.filter(d => d.c_score != null && d.c_score > 0);
+                            const h4MultPreds = h4D.map(d => d.r + d.i * d.f);
+                            const h4AditPreds = h4D.map(d => d.r + d.i + d.f);
+                            const h4Cps = h4D.map(d => d.c_score!);
+                            const h4SpearmanMult = h4D.length >= 3 ? _spearmanRho(h4MultPreds, h4Cps) : 0;
+                            const h4SpearmanAdit = h4D.length >= 3 ? _spearmanRho(h4AditPreds, h4Cps) : 0;
+                            const h4DeltaRho = h4SpearmanMult - h4SpearmanAdit;
+                            const h4FisherZ = _fisherZTest(h4SpearmanMult, h4SpearmanAdit, h4D.length, h4D.length);
+                            const h4AditReg = _linReg(h4D.map(d => d.r + d.i + d.f), h4Cps);
+                            const h4Residuals = h4Cps.map((cp, i) => cp - (h4AditReg.slope * (h4D[i].r + h4D[i].i + h4D[i].f) + h4AditReg.intercept));
+                            const h4IxF = h4D.map(d => d.i * d.f);
+                            const h4PartialR = h4D.length >= 3 ? _pearsonR(h4Residuals, h4IxF) : 0;
+                            const h4PartialP = _pValuePearson(h4PartialR, h4D.length);
+                            const h4SpearmanSig = h4FisherZ.p < 0.05 && h4DeltaRho > 0;
+                            const h4PartialSig = h4PartialP < 0.05 && Math.abs(h4PartialR) > 0.1;
+                            const h4Verdict = h4SpearmanSig && h4PartialSig ? "CONFIRMATA" : (h4SpearmanSig || h4PartialSig) ? "PARTIAL" : "NECONFIRMATA";
+                            const h4VerdictColor = h4Verdict === "CONFIRMATA" ? "#059669" : h4Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
 
                             // Metric card builder
                             const metricCard = (icon: string, title: string, value: string, color: string, explanation: string, thresholds: string) => (
@@ -3034,8 +3029,8 @@ export default function StudiuAdminPage() {
                                     { code: "H1", name: "Poarta Relevantei (Threshold Effect)", verdict: h1Diff > 2 ? `Confirmata — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}, ΔCp=${h1DiffCp.toFixed(1)}). Poarta Relevantei functioneaza.` : h1Diff >= 1 ? `Partial — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}). Efect moderat al pragului.` : `Neconfirmata — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}). Pragul nu produce efect semnificativ.`, color: h1Diff > 2 ? "#059669" : h1Diff >= 1 ? "#D97706" : "#DC2626" },
                                     { code: "H2", name: "Formula prezice actiunea reala (C→CTA Correlation)", verdict: `r(C,CTA) = ${cfCtaR.toFixed(2)} — ${Math.abs(cfCtaR) >= 0.5 ? "Corelatie puternica. Formula prezice cu succes intentia de actiune." : Math.abs(cfCtaR) >= 0.3 ? "Corelatie moderata. Formula are putere predictiva, dar exista si alti factori." : "Corelatie slaba. Formula necesita ajustari suplimentare."}`, color: Math.abs(cfCtaR) >= 0.3 ? "#059669" : "#D97706" },
                                     { code: "H3", name: "Brandul modereaza C (Moderation Analysis)", verdict: "Vezi graficul H3 — analiza compara corelatia C→CTA intre brand cunoscut vs necunoscut.", color: "#6B7280" },
-                                    { code: "H4", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul H4 — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
-                                    { code: "H7", name: "Test Scale-Independent al Interactiei I\u00D7F", verdict: h7Verdict === "CONFIRMATA" ? `Spearman \u03C1mult=${h7SpearmanMult.toFixed(3)} > \u03C1adit=${h7SpearmanAdit.toFixed(3)} (Fisher Z p=${h7FisherZ.p.toFixed(3)}) + Partial r(I\u00D7F|R+I+F)=${h7PartialR.toFixed(3)} (p=${h7PartialP.toFixed(3)}). Sinergia I\u00D7F confirmata fara artefact de scala.` : h7Verdict === "PARTIAL" ? `${h7SpearmanSig ? `Spearman favorizeaza multiplicativ (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)})` : `Spearman nesemnificativ (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)})`}. ${h7PartialSig ? `Partial r=${h7PartialR.toFixed(3)} semnificativ.` : `Partial r=${h7PartialR.toFixed(3)} nesemnificativ.`} Evidenta mixta.` : `Nici Spearman (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)}) nici Partial r=${h7PartialR.toFixed(3)} (p=${h7PartialP.toFixed(3)}) nu confirma sinergia I\u00D7F.`, color: h7VerdictColor },
+                                    { code: "H5", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul H5 — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
+                                    { code: "H4", name: "Test Scale-Independent al Interactiei I\u00D7F", verdict: h4Verdict === "CONFIRMATA" ? `Spearman \u03C1mult=${h4SpearmanMult.toFixed(3)} > \u03C1adit=${h4SpearmanAdit.toFixed(3)} (Fisher Z p=${h4FisherZ.p.toFixed(3)}) + Partial r(I\u00D7F|R+I+F)=${h4PartialR.toFixed(3)} (p=${h4PartialP.toFixed(3)}). Sinergia I\u00D7F confirmata fara artefact de scala.` : h4Verdict === "PARTIAL" ? `${h4SpearmanSig ? `Spearman favorizeaza multiplicativ (\u0394\u03C1=${h4DeltaRho.toFixed(3)}, p=${h4FisherZ.p.toFixed(3)})` : `Spearman nesemnificativ (\u0394\u03C1=${h4DeltaRho.toFixed(3)}, p=${h4FisherZ.p.toFixed(3)})`}. ${h4PartialSig ? `Partial r=${h4PartialR.toFixed(3)} semnificativ.` : `Partial r=${h4PartialR.toFixed(3)} nesemnificativ.`} Evidenta mixta.` : `Nici Spearman (\u0394\u03C1=${h4DeltaRho.toFixed(3)}, p=${h4FisherZ.p.toFixed(3)}) nici Partial r=${h4PartialR.toFixed(3)} (p=${h4PartialP.toFixed(3)}) nu confirma sinergia I\u00D7F.`, color: h4VerdictColor },
                                   ].map(h => (
                                     <div key={h.code} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 10, padding: "8px 12px", background: "#fff", borderRadius: 6, border: "1px solid #f3f4f6", borderLeft: `3px solid ${h.color}` }}>
                                       <div style={{ minWidth: 24 }}>
@@ -6092,7 +6087,7 @@ export default function StudiuAdminPage() {
               ]};
               case "score_ixf": return { sections: [
                 { heading: "Ce reprezinta I×F (Motorul)", text: `Scorul I×F = ${val} este motorul formulei RIFC — produce ~90% din magnitudinea C. Cu I = ${_ctx.i || "?"} si F = ${_ctx.f || "?"}, motorul I×F = ${val} (scala 0-100). R (cheia de contact, ~10%) activeaza motorul: fara R >= ${GATE}, I×F produce claritate dar audienta se dezangajeaza (CTA scade ~58%). Cu R activat, I×F devine determinantul principal al claritatii actionabile.` },
-                { heading: "De ce e multiplicativ, nu aditiv", text: `Formula foloseste I×F (nu I+F) pentru ca Interesul si Forma se amplifica reciproc: un continut interesant (I=8) cu design slab (F=2) = 16, dar cu design excelent (F=8) = 64. Amplificarea este de 4× — nu se intampla cu adunarea (10 vs 16, doar 1.6×). Aceasta sinergie multiplicativa este testata statistic in H5, H6 si H7.` },
+                { heading: "De ce e multiplicativ, nu aditiv", text: `Formula foloseste I×F (nu I+F) pentru ca Interesul si Forma se amplifica reciproc: un continut interesant (I=8) cu design slab (F=2) = 16, dar cu design excelent (F=8) = 64. Amplificarea este de 4× — nu se intampla cu adunarea (10 vs 16, doar 1.6×). Aceasta sinergie multiplicativa este testata statistic in H4 (Scale-Independent).` },
                 { heading: "De ce arata acest rezultat", text: `I×F = ${val} ${v > 60 ? "indica o sinergie puternica — atat continutul cat si executia sunt de calitate, amplificandu-se reciproc." : v > 35 ? "indica o sinergie moderata — cel putin unul dintre factori (I sau F) limiteaza amplificarea." : "indica o sinergie slaba — ambii factori necesita imbunatatire pentru a genera impact."}` },
                 { heading: "Contributia la Claritate si CTA", text: `I×F este motorul formulei: R (${_ctx.r || "?"}) + I×F (${val}) = Cf (${_ctx.cf || "?"}). I×F reprezinta ${_ctx.cf && _ctx.r ? ((v / Number(_ctx.cf)) * 100).toFixed(0) : "?"}% din scorul C formula. Sinergia determina cat de mult amplifica formula baza de relevanta. Cu cat I×F este mai mare, cu atat mesajul este mai clar (C) si probabilitatea de actiune (CTA) creste.` },
                 { heading: "Concluzie", text: `Sinergia I×F = ${val} (din maxim 100) ${v > 60 ? "contribuie semnificativ la claritatea mesajului. Ambii factori sunt puternici si se amplifica reciproc." : v > 35 ? "contribuie moderat — optimizarea factorului mai slab (I sau F) poate creste substantial scorul C." : "necesita imbunatatire pe ambii fronti. Factorul bottleneck trebuie identificat si tratat prioritar."}` },
@@ -6242,13 +6237,13 @@ export default function StudiuAdminPage() {
                   { heading: "Concluzie", text: `"${nm}" cu ${bPct}% validare ${bPct >= 80 ? "este o evidenta puternica pentru formula RIFC." : bPct >= 50 ? "ofera evidenta partiala — se recomanda analiza detaliata a componentelor individuale." : "reprezinta un caz unde formula necesita factori suplimentari pentru a explica perceptia."} ${!bGateOk ? `Atentie: R=${_ctx.r} < ${GATE} indica o problema fundamentala de relevanta.` : ""}` },
                 ]};
               }
-              case "h7": return { sections: [
-                { heading: "Ce testeaza H7", text: "H7 testeaza daca sinergia I×F (motorul formulei, ~90% din C) este reala prin metode scale-independent. Comparatia directa a erorilor absolute (normalizare /110 vs /30) introduce un artefact de scala care biaseaza rezultatul. H7 elimina complet acest artefact prin Spearman ranks si Partial Correlation." },
+              case "h4": return { sections: [
+                { heading: "Ce testeaza H4", text: "H4 testeaza daca sinergia I×F (motorul formulei, ~90% din C) este reala prin metode scale-independent. Comparatia directa a erorilor absolute (normalizare /110 vs /30) introduce un artefact de scala care biaseaza rezultatul. H4 elimina complet acest artefact prin Spearman ranks si Partial Correlation." },
                 { heading: "Analiza 1 — Spearman Rank Correlation", text: "Converteste predictiile si C perceput in RANGURI (pozitii relative 1, 2, 3...). Rangurile ignora magnitudinea — conteaza doar daca ordinea predictiilor e corecta. Se calculeaza Spearman rho pentru modelul multiplicativ (R+I×F) si cel aditiv (R+I+F). Modelul cu rho mai mare prezice mai corect ORDINEA perceptiei." },
                 { heading: "Analiza 2 — Partial Correlation", text: "Se face regresie liniara C ~ (R+I+F) si se obtin reziduurile — ce NU poate explica modelul aditiv. Apoi se coreleaza reziduurile cu I×F. Daca corelatia e semnificativa, inseamna ca I×F aduce informatie SUPLIMENTARA pe care aditivul nu o capteaza. Aceasta e dovada directa a sinergiei." },
                 { heading: "De ce scale-independent", text: "Comparatia directa normalizata (mult/110 vs adit/30) produce un artefact: max(R+I×F) = 110 comprima in 0.1-0.5, in timp ce Cp/10 e 0.5-0.9. Aditivul (/30) produce 0.3-0.8, natural mai aproape. Spearman ranks si Partial Correlation elimina complet aceasta dependenta de scala — testeaza sinergia I×F in mod echitabil." },
                 { heading: "Cum se interpreteaza", text: "Spearman: rho_mult > rho_adit + Fisher Z p<0.05 = multiplicativul prezice ordinea mai bine. Partial: |r(I×F|R+I+F)| > 0.1 + p<0.05 = sinergia aduce informatie extra. Ambele → CONFIRMATA. Una → PARTIAL. Niciuna → NECONFIRMATA." },
-                { heading: "Concluzie", text: "H7 ofera raspunsul definitiv la intrebarea 'Este sinergia I×F reala sau un artefact al normalizarii?' Rezultatul este independent de orice alegere de scala, normalizare sau range de valori." },
+                { heading: "Concluzie", text: "H4 ofera raspunsul definitiv la intrebarea 'Este sinergia I×F reala sau un artefact al normalizarii?' Rezultatul este independent de orice alegere de scala, normalizare sau range de valori." },
               ]};
               case "v1": return { sections: [
                 { heading: "Ce masoara Cronbach Alpha", text: "Cronbach Alpha (α) masoara consistenta interna a instrumentului de masurare. In cazul RIFC, verifica daca cele 4 dimensiuni (R, I, F, C normalizat) masoara un construct coerent — adica daca respondentii care dau scoruri mari pe o dimensiune tind sa dea scoruri mari si pe celelalte." },
@@ -7065,7 +7060,7 @@ export default function StudiuAdminPage() {
               )}
 
               {/* ═══════════════════════════════════════════════════════════════
-                  TESTARE IPOTEZE H1 – H4 — SVG scatter & bar charts
+                  TESTARE IPOTEZE H1 – H5 — SVG scatter & bar charts
                   ═══════════════════════════════════════════════════════════════ */}
               {(() => {
                 const scatter = results.hypothesisScatterData || [];
@@ -7210,8 +7205,8 @@ export default function StudiuAdminPage() {
                 const h3PearsonKnown = _pearsonR(h3Known.map(d => d.c_computed / 11), h3Known.map(d => d.cta!));
                 const h3PearsonUnknown = _pearsonR(h3Unknown.map(d => d.c_computed / 11), h3Unknown.map(d => d.cta!));
 
-                // ── H4: Per-material C vs brand_rate bar chart ──
-                const h4Materials = withData
+                // ── H5: Per-material C vs brand_rate bar chart ──
+                const h5Materials = withData
                   .filter(s => s.response_count > 0 && (s.brand_yes + s.brand_no) > 0)
                   .map(s => ({
                     name: s.name.length > 18 ? s.name.slice(0, 16) + "…" : s.name,
@@ -7221,14 +7216,14 @@ export default function StudiuAdminPage() {
                   }))
                   .sort((a, b) => b.cNorm - a.cNorm)
                   .slice(0, 20);
-                const h4BarW = h4Materials.length > 0 ? Math.min(28, Math.floor((chartW - pad.l - pad.r - 20) / h4Materials.length / 2)) : 20;
+                const h5BarW = h5Materials.length > 0 ? Math.min(28, Math.floor((chartW - pad.l - pad.r - 20) / h5Materials.length / 2)) : 20;
 
                 return (
                   <div style={{ marginTop: 32, borderTop: "2px solid #e5e7eb", paddingTop: 24 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                       <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H7)</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H5)</div>
                         <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {_interpResponses.toLocaleString("ro-RO")} raspunsuri din {n} materiale ({_interpCompleted} completati / {_interpTotal} inscrisi).</div>
                       </div>
                     </div>
@@ -7792,22 +7787,22 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
-                    {/* ── GRAFIC H4 — C vs Brand Recognition per Material ── */}
+                    {/* ── GRAFIC H5 — C vs Brand Recognition per Material ── */}
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H4: Claritate si recognoscibilitate <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Bar Chart Comparison — C vs Brand Recognition)</span></div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H5: Claritate si recognoscibilitate <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Bar Chart Comparison — C vs Brand Recognition)</span></div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
                         <strong>Ce testeaza:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului — un mesaj clar e si mai usor de recunoscut si retinut.{" "}
                         <strong>Metoda:</strong> Bar chart grupat per material: C formula normalizat (albastru) vs procentul care cunosc brandul (portocaliu).{" "}
                         <strong>Interpretare:</strong> Corespondenta intre inaltimile barelor = confirmat, lipsa corespondentei = brand recognition independent de C.
                       </div>
-                      {h4Materials.length > 0 ? (
+                      {h5Materials.length > 0 ? (
                         <div style={{ overflowX: "auto" as const }}>
-                          <svg width={Math.max(chartW, h4Materials.length * (h4BarW * 2 + 12) + pad.l + pad.r + 20)} height={chartH + 50} style={{ display: "block" }}>
+                          <svg width={Math.max(chartW, h5Materials.length * (h5BarW * 2 + 12) + pad.l + pad.r + 20)} height={chartH + 50} style={{ display: "block" }}>
                             {/* Y grid */}
                             {[0, 25, 50, 75, 100].map(v => {
                               const y = pad.t + plotH - (v / 100) * plotH;
                               return (
-                                <g key={`h4y-${v}`}>
+                                <g key={`h5y-${v}`}>
                                   <line x1={pad.l} y1={y} x2={chartW - pad.r} y2={y} stroke="#f3f4f6" strokeWidth={0.5} />
                                   <text x={pad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{v}%</text>
                                 </g>
@@ -7815,20 +7810,20 @@ export default function StudiuAdminPage() {
                             })}
                             <rect x={pad.l} y={pad.t} width={plotW} height={plotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
                             {/* Bars */}
-                            {h4Materials.map((m, i) => {
-                              const groupX = pad.l + 16 + i * (h4BarW * 2 + 12);
+                            {h5Materials.map((m, i) => {
+                              const groupX = pad.l + 16 + i * (h5BarW * 2 + 12);
                               const cH = (m.cNorm / 100) * plotH;
                               const bH = (m.brandRate / 100) * plotH;
                               return (
                                 <g key={i}>
                                   {/* C bar */}
-                                  <rect x={groupX} y={pad.t + plotH - cH} width={h4BarW} height={cH} fill="#2563EB" rx={2} opacity={0.75} />
-                                  <text x={groupX + h4BarW / 2} y={pad.t + plotH - cH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#2563EB">{m.cNorm}%</text>
+                                  <rect x={groupX} y={pad.t + plotH - cH} width={h5BarW} height={cH} fill="#2563EB" rx={2} opacity={0.75} />
+                                  <text x={groupX + h5BarW / 2} y={pad.t + plotH - cH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#2563EB">{m.cNorm}%</text>
                                   {/* Brand bar */}
-                                  <rect x={groupX + h4BarW + 2} y={pad.t + plotH - bH} width={h4BarW} height={bH} fill="#D97706" rx={2} opacity={0.75} />
-                                  <text x={groupX + h4BarW + 2 + h4BarW / 2} y={pad.t + plotH - bH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#D97706">{m.brandRate}%</text>
+                                  <rect x={groupX + h5BarW + 2} y={pad.t + plotH - bH} width={h5BarW} height={bH} fill="#D97706" rx={2} opacity={0.75} />
+                                  <text x={groupX + h5BarW + 2 + h5BarW / 2} y={pad.t + plotH - bH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#D97706">{m.brandRate}%</text>
                                   {/* X label */}
-                                  <text x={groupX + h4BarW} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#6B7280" transform={`rotate(-35 ${groupX + h4BarW} ${chartH - pad.b + 12})`}>{m.name}</text>
+                                  <text x={groupX + h5BarW} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#6B7280" transform={`rotate(-35 ${groupX + h5BarW} ${chartH - pad.b + 12})`}>{m.name}</text>
                                 </g>
                               );
                             })}
@@ -7846,10 +7841,10 @@ export default function StudiuAdminPage() {
                         Brand_familiar% este folosit ca proxy pentru recognoscibilitate. Scala portocalie: 0-100% convertita la 0-100 pentru comparabilitate cu C normalizat.
                       </div>
                       <div style={cardStyle}>
-                        <strong>H4 — Claritate si recognoscibilitate:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului. Comparati bara albastra (C formulat) cu bara portocalie (% care cunosc brandul). O corelatie pozitiva intre inaltimile barelor confirma H4.
-                        {h4Materials.length > 0 && (() => {
-                          const corr = linReg(h4Materials.map(m => ({ x: m.cNorm, y: m.brandRate })));
-                          const corrR = _pearsonR(h4Materials.map(m => m.cNorm), h4Materials.map(m => m.brandRate));
+                        <strong>H5 — Claritate si recognoscibilitate:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului. Comparati bara albastra (C formulat) cu bara portocalie (% care cunosc brandul). O corelatie pozitiva intre inaltimile barelor confirma H5.
+                        {h5Materials.length > 0 && (() => {
+                          const corr = linReg(h5Materials.map(m => ({ x: m.cNorm, y: m.brandRate })));
+                          const corrR = _pearsonR(h5Materials.map(m => m.cNorm), h5Materials.map(m => m.brandRate));
                           return <> Pearson r={corrR.toFixed(3)}, r&sup2;={corr.r2.toFixed(3)}.{" "}
                             {corr.slope > 0 && corr.r2 > 0.05
                               ? <strong style={{ color: "#059669" }}>Tendinta pozitiva — materialele cu C mai mare au si brand recognition mai mare.</strong>
@@ -7859,7 +7854,7 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
-                    {/* ═══ GRAFIC H7 — Test Scale-Independent al Interactiei I×F ═══ */}
+                    {/* ═══ GRAFIC H4 — Test Scale-Independent al Interactiei I×F ═══ */}
                     {(() => {
                       const sc = results.hypothesisScatterData || [];
                       const valid = sc.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_score != null && d.c_score > 0);
@@ -7928,11 +7923,11 @@ export default function StudiuAdminPage() {
                         <>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 28, marginBottom: 8 }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>H7 — Test Scale-Independent al Interactiei I×F</span>
-                            <InterpBtn k="h7" title="H7 — Scale-Independent" val={verdict} />
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>H4 — Test Scale-Independent al Interactiei I×F</span>
+                            <InterpBtn k="h4" title="H4 — Scale-Independent" val={verdict} />
                           </div>
                           <div style={{ ...cardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
-                            <strong>Ce testeaza H7?</strong> Sinergia I×F (motorul formulei, ~90% din C) este reala? Comparatia directa normalizata (/110 vs /30) are un artefact de scala. H7 testeaza acelasi lucru prin metode scale-independent: Spearman Rank Correlation (ordinea predictiilor) si Partial Correlation (informatia suplimentara a I×F fata de modelul aditiv).
+                            <strong>Ce testeaza H4?</strong> Sinergia I×F (motorul formulei, ~90% din C) este reala? Comparatia directa normalizata (/110 vs /30) are un artefact de scala. H4 testeaza acelasi lucru prin metode scale-independent: Spearman Rank Correlation (ordinea predictiilor) si Partial Correlation (informatia suplimentara a I×F fata de modelul aditiv).
                           </div>
 
                           {/* Stats banner */}
@@ -8006,13 +8001,13 @@ export default function StudiuAdminPage() {
                               {partialSig ? <span style={{ color: "#059669" }}>Da — I×F aduce informatie suplimentara pe care aditivul nu o capteaza.</span> : <span style={{ color: "#DC2626" }}>Nu — I×F nu adauga informatie dincolo de R+I+F.</span>}
                             </div>
                             <div style={cardStyle}>
-                              <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. H7 elimina artefactul complet prin Spearman ranks + Partial Correlation.
+                              <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. H4 elimina artefactul complet prin Spearman ranks + Partial Correlation.
                             </div>
                           </div>
 
                           {/* Verdict card */}
                           <div style={{ ...cardStyle, borderLeft: `4px solid ${verdictColor}`, background: verdict === "CONFIRMATA" ? "#f0fdf4" : verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2" }}>
-                            <strong>H7 — Verdict: <span style={{ color: verdictColor }}>{verdict}</span></strong>
+                            <strong>H4 — Verdict: <span style={{ color: verdictColor }}>{verdict}</span></strong>
                             <div style={{ marginTop: 4 }}>
                               {verdict === "CONFIRMATA"
                                 ? `Ambele analize confirma: sinergia I×F este reala si nu e un artefact de scala. Multiplicativul prezice mai bine ordinea (\u0394\u03C1=${deltaRho.toFixed(3)}, p=${_fmtP(fisherZ.p)}) si I×F aduce informatie suplimentara (partial r=${partialR.toFixed(3)}, p=${_fmtP(partialP)}).`
@@ -8308,25 +8303,25 @@ export default function StudiuAdminPage() {
                       const _h3Rk = _h3K.length >= 3 ? _pearsonR(_h3K.map(d => d.c_computed / 11), _h3K.map(d => d.cta!)) : 0;
                       const _h3Ru = _h3U.length >= 3 ? _pearsonR(_h3U.map(d => d.c_computed / 11), _h3U.map(d => d.cta!)) : 0;
                       const _h3Fz = _fisherZTest(_h3Rk, _h3Ru, _h3K.length, _h3U.length);
-                      // H7
-                      const _h7V = _scV.filter(d => d.c_score != null && d.c_score > 0);
-                      const _h7RhoM = _h7V.length >= 3 ? _spearmanRho(_h7V.map(d => d.r + d.i * d.f), _h7V.map(d => d.c_score!)) : 0;
-                      const _h7RhoA = _h7V.length >= 3 ? _spearmanRho(_h7V.map(d => d.r + d.i + d.f), _h7V.map(d => d.c_score!)) : 0;
-                      const _h7Fz = _fisherZTest(_h7RhoM, _h7RhoA, _h7V.length, _h7V.length);
-                      const _h7Reg = _linReg(_h7V.map(d => d.r + d.i + d.f), _h7V.map(d => d.c_score!));
-                      const _h7Res = _h7V.map((d, i) => d.c_score! - (_h7Reg.slope * (d.r + d.i + d.f) + _h7Reg.intercept));
-                      const _h7PartR = _h7V.length >= 3 ? _pearsonR(_h7Res, _h7V.map(d => d.i * d.f)) : 0;
-                      const _h7PartP = _pValuePearson(_h7PartR, _h7V.length);
-                      const _h7SpSig = _h7Fz.p < 0.05 && (_h7RhoM - _h7RhoA) > 0;
-                      const _h7PaSig = _h7PartP < 0.05 && Math.abs(_h7PartR) > 0.1;
-                      const _h7Verd = _h7SpSig && _h7PaSig ? "CONFIRMATA" : (_h7SpSig || _h7PaSig) ? "PARTIAL" : "NECONFIRMATA";
-                      const _h7VerdColor = _h7Verd === "CONFIRMATA" ? "#059669" : _h7Verd === "PARTIAL" ? "#D97706" : "#DC2626";
+                      // H4
+                      const _h4V = _scV.filter(d => d.c_score != null && d.c_score > 0);
+                      const _h4RhoM = _h4V.length >= 3 ? _spearmanRho(_h4V.map(d => d.r + d.i * d.f), _h4V.map(d => d.c_score!)) : 0;
+                      const _h4RhoA = _h4V.length >= 3 ? _spearmanRho(_h4V.map(d => d.r + d.i + d.f), _h4V.map(d => d.c_score!)) : 0;
+                      const _h4Fz = _fisherZTest(_h4RhoM, _h4RhoA, _h4V.length, _h4V.length);
+                      const _h4Reg = _linReg(_h4V.map(d => d.r + d.i + d.f), _h4V.map(d => d.c_score!));
+                      const _h4Res = _h4V.map((d, i) => d.c_score! - (_h4Reg.slope * (d.r + d.i + d.f) + _h4Reg.intercept));
+                      const _h4PartR = _h4V.length >= 3 ? _pearsonR(_h4Res, _h4V.map(d => d.i * d.f)) : 0;
+                      const _h4PartP = _pValuePearson(_h4PartR, _h4V.length);
+                      const _h4SpSig = _h4Fz.p < 0.05 && (_h4RhoM - _h4RhoA) > 0;
+                      const _h4PaSig = _h4PartP < 0.05 && Math.abs(_h4PartR) > 0.1;
+                      const _h4Verd = _h4SpSig && _h4PaSig ? "CONFIRMATA" : (_h4SpSig || _h4PaSig) ? "PARTIAL" : "NECONFIRMATA";
+                      const _h4VerdColor = _h4Verd === "CONFIRMATA" ? "#059669" : _h4Verd === "PARTIAL" ? "#D97706" : "#DC2626";
 
                       const rows: { code: string; name: string; metric: string; n: string; pVal: string; verdict: string; color: string }[] = [
                         { code: "H1", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "—", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
                         { code: "H2", name: "C prezice CTA", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
                         { code: "H3", name: "Brand modereaza C→CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
-                        { code: "H7", name: "Scale-Independent I×F", metric: `\u03C1m=${_h7RhoM.toFixed(3)}, \u03C1a=${_h7RhoA.toFixed(3)}, pr=${_h7PartR.toFixed(3)}`, n: `${_h7V.length}`, pVal: `Z=${_h7Fz.z.toFixed(2)}, ${_fmtP(_h7Fz.p)}; pr ${_fmtP(_h7PartP)}`, verdict: _h7Verd, color: _h7VerdColor },
+                        { code: "H4", name: "Scale-Independent I×F", metric: `\u03C1m=${_h4RhoM.toFixed(3)}, \u03C1a=${_h4RhoA.toFixed(3)}, pr=${_h4PartR.toFixed(3)}`, n: `${_h4V.length}`, pVal: `Z=${_h4Fz.z.toFixed(2)}, ${_fmtP(_h4Fz.p)}; pr ${_fmtP(_h4PartP)}`, verdict: _h4Verd, color: _h4VerdColor },
                       ];
                       return (
                         <div style={{ marginTop: 30 }}>
@@ -8362,7 +8357,7 @@ export default function StudiuAdminPage() {
                             </table>
                           </div>
                           <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
-                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). Ipoteza H4 este calitativa (bar chart) si nu apare in tabel. H5 si H6 au fost eliminate: H5 (artefact de scala) inlocuit de H7; H6 (testa ipoteza veche ca I×F se opreste sub Gate) contrazis de noua interpretare.
+                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). Ipoteza H5 este calitativa (bar chart) si nu apare in tabel.
                           </div>
                         </div>
                       );
