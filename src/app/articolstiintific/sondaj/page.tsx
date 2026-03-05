@@ -8380,6 +8380,7 @@ export default function StudiuAdminPage() {
                         { code: "H2", name: "C prezice CTA", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
                         { code: "H3", name: "Brand modereaza C→CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
                         { code: "H4", name: "Scale-Independent I×F", metric: `\u03C1m=${_h4RhoM.toFixed(3)}, \u03C1a=${_h4RhoA.toFixed(3)}, pr=${_h4PartR.toFixed(3)}`, n: `${_h4V.length}`, pVal: `Z=${_h4Fz.z.toFixed(2)}, ${_fmtP(_h4Fz.p)}; pr ${_fmtP(_h4PartP)}`, verdict: _h4Verd, color: _h4VerdColor },
+                        { code: "H5", name: "Claritate vs Recognoscibilitate", metric: `${h5Materials.length} materiale analizate`, n: `${h5Materials.length}`, pVal: "—", verdict: "CALITATIVA", color: "#6B7280" },
                       ];
                       return (
                         <div style={{ marginTop: 30 }}>
@@ -8415,7 +8416,7 @@ export default function StudiuAdminPage() {
                             </table>
                           </div>
                           <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
-                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). Ipoteza H5 este calitativa (bar chart) si nu apare in tabel.
+                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). H5 este calitativa (bar chart comparativ C vs brand recognition) — fara test statistic propriu-zis.
                           </div>
                         </div>
                       );
