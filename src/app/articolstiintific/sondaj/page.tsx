@@ -6551,6 +6551,46 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
+                    {/* R-Synthesis explanation */}
+                    {(() => {
+                      const rContrib = grandCf > 0 ? Math.round(grandR / grandCf * 1000) / 10 : 0;
+                      const ixfVal = Math.round((grandCf - grandR) * 100) / 100;
+                      const ixfContrib = Math.round((100 - rContrib) * 10) / 10;
+                      const gateActivated = grandR >= GATE;
+                      const deltaDir = _grandCfNorm < grandCp ? "subestimeaza" : _grandCfNorm > grandCp ? "supraestimeaza" : "aliniata";
+                      return (
+                        <div style={{ marginTop: 14, textAlign: "left" as const, padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: "#1e40af", marginBottom: 6 }}>DE CE {grandHypPct}% SI NU 100%?</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                            <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 4, border: "1px solid #e5e7eb" }}>
+                              <div style={{ fontWeight: 700, color: gateActivated ? "#059669" : "#DC2626", marginBottom: 2 }}>
+                                {gateActivated ? "R activat" : "R sub Gate"} (R={grandR.toFixed(2)})
+                              </div>
+                              {gateActivated
+                                ? <>R &ge; {GATE} — formula este activata. R contribuie {rContrib}% la Cf ({grandR.toFixed(1)}/{grandCf.toFixed(1)}), I&times;F contribuie {ixfContrib}% ({ixfVal.toFixed(1)}). Motorul (I&times;F) functioneaza, cheia (R) e in contact.</>
+                                : <>R &lt; {GATE} — formula NU este activata. Chiar daca I&times;F = {ixfVal.toFixed(1)}, fara relevanta suficienta mesajul nu produce actiune.</>}
+                            </div>
+                            <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 4, border: "1px solid #e5e7eb" }}>
+                              <div style={{ fontWeight: 700, color: "#7C3AED", marginBottom: 2 }}>
+                                Delta = {deltaDir} (+{grandDelta.toFixed(2)})
+                              </div>
+                              {deltaDir === "subestimeaza"
+                                ? <>Cp ({grandCp.toFixed(2)}) &gt; Cf_norm ({_grandCfNorm.toFixed(2)}). Respondentii percep mai multa claritate decat prezice R+(I&times;F). Factori externi (Brand, context, experienta) amplifica perceptia cu &times;{(grandCp / _grandCfNorm).toFixed(2)}. Formula e conservatoare — oportunitate de calibrare.</>
+                                : deltaDir === "supraestimeaza"
+                                  ? <>Cf_norm ({_grandCfNorm.toFixed(2)}) &gt; Cp ({grandCp.toFixed(2)}). Formula prezice mai mult decat se percepe. Bariere cognitive sau asteptari ridicate reduc claritatea perceputa.</>
+                                  : <>Aliniere perfecta intre predictie si perceptie.</>}
+                            </div>
+                          </div>
+                          <div style={{ marginTop: 8, fontSize: 10, color: "#475569", lineHeight: 1.5, padding: "6px 8px", background: "#eff6ff", borderRadius: 4 }}>
+                            <strong>Interpretare {grandHypPct}%:</strong>{" "}
+                            {gateActivated
+                              ? `Formula este activata (R=${grandR.toFixed(1)} >= ${GATE}), dar prezice doar ${grandHypPct}% din claritatea perceputa. Diferenta de ${(100 - grandHypPct).toFixed(1)}% provine din factori neincorporati in R+(I×F): recunoasterea Brandului, experienta anterioara a audientei, contextul de consum. Zone Match ${zoneMatchRate}% confirma: formula clasifica corect doar ${zoneMatchCount}/${n} materiale in aceeasi zona cu perceptia.`
+                              : `Formula NU este activata (R=${grandR.toFixed(1)} < ${GATE}). Cele ${grandHypPct}% reflecta o potrivire intamplatoare, nu predictie reala. Prioritate: creste R prin imbunatatirea targetarii.`}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div style={{ marginTop: 12 }}>
                       <InterpBtn k="hypothesis_total" title="Validare Ipoteza — Total" val={String(grandHypPct)} ctx={{ cf: grandCf, cfNorm: _grandCfNorm, cp: grandCp, delta: grandDelta, gatePass: gatePassCount, gateTotal: n, gateRate: gatePassRate, r: grandR, i: grandI, f: grandF }} />
                     </div>
