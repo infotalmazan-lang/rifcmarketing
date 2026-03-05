@@ -6181,13 +6181,27 @@ export default function StudiuAdminPage() {
                 { heading: "Cum se interpreteaza", text: `>= 30 materiale: Esantion solid — suficient pentru teste statistice parametrice si concluzii robuste. 15-30: Esantion acceptabil — concluzii fiabile dar cu prudenta. < 15: Esantion mic — rezultate preliminare, se recomanda extindere. Cu ${val} materiale, esantionul este ${v >= 30 ? "solid." : v >= 15 ? "acceptabil." : "mic — necesita extindere."}` },
                 { heading: "Concluzie", text: `Analiza pe ${val} materiale, ${_ctx.responses ? Number(_ctx.responses).toLocaleString("ro-RO") : 0} evaluari, ${_ctx.channels || "?"} canale si ${_ctx.industries || "?"} industrii ${v >= 20 ? "ofera o baza robusta pentru validarea formulei RIFC ca predictor al claritatii si actiunii (CTA)." : "ofera o baza acceptabila — se recomanda extinderea pentru concluzii definitive."}` },
               ]};
-              case "zones": return { sections: [
-                { heading: "Ce reprezinta distributia pe zone", text: `Graficul compara cum sunt distribuite materialele pe cele 4 zone de performanta (Critical, Noise, Medium, Supreme) — o data calculat prin formula (C formula) si o data perceput de respondenti (C perceput).` },
-                { heading: "Cum se aplica", text: `Cele 4 zone se aplica proportional pe fiecare scala. Cf (0-110): Critical (0-20), Noise (21-50), Medium (51-80), Supreme (81-110). Cp (1-10): Critical (1-2), Noise (2.1-5), Medium (5.1-8), Supreme (8.1-10). Daca distributiile formula vs perceput sunt similare, formula prezice corect.` },
-                { heading: "De ce arata acest rezultat", text: `Distributia arata unde se concentreaza materialele. Daca majoritatea sunt in zona Medium/Supreme pe ambele coloane, materialele sunt eficiente si formula le prezice corect. Daca exista discrepante mari intre coloane, formula nu estimeaza corect pentru anumite materiale.` },
-                { heading: "Cum se interpreteaza", text: `Distributii similare intre Formula si Perceput = formula valida. Shift catre stanga pe Perceput (mai multe in Noise/Critical) fata de Formula = formula supraestimeaza. Shift catre dreapta pe Perceput = formula subestimeaza.` },
-                { heading: "Concluzie", text: `Comparand cele doua distributii se poate observa daca formula tinde sa supraestimeze sau subestimeze impactul real al materialelor, oferind directie pentru calibrare.` },
-              ]};
+              case "zones": {
+                const _zf = (() => { try { return JSON.parse(String(_ctx.zf || "{}")); } catch { return {}; } })();
+                const _zp = (() => { try { return JSON.parse(String(_ctx.zp || "{}")); } catch { return {}; } })();
+                const _zn = Number(_ctx.n || 0);
+                const _zShift = String(_ctx.shiftDir || "aliniata");
+                const _zMatch = Number(_ctx.zoneMatch || 0);
+                const _zZones = ["Critical", "Noise", "Medium", "Supreme"];
+                const _zCfTop = _zZones.reduce((best, z) => (_zf[z] || 0) > (_zf[best] || 0) ? z : best, "Critical");
+                const _zCpTop = _zZones.reduce((best, z) => (_zp[z] || 0) > (_zp[best] || 0) ? z : best, "Critical");
+                return { sections: [
+                  { heading: "Ce reprezinta distributia pe zone", text: `Cele ${_zn} materiale sunt clasificate in 4 zone de performanta: Critical (Cf 0-20 / Cp 1-2), Noise (Cf 21-50 / Cp 2.1-5), Medium (Cf 51-80 / Cp 5.1-8) si Supreme (Cf 81-110 / Cp 8.1-10). Graficul arata cate materiale cad in fiecare zona — o data dupa formula R+(IxF) si o data dupa perceptia respondentilor. Zone Match = ${_zMatch}% (din ${_zn} materiale, ${Math.round(_zn * _zMatch / 100)} cad in aceeasi zona pe ambele scale).` },
+                  { heading: "Distributia concreta", text: _zZones.map(z => {
+                    const cf = _zf[z] || 0; const cp = _zp[z] || 0; const diff = cp - cf;
+                    return `${z}: Cf=${cf}, Cp=${cp}` + (diff !== 0 ? ` (${diff > 0 ? "+" : ""}${diff} Cp)` : " (MATCH)");
+                  }).join(". ") + `. Zona dominanta Cf: ${_zCfTop} (${_zf[_zCfTop] || 0}). Zona dominanta Cp: ${_zCpTop} (${_zp[_zCpTop] || 0}).` },
+                  { heading: "Analiza Shift: formula vs perceptie", text: _zShift === "subestimeaza" ? `Formula SUBESTIMEAZA — respondentii percep claritate mai mare decat prezice modelul. Concret: pe Cp sunt mai multe materiale in zonele inalte (Medium/Supreme) decat pe Cf. Posibile cauze: Brandul amplifica perceptia (efect moderator pozitiv), experienta anterioara cu produsul, sau contextul de consum favorabil. In termeni RIFC: interactiunea I×F produce un efect perceput mai puternic decat sugereaza calculul brut.` : _zShift === "supraestimeaza" ? `Formula SUPRAESTIMEAZA — respondentii percep claritate mai mica decat prezice modelul. Concret: pe Cp sunt mai multe materiale in zonele joase (Critical/Noise) decat pe Cf. Posibile cauze: bariere cognitive (mesaj prea complex), distractori vizuali care reduc F perceput, sau asteptari ridicate ale audientei. In termeni RIFC: interactiunea I×F nu se traduce complet in claritate perceputa.` : `Formula este ALINIATA cu perceptia — distributiile Cf si Cp sunt similare pe zone. Modelul R+(IxF)=C prezice corect cum percep respondentii claritatea materialelor.` },
+                  { heading: "Legatura cu Claritate si CTA", text: `Zonele reflecta nivelul de Claritate (C) al materialului. Un material in zona Supreme (Cf>80 sau Cp>8) transmite un mesaj clar, cu Relevanta ridicata (R), Interes captivant (I) si Format de calitate (F). H2 a demonstrat ca C coreleaza puternic cu CTA (intentia de actiune) — deci materialele din Supreme au cea mai mare probabilitate de a genera actiune. Materialele din Critical (Cf<20 sau Cp<2) nu comunica eficient — chiar daca au R>3 (trec Gate-ul), combinatia IxF e prea slaba.` },
+                  { heading: "De ce conteaza Zone Match", text: `Zone Match de ${_zMatch}% indica cat de bine formula prezice perceptia reala. ${_zMatch >= 70 ? "Un match >=70% valideaza puternic formula — modelul clasificia corect materialele in aceleasi zone ca respondentii." : _zMatch >= 50 ? "Un match de 50-69% indica potrivire moderata — formula prezice orientativ corect, dar exista divergente pe anumite materiale (posibil din cauza Brand sau context)." : "Un match <50% indica divergenta — formula clasifica materialele diferit fata de perceptia reala. Probabil factori externi (Brand, experienta, context) influenteaza puternic perceptia."}` },
+                  { heading: "Concluzie", text: `Din ${_zn} materiale: ${_zMatch}% sunt clasificate identic pe formula si perceptie. Shift-ul este "${_zShift}". ${_zShift === "aliniata" ? "Formula RIFC R+(IxF)=C este calibrata corect pentru acest set de materiale — predictia se aliniaza cu perceptia." : "Diferenta de distributie sugereaza ca formula necesita un factor de corectie (probabil Brand sau context) pentru a se alinia complet cu perceptia. H3 investigheaza exact acest efect moderator."}` },
+                ]};
+              }
               case "industry": {
                 const nm = String(_ctx.name || "");
                 const iN = Number(_ctx.count || 0);
@@ -6700,49 +6714,65 @@ export default function StudiuAdminPage() {
                     </div>
                   </div>
 
-                  {/* Zone distribution */}
-                  <div style={{ ...S.configItem, marginBottom: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", flex: 1 }}>DISTRIBUTIE PE ZONE</div>
-                      <InterpBtn k="zones" title="Distributie pe Zone" val={`${n} materiale`} />
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", marginBottom: 8 }}>C FORMULA</div>
+                  {/* Zone distribution — grouped comparison */}
+                  {(() => {
+                    const shiftUp = zones.filter(z => zoneDistPerceived[z] > zoneDistFormula[z] && ["Medium", "Supreme"].includes(z)).length;
+                    const shiftDown = zones.filter(z => zoneDistPerceived[z] > zoneDistFormula[z] && ["Critical", "Noise"].includes(z)).length;
+                    const shiftDir = shiftUp > shiftDown ? "subestimeaza" : shiftUp < shiftDown ? "supraestimeaza" : "aliniata";
+                    const maxCount = Math.max(...zones.map(z => Math.max(zoneDistFormula[z], zoneDistPerceived[z])), 1);
+                    return (
+                      <div style={{ ...S.configItem, marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", flex: 1 }}>DISTRIBUTIE PE ZONE</div>
+                          <InterpBtn k="zones" title="Distributie pe Zone" val={`${n} materiale`} ctx={{ zf: JSON.stringify(zoneDistFormula), zp: JSON.stringify(zoneDistPerceived), n, shiftDir, zoneMatch: zoneMatchRate }} />
+                        </div>
+                        {/* Legend */}
+                        <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 10, color: "#6B7280" }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 4, borderRadius: 2, background: "#6B7280" }} /> Cf (Formula)</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 4, borderRadius: 2, background: "#2563EB" }} /> Cp (Perceput)</span>
+                        </div>
+                        {/* Grouped bars per zone */}
                         {zones.map(z => {
-                          const count = zoneDistFormula[z];
-                          const pct = n > 0 ? Math.round((count / n) * 100) : 0;
+                          const cf = zoneDistFormula[z];
+                          const cp = zoneDistPerceived[z];
+                          const cfPct = Math.round((cf / n) * 100);
+                          const cpPct = Math.round((cp / n) * 100);
+                          const cfBar = Math.round((cf / maxCount) * 100);
+                          const cpBar = Math.round((cp / maxCount) * 100);
+                          const diff = cp - cf;
                           return (
-                            <div key={`f-${z}`} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: getZoneColor(z), flexShrink: 0 }} />
-                              <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", minWidth: 60 }}>{z}</span>
-                              <div style={{ flex: 1, height: 6, background: "#f3f4f6", borderRadius: 3, overflow: "hidden" }}>
-                                <div style={{ width: `${pct}%`, height: "100%", background: getZoneColor(z), borderRadius: 3, transition: "width 0.3s" }} />
+                            <div key={z} style={{ marginBottom: 10 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: getZoneColor(z), flexShrink: 0 }} />
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", minWidth: 65 }}>{z}</span>
+                                {diff !== 0 && <span style={{ fontSize: 9, fontWeight: 600, padding: "0 4px", borderRadius: 3, background: diff > 0 ? "#dbeafe" : "#fef3c7", color: diff > 0 ? "#2563EB" : "#D97706" }}>{diff > 0 ? "+" : ""}{diff} Cp</span>}
+                                {cf === cp && <span style={{ fontSize: 9, fontWeight: 600, padding: "0 4px", borderRadius: 3, background: "#d1fae5", color: "#059669" }}>MATCH</span>}
                               </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", minWidth: 40, textAlign: "right" as const }}>{count} ({pct}%)</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                                <span style={{ fontSize: 9, color: "#9CA3AF", minWidth: 18 }}>Cf</span>
+                                <div style={{ flex: 1, height: 5, background: "#f3f4f6", borderRadius: 2, overflow: "hidden" }}>
+                                  <div style={{ width: `${cfBar}%`, height: "100%", borderRadius: 2, background: "#6B7280", transition: "width 0.3s" }} />
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#374151", minWidth: 50, textAlign: "right" as const }}>{cf} ({cfPct}%)</span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 9, color: "#9CA3AF", minWidth: 18 }}>Cp</span>
+                                <div style={{ flex: 1, height: 5, background: "#f3f4f6", borderRadius: 2, overflow: "hidden" }}>
+                                  <div style={{ width: `${cpBar}%`, height: "100%", borderRadius: 2, background: "#2563EB", transition: "width 0.3s" }} />
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#374151", minWidth: 50, textAlign: "right" as const }}>{cp} ({cpPct}%)</span>
+                              </div>
                             </div>
                           );
                         })}
+                        {/* Shift summary */}
+                        <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: shiftDir === "aliniata" ? "#d1fae5" : "#fef3c7", fontSize: 11, color: shiftDir === "aliniata" ? "#059669" : "#92400e" }}>
+                          <strong>Shift:</strong> Formula {shiftDir === "subestimeaza" ? "subestimeaza — respondentii percep claritate mai mare decat prezice modelul. Posibile cauze: Brand, experienta anterioara, context favorabil." : shiftDir === "supraestimeaza" ? "supraestimeaza — respondentii percep claritate mai mica decat prezice modelul. Posibile cauze: bariere cognitive, distractori, asteptari ridicate." : "e aliniata cu perceptia — distributiile sunt similare."}
+                          {" "}Zone Match: {zoneMatchRate}% ({zoneMatchCount}/{n}).
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 600, color: "#9CA3AF", marginBottom: 8 }}>C PERCEPUT</div>
-                        {zones.map(z => {
-                          const count = zoneDistPerceived[z];
-                          const pct = n > 0 ? Math.round((count / n) * 100) : 0;
-                          return (
-                            <div key={`p-${z}`} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: getZoneColor(z), flexShrink: 0 }} />
-                              <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", minWidth: 60 }}>{z}</span>
-                              <div style={{ flex: 1, height: 6, background: "#f3f4f6", borderRadius: 3, overflow: "hidden" }}>
-                                <div style={{ width: `${pct}%`, height: "100%", background: getZoneColor(z), borderRadius: 3, transition: "width 0.3s" }} />
-                              </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", minWidth: 40, textAlign: "right" as const }}>{count} ({pct}%)</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Conclusion */}
                   <div style={{
