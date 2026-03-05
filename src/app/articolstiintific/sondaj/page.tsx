@@ -6110,6 +6110,47 @@ export default function StudiuAdminPage() {
                 { heading: "Cum se interpreteaza", text: `>= 80%: Formula clasifica corect — nivel inalt de incredere. 50-80%: Clasificare partiala — formula functioneaza dar nu pentru toate tipurile de materiale. < 50%: Clasificare slaba — formula necesita recalibrare sau factori suplimentari.` },
                 { heading: "Concluzie", text: `Un Zone Match de ${val}% ${v >= 70 ? "confirma ca formula RIFC are o capacitate solida de clasificare a materialelor in categorii de impact." : v >= 40 ? "sugereaza ca formula are potentialul de clasificare, dar necesita raffinare pentru anumite tipuri de materiale sau industrii." : "indica nevoia de a reconsidera structura formulei sau factorii inclusi."}` },
               ]};
+              case "val_channel": {
+                const _vLabel = String(_ctx.label || "");
+                const _vCfN = Number(_ctx.cfNorm || 0);
+                const _vCp = Number(_ctx.cp || 0);
+                const _vDelta = Number(_ctx.delta || 0);
+                const _vGp = Number(_ctx.gatePass || 0);
+                const _vN = Number(_ctx.n || 0);
+                const _vGr = Number(_ctx.gateRate || 0);
+                const _vDir = _vCfN < _vCp ? "subestimeaza" : _vCfN > _vCp ? "supraevalueaza" : "coincide cu";
+                const _vDirF = _vCp > 0 && _vCfN > 0 ? (_vCfN < _vCp ? _vCp / _vCfN : _vCfN / _vCp) : 1;
+                return { sections: [
+                  { heading: `Validare — Canal ${_vLabel}`, text: `Formula RIFC prezice Claritatea cu ${val}% acuratete pe canalul ${_vLabel} (${_vN} materiale). Aceasta compara Cf/11 = ${_vCfN.toFixed(2)} cu Cp = ${_vCp.toFixed(2)}, Delta = ${_vDelta.toFixed(2)}.` },
+                  { heading: "Valorile concrete", text: `C formula normalizat (Cf/11) = ${_vCfN.toFixed(2)}. C perceput (Cp) = ${_vCp.toFixed(2)}. Delta = |${_vCfN.toFixed(2)} - ${_vCp.toFixed(2)}| = ${_vDelta.toFixed(2)}. Validare = 100 - (${_vDelta.toFixed(2)} / 10 × 100) = ${val}%.` },
+                  { heading: "Directia erorii", text: `Pe canalul ${_vLabel}, formula ${_vDir} Claritatea perceputa (factor ×${_vDirF.toFixed(2)}). ${_vCfN < _vCp ? "Respondentii percep mai multa claritate decat prezice formula — posibil ca mediul (canalul) amplificeaza impactul mesajului." : _vCfN > _vCp ? "Formula prezice mai multa claritate decat percep respondentii — canalul poate diminua impactul." : "Aliniere perfecta pe acest canal."}` },
+                  { heading: "Relevance Gate", text: `${_vGp} din ${_vN} materiale pe ${_vLabel} trec Gate-ul (R >= ${GATE}) — rata de ${_vGr}%. ${_vGr >= 80 ? "Materialele sunt relevante pentru audienta acestui canal." : _vGr >= 50 ? "Parte din materiale nu sunt relevante pe acest canal." : "Majoritatea materialelor nu sunt relevante pe acest canal — problema de targetare."}` },
+                  { heading: "Comparatie cu totalul", text: `Validare canal ${_vLabel}: ${val}% vs validare totala: ${_ctx.grandPct || "?"}%. ${v > Number(_ctx.grandPct || 0) ? `Canalul ${_vLabel} performeaza peste medie — formula prezice mai bine pe acest tip de media.` : v < Number(_ctx.grandPct || 0) ? `Canalul ${_vLabel} performeaza sub medie — pot exista factori specifici canalului care influenteaza perceptia.` : "Performanta identica cu media generala."}` },
+                  { heading: "Concluzie", text: `Cu ${val}% validare pe ${_vN} materiale, canalul ${_vLabel} ${v >= 80 ? "confirma puternic modelul RIFC." : v >= 70 ? "sustine modelul RIFC cu o aliniere buna." : v >= 50 ? "ofera evidenta partiala — necesita investigare suplimentara." : "indica limitari ale formulei pe acest tip de media."}` },
+                ]};
+              }
+              case "val_industry": {
+                const _viLabel = String(_ctx.label || "");
+                const _viCfN = Number(_ctx.cfNorm || 0);
+                const _viCp = Number(_ctx.cp || 0);
+                const _viDelta = Number(_ctx.delta || 0);
+                const _viGp = Number(_ctx.gatePass || 0);
+                const _viN = Number(_ctx.n || 0);
+                const _viGr = Number(_ctx.gateRate || 0);
+                const _viR = Number(_ctx.r || 0);
+                const _viI = Number(_ctx.i || 0);
+                const _viF = Number(_ctx.f || 0);
+                const _viDir = _viCfN < _viCp ? "subestimeaza" : _viCfN > _viCp ? "supraevalueaza" : "coincide cu";
+                const _viDirF = _viCp > 0 && _viCfN > 0 ? (_viCfN < _viCp ? _viCp / _viCfN : _viCfN / _viCp) : 1;
+                return { sections: [
+                  { heading: `Validare — Industria ${_viLabel}`, text: `Formula RIFC prezice Claritatea cu ${val}% acuratete in industria ${_viLabel} (${_viN} materiale). Cf/11 = ${_viCfN.toFixed(2)} vs Cp = ${_viCp.toFixed(2)}, Delta = ${_viDelta.toFixed(2)}.` },
+                  { heading: "Scoruri medii R/I/F", text: `R (Relevanta) = ${_viR.toFixed(2)}, I (Interes) = ${_viI.toFixed(2)}, F (Forma) = ${_viF.toFixed(2)}. ${_viR < GATE ? `Atentie: R mediu (${_viR.toFixed(2)}) este sub Gate (${GATE}) — materialele din aceasta industrie nu sunt percepute ca relevante.` : `R mediu (${_viR.toFixed(2)}) depaseste Gate-ul — materialele sunt relevante pentru audienta.`} ${_viI >= 4 && _viF >= 4 ? "I si F sunt ridicate — continutul capteaza atentia si este bine executat." : "I si/sau F sunt moderate — exista spatiu de imbunatatire in continut sau executie."}` },
+                  { heading: "Directia erorii", text: `In industria ${_viLabel}, formula ${_viDir} Claritatea perceputa (factor ×${_viDirF.toFixed(2)}). ${_viCfN < _viCp ? "Respondentii percep mai multa claritate decat prezice modelul — posibil ca familiaritatea cu industria amplifica perceptia." : _viCfN > _viCp ? "Formula prezice mai multa claritate decat percep respondentii — industria poate fi mai complexa si mesajul mai greu de comunicat." : "Aliniere perfecta in aceasta industrie."}` },
+                  { heading: "Relevance Gate", text: `${_viGp} din ${_viN} materiale trec Gate-ul (R >= ${GATE}) — rata de ${_viGr}%.` },
+                  { heading: "Comparatie cu totalul", text: `Validare industrie ${_viLabel}: ${val}% vs validare totala: ${_ctx.grandPct || "?"}%. ${v > Number(_ctx.grandPct || 0) ? `Industria ${_viLabel} performeaza peste medie.` : v < Number(_ctx.grandPct || 0) ? `Industria ${_viLabel} performeaza sub medie.` : "Performanta identica cu media generala."}` },
+                  { heading: "Concluzie", text: `Cu ${val}% validare pe ${_viN} materiale, industria ${_viLabel} ${v >= 80 ? "confirma puternic aplicabilitatea RIFC in acest sector." : v >= 70 ? "sustine modelul RIFC cu aliniere buna." : v >= 50 ? "ofera evidenta partiala — factori specifici industriei influenteaza rezultatul." : "indica limitari ale formulei in acest sector — necesita investigare suplimentara."}` },
+                ]};
+              }
               case "materials": return { sections: [
                 { heading: "Ce reprezinta", text: `Au fost analizate ${val} materiale de marketing care au primit cel putin un raspuns de la respondenti. Totalul de ${_ctx.responses || 0} raspunsuri ofera baza statistica pentru calculul mediilor R, I, F si C.` },
                 { heading: "De ce conteaza numarul", text: `Cu cat numarul de materiale analizate este mai mare, cu atat validarea formulei este mai robusta statistic. Fiecare material reprezinta un "test" independent al formulei — daca formula functioneaza pe multe materiale diverse, evidenta este mai puternica.` },
@@ -6432,6 +6473,96 @@ export default function StudiuAdminPage() {
                       <InterpBtn k="hypothesis_total" title="Validare Ipoteza — Total" val={String(grandHypPct)} ctx={{ cf: grandCf, cfNorm: _grandCfNorm, cp: grandCp, delta: grandDelta, gatePass: gatePassCount, gateTotal: n, gateRate: gatePassRate, r: grandR, i: grandI, f: grandF }} />
                     </div>
                   </div>
+                    );
+                  })()}
+
+                  {/* ═══ VALIDARE PER CANALE + INDUSTRIE (compact) ═══ */}
+                  {(() => {
+                    // Build channel aggregates
+                    const chByType: Record<string, typeof withData> = {};
+                    withData.forEach(s => { if (!chByType[s.type]) chByType[s.type] = []; chByType[s.type].push(s); });
+                    const chAggs = [...categories].sort((a, b) => a.display_order - b.display_order).reduce<{ label: string; color: string; code: string; items: typeof withData; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number }[]>((acc, cat) => {
+                      const items = (chByType[cat.type] || []).filter(s => s.response_count > 0);
+                      if (items.length === 0) return acc;
+                      const cn = items.length;
+                      const cf = Math.round((items.reduce((a, s) => a + s.avg_c, 0) / cn) * 100) / 100;
+                      const cp = Math.round((items.reduce((a, s) => a + s.avg_c_score, 0) / cn) * 100) / 100;
+                      const cfN = Math.round((cf / 11) * 100) / 100;
+                      const d = calcDelta(cf, cp);
+                      const p = hypothesisPct(cf, cp);
+                      const gp = items.filter(s => s.avg_r >= GATE).length;
+                      acc.push({ label: cat.label, color: cat.color, code: cat.short_code, items, n: cn, cfNorm: cfN, cp, delta: d, pct: p, gatePass: gp, gateRate: Math.round((gp / cn) * 100), dir: cfN < cp ? "sub" : cfN > cp ? "supra" : "=", dirFactor: cp > 0 && cfN > 0 ? (cfN < cp ? cp / cfN : cfN / cp) : 1 });
+                      return acc;
+                    }, []);
+
+                    // Build industry aggregates
+                    const indAggs = industryKeys.map((ind, idx) => {
+                      const items = byIndustry[ind];
+                      const cn = items.length;
+                      const cf = Math.round((items.reduce((a, s) => a + s.avg_c, 0) / cn) * 100) / 100;
+                      const cp = Math.round((items.reduce((a, s) => a + s.avg_c_score, 0) / cn) * 100) / 100;
+                      const cfN = Math.round((cf / 11) * 100) / 100;
+                      const d = calcDelta(cf, cp);
+                      const p = hypothesisPct(cf, cp);
+                      const gp = items.filter(s => s.avg_r >= GATE).length;
+                      const r = Math.round((items.reduce((a, s) => a + s.avg_r, 0) / cn) * 100) / 100;
+                      const iVal = Math.round((items.reduce((a, s) => a + s.avg_i, 0) / cn) * 100) / 100;
+                      const f = Math.round((items.reduce((a, s) => a + s.avg_f, 0) / cn) * 100) / 100;
+                      return { label: ind, color: INDUSTRY_COLORS[idx % INDUSTRY_COLORS.length], n: cn, cfNorm: cfN, cp, delta: d, pct: p, gatePass: gp, gateRate: Math.round((gp / cn) * 100), dir: cfN < cp ? "sub" : cfN > cp ? "supra" : "=", dirFactor: cp > 0 && cfN > 0 ? (cfN < cp ? cp / cfN : cfN / cp) : 1, r, i: iVal, f, cf };
+                    });
+
+                    // Compact card renderer
+                    const compactCard = (item: { label: string; color: string; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number }, interpKey: string, interpCtx: Record<string, unknown>) => (
+                      <div key={item.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${item.color}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{item.label}</div>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: getValidationColor(item.pct) }}>{item.pct}%</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 9, color: "#6B7280", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>Cf/11={item.cfNorm.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#059669", padding: "2px 6px", background: "#f0fdf4", borderRadius: 4 }}>Cp={item.cp.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#374151", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>&Delta;={item.delta.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 9, color: "#6B7280" }}>
+                            <span style={{ color: item.dir === "sub" ? "#D97706" : item.dir === "supra" ? "#DC2626" : "#059669", fontWeight: 600 }}>
+                              {item.dir === "sub" ? `\u2191 sub. \u00D7${item.dirFactor.toFixed(2)}` : item.dir === "supra" ? `\u2193 supra. \u00D7${item.dirFactor.toFixed(2)}` : "= perfect"}
+                            </span>
+                            <span>Gate: {item.gatePass}/{item.n}</span>
+                            <span>{item.n} mat.</span>
+                          </div>
+                          <InterpBtn k={interpKey} title={`Validare — ${item.label}`} val={String(item.pct)} ctx={interpCtx} />
+                        </div>
+                      </div>
+                    );
+
+                    return (
+                      <>
+                        {/* Per Canale */}
+                        {chAggs.length > 1 && (
+                          <div style={{ marginBottom: 20 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                              Validare per Canal
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                              {chAggs.map(ch => compactCard(ch, "val_channel", { ...ch, type: "canal", grandPct: grandHypPct }))}
+                            </div>
+                          </div>
+                        )}
+                        {/* Per Industrie */}
+                        {indAggs.length > 1 && (
+                          <div style={{ marginBottom: 20 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+                              Validare per Industrie
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                              {indAggs.map(ia => compactCard(ia, "val_industry", { ...ia, type: "industrie", grandPct: grandHypPct }))}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
 
