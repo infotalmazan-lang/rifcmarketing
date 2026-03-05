@@ -2885,11 +2885,6 @@ export default function StudiuAdminPage() {
                             const h5D = scValid.filter(d => d.c_score != null && d.c_score > 0);
                             const h5MultR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i * d.f), h5D.map(d => d.c_score!)) : 0;
                             const h5AddR = h5D.length >= 3 ? _pearsonR(h5D.map(d => d.i + d.f), h5D.map(d => d.c_score!)) : 0;
-                            // H6 gate effect — use c_score (perceived) NOT c_computed (which contains I*F → tautology)
-                            const h6Below = scValid.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0);
-                            const h6Above = scValid.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
-                            const h6BR = h6Below.length >= 2 ? _pearsonR(h6Below.map(d => d.i * d.f), h6Below.map(d => d.c_score!)) : 0;
-                            const h6AR = h6Above.length >= 2 ? _pearsonR(h6Above.map(d => d.i * d.f), h6Above.map(d => d.c_score!)) : 0;
 
                             // Compute Factor Calibrare
                             const calD = scValid.filter(d => d.c_score != null && d.c_score > 0);
@@ -2899,14 +2894,6 @@ export default function StudiuAdminPage() {
                             const fcColor = fc >= 1.0 && fc <= 1.2 ? "#059669" : fc <= 1.5 ? "#D97706" : "#DC2626";
                             const fcLabel = fc >= 1.0 && fc <= 1.2 ? "Calibrat excelent" : fc <= 1.5 ? "Subestimare moderata" : fc <= 2.0 ? "Subestimare semnificativa" : "Discrepanta mare";
 
-                            // H5 deltas — both models normalized to 0-1 scale
-                            // Multiplicativ: max(R + I*F) = 10 + 100 = 110, so /110 → 0-1
-                            // Aditiv: max(R + I + F) = 30, so /30 → 0-1
-                            // Cp: max(c_score) = 10, so /10 → 0-1
-                            const h5Valid = scValid.filter(d => d.c_score != null && d.c_score > 0);
-                            const dMult = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i * d.f) / 110 - d.c_score! / 10))) : 0;
-                            const dAdit = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i + d.f) / 30 - d.c_score! / 10))) : 0;
-                            const h5CastigPct = dAdit > 0 ? Math.round(((dAdit - dMult) / dAdit) * 1000) / 10 : 0;
 
                             // H7 — Scale-Independent Interaction Test (Spearman + Partial Correlation)
                             const h7D = scValid.filter(d => d.c_score != null && d.c_score > 0);
@@ -3048,8 +3035,6 @@ export default function StudiuAdminPage() {
                                     { code: "H2", name: "Formula prezice actiunea reala (C→CTA Correlation)", verdict: `r(C,CTA) = ${cfCtaR.toFixed(2)} — ${Math.abs(cfCtaR) >= 0.5 ? "Corelatie puternica. Formula prezice cu succes intentia de actiune." : Math.abs(cfCtaR) >= 0.3 ? "Corelatie moderata. Formula are putere predictiva, dar exista si alti factori." : "Corelatie slaba. Formula necesita ajustari suplimentare."}`, color: Math.abs(cfCtaR) >= 0.3 ? "#059669" : "#D97706" },
                                     { code: "H3", name: "Brandul modereaza C (Moderation Analysis)", verdict: "Vezi graficul H3 — analiza compara corelatia C→CTA intre brand cunoscut vs necunoscut.", color: "#6B7280" },
                                     { code: "H4", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul H4 — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
-                                    { code: "H5", name: "Multiplicativ vs Aditiv (Model Comparison)", verdict: `${h5CastigPct > 0 ? "Modelul multiplicativ (I\u00D7F) este superior" : "Modelul aditiv (I+F) este superior"} cu ${Math.abs(h5CastigPct)}% eroare mai mica. \u0394mult=${dMult.toFixed(2)}, \u0394adit=${dAdit.toFixed(2)}.`, color: h5CastigPct > 10 ? "#059669" : h5CastigPct >= 0 ? "#D97706" : "#DC2626" },
-                                    { code: "H6", name: "I\u00D7F irelevant sub prag (Sub-threshold Test)", verdict: `Sub R<${GATE}: r=${h6BR.toFixed(2)} — ${Math.abs(h6BR) < 0.2 ? "Gate confirmat. Sub prag, I\u00D7F nu influenteaza C." : Math.abs(h6BR) <= 0.4 ? "Partial confirmat. Exista o corelatie slaba sub prag." : "Neconfirmat. I\u00D7F inca influenteaza sub prag."}`, color: Math.abs(h6BR) < 0.2 ? "#059669" : Math.abs(h6BR) <= 0.4 ? "#D97706" : "#DC2626" },
                                     { code: "H7", name: "Test Scale-Independent al Interactiei I\u00D7F", verdict: h7Verdict === "CONFIRMATA" ? `Spearman \u03C1mult=${h7SpearmanMult.toFixed(3)} > \u03C1adit=${h7SpearmanAdit.toFixed(3)} (Fisher Z p=${h7FisherZ.p.toFixed(3)}) + Partial r(I\u00D7F|R+I+F)=${h7PartialR.toFixed(3)} (p=${h7PartialP.toFixed(3)}). Sinergia I\u00D7F confirmata fara artefact de scala.` : h7Verdict === "PARTIAL" ? `${h7SpearmanSig ? `Spearman favorizeaza multiplicativ (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)})` : `Spearman nesemnificativ (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)})`}. ${h7PartialSig ? `Partial r=${h7PartialR.toFixed(3)} semnificativ.` : `Partial r=${h7PartialR.toFixed(3)} nesemnificativ.`} Evidenta mixta.` : `Nici Spearman (\u0394\u03C1=${h7DeltaRho.toFixed(3)}, p=${h7FisherZ.p.toFixed(3)}) nici Partial r=${h7PartialR.toFixed(3)} (p=${h7PartialP.toFixed(3)}) nu confirma sinergia I\u00D7F.`, color: h7VerdictColor },
                                   ].map(h => (
                                     <div key={h.code} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 10, padding: "8px 12px", background: "#fff", borderRadius: 6, border: "1px solid #f3f4f6", borderLeft: `3px solid ${h.color}` }}>
@@ -6257,25 +6242,11 @@ export default function StudiuAdminPage() {
                   { heading: "Concluzie", text: `"${nm}" cu ${bPct}% validare ${bPct >= 80 ? "este o evidenta puternica pentru formula RIFC." : bPct >= 50 ? "ofera evidenta partiala — se recomanda analiza detaliata a componentelor individuale." : "reprezinta un caz unde formula necesita factori suplimentari pentru a explica perceptia."} ${!bGateOk ? `Atentie: R=${_ctx.r} < ${GATE} indica o problema fundamentala de relevanta.` : ""}` },
                 ]};
               }
-              case "h5": return { sections: [
-                { heading: "Ce testeaza H5", text: "Ipoteza H5 compara doua modele de combinare a Interesului (I) si Formei (F): modelul multiplicativ (I×F) din RIFC versus un model aditiv alternativ (I+F). Se compara Delta medie (eroarea de predictie absoluta) a fiecarui model fata de C perceput normalizat." },
-                { heading: "Cum se calculeaza", text: "Cf_mult = (R + I×F) / 110, Cf_adit = (R + I + F) / 30, Cp_norm = C_score / 10. Toate trei pe scala 0-1 (max R+I×F = 110, max R+I+F = 30, max C_score = 10). Delta_mult = |Cf_mult - Cp_norm|, Delta_adit = |Cf_adit - Cp_norm|. Castigul % = ((Delta_adit - Delta_mult) / Delta_adit) × 100." },
-                { heading: "De ce conteaza", text: "Formula RIFC postuleaza ca I si F se amplifica reciproc — un continut foarte interesant dar prost prezentat pierde forta. Modelul aditiv nu capteaza aceasta interdependenta. Daca Delta multiplicativ < Delta aditiv, formula R+(I×F)=C este matematic superioara fata de R+I+F=C." },
-                { heading: "Cum se interpreteaza", text: "Castig > 10%: H5 confirmata — modelul multiplicativ prezice semnificativ mai precis. Castig 0-10%: Diferenta mica, ambele modele similare. Castig < 0%: Modelul aditiv performeaza mai bine — reconsidera structura formulei." },
-                { heading: "Concluzie", text: "Daca modelul multiplicativ castiga, formula RIFC este justificata matematic — sinergia I×F este reala si captureaza interdependenta intre calitatea continutului si calitatea executiei." },
-              ]};
-              case "h6": return { sections: [
-                { heading: "Ce testeaza H6", text: `H6 testeaza o afirmatie mai puternica decat H1: sub R < ${GATE}, motorul I×F devine complet ineficient — C nu mai raspunde la variatie in I×F. H1 spune "sub Gate, audienta se dezangajeaza (CTA scade ~58%)". H6 spune "sub Gate, chiar si un I×F excelent nu influenteaza C". H6 testeaza daca Gate-ul este absolut (I×F irelevant) sau relativ (I×F inca influenteaza dar la nivel mai mic).` },
-                { heading: "Cum se calculeaza", text: `Se filtreaza DOAR raspunsurile cu r_score < ${GATE} si care au c_score (C perceput). Pe acest subset se calculeaza corelatia Pearson intre I×F (produsul) si c_score (perceptia reala a consumatorului). Daca |r| ≈ 0, I×F nu influenteaza perceptia sub prag.` },
-                { heading: "Cum se interpreteaza", text: `|r| < 0.2: H6 confirmata — sub R=${GATE}, I×F nu influenteaza C. Poarta Relevantei functioneaza ca gate real. |r| 0.2-0.4: Influenta slaba reziduala a I×F sub prag. |r| > 0.4: H6 neconfirmata — I×F influenteaza C chiar sub R=${GATE}. Pragul poate fi incorect.` },
-                { heading: "De ce conteaza", text: `Daca R < ${GATE} si totusi I×F coreleaza cu C, inseamna ca R e doar o variabila obisnuita, nu un gate. Daca corelatia e ~0 (haos), inseamna ca sub prag, oricat investesti in Interes si Forma, nu produci Claritate. Aceasta ar fi cea mai puternica confirmare a originalitatii RIFC.` },
-                { heading: "Concluzie", text: `Un r aproape de 0 sub gate confirma puternic rolul de "poarta" al Relevantei — cel mai distinctiv element al formulei RIFC fata de alte framework-uri de marketing.` },
-              ]};
               case "h7": return { sections: [
-                { heading: "Ce testeaza H7", text: "H7 testeaza daca sinergia I×F este reala prin metode care NU depind de scala de normalizare. H5 compara erori absolute (Delta), dar normalizarea /110 vs /30 introduce un artefact: comprima valorile multiplicative in range 0.1-0.5, facand comparatia inechitabila. H7 elimina complet acest artefact." },
+                { heading: "Ce testeaza H7", text: "H7 testeaza daca sinergia I×F (motorul formulei, ~90% din C) este reala prin metode scale-independent. Comparatia directa a erorilor absolute (normalizare /110 vs /30) introduce un artefact de scala care biaseaza rezultatul. H7 elimina complet acest artefact prin Spearman ranks si Partial Correlation." },
                 { heading: "Analiza 1 — Spearman Rank Correlation", text: "Converteste predictiile si C perceput in RANGURI (pozitii relative 1, 2, 3...). Rangurile ignora magnitudinea — conteaza doar daca ordinea predictiilor e corecta. Se calculeaza Spearman rho pentru modelul multiplicativ (R+I×F) si cel aditiv (R+I+F). Modelul cu rho mai mare prezice mai corect ORDINEA perceptiei." },
                 { heading: "Analiza 2 — Partial Correlation", text: "Se face regresie liniara C ~ (R+I+F) si se obtin reziduurile — ce NU poate explica modelul aditiv. Apoi se coreleaza reziduurile cu I×F. Daca corelatia e semnificativa, inseamna ca I×F aduce informatie SUPLIMENTARA pe care aditivul nu o capteaza. Aceasta e dovada directa a sinergiei." },
-                { heading: "De ce corecteaza H5", text: "H5 normalizeaza: mult/110, adit/30, Cp/10. Dar max(R+I×F) = 110 produce valori in 0.1-0.5, in timp ce Cp/10 e in 0.5-0.9. Aditivul (/30) produce valori in 0.3-0.8, natural mai apropiate. Deci aditivul castiga prin artefact de scala, nu prin acuratete superioara. H7 testeaza acelasi lucru fara aceste probleme." },
+                { heading: "De ce scale-independent", text: "Comparatia directa normalizata (mult/110 vs adit/30) produce un artefact: max(R+I×F) = 110 comprima in 0.1-0.5, in timp ce Cp/10 e 0.5-0.9. Aditivul (/30) produce 0.3-0.8, natural mai aproape. Spearman ranks si Partial Correlation elimina complet aceasta dependenta de scala — testeaza sinergia I×F in mod echitabil." },
                 { heading: "Cum se interpreteaza", text: "Spearman: rho_mult > rho_adit + Fisher Z p<0.05 = multiplicativul prezice ordinea mai bine. Partial: |r(I×F|R+I+F)| > 0.1 + p<0.05 = sinergia aduce informatie extra. Ambele → CONFIRMATA. Una → PARTIAL. Niciuna → NECONFIRMATA." },
                 { heading: "Concluzie", text: "H7 ofera raspunsul definitiv la intrebarea 'Este sinergia I×F reala sau un artefact al normalizarii?' Rezultatul este independent de orice alegere de scala, normalizare sau range de valori." },
               ]};
@@ -7888,242 +7859,6 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
-                    {/* ── GRAFIC H5 — Multiplicativ vs Aditiv (DELTA) ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Ipoteza H5: Justificarea matematica I×F <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Model Comparison — Multiplicativ vs Aditiv)</span></div>
-                        <InterpBtn k="h5" title="H5 — Multiplicativ vs Aditiv" val="0" />
-                      </div>
-                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #059669" }}>
-                        <strong>Ce testeaza:</strong> De ce formula foloseste I×F si nu I+F? Ipoteza spune ca Interesul si Forma se amplifica reciproc (model multiplicativ) — un continut interesant dar prost prezentat pierde forta.{" "}
-                        <strong>Metoda:</strong> Se compara Delta medie (eroarea absoluta) a doua modele: R+(I×F)/110 vs (R+I+F)/30, ambele normalizate pe scala 0-1 fata de C perceput normalizat (c_score/10).{" "}
-                        <strong>Interpretare:</strong> Castig &gt; 10% = multiplicativ justificat, 0-10% = similar, &lt; 0% = aditivul e mai bun.
-                      </div>
-                      {(() => {
-                        const h5Data = scatter.filter(d => d.c_computed > 0 && d.c_score != null && d.c_score > 0);
-                        if (h5Data.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente pentru H5.</div>;
-                        // Cf_mult = (r + i*f)/110, Cf_adit = (r + i + f)/30, Cp_norm = c_score/10 — all on 0-1 scale
-                        const h5Mult = h5Data.map(d => ({ cf: (d.r + d.i * d.f) / 110, cp: d.c_score! / 10 }));
-                        const h5Adit = h5Data.map(d => ({ cf: (d.r + d.i + d.f) / 30, cp: d.c_score! / 10 }));
-                        const deltaMult = h5Mult.map(d => Math.abs(d.cf - d.cp));
-                        const deltaAdit = h5Adit.map(d => Math.abs(d.cf - d.cp));
-                        const deltaMultMean = _mean(deltaMult);
-                        const deltaAditMean = _mean(deltaAdit);
-                        const castigPct = deltaAditMean > 0 ? Math.round(((deltaAditMean - deltaMultMean) / deltaAditMean) * 1000) / 10 : 0;
-                        const multWins = castigPct > 0;
-                        const h5MultReg = linReg(h5Mult.map(d => ({ x: d.cf, y: d.cp })));
-                        const h5AditReg = linReg(h5Adit.map(d => ({ x: d.cf, y: d.cp })));
-                        const halfW = Math.floor(chartW / 2) - 4;
-                        // Both charts on 0-1 scale
-                        const xMin = 0, xMax = 1, yMin = 0, yMax = 1;
-                        return (
-                          <>
-                            {/* Stats banner */}
-                            <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #d1fae5" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Delta medie Multiplicativ</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{deltaMultMean.toFixed(3)}</div>
-                                </div>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fee2e2" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Delta medie Aditiv</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{deltaAditMean.toFixed(3)}</div>
-                                </div>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${multWins ? "#d1fae5" : "#fee2e2"}` }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Castig {multWins ? "multiplicativ" : "aditiv"}</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: multWins ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{Math.abs(castigPct).toFixed(1)}%</div>
-                                </div>
-                              </div>
-                              <div style={{ textAlign: "right" as const, fontWeight: 800, color: castigPct > 10 ? "#059669" : castigPct >= 0 ? "#D97706" : "#DC2626", fontSize: 11 }}>
-                                {castigPct > 10 ? "\u2705 H5 CONFIRMATA" : castigPct >= 0 ? "\u26A0\uFE0F H5 PARTIAL" : "\u274C H5 NECONFIRMATA"}
-                              </div>
-                            </div>
-                            <div style={{ display: "flex", gap: 8, overflowX: "auto" as const }}>
-                              {/* Multiplicative panel */}
-                              <div>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: multWins ? "#059669" : "#6B7280", textAlign: "center" as const, marginBottom: 4 }}>
-                                  R+(I×F)/110 (Multiplicativ) — &Delta;={deltaMultMean.toFixed(3)} {multWins && " \u2605"}
-                                </div>
-                                <svg width={halfW} height={chartH + 10} style={{ display: "block" }}>
-                                  {(() => {
-                                    const pw = halfW - pad.l - pad.r; const ph = chartH - pad.t - pad.b;
-                                    const tx = (v: number) => pad.l + ((v - xMin) / (xMax - xMin || 1)) * pw;
-                                    const ty = (v: number) => pad.t + ph - ((v - yMin) / (yMax - yMin || 1)) * ph;
-                                    return (
-                                      <>
-                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <g key={v}><line x1={pad.l} y1={ty(v)} x2={halfW - pad.r} y2={ty(v)} stroke="#f3f4f6" strokeWidth={0.5} /><text x={pad.l - 3} y={ty(v) + 3} textAnchor="end" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text></g>)}
-                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <text key={v} x={tx(v)} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text>)}
-                                        <rect x={pad.l} y={pad.t} width={pw} height={ph} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-                                        {/* Diagonal reference line (perfect prediction) */}
-                                        <line x1={tx(xMin)} y1={ty(yMin)} x2={tx(xMax)} y2={ty(yMax)} stroke="#9CA3AF" strokeWidth={1} strokeDasharray="4 2" opacity={0.4} />
-                                        {/* Trend line */}
-                                        {h5Mult.length >= 2 && (() => {
-                                          const y1v = Math.max(yMin, Math.min(yMax, h5MultReg.slope * xMin + h5MultReg.intercept));
-                                          const y2v = Math.max(yMin, Math.min(yMax, h5MultReg.slope * xMax + h5MultReg.intercept));
-                                          return <line x1={tx(xMin)} y1={ty(y1v)} x2={tx(xMax)} y2={ty(y2v)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
-                                        })()}
-                                        {h5Mult.map((d, i) => <circle key={i} cx={tx(d.cf)} cy={ty(d.cp)} r={2.5} fill="#059669" opacity={0.45} />)}
-                                        <text x={halfW / 2} y={chartH - 2} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">Cf mult (norm.)</text>
-                                      </>
-                                    );
-                                  })()}
-                                </svg>
-                              </div>
-                              {/* Additive panel */}
-                              <div>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: !multWins ? "#DC2626" : "#6B7280", textAlign: "center" as const, marginBottom: 4 }}>
-                                  (R+I+F)/30 (Aditiv) — &Delta;={deltaAditMean.toFixed(3)} {!multWins && " \u2605"}
-                                </div>
-                                <svg width={halfW} height={chartH + 10} style={{ display: "block" }}>
-                                  {(() => {
-                                    const pw = halfW - pad.l - pad.r; const ph = chartH - pad.t - pad.b;
-                                    const tx = (v: number) => pad.l + ((v - xMin) / (xMax - xMin || 1)) * pw;
-                                    const ty = (v: number) => pad.t + ph - ((v - yMin) / (yMax - yMin || 1)) * ph;
-                                    return (
-                                      <>
-                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <g key={v}><line x1={pad.l} y1={ty(v)} x2={halfW - pad.r} y2={ty(v)} stroke="#f3f4f6" strokeWidth={0.5} /><text x={pad.l - 3} y={ty(v) + 3} textAnchor="end" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text></g>)}
-                                        {[0, 0.2, 0.4, 0.6, 0.8, 1.0].map(v => <text key={v} x={tx(v)} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#9CA3AF">{v.toFixed(1)}</text>)}
-                                        <rect x={pad.l} y={pad.t} width={pw} height={ph} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-                                        {/* Diagonal reference line */}
-                                        <line x1={tx(xMin)} y1={ty(yMin)} x2={tx(xMax)} y2={ty(yMax)} stroke="#9CA3AF" strokeWidth={1} strokeDasharray="4 2" opacity={0.4} />
-                                        {/* Trend line */}
-                                        {h5Adit.length >= 2 && (() => {
-                                          const y1v = Math.max(yMin, Math.min(yMax, h5AditReg.slope * xMin + h5AditReg.intercept));
-                                          const y2v = Math.max(yMin, Math.min(yMax, h5AditReg.slope * xMax + h5AditReg.intercept));
-                                          return <line x1={tx(xMin)} y1={ty(y1v)} x2={tx(xMax)} y2={ty(y2v)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
-                                        })()}
-                                        {h5Adit.map((d, i) => <circle key={i} cx={tx(d.cf)} cy={ty(d.cp)} r={2.5} fill="#DC2626" opacity={0.45} />)}
-                                        <text x={halfW / 2} y={chartH - 2} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">Cf adit (norm.)</text>
-                                      </>
-                                    );
-                                  })()}
-                                </svg>
-                              </div>
-                            </div>
-                            <div style={cardStyle}>
-                              <strong>H5 — Justificarea I×F:</strong> De ce inmultim Interesul cu Forma si nu le adunam? Ipoteza spune ca ele se potenteaza reciproc — un continut foarte interesant dar prost prezentat pierde forta, si invers. Modelul aditiv nu captureaza aceasta interdependenta.{" "}
-                              {castigPct > 10
-                                ? <strong style={{ color: "#059669" }}>Modelul multiplicativ prezice cu {castigPct.toFixed(1)}% mai precis. I×F justificat matematic.</strong>
-                                : castigPct >= 0
-                                  ? <strong style={{ color: "#D97706" }}>Diferenta mica ({castigPct.toFixed(1)}%). Ambele modele similare.</strong>
-                                  : <strong style={{ color: "#DC2626" }}>Modelul aditiv performeaza mai bine ({Math.abs(castigPct).toFixed(1)}%). Reconsidera structura formulei.</strong>}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-
-                    {/* ── GRAFIC H6 — Irelevanta I×F cand R < Gate ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Ipoteza H6: Gate real — I×F irelevant sub prag <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Sub-threshold Correlation Test)</span></div>
-                        <InterpBtn k="h6" title={`H6 — Irelevanta I×F cand R < ${GATE}`} val="0" />
-                      </div>
-                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #DC2626" }}>
-                        <strong>Ce testeaza:</strong> Cand R &lt; {GATE}, I si F devin complet irelevante — nu mai influenteaza C deloc. Aceasta e afirmatie mai puternica decat H1 (care spune doar ca C e mic).{" "}
-                        <strong>Metoda:</strong> Pearson r intre I×F si C<sub>perceput</sub> (c_score), calculat doar pe subsetul raspunsurilor cu R &lt; {GATE}.{" "}
-                        <strong>Interpretare:</strong> |r| &lt; 0.2 = confirmat (gate real), 0.2-0.4 = partial, &gt; 0.4 = neconfirmat (pragul nu functioneaza).
-                      </div>
-                      {(() => {
-                        // Use c_score (perceived) NOT c_computed (which contains I*F → tautological correlation)
-                        const h6All = scatter.filter(d => d.c_score != null && d.c_score > 0);
-                        const h6Below = h6All.filter(d => d.r < GATE);
-                        const h6NSubprag = h6Below.length;
-                        if (h6All.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente pentru H6.</div>;
-                        if (h6NSubprag < 2) return <div style={{ padding: 20, textAlign: "center" as const, color: "#D97706", fontSize: 12 }}>Prea putine raspunsuri cu R&lt;{GATE} (n={h6NSubprag}). Sunt necesare minim 10 pentru analiza valida.</div>;
-                        const h6Pts = h6Below.map(d => ({ x: d.i * d.f, y: d.c_score! }));
-                        const h6Reg = linReg(h6Pts);
-                        const h6R = _pearsonR(h6Pts.map(p => p.x), h6Pts.map(p => p.y));
-                        const h6PVal = _pValuePearson(h6R, h6NSubprag);
-                        // Above-gate contrast
-                        const h6Above = h6All.filter(d => d.r >= GATE);
-                        const h6AboveR = h6Above.length >= 2 ? _pearsonR(h6Above.map(d => d.i * d.f), h6Above.map(d => d.c_score!)) : 0;
-                        const h6AbovePVal = _pValuePearson(h6AboveR, h6Above.length);
-                        const absR = Math.abs(h6R);
-                        const verdict = absR < 0.2 ? "H6 CONFIRMATA" : absR <= 0.4 ? "H6 PARTIAL" : "H6 NECONFIRMATA";
-                        const verdColor = absR < 0.2 ? "#059669" : absR <= 0.4 ? "#D97706" : "#DC2626";
-                        const verdIcon = absR < 0.2 ? "\u2705" : absR <= 0.4 ? "\u26A0\uFE0F" : "\u274C";
-                        const xMin = 0, xMax = 100, yMin = 0, yMax = 10;
-                        return (
-                          <>
-                            {/* Stats banner */}
-                            <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${verdColor}30` }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>r sub prag (R&lt;{GATE})</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: verdColor, fontFamily: "JetBrains Mono, monospace" }}>{h6R.toFixed(3)}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(h6PVal)} &middot; n={h6NSubprag}</div>
-                                </div>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #d1fae5" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>r peste prag (R&ge;{GATE})</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h6AboveR.toFixed(3)}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(h6AbovePVal)} &middot; n={h6Above.length}</div>
-                                </div>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Contrast (&Delta;r)</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{Math.abs(h6AboveR - h6R).toFixed(3)}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>r&sup2; sub={Math.round(h6R * h6R * 1000) / 1000}</div>
-                                </div>
-                              </div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280" }}>Daca gate functioneaza: r sub prag &asymp; 0 si r peste prag semnificativ</div>
-                                <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
-                              </div>
-                              {/* H6 Card annotations */}
-                              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 8 }}>
-                                <div style={{ fontSize: 9, color: "#374151", lineHeight: 1.4, padding: "5px 8px", background: "#fef2f2", borderRadius: 4, borderLeft: "2px solid #DC2626" }}>
-                                  <strong>Ce e:</strong> Corelatia Pearson intre I&times;F si C<sub>perceput</sub> doar pe respondentii cu R&lt;{GATE}. <strong>Citire:</strong> r&asymp;0 = I&times;F nu influenteaza C (gate absolut). r&gt;0.4 = influenteaza puternic (gate nu functioneaza). <strong>Aici:</strong> r={h6R.toFixed(3)} — {absR < 0.2 ? "influenta zero, gate absolut" : absR <= 0.4 ? "influenta slaba, gate partial" : "I\u00d7F inca influenteaza C sub prag"}
-                                </div>
-                                <div style={{ fontSize: 9, color: "#374151", lineHeight: 1.4, padding: "5px 8px", background: "#f0fdf4", borderRadius: 4, borderLeft: "2px solid #059669" }}>
-                                  <strong>Ce e:</strong> Aceeasi corelatie dar pe respondentii cu R&ge;{GATE} (grup de contrast). <strong>Citire:</strong> Peste prag, ne asteptam ca I&times;F sa coreleze puternic cu C. <strong>Comparatie:</strong> r sub ({h6R.toFixed(3)}) vs r supra ({h6AboveR.toFixed(3)}) — {Math.abs(h6AboveR - h6R) < 0.1 ? "aproape identice = gate NU opreste mecanismul I\u00d7F" : Math.abs(h6AboveR - h6R) < 0.3 ? "diferenta moderata" : "diferenta mare = gate functioneaza"}
-                                </div>
-                                <div style={{ fontSize: 9, color: "#374151", lineHeight: 1.4, padding: "5px 8px", background: "#f9fafb", borderRadius: 4, borderLeft: "2px solid #6B7280" }}>
-                                  <strong>Ce e:</strong> Diferenta absoluta intre cele doua corelatii. r&sup2;={Math.round(h6R * h6R * 1000) / 1000} = I&times;F explica {Math.round(h6R * h6R * 100)}% din varianta C sub prag. <strong>Ideal:</strong> &Delta;r mare (semnificativ diferit) = gate modifica mecanismul. <strong>Aici:</strong> &Delta;r={Math.abs(h6AboveR - h6R).toFixed(3)} — {Math.abs(h6AboveR - h6R) < 0.1 ? "diferenta neglijabila, mecanismul e identic pe ambele parti ale pragului" : "diferenta prezenta"}
-                                </div>
-                              </div>
-                            </div>
-                            {/* Interpretare globala H6 */}
-                            <div style={{ marginBottom: 12, padding: "8px 12px", background: absR >= 0.4 ? "#fef3c7" : "#f0fdf4", borderRadius: 6, border: `1px solid ${absR >= 0.4 ? "#fde68a" : "#bbf7d0"}`, borderLeft: `3px solid ${verdColor}` }}>
-                              <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
-                                <strong>Interpretare pentru formula RIFC:</strong>{" "}
-                                {absR < 0.2
-                                  ? "Gate-ul functioneaza absolut — sub R=" + GATE + ", I\u00d7F nu produce Claritate. R e conditia sine qua non. RIFC are originalitate fata de alte framework-uri."
-                                  : absR <= 0.4
-                                    ? "Gate partial — I\u00d7F are influenta slaba sub prag. R e important dar nu opreste complet mecanismul."
-                                    : "R functioneaza ca un \"level-shifter\" nu ca un \"switch\". I\u00d7F influenteaza C la fel sub si peste prag, dar R coboara nivelul de baza. Aceasta nu invalideaza narativa RIFC (CTA tot scade dramatic sub prag — vezi H1), ci o nuanteaza: R nu opreste motorul, ci coboara etajul."}{" "}
-                                <strong>Ipoteza noua:</strong> <em>R modereaza nivelul absolut (baseline) nu mecanismul intern. I&times;F tot produce C proportional, dar dintr-un nivel de baza prea jos pentru a genera actiune.</em>
-                              </div>
-                            </div>
-                            <div style={{ overflowX: "auto" as const }}>
-                              <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
-                                {renderGrid(xMin, xMax, yMin, yMax, "I × F (produs)", "C perceput (c_score 1-10)")}
-                                {/* Trend line */}
-                                {h6Pts.length >= 2 && (() => {
-                                  const y1v = Math.max(yMin, Math.min(yMax, h6Reg.slope * xMin + h6Reg.intercept));
-                                  const y2v = Math.max(yMin, Math.min(yMax, h6Reg.slope * xMax + h6Reg.intercept));
-                                  return <line x1={toX(xMin, xMin, xMax)} y1={toY(y1v, yMin, yMax)} x2={toX(xMax, xMin, xMax)} y2={toY(y2v, yMin, yMax)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
-                                })()}
-                                {/* All dots red (danger zone) */}
-                                {h6Pts.map((p, i) => <circle key={i} cx={toX(p.x, xMin, xMax)} cy={toY(p.y, yMin, yMax)} r={3} fill="#DC2626" opacity={0.5} />)}
-                                {/* Legend */}
-                                <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
-                                <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} (zona sub-prag, n={h6NSubprag})</text>
-                                <text x={chartW - pad.r - 5} y={pad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill="#DC2626">r = {h6R.toFixed(3)}</text>
-                              </svg>
-                            </div>
-                            <div style={cardStyle}>
-                              <strong>H6 — Gate real vs variabila aditiva:</strong> Daca R&lt;{GATE} si totusi I×F coreleaza cu C, inseamna ca R e doar o variabila obisnuita, nu un gate. Daca corelatia e ~0 (haos), inseamna ca sub prag, oricat investesti in Interes si Forma, nu produci Claritate. Aceasta ar fi cea mai puternica confirmare a originalitatii RIFC fata de alte framework-uri.{" "}
-                              {absR < 0.2
-                                ? <strong style={{ color: "#059669" }}>Sub R={GATE}, I×F nu influenteaza C. Poarta Relevantei functioneaza ca gate real.</strong>
-                                : absR <= 0.4
-                                  ? <strong style={{ color: "#D97706" }}>Influenta slaba reziduala a I×F sub prag (r={h6R.toFixed(3)}). Pragul de {GATE} poate necesita ajustare.</strong>
-                                  : <strong style={{ color: "#DC2626" }}>I×F influenteaza C chiar sub R={GATE} (r={h6R.toFixed(3)}). Pragul de {GATE} poate fi incorect sau gate-ul nu functioneaza.</strong>}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-
                     {/* ═══ GRAFIC H7 — Test Scale-Independent al Interactiei I×F ═══ */}
                     {(() => {
                       const sc = results.hypothesisScatterData || [];
@@ -8197,7 +7932,7 @@ export default function StudiuAdminPage() {
                             <InterpBtn k="h7" title="H7 — Scale-Independent" val={verdict} />
                           </div>
                           <div style={{ ...cardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
-                            <strong>De ce H7?</strong> H5 compara erori absolute normalizate (/110 vs /30) — dar normalizarea comprima valorile multiplicative in range 0.1-0.5 (vs Cp 0.5-0.9), facand aditivul sa para mai precis prin artefact de scala. H7 elimina complet acest artefact prin doua analize complementare care nu depind de scala.
+                            <strong>Ce testeaza H7?</strong> Sinergia I×F (motorul formulei, ~90% din C) este reala? Comparatia directa normalizata (/110 vs /30) are un artefact de scala. H7 testeaza acelasi lucru prin metode scale-independent: Spearman Rank Correlation (ordinea predictiilor) si Partial Correlation (informatia suplimentara a I×F fata de modelul aditiv).
                           </div>
 
                           {/* Stats banner */}
@@ -8271,7 +8006,7 @@ export default function StudiuAdminPage() {
                               {partialSig ? <span style={{ color: "#059669" }}>Da — I×F aduce informatie suplimentara pe care aditivul nu o capteaza.</span> : <span style={{ color: "#DC2626" }}>Nu — I×F nu adauga informatie dincolo de R+I+F.</span>}
                             </div>
                             <div style={cardStyle}>
-                              <strong style={{ color: "#374151" }}>De ce e superior H5:</strong> H5 compara |Cf_mult/110 - Cp/10| vs |Cf_adit/30 - Cp/10|. Normalizarea /110 comprima in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. H7 elimina artefactul complet — raspunsul e definitiv.
+                              <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. H7 elimina artefactul complet prin Spearman ranks + Partial Correlation.
                             </div>
                           </div>
 
@@ -8549,7 +8284,7 @@ export default function StudiuAdminPage() {
                       })()}
                     </div>
 
-                    {/* ═══ TABEL SUMAR H1-H7 (Academic Summary) ═══ */}
+                    {/* ═══ TABEL SUMAR IPOTEZE (Academic Summary) ═══ */}
                     {(() => {
                       // Recompute summary data from scatter
                       const _sc = results.hypothesisScatterData || [];
@@ -8573,17 +8308,6 @@ export default function StudiuAdminPage() {
                       const _h3Rk = _h3K.length >= 3 ? _pearsonR(_h3K.map(d => d.c_computed / 11), _h3K.map(d => d.cta!)) : 0;
                       const _h3Ru = _h3U.length >= 3 ? _pearsonR(_h3U.map(d => d.c_computed / 11), _h3U.map(d => d.cta!)) : 0;
                       const _h3Fz = _fisherZTest(_h3Rk, _h3Ru, _h3K.length, _h3U.length);
-                      // H5
-                      const _h5V = _scV.filter(d => d.c_score != null && d.c_score > 0);
-                      const _dM = _h5V.length >= 2 ? _mean(_h5V.map(d => Math.abs((d.r + d.i * d.f) / 110 - d.c_score! / 10))) : 0;
-                      const _dA = _h5V.length >= 2 ? _mean(_h5V.map(d => Math.abs((d.r + d.i + d.f) / 30 - d.c_score! / 10))) : 0;
-                      const _h5Pct = _dA > 0 ? Math.round(((_dA - _dM) / _dA) * 1000) / 10 : 0;
-                      // H6
-                      const _h6B = _scV.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0);
-                      const _h6R = _h6B.length >= 2 ? _pearsonR(_h6B.map(d => d.i * d.f), _h6B.map(d => d.c_score!)) : 0;
-                      const _h6P = _pValuePearson(_h6R, _h6B.length);
-                      const _h6Ab = _scV.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
-                      const _h6Rab = _h6Ab.length >= 2 ? _pearsonR(_h6Ab.map(d => d.i * d.f), _h6Ab.map(d => d.c_score!)) : 0;
                       // H7
                       const _h7V = _scV.filter(d => d.c_score != null && d.c_score > 0);
                       const _h7RhoM = _h7V.length >= 3 ? _spearmanRho(_h7V.map(d => d.r + d.i * d.f), _h7V.map(d => d.c_score!)) : 0;
@@ -8602,8 +8326,6 @@ export default function StudiuAdminPage() {
                         { code: "H1", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "—", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
                         { code: "H2", name: "C prezice CTA", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
                         { code: "H3", name: "Brand modereaza C→CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
-                        { code: "H5", name: "Multiplicativ vs Aditiv", metric: `\u0394mult=${_dM.toFixed(3)}, \u0394adit=${_dA.toFixed(3)}`, n: `${_h5V.length}`, pVal: "—", verdict: _h5Pct > 10 ? "CONFIRMATA" : _h5Pct >= 0 ? "PARTIAL" : "NECONFIRMATA", color: _h5Pct > 10 ? "#059669" : _h5Pct >= 0 ? "#D97706" : "#DC2626" },
-                        { code: "H6", name: `Gate real (I×F irelevant sub R<${GATE})`, metric: `r\u2098\u2092\u2097=${_h6R.toFixed(3)}, r\u2090\u2097=${_h6Rab.toFixed(3)}`, n: `${_h6B.length} / ${_h6Ab.length}`, pVal: _fmtP(_h6P), verdict: Math.abs(_h6R) < 0.2 ? "CONFIRMATA" : Math.abs(_h6R) <= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h6R) < 0.2 ? "#059669" : Math.abs(_h6R) <= 0.4 ? "#D97706" : "#DC2626" },
                         { code: "H7", name: "Scale-Independent I×F", metric: `\u03C1m=${_h7RhoM.toFixed(3)}, \u03C1a=${_h7RhoA.toFixed(3)}, pr=${_h7PartR.toFixed(3)}`, n: `${_h7V.length}`, pVal: `Z=${_h7Fz.z.toFixed(2)}, ${_fmtP(_h7Fz.p)}; pr ${_fmtP(_h7PartP)}`, verdict: _h7Verd, color: _h7VerdColor },
                       ];
                       return (
@@ -8640,7 +8362,7 @@ export default function StudiuAdminPage() {
                             </table>
                           </div>
                           <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
-                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). Ipoteza H4 este calitativa (bar chart) si nu apare in tabel.
+                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). Ipoteza H4 este calitativa (bar chart) si nu apare in tabel. H5 si H6 au fost eliminate: H5 (artefact de scala) inlocuit de H7; H6 (testa ipoteza veche ca I×F se opreste sub Gate) contrazis de noua interpretare.
                           </div>
                         </div>
                       );
