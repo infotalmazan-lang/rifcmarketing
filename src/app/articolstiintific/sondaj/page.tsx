@@ -6308,13 +6308,6 @@ export default function StudiuAdminPage() {
           const rMax = Math.round(Math.max(...withData.map(s => s.avg_r)) * 100) / 100;
           const uniqueChannels = Array.from(new Set(withData.map(s => s.type))).length;
           const uniqueIndustries = Array.from(new Set(withData.map((s: any) => s.industry).filter(Boolean))).length;
-          const zoneMatchBreakdown = zones.reduce((acc, z) => {
-            const inZone = withData.filter(s => getZone(s.avg_c) === z || getZoneCp(s.avg_c_score) === z);
-            const matched = inZone.filter(s => getZone(s.avg_c) === z && getZoneCp(s.avg_c_score) === z).length;
-            const total = withData.filter(s => getZone(s.avg_c) === z).length;
-            acc[z] = { matched, total };
-            return acc;
-          }, {} as Record<string, { matched: number; total: number }>);
 
           // ── Interp header stats from LOG data (single source of truth) ──
           const _interpActiveN = stimuli.filter(s => s.is_active).length;
@@ -6331,6 +6324,12 @@ export default function StudiuAdminPage() {
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
           const zones = ["Critical", "Noise", "Medium", "Supreme"];
+          const zoneMatchBreakdown = zones.reduce((acc, z) => {
+            const matched = withData.filter(s => getZone(s.avg_c) === z && getZoneCp(s.avg_c_score) === z).length;
+            const total = withData.filter(s => getZone(s.avg_c) === z).length;
+            acc[z] = { matched, total };
+            return acc;
+          }, {} as Record<string, { matched: number; total: number }>);
           const zoneDistFormula: Record<string, number> = { Critical: 0, Noise: 0, Medium: 0, Supreme: 0 };
           const zoneDistPerceived: Record<string, number> = { Critical: 0, Noise: 0, Medium: 0, Supreme: 0 };
           withData.forEach(s => {
