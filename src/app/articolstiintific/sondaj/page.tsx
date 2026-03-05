@@ -5463,7 +5463,7 @@ export default function StudiuAdminPage() {
                                         </div>
                                       ))}
                                       <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 8, background: "#111827", color: "#fff" }}>
-                                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5 }}>C=R+(IxF)</span>
+                                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 0.5 }}>R+(IxF)=C</span>
                                         <span style={{ fontSize: 18, fontWeight: 800 }}>{cCalc}</span>
                                       </div>
                                     </div>
@@ -7282,8 +7282,6 @@ export default function StudiuAdminPage() {
 
                       <div style={{ textAlign: "center" as const, padding: "14px 0", marginBottom: 12, background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
                         <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "JetBrains Mono, monospace", letterSpacing: 2 }}>
-                          <span style={{ color: "#059669" }}>C</span>
-                          <span style={{ color: "#6B7280", margin: "0 6px" }}>=</span>
                           <span style={{ color: "#DC2626" }}>R</span>
                           <span style={{ color: "#6B7280", margin: "0 6px" }}>+</span>
                           <span style={{ color: "#6B7280" }}>(</span>
@@ -7291,9 +7289,11 @@ export default function StudiuAdminPage() {
                           <span style={{ color: "#6B7280", margin: "0 4px" }}>{"\u00D7"}</span>
                           <span style={{ color: "#7C3AED" }}>F</span>
                           <span style={{ color: "#6B7280" }}>)</span>
+                          <span style={{ color: "#6B7280", margin: "0 6px" }}>=</span>
+                          <span style={{ color: "#059669" }}>C</span>
                         </div>
                         <div style={{ fontSize: 10, color: "#6B7280", marginTop: 4, fontStyle: "italic" }}>
-                          <span style={{ color: "#059669", fontWeight: 700 }}>Claritatea</span> = <span style={{ color: "#DC2626", fontWeight: 700 }}>Relevanta</span> + <span style={{ color: "#D97706", fontWeight: 700 }}>Interesul</span> {"\u00D7"} <span style={{ color: "#7C3AED", fontWeight: 700 }}>Forma</span>
+                          <span style={{ color: "#DC2626", fontWeight: 700 }}>Relevanta</span> + <span style={{ color: "#D97706", fontWeight: 700 }}>Interesul</span> {"\u00D7"} <span style={{ color: "#7C3AED", fontWeight: 700 }}>Forma</span> = <span style={{ color: "#059669", fontWeight: 700 }}>Claritatea</span>
                         </div>
                       </div>
 
