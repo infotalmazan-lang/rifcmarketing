@@ -7845,73 +7845,6 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
-                    {/* ── GRAFIC H5 — C vs Brand Recognition per Material ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H5: Claritate si recognoscibilitate <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Bar Chart Comparison — C vs Brand Recognition)</span></div>
-                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
-                        <strong>Ce testeaza:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului — un mesaj clar e si mai usor de recunoscut si retinut.{" "}
-                        <strong>Metoda:</strong> Bar chart grupat per material: C formula normalizat (albastru) vs procentul care cunosc brandul (portocaliu).{" "}
-                        <strong>Interpretare:</strong> Corespondenta intre inaltimile barelor = confirmat, lipsa corespondentei = brand recognition independent de C.
-                      </div>
-                      {h5Materials.length > 0 ? (
-                        <div style={{ overflowX: "auto" as const }}>
-                          <svg width={Math.max(chartW, h5Materials.length * (h5BarW * 2 + 12) + pad.l + pad.r + 20)} height={chartH + 50} style={{ display: "block" }}>
-                            {/* Y grid */}
-                            {[0, 25, 50, 75, 100].map(v => {
-                              const y = pad.t + plotH - (v / 100) * plotH;
-                              return (
-                                <g key={`h5y-${v}`}>
-                                  <line x1={pad.l} y1={y} x2={chartW - pad.r} y2={y} stroke="#f3f4f6" strokeWidth={0.5} />
-                                  <text x={pad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{v}%</text>
-                                </g>
-                              );
-                            })}
-                            <rect x={pad.l} y={pad.t} width={plotW} height={plotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-                            {/* Bars */}
-                            {h5Materials.map((m, i) => {
-                              const groupX = pad.l + 16 + i * (h5BarW * 2 + 12);
-                              const cH = (m.cNorm / 100) * plotH;
-                              const bH = (m.brandRate / 100) * plotH;
-                              return (
-                                <g key={i}>
-                                  {/* C bar */}
-                                  <rect x={groupX} y={pad.t + plotH - cH} width={h5BarW} height={cH} fill="#2563EB" rx={2} opacity={0.75} />
-                                  <text x={groupX + h5BarW / 2} y={pad.t + plotH - cH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#2563EB">{m.cNorm}%</text>
-                                  {/* Brand bar */}
-                                  <rect x={groupX + h5BarW + 2} y={pad.t + plotH - bH} width={h5BarW} height={bH} fill="#D97706" rx={2} opacity={0.75} />
-                                  <text x={groupX + h5BarW + 2 + h5BarW / 2} y={pad.t + plotH - bH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#D97706">{m.brandRate}%</text>
-                                  {/* X label */}
-                                  <text x={groupX + h5BarW} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#6B7280" transform={`rotate(-35 ${groupX + h5BarW} ${chartH - pad.b + 12})`}>{m.name}</text>
-                                </g>
-                              );
-                            })}
-                            {/* Legend */}
-                            <rect x={pad.l + 10} y={chartH + 26} width={12} height={6} fill="#2563EB" rx={1} opacity={0.75} />
-                            <text x={pad.l + 26} y={chartH + 32} fontSize={9} fontWeight={600} fill="#2563EB">C formula (normalizat 0-100%)</text>
-                            <rect x={pad.l + 230} y={chartH + 26} width={12} height={6} fill="#D97706" rx={1} opacity={0.75} />
-                            <text x={pad.l + 246} y={chartH + 32} fontSize={9} fontWeight={600} fill="#D97706">Brand familiar %</text>
-                          </svg>
-                        </div>
-                      ) : (
-                        <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu exista suficiente date brand_familiar pentru acest grafic.</div>
-                      )}
-                      <div style={{ ...cardStyle, marginTop: 8, borderLeft: "3px solid #6B7280", color: "#6B7280", fontSize: 11 }}>
-                        Brand_familiar% este folosit ca proxy pentru recognoscibilitate. Scala portocalie: 0-100% convertita la 0-100 pentru comparabilitate cu C normalizat.
-                      </div>
-                      <div style={cardStyle}>
-                        <strong>H5 — Claritate si recognoscibilitate:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului. Comparati bara albastra (C formulat) cu bara portocalie (% care cunosc brandul). O corelatie pozitiva intre inaltimile barelor confirma H5.
-                        {h5Materials.length > 0 && (() => {
-                          const corr = linReg(h5Materials.map(m => ({ x: m.cNorm, y: m.brandRate })));
-                          const corrR = _pearsonR(h5Materials.map(m => m.cNorm), h5Materials.map(m => m.brandRate));
-                          return <> Pearson r={corrR.toFixed(3)}, r&sup2;={corr.r2.toFixed(3)}.{" "}
-                            {corr.slope > 0 && corr.r2 > 0.05
-                              ? <strong style={{ color: "#059669" }}>Tendinta pozitiva — materialele cu C mai mare au si brand recognition mai mare.</strong>
-                              : <strong style={{ color: "#D97706" }}>Corelatie slaba — brand recognition pare independent de scorul C in acest esantion.</strong>}
-                          </>;
-                        })()}
-                      </div>
-                    </div>
-
                     {/* ═══ GRAFIC H4 — Test Scale-Independent al Interactiei I×F ═══ */}
                     {(() => {
                       const sc = results.hypothesisScatterData || [];
@@ -8078,6 +8011,73 @@ export default function StudiuAdminPage() {
                         </>
                       );
                     })()}
+
+                    {/* ── GRAFIC H5 — C vs Brand Recognition per Material ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H5: Claritate si recognoscibilitate <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Bar Chart Comparison — C vs Brand Recognition)</span></div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
+                        <strong>Ce testeaza:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului — un mesaj clar e si mai usor de recunoscut si retinut.{" "}
+                        <strong>Metoda:</strong> Bar chart grupat per material: C formula normalizat (albastru) vs procentul care cunosc brandul (portocaliu).{" "}
+                        <strong>Interpretare:</strong> Corespondenta intre inaltimile barelor = confirmat, lipsa corespondentei = brand recognition independent de C.
+                      </div>
+                      {h5Materials.length > 0 ? (
+                        <div style={{ overflowX: "auto" as const }}>
+                          <svg width={Math.max(chartW, h5Materials.length * (h5BarW * 2 + 12) + pad.l + pad.r + 20)} height={chartH + 50} style={{ display: "block" }}>
+                            {/* Y grid */}
+                            {[0, 25, 50, 75, 100].map(v => {
+                              const y = pad.t + plotH - (v / 100) * plotH;
+                              return (
+                                <g key={`h5y-${v}`}>
+                                  <line x1={pad.l} y1={y} x2={chartW - pad.r} y2={y} stroke="#f3f4f6" strokeWidth={0.5} />
+                                  <text x={pad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{v}%</text>
+                                </g>
+                              );
+                            })}
+                            <rect x={pad.l} y={pad.t} width={plotW} height={plotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                            {/* Bars */}
+                            {h5Materials.map((m, i) => {
+                              const groupX = pad.l + 16 + i * (h5BarW * 2 + 12);
+                              const cH = (m.cNorm / 100) * plotH;
+                              const bH = (m.brandRate / 100) * plotH;
+                              return (
+                                <g key={i}>
+                                  {/* C bar */}
+                                  <rect x={groupX} y={pad.t + plotH - cH} width={h5BarW} height={cH} fill="#2563EB" rx={2} opacity={0.75} />
+                                  <text x={groupX + h5BarW / 2} y={pad.t + plotH - cH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#2563EB">{m.cNorm}%</text>
+                                  {/* Brand bar */}
+                                  <rect x={groupX + h5BarW + 2} y={pad.t + plotH - bH} width={h5BarW} height={bH} fill="#D97706" rx={2} opacity={0.75} />
+                                  <text x={groupX + h5BarW + 2 + h5BarW / 2} y={pad.t + plotH - bH - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill="#D97706">{m.brandRate}%</text>
+                                  {/* X label */}
+                                  <text x={groupX + h5BarW} y={chartH - pad.b + 12} textAnchor="middle" fontSize={7} fill="#6B7280" transform={`rotate(-35 ${groupX + h5BarW} ${chartH - pad.b + 12})`}>{m.name}</text>
+                                </g>
+                              );
+                            })}
+                            {/* Legend */}
+                            <rect x={pad.l + 10} y={chartH + 26} width={12} height={6} fill="#2563EB" rx={1} opacity={0.75} />
+                            <text x={pad.l + 26} y={chartH + 32} fontSize={9} fontWeight={600} fill="#2563EB">C formula (normalizat 0-100%)</text>
+                            <rect x={pad.l + 230} y={chartH + 26} width={12} height={6} fill="#D97706" rx={1} opacity={0.75} />
+                            <text x={pad.l + 246} y={chartH + 32} fontSize={9} fontWeight={600} fill="#D97706">Brand familiar %</text>
+                          </svg>
+                        </div>
+                      ) : (
+                        <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu exista suficiente date brand_familiar pentru acest grafic.</div>
+                      )}
+                      <div style={{ ...cardStyle, marginTop: 8, borderLeft: "3px solid #6B7280", color: "#6B7280", fontSize: 11 }}>
+                        Brand_familiar% este folosit ca proxy pentru recognoscibilitate. Scala portocalie: 0-100% convertita la 0-100 pentru comparabilitate cu C normalizat.
+                      </div>
+                      <div style={cardStyle}>
+                        <strong>H5 — Claritate si recognoscibilitate:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului. Comparati bara albastra (C formulat) cu bara portocalie (% care cunosc brandul). O corelatie pozitiva intre inaltimile barelor confirma H5.
+                        {h5Materials.length > 0 && (() => {
+                          const corr = linReg(h5Materials.map(m => ({ x: m.cNorm, y: m.brandRate })));
+                          const corrR = _pearsonR(h5Materials.map(m => m.cNorm), h5Materials.map(m => m.brandRate));
+                          return <> Pearson r={corrR.toFixed(3)}, r&sup2;={corr.r2.toFixed(3)}.{" "}
+                            {corr.slope > 0 && corr.r2 > 0.05
+                              ? <strong style={{ color: "#059669" }}>Tendinta pozitiva — materialele cu C mai mare au si brand recognition mai mare.</strong>
+                              : <strong style={{ color: "#D97706" }}>Corelatie slaba — brand recognition pare independent de scorul C in acest esantion.</strong>}
+                          </>;
+                        })()}
+                      </div>
+                    </div>
 
                     {/* ═══════════════════════════════════════════════════════════════
                         VALIDARE INSTRUMENT — V1 (Cronbach Alpha) + V2 (Distributii)
