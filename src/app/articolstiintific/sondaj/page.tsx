@@ -6844,19 +6844,63 @@ export default function StudiuAdminPage() {
                     );
                   })()}
 
-                  {/* Conclusion */}
-                  <div style={{
-                    background: `${getValidationColor(grandHypPct)}08`, border: `1px solid ${getValidationColor(grandHypPct)}30`,
-                    borderRadius: 10, padding: 16,
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                      <Brain size={16} style={{ color: getValidationColor(grandHypPct) }} />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: getValidationColor(grandHypPct) }}>CONCLUZIE GENERALA</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, margin: 0 }}>
-                      {getConclusion(grandHypPct, grandR, grandZoneMatch)}
-                    </p>
-                  </div>
+                  {/* Conclusion + R-Synthesis Rules */}
+                  {(() => {
+                    const _rContrib = grandCf > 0 ? Math.round(grandR / grandCf * 1000) / 10 : 0;
+                    const _ixfVal = Math.round((grandCf - grandR) * 100) / 100;
+                    const _ixfContrib = Math.round((100 - _rContrib) * 10) / 10;
+                    const _gapPct = Math.round((100 - grandHypPct) * 10) / 10;
+                    const _cfNorm = grandCfNorm;
+                    const _deltaFactor = _cfNorm > 0 ? Math.round(grandCp / _cfNorm * 100) / 100 : 1;
+                    return (
+                      <div style={{ background: `${getValidationColor(grandHypPct)}08`, border: `1px solid ${getValidationColor(grandHypPct)}30`, borderRadius: 10, padding: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                          <Brain size={16} style={{ color: getValidationColor(grandHypPct) }} />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: getValidationColor(grandHypPct) }}>CONCLUZIE GENERALA</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, marginBottom: 12 }}>
+                          Formula <strong>R+(I&times;F)=C</strong> este <strong>{getValidationLabel(grandHypPct).toLowerCase()}</strong> ({grandHypPct}%). Diferenta de {_gapPct}% fata de 100% se explica prin 4 reguli derivate din analiza H1+H6:
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          {/* Rule 1 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #2563EB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#2563EB", marginBottom: 3 }}>R1: R = cheie de contact, I&times;F = motor</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              R = {grandR.toFixed(2)} contribuie <strong>{_rContrib}%</strong> la formula. I&times;F = {_ixfVal.toFixed(2)} contribuie <strong>{_ixfContrib}%</strong>. Gate-ul (R &ge; {GATE}) este {grandR >= GATE ? <strong style={{ color: "#059669" }}>ACTIVAT</strong> : <strong style={{ color: "#DC2626" }}>INACTIV</strong>} — {grandR >= GATE ? "motorul (I×F) functioneaza." : "motorul exista dar nu produce actiune."}
+                            </div>
+                          </div>
+                          {/* Rule 2 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #D97706" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#D97706", marginBottom: 3 }}>R2: R &lt; {GATE} = diagnostic, nu condamnare</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              {gatePassRate >= 100
+                                ? <>Toate {n} materialele trec Gate-ul. Nu exista materiale irelevante in set — formula e aplicabila pe intregul esantion.</>
+                                : <>{n - gatePassCount} materiale ({Math.round((1 - gatePassRate / 100) * 100)}%) au R &lt; {GATE}. Acestea functioneaza tehnic dar nu sunt actionabile — diagnosticul: schimba audienta sau propunerea de valoare.</>}
+                            </div>
+                          </div>
+                          {/* Rule 3 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #059669" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#059669", marginBottom: 3 }}>R3: R &ge; {GATE} = aplicabila, nu precisa</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              Formula prezice <strong>{grandHypPct}%</strong> din claritate. Zone Match <strong>{zoneMatchRate}%</strong> ({zoneMatchCount}/{n} materiale in aceeasi zona). {zoneMatchRate >= 70 ? "Potrivire puternica — formula clasifica corect." : zoneMatchRate >= 50 ? "Potrivire moderata — formula necesita calibrare pe factori externi." : "Potrivire slaba — factori externi domina perceptia."}
+                            </div>
+                          </div>
+                          {/* Rule 4 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #7C3AED" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#7C3AED", marginBottom: 3 }}>R4: Delta = dependenta contextuala</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              &Delta; = {grandDelta.toFixed(2)} (Cf_norm {_cfNorm.toFixed(2)} vs Cp {grandCp.toFixed(2)}, factor &times;{_deltaFactor}). {_cfNorm < grandCp ? <>Formula <strong>subestimeaza</strong> — {_gapPct}% gap provine din Brand, experienta, context care amplifica claritatea perceputa.</> : _cfNorm > grandCp ? <>Formula <strong>supraestimeaza</strong> — bariere cognitive reduc claritatea perceputa sub predictie.</> : <>Aliniere perfecta.</>}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 10, padding: "8px 12px", background: grandR >= GATE ? "#eff6ff" : "#fef2f2", borderRadius: 6, fontSize: 11, color: grandR >= GATE ? "#1e40af" : "#991b1b", fontWeight: 600, textAlign: "center" as const }}>
+                          {grandR >= GATE
+                            ? <>&quot;Creste I&times;F si calibreaza pentru Brand — formula lucreaza pentru tine.&quot; R={grandR.toFixed(1)} activeaza, I&times;F={_ixfVal.toFixed(1)} amplifica, dar {_gapPct}% din perceptie vine din afara formulei.</>
+                            : <>&quot;Creste R mai intai — fara relevanta, audienta lucreaza in locul mesajului.&quot; Prioritate absoluta: targetare si propunere de valoare.</>}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
