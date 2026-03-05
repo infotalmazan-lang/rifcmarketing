@@ -1048,7 +1048,7 @@ export default function StudiuAdminPage() {
   const [cviSaving, setCviSaving] = useState(false);
   const defaultCviExpertForm = { name: "", org: "", role: "", experience: "", email: "" };
   const [cviExpertForm, setCviExpertForm] = useState(defaultCviExpertForm);
-  const [cviSubTab, setCviSubTab] = useState<"main" | "edit" | "preview">("main");
+  const [cviSubTab, setCviSubTab] = useState<"main" | "edit" | "preview" | "interpretare">("main");
 
   // CVI item editor state (for Editează sub-tab)
   const [cviItemEdits, setCviItemEdits] = useState<Record<string, { text?: string; sub?: string }>>({});
@@ -6266,6 +6266,48 @@ export default function StudiuAdminPage() {
                 { heading: "De ce nu e o eroare", text: "Factorul de corectie nu indica o greseala in formula, ci o descoperire academica. Sugereaza ca exista factori (brand equity, emotie, context cultural, experienta anterioara) neinclusi in formula actuala. Aceasta justifica cercetarea continua si posibila extindere a modelului RIFC." },
                 { heading: "Concluzie", text: `Cu un factor de ${val}×, formula RIFC ${v <= 1.2 ? "este bine calibrata — predictia se aliniaza cu perceptia reala." : v <= 1.5 ? "subestimeaza moderat — exista factori pozitivi externi formulei care ridica perceptia." : "subestimeaza semnificativ — este necesara o investigare a factorilor care amplifica perceptia dincolo de R, I si F."}` },
               ]};
+              // ── CVI Drawer Cases ──
+              case "cvi-global": {
+                const _sAve = _ctx.sCviAve as number || 0;
+                const _sUa = _ctx.sCviUa as number || 0;
+                const _fk = _ctx.fleissK as number || 0;
+                const _iPass = _ctx.itemsPass as number || 0;
+                const _iRev = _ctx.itemsRevise as number || 0;
+                const _iRej = _ctx.itemsReject as number || 0;
+                const _nE = _ctx.nExperts as number || 0;
+                return { sections: [
+                  { heading: "Ce masoara S-CVI", text: `S-CVI (Scale-level Content Validity Index) masoara validitatea de continut a intregului instrument (35 itemi). S-CVI/Ave = media tuturor I-CVI = ${_sAve.toFixed(3)}. S-CVI/UA = proportia itemilor cu unanimitate (I-CVI=1.00) = ${_sUa.toFixed(3)}.` },
+                  { heading: "Praguri academice", text: `S-CVI/Ave ≥ 0.90 = excelent (Polit & Beck, 2006). S-CVI/UA ≥ 0.80 = acceptabil. Fleiss κ > 0.61 = acord substantial (Landis & Koch, 1977). Items PASS ≥ 80% = instrument valid.` },
+                  { heading: "Rezultatele panelului", text: `${_nE} experti au evaluat cei 35 itemi. ${_iPass} PASS, ${_iRev} REVISE, ${_iRej} REJECT. ${_sAve >= 0.90 ? "Instrumentul demonstreaza validitate de continut excelenta." : _sAve >= 0.80 ? "Validitate acceptabila, dar sub pragul de excelenta." : "Validitate insuficienta — sunt necesare revizuiri."}` },
+                  { heading: "Concluzie", text: `${_sAve >= 0.90 && _fk > 0.61 ? "Instrumentul RIFC cu 35 itemi este valid din perspectiva continutului, cu acord substantial intre evaluatori. Se poate utiliza in cercetarea principala." : "Sunt necesare ajustari: revizuirea itemilor sub prag si/sau extinderea panelului de experti."}` },
+                ]};
+              }
+              case "cvi-R": case "cvi-I": case "cvi-F": case "cvi-C": {
+                const _dim = _ctx.dim as string || "";
+                const _dCvi = _ctx.dCvi as number || 0;
+                const _dP = _ctx.dPass as number || 0;
+                const _dRv = _ctx.dRevise as number || 0;
+                const _dRj = _ctx.dReject as number || 0;
+                const _nI = _ctx.nItems as number || 0;
+                const dimNames: Record<string,string> = { R: "Relevanta", I: "Interes", F: "Forma", C: "Claritate" };
+                const dimDescs: Record<string,string> = { R: "masoara cat de adecvat este continutul pentru audienta tinta", I: "evalueaza capacitatea de a capta si mentine atentia", F: "analizeaza calitatea executiei si prezentarii", C: "masoara intelegerea si impactul mesajului" };
+                return { sections: [
+                  { heading: `Ce masoara dimensiunea ${dimNames[_dim] || _dim}`, text: `Dimensiunea ${dimNames[_dim] || _dim} (${_dim}) ${dimDescs[_dim] || "face parte din modelul RIFC"}. Contine ${_nI} itemi (sub-factori) evaluati de panelul de experti.` },
+                  { heading: "Rezultate CVI", text: `CVI mediu dimensiune = ${_dCvi.toFixed(3)}. Din ${_nI} itemi: ${_dP} PASS (≥0.80), ${_dRv} REVISE (0.70-0.79), ${_dRj} REJECT (<0.70).` },
+                  { heading: "Interpretare", text: `${_dCvi >= 0.90 ? "Dimensiunea are validitate excelenta — toti itemii sunt considerati relevanti de catre experti." : _dCvi >= 0.78 ? "Dimensiunea depaseste pragul minim (0.78) — validitate acceptabila." : "Dimensiunea este sub pragul minim — itemii necesita revizuire."}` },
+                ]};
+              }
+              case "cvi-fleiss": {
+                const _fkVal = _ctx.fleissK as number || 0;
+                const _nExp = _ctx.nExperts as number || 0;
+                const _kLabel = _ctx.kappaLabel as string || "";
+                return { sections: [
+                  { heading: "Ce masoara Fleiss Kappa", text: `Fleiss κ masoara concordanta (inter-rater reliability) dintre mai multi evaluatori care clasifica aceleasi subiecte in categorii. Spre deosebire de Cohen's κ (2 evaluatori), Fleiss κ permite orice numar de evaluatori (aici: ${_nExp}).` },
+                  { heading: "Scala Landis & Koch (1977)", text: "κ < 0.00: Acord mai mic decat sansa. 0.00-0.20: Slab. 0.21-0.40: Acceptabil. 0.41-0.60: Moderat. 0.61-0.80: Substantial. 0.81-1.00: Aproape perfect." },
+                  { heading: "Rezultatul panelului", text: `Fleiss κ = ${_fkVal.toFixed(3)} → acord ${_kLabel.toLowerCase()}. ${_fkVal > 0.61 ? "Expertii au un grad ridicat de concordanta — evaluarile sunt fiabile si consistente." : _fkVal > 0.40 ? "Acordul este moderat — exista variabilitate in opiniile expertilor." : "Acordul este scazut — expertii au opinii divergente, ceea ce reduce fiabilitatea CVI."}` },
+                  { heading: "Implicatii", text: `${_fkVal > 0.61 ? "Cu acord substantial, S-CVI si I-CVI pot fi considerate fiabile. Panelul de experti a demonstrat consens in evaluarea relevantei itemilor." : "Se recomanda clarificarea criteriilor de evaluare, instruirea suplimentara a evaluatorilor sau extinderea panelului."}` },
+                ]};
+              }
               default: return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare a formulei RIFC." }] };
             }
           };
@@ -8628,6 +8670,7 @@ export default function StudiuAdminPage() {
                         { key: "main" as const, label: "Pagina", icon: <LayoutList size={13} /> },
                         { key: "edit" as const, label: "Editează", icon: <Pencil size={13} /> },
                         { key: "preview" as const, label: "Preview", icon: <Eye size={13} /> },
+                        ...((cviResults?.stats?.completed || 0) >= 3 ? [{ key: "interpretare" as const, label: "Interpretare", icon: <Brain size={13} /> }] : []),
                       ]).map(t => (
                         <button
                           key={t.key}
@@ -8882,20 +8925,65 @@ export default function StudiuAdminPage() {
                 {cviSubTab === "main" && (
                 <>
 
-                {/* ── Stats Panel ── */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-                  {[
-                    { label: "Invitați", value: cviExperts.length, color: "#6366F1" },
-                    { label: "Completat", value: cviExperts.filter((e: any) => e.status === "completed").length, color: "#22C55E" },
-                    { label: "Pending", value: cviExperts.filter((e: any) => e.status === "pending").length, color: "#F59E0B" },
-                    { label: "Fleiss κ", value: cviResults?.fleissKappa !== undefined && cviResults.fleissKappa > 0 ? cviResults.fleissKappa.toFixed(3) : "—", color: "#8B5CF6" },
-                  ].map((s, i) => (
-                    <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px", textAlign: "center" }}>
-                      <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
-                      <div style={{ fontSize: 12, color: "#6B7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+                {/* ── Hero KPI Panel (dark, target 50) ── */}
+                {(() => {
+                  const CVI_TARGET = 50;
+                  const _cviCompleted = cviExperts.filter((e: any) => e.status === "completed").length;
+                  const _cviPending = cviExperts.filter((e: any) => e.status === "pending").length;
+                  const _cviRate = cviExperts.length > 0 ? Math.round((_cviCompleted / cviExperts.length) * 100) : 0;
+                  const _cviRemaining = Math.max(CVI_TARGET - _cviCompleted, 0);
+                  const _cviPct = Math.min(Math.round((_cviCompleted / CVI_TARGET) * 100), 100);
+                  const _sCviAve = cviResults?.summary?.length > 0 ? (cviResults.summary.reduce((a: number, s: any) => a + (s.cvi_score || 0), 0) / cviResults.summary.length) : 0;
+                  return (
+                    <div style={{ background: "linear-gradient(135deg, #111827 0%, #1e293b 100%)", borderRadius: 16, padding: "28px 32px 20px", marginBottom: 20, position: "relative" as const, overflow: "hidden" }}>
+                      <div style={{ position: "absolute" as const, top: -40, right: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(99,102,241,0.06)" }} />
+                      <div style={{ position: "absolute" as const, bottom: -30, left: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(139,92,246,0.05)" }} />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16, position: "relative" as const, zIndex: 1 }}>
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 6 }}>OBIECTIV PANEL EXPERTI — CVI</div>
+                          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                            <span style={{ fontSize: 52, fontWeight: 900, color: "#fff", fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>{_cviCompleted}</span>
+                            <span style={{ fontSize: 18, fontWeight: 600, color: "#4B5563" }}>/ {CVI_TARGET}</span>
+                          </div>
+                          <div style={{ fontSize: 13, color: "#9CA3AF", marginTop: 4 }}>{_cviRemaining > 0 ? `Încă ${_cviRemaining} experți necesari` : "Obiectiv atins!"}</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, justifyContent: "flex-end" }}>
+                          {[
+                            { label: "Invitati", value: cviExperts.length, color: "#94a3b8" },
+                            { label: "Completat", value: _cviCompleted, color: "#10b981" },
+                            { label: "Pending", value: _cviPending, color: "#f59e0b" },
+                            { label: "Rata", value: `${_cviRate}%`, color: _cviRate >= 80 ? "#10b981" : _cviRate >= 50 ? "#f59e0b" : "#ef4444", isText: true },
+                            { label: "Fleiss κ", value: cviResults?.fleissKappa > 0 ? cviResults.fleissKappa.toFixed(3) : "—", color: "#a78bfa", isText: true },
+                            { label: "S-CVI/Ave", value: _sCviAve > 0 ? _sCviAve.toFixed(2) : "—", color: "#6366f1", isText: true },
+                          ].map((s: any) => (
+                            <div key={s.label} style={{ textAlign: "center" as const, minWidth: 56, padding: "4px 6px" }}>
+                              <div style={{ fontSize: 8, fontWeight: 600, letterSpacing: 0.5, color: "#6B7280", marginBottom: 2, textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>{s.label}</div>
+                              <div style={{ fontSize: 17, fontWeight: 800, color: s.color, fontFamily: "JetBrains Mono, monospace", lineHeight: 1.2 }}>{s.isText ? s.value : (typeof s.value === "number" ? s.value.toLocaleString("ro-RO") : s.value)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Progress bar */}
+                      <div style={{ position: "relative" as const, zIndex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280" }}>PROGRES</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: _cviPct >= 80 ? "#10b981" : _cviPct >= 50 ? "#f59e0b" : "#6366f1", fontFamily: "JetBrains Mono, monospace" }}>{_cviPct}%</span>
+                        </div>
+                        <div style={{ width: "100%", height: 8, background: "rgba(255,255,255,0.08)", borderRadius: 4, overflow: "hidden" }}>
+                          <div style={{ width: `${_cviPct}%`, height: "100%", background: "linear-gradient(90deg, #6366F1, #8B5CF6)", borderRadius: 4, transition: "width 0.5s" }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                          {[0, 10, 20, 30, 40, 50].map(v => <span key={v} style={{ fontSize: 8, color: "#4B5563" }}>{v}</span>)}
+                        </div>
+                      </div>
+                      {/* Bottom: items + dimensions */}
+                      <div style={{ display: "flex", gap: 8, marginTop: 12, position: "relative" as const, zIndex: 1 }}>
+                        <div style={{ padding: "3px 10px", borderRadius: 4, background: "rgba(99,102,241,0.15)", fontSize: 10, fontWeight: 600, color: "#a78bfa" }}>35 itemi × 4 dimensiuni (R·I·F·C)</div>
+                        <div style={{ padding: "3px 10px", borderRadius: 4, background: "rgba(139,92,246,0.15)", fontSize: 10, fontWeight: 600, color: "#c4b5fd" }}>Scala Likert 1-4</div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })()}
 
                 {/* ── General CVI Access Link Card ── */}
                 <div style={{ background: "linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)", border: "1px solid #BFDBFE", borderRadius: 12, padding: 20, marginBottom: 20 }}>
@@ -9265,6 +9353,548 @@ export default function StudiuAdminPage() {
 
                 </>
                 )}
+
+                {/* ═══ CVI INTERPRETARE SUB-TAB ═══ */}
+                {cviSubTab === "interpretare" && cviResults && (() => {
+                  const summary: any[] = cviResults.summary || [];
+                  const nExperts = cviResults.stats?.completed || 0;
+                  const exportData: number[][] = cviResults.exportData || [];
+                  const fleissK = cviResults.fleissKappa || 0;
+                  const dimCvi = cviResults.dimensionCvi || { R: 0, I: 0, F: 0, C: 0 };
+
+                  // S-CVI/Ave = mean of all I-CVI scores
+                  const sCviAve = summary.length > 0 ? summary.reduce((a: number, s: any) => a + (s.cvi_score || 0), 0) / summary.length : 0;
+                  // S-CVI/UA = proportion of items with I-CVI = 1.00
+                  const sCviUa = summary.length > 0 ? summary.filter((s: any) => s.cvi_score >= 1.0).length / summary.length : 0;
+                  // Items counts
+                  const itemsPass = summary.filter((s: any) => s.status === "PASS").length;
+                  const itemsRevise = summary.filter((s: any) => s.status === "REVISE").length;
+                  const itemsReject = summary.filter((s: any) => s.status === "REJECT").length;
+
+                  // Modified Kappa per item: κ* = (I_CVI - pc) / (1 - pc) where pc = C(n,agree) × 0.5^n
+                  const calcModifiedKappa = (iCvi: number, n: number): number => {
+                    if (n < 2) return 0;
+                    const agree = Math.round(iCvi * n);
+                    // pc = C(n, agree) * 0.5^n
+                    const factorial = (x: number): number => { let r = 1; for (let i = 2; i <= x; i++) r *= i; return r; };
+                    const comb = factorial(n) / (factorial(agree) * factorial(n - agree));
+                    const pc = comb * Math.pow(0.5, n);
+                    if (pc >= 1) return 1;
+                    return (iCvi - pc) / (1 - pc);
+                  };
+
+                  // Kappa label (Landis & Koch)
+                  const kappaLabel = (k: number): string => {
+                    if (k > 0.80) return "Aproape perfect";
+                    if (k > 0.60) return "Substanțial";
+                    if (k > 0.40) return "Moderat";
+                    if (k > 0.20) return "Acceptabil";
+                    if (k > 0.0) return "Slab";
+                    return "Fără acord";
+                  };
+                  const kappaColor = (k: number): string => {
+                    if (k > 0.80) return "#059669";
+                    if (k > 0.60) return "#10b981";
+                    if (k > 0.40) return "#f59e0b";
+                    if (k > 0.20) return "#D97706";
+                    return "#DC2626";
+                  };
+
+                  // Validation badge
+                  const getValidationBadge = (val: number): { text: string; color: string; bg: string } => {
+                    if (val >= 0.90) return { text: "PUTERNIC VALIDAT", color: "#059669", bg: "#DCFCE7" };
+                    if (val >= 0.80) return { text: "VALIDAT", color: "#10b981", bg: "#D1FAE5" };
+                    if (val >= 0.70) return { text: "PARȚIAL VALIDAT", color: "#D97706", bg: "#FEF3C7" };
+                    return { text: "NEVALIDAT", color: "#DC2626", bg: "#FEE2E2" };
+                  };
+
+                  const dimMeta = [
+                    { key: "R", label: "Relevanță", color: "#DC2626", bg: "#FEF2F2", items: ["R1","R2","R3","R4","R5","R6","R7"] },
+                    { key: "I", label: "Interes", color: "#2563EB", bg: "#EFF6FF", items: ["I1","I2","I3","I4","I5","I6","I7","I8","I9","I10"] },
+                    { key: "F", label: "Formă", color: "#059669", bg: "#ECFDF5", items: ["F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11"] },
+                    { key: "C", label: "Claritate", color: "#D97706", bg: "#FFFBEB", items: ["C1","C2","C3","C4","C5","C6","C7"] },
+                  ];
+
+                  const vBadge = getValidationBadge(sCviAve);
+
+                  return (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+
+                    {/* ═══ S1. CHENAR EXPLICATIV CVI ═══ */}
+                    <div style={{ background: "#f8fafc", borderLeft: "4px solid #7C3AED", borderRadius: 8, padding: "20px 24px" }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: "#1E293B", marginBottom: 12 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 6 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        Ce este Content Validity Index (CVI)?
+                      </div>
+                      <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, margin: "0 0 12px" }}>
+                        <strong>Content Validity Index (CVI)</strong> masoara gradul in care un set de itemi este considerat <strong>relevant</strong> de catre un panel de experti.
+                        Fiecare expert evalueaza fiecare item pe o <strong>scala Likert 1-4</strong> (1 = Irelevant, 2 = Partial relevant, 3 = Relevant, 4 = Extrem de relevant).
+                        Scorurile &ge; 3 sunt considerate &quot;relevante&quot;.
+                      </p>
+                      <div style={{ background: "#ede9fe", borderRadius: 6, padding: "10px 14px", fontFamily: "JetBrains Mono, monospace", fontSize: 12, color: "#5B21B6", marginBottom: 14 }}>
+                        I-CVI = N<sub>relevant</sub> / N<sub>total</sub> &nbsp;&nbsp;(relevant = scor &ge; 3)
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                        {[
+                          { title: "I-CVI (per item)", desc: "Proportia expertilor care evalueaza itemul ca relevant. Prag: ≥ 0.78 (Lynn, 1986)." },
+                          { title: "S-CVI/Ave", desc: "Media tuturor I-CVI. Prag: ≥ 0.90 (Polit & Beck, 2006)." },
+                          { title: "S-CVI/UA", desc: "Proportia itemilor cu unanimitate (I-CVI = 1.00). Prag: ≥ 0.80." },
+                          { title: "Fleiss κ (Kappa)", desc: "Fiabilitate inter-evaluatori (> 0.61 = substantial, Landis & Koch, 1977)." },
+                        ].map(m => (
+                          <div key={m.title} style={{ padding: "10px 12px", borderRadius: 6, background: "#fff", border: "1px solid #e2e8f0" }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#7C3AED", marginBottom: 3 }}>{m.title}</div>
+                            <div style={{ fontSize: 11, color: "#64748B", lineHeight: 1.5 }}>{m.desc}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6 }}>
+                        <strong>Ce testam:</strong> Cei 35 de itemi (R=7, I=10, F=11, C=7) din protocolul RIFC sunt relevanti conform panelului de experti?
+                        <br /><strong>Panel:</strong> N = {nExperts} experti, scala 1-4.
+                        <br /><strong>Praguri:</strong> I-CVI &ge; 0.78 (Lynn, 1986), S-CVI/Ave &ge; 0.90 (Polit &amp; Beck, 2006), Fleiss &kappa; &gt; 0.61 (Landis &amp; Koch, 1977).
+                      </div>
+                    </div>
+
+                    {/* ═══ S2. HERO VALIDARE CVI ═══ */}
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16, padding: "28px 32px", textAlign: "center" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 8 }}>VALIDARE CONȚINUT — S-CVI/Ave</div>
+                      <div style={{ fontSize: 56, fontWeight: 900, color: vBadge.color, fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>
+                        {(sCviAve * 100).toFixed(1)}%
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        <span style={{ display: "inline-block", padding: "4px 16px", borderRadius: 20, fontSize: 11, fontWeight: 800, letterSpacing: 1, background: vBadge.bg, color: vBadge.color }}>
+                          {vBadge.text}
+                        </span>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 20 }}>
+                        {[
+                          { label: "S-CVI/Ave", value: sCviAve.toFixed(3), threshold: "≥ 0.90", pass: sCviAve >= 0.90 },
+                          { label: "S-CVI/UA", value: sCviUa.toFixed(3), threshold: "≥ 0.80", pass: sCviUa >= 0.80 },
+                          { label: "Fleiss κ", value: fleissK > 0 ? fleissK.toFixed(3) : "—", threshold: "> 0.61", pass: fleissK > 0.61 },
+                          { label: "Items PASS", value: `${itemsPass}/35`, threshold: "≥ 80%", pass: (itemsPass / 35) >= 0.80 },
+                        ].map(m => (
+                          <div key={m.label} style={{ padding: "14px 10px", borderRadius: 10, background: m.pass ? "#f0fdf4" : "#fef2f2", border: `1px solid ${m.pass ? "#bbf7d0" : "#fecaca"}` }}>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: m.pass ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{m.value}</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5, marginTop: 2 }}>{m.label}</div>
+                            <div style={{ fontSize: 9, color: m.pass ? "#059669" : "#DC2626", marginTop: 2 }}>{m.threshold} {m.pass ? "✓" : "✗"}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setInterpDrawer({ key: "cvi-global", title: "Validare CVI Globala", value: String(sCviAve), context: { sCviAve, sCviUa, fleissK, itemsPass, itemsRevise, itemsReject, nExperts } })}
+                        style={{ marginTop: 14, display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 12px", fontSize: 10, fontWeight: 600, borderRadius: 4, border: "1px solid #d1d5db", background: "#f9fafb", color: "#6B7280", cursor: "pointer" }}
+                      >
+                        <FileText size={10} /> Interpretare
+                      </button>
+                    </div>
+
+                    {/* ═══ S3. DIMENSION CVI — 4 Cards ═══ */}
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>CVI PER DIMENSIUNE</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))", gap: 12 }}>
+                        {dimMeta.map(dim => {
+                          const dCvi = dimCvi[dim.key] || 0;
+                          const dItems = summary.filter((s: any) => s.construct === dim.key);
+                          const dPass = dItems.filter((s: any) => s.status === "PASS").length;
+                          const dRevise = dItems.filter((s: any) => s.status === "REVISE").length;
+                          const dReject = dItems.filter((s: any) => s.status === "REJECT").length;
+                          return (
+                            <div key={dim.key} style={{ padding: "16px 14px", borderRadius: 12, background: dim.bg, border: `1px solid ${dim.color}20`, position: "relative" as const }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: dim.color, marginBottom: 6, textTransform: "uppercase" as const }}>
+                                {dim.label} ({dim.key})
+                              </div>
+                              <div style={{ fontSize: 28, fontWeight: 900, color: dim.color, fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>
+                                {dCvi.toFixed(2)}
+                              </div>
+                              <div style={{ fontSize: 10, color: "#64748B", marginTop: 4 }}>
+                                {dim.items.length} itemi · {dPass} PASS · {dRevise} REV · {dReject} REJ
+                              </div>
+                              {/* Mini progress bar */}
+                              <div style={{ width: "100%", height: 4, background: `${dim.color}20`, borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                                <div style={{ width: `${Math.round(dCvi * 100)}%`, height: "100%", background: dim.color, borderRadius: 2 }} />
+                              </div>
+                              <button
+                                onClick={() => setInterpDrawer({ key: `cvi-${dim.key}`, title: `CVI Dimensiune ${dim.label}`, value: String(dCvi), context: { dim: dim.key, dCvi, dPass, dRevise, dReject, nItems: dim.items.length } })}
+                                style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 9, fontWeight: 600, borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", color: "#6B7280", cursor: "pointer" }}
+                              >
+                                <FileText size={9} /> Interpretare
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* ═══ S4. BAR CHART — I-CVI PER ITEM ═══ */}
+                    {(() => {
+                      const chartW = 900;
+                      const chartH = 320;
+                      const padL = 45, padR = 10, padT = 20, padB = 90;
+                      const plotW = chartW - padL - padR;
+                      const plotH = chartH - padT - padB;
+                      const barW = Math.max(plotW / summary.length - 2, 8);
+                      const dimColors: Record<string, string> = { R: "#DC2626", I: "#2563EB", F: "#059669", C: "#D97706" };
+                      return (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>I-CVI PER ITEM (35 ITEMI)</div>
+                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, overflowX: "auto" }}>
+                            <svg viewBox={`0 0 ${chartW} ${chartH}`} style={{ width: "100%", maxWidth: chartW, display: "block" }}>
+                              {/* Y axis labels */}
+                              {[0, 0.2, 0.4, 0.6, 0.78, 0.9, 1.0].map(v => {
+                                const y = padT + plotH - (v * plotH);
+                                return (
+                                  <g key={v}>
+                                    <line x1={padL} y1={y} x2={padL + plotW} y2={y} stroke="#f1f5f9" strokeWidth={1} />
+                                    <text x={padL - 6} y={y + 4} textAnchor="end" fontSize={9} fill="#94a3b8">{v.toFixed(1)}</text>
+                                  </g>
+                                );
+                              })}
+                              {/* Threshold line 0.78 */}
+                              <line x1={padL} y1={padT + plotH - (0.78 * plotH)} x2={padL + plotW} y2={padT + plotH - (0.78 * plotH)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" />
+                              <text x={padL + plotW + 2} y={padT + plotH - (0.78 * plotH) + 3} fontSize={8} fill="#DC2626" fontWeight={700}>0.78</text>
+                              {/* Excellent line 0.90 */}
+                              <line x1={padL} y1={padT + plotH - (0.90 * plotH)} x2={padL + plotW} y2={padT + plotH - (0.90 * plotH)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" />
+                              <text x={padL + plotW + 2} y={padT + plotH - (0.90 * plotH) + 3} fontSize={8} fill="#059669" fontWeight={700}>0.90</text>
+                              {/* Bars */}
+                              {summary.map((item: any, i: number) => {
+                                const x = padL + i * (plotW / summary.length) + (plotW / summary.length - barW) / 2;
+                                const h = item.cvi_score * plotH;
+                                const y = padT + plotH - h;
+                                const col = dimColors[item.construct] || "#6B7280";
+                                const isBelowThreshold = item.cvi_score < 0.78;
+                                return (
+                                  <g key={item.item_id}>
+                                    <rect x={x} y={y} width={barW} height={h} rx={2} fill={isBelowThreshold ? "#DC2626" : col} opacity={isBelowThreshold ? 0.85 : 0.75} />
+                                    {/* Item label rotated */}
+                                    <text x={x + barW / 2} y={padT + plotH + 8} fontSize={7.5} fill="#64748B" textAnchor="end" transform={`rotate(-35, ${x + barW / 2}, ${padT + plotH + 8})`} fontWeight={600}>
+                                      {item.item_id}
+                                    </text>
+                                  </g>
+                                );
+                              })}
+                              {/* Legend */}
+                              {[
+                                { label: "R — Relevanță", color: "#DC2626" },
+                                { label: "I — Interes", color: "#2563EB" },
+                                { label: "F — Formă", color: "#059669" },
+                                { label: "C — Claritate", color: "#D97706" },
+                              ].map((l, i) => (
+                                <g key={l.label}>
+                                  <rect x={padL + i * 130} y={chartH - 18} width={10} height={10} rx={2} fill={l.color} opacity={0.75} />
+                                  <text x={padL + i * 130 + 14} y={chartH - 10} fontSize={9} fill="#64748B">{l.label}</text>
+                                </g>
+                              ))}
+                              {/* Legend threshold lines */}
+                              <line x1={padL + 530} y1={chartH - 13} x2={padL + 550} y2={chartH - 13} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 2" />
+                              <text x={padL + 554} y={chartH - 10} fontSize={9} fill="#DC2626">Prag 0.78</text>
+                              <line x1={padL + 640} y1={chartH - 13} x2={padL + 660} y2={chartH - 13} stroke="#059669" strokeWidth={1.5} strokeDasharray="4 2" />
+                              <text x={padL + 664} y={chartH - 10} fontSize={9} fill="#059669">Excelent 0.90</text>
+                            </svg>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ═══ S5. HEATMAP EXPERTI × ITEMI ═══ */}
+                    {exportData.length > 0 && (() => {
+                      const hmColors: Record<number, string> = { 1: "#DC2626", 2: "#D97706", 3: "#EAB308", 4: "#059669" };
+                      const hmLabels: Record<number, string> = { 1: "Irelevant", 2: "Partial", 3: "Relevant", 4: "Ext. relevant" };
+                      const itemIds = ["R1","R2","R3","R4","R5","R6","R7","I1","I2","I3","I4","I5","I6","I7","I8","I9","I10","F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11","C1","C2","C3","C4","C5","C6","C7"];
+                      const cellW = 22, cellH = 28, padLHm = 65, padTHm = 30;
+                      const hmW = padLHm + itemIds.length * cellW + 20;
+                      const hmH = padTHm + exportData.length * cellH + 50;
+                      // Dimension separator positions
+                      const dimSeps = [7, 17, 28]; // after R7, I10, F11
+                      return (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>HEATMAP — EXPERȚI × ITEMI</div>
+                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 16, overflowX: "auto" }}>
+                            <svg viewBox={`0 0 ${hmW} ${hmH}`} style={{ width: "100%", maxWidth: hmW, display: "block" }}>
+                              {/* Column headers (item IDs) */}
+                              {itemIds.map((id, ci) => (
+                                <text key={id} x={padLHm + ci * cellW + cellW / 2} y={padTHm - 6} fontSize={7} fill="#64748B" textAnchor="middle" fontWeight={600}>{id}</text>
+                              ))}
+                              {/* Rows */}
+                              {exportData.map((row: number[], ri: number) => (
+                                <g key={ri}>
+                                  <text x={padLHm - 8} y={padTHm + ri * cellH + cellH / 2 + 4} fontSize={9} fill="#94a3b8" textAnchor="end">Expert {ri + 1}</text>
+                                  {row.map((val: number, ci: number) => (
+                                    <rect key={ci} x={padLHm + ci * cellW} y={padTHm + ri * cellH} width={cellW - 1} height={cellH - 1} rx={3} fill={hmColors[val] || "#e5e7eb"} opacity={0.8} />
+                                  ))}
+                                </g>
+                              ))}
+                              {/* Dimension separators */}
+                              {dimSeps.map(pos => (
+                                <line key={pos} x1={padLHm + pos * cellW - 0.5} y1={padTHm - 2} x2={padLHm + pos * cellW - 0.5} y2={padTHm + exportData.length * cellH} stroke="#374151" strokeWidth={1.5} />
+                              ))}
+                              {/* Legend */}
+                              {[1, 2, 3, 4].map((v, i) => (
+                                <g key={v}>
+                                  <rect x={padLHm + i * 100} y={padTHm + exportData.length * cellH + 14} width={12} height={12} rx={3} fill={hmColors[v]} opacity={0.8} />
+                                  <text x={padLHm + i * 100 + 16} y={padTHm + exportData.length * cellH + 24} fontSize={9} fill="#64748B">{v} — {hmLabels[v]}</text>
+                                </g>
+                              ))}
+                            </svg>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ═══ S6. TABEL I-CVI DETALIAT ═══ */}
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>TABEL I-CVI DETALIAT — 35 ITEMI</div>
+                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ background: "#f8fafc" }}>
+                              <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>Item</th>
+                              <th style={{ padding: "8px 10px", textAlign: "left", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>Sub-factor</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>Dim.</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>N</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>Acord (&ge;3)</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>I-CVI</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>κ*</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb", fontSize: 10 }}>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {dimMeta.map(dim => {
+                              const dimItems = summary.filter((s: any) => s.construct === dim.key);
+                              const dimAvg = dimItems.length > 0 ? dimItems.reduce((a: number, s: any) => a + s.cvi_score, 0) / dimItems.length : 0;
+                              return (
+                                <React.Fragment key={dim.key}>
+                                  {/* Dimension header */}
+                                  <tr>
+                                    <td colSpan={8} style={{ padding: "6px 10px", background: `${dim.color}10`, borderBottom: `2px solid ${dim.color}30`, fontSize: 10, fontWeight: 800, color: dim.color, letterSpacing: 1 }}>
+                                      {dim.label.toUpperCase()} ({dim.key}) — {dim.items.length} itemi — CVI mediu: {dimAvg.toFixed(3)}
+                                    </td>
+                                  </tr>
+                                  {dimItems.map((item: any) => {
+                                    const kStar = calcModifiedKappa(item.cvi_score, item.n_total);
+                                    const statusBg = item.status === "PASS" ? "#DCFCE7" : item.status === "REVISE" ? "#FEF3C7" : item.status === "REJECT" ? "#FEE2E2" : "#F3F4F6";
+                                    const statusColor = item.status === "PASS" ? "#16A34A" : item.status === "REVISE" ? "#D97706" : item.status === "REJECT" ? "#DC2626" : "#9CA3AF";
+                                    return (
+                                      <tr key={item.item_id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                        <td style={{ padding: "6px 10px", fontWeight: 700, color: dim.color, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{item.item_id}</td>
+                                        <td style={{ padding: "6px 10px", color: "#374151" }}>{item.item_label}</td>
+                                        <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 700, color: dim.color }}>{item.construct}</td>
+                                        <td style={{ padding: "6px 10px", textAlign: "center", color: "#6B7280" }}>{item.n_total}</td>
+                                        <td style={{ padding: "6px 10px", textAlign: "center", color: "#374151", fontWeight: 600 }}>{item.n_relevant}</td>
+                                        <td style={{ padding: "6px 10px", textAlign: "center", fontWeight: 800, fontFamily: "JetBrains Mono, monospace", color: item.cvi_score >= 0.78 ? "#059669" : "#DC2626" }}>{item.cvi_score.toFixed(2)}</td>
+                                        <td style={{ padding: "6px 10px", textAlign: "center", fontFamily: "JetBrains Mono, monospace", fontSize: 11, color: kStar >= 0.74 ? "#059669" : kStar >= 0.60 ? "#D97706" : "#DC2626" }}>{kStar.toFixed(3)}</td>
+                                        <td style={{ padding: "6px 10px", textAlign: "center" }}>
+                                          <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 9, fontWeight: 700, background: statusBg, color: statusColor }}>{item.status}</span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </React.Fragment>
+                              );
+                            })}
+                            {/* Footer: S-CVI/Ave and S-CVI/UA */}
+                            <tr style={{ background: "#f8fafc", borderTop: "2px solid #e5e7eb" }}>
+                              <td colSpan={5} style={{ padding: "8px 10px", fontWeight: 700, fontSize: 11, color: "#374151" }}>S-CVI/Ave (media globala)</td>
+                              <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 900, fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: sCviAve >= 0.90 ? "#059669" : "#D97706" }}>{sCviAve.toFixed(3)}</td>
+                              <td colSpan={2} style={{ padding: "8px 10px", textAlign: "center", fontSize: 10, color: "#6B7280" }}>{sCviAve >= 0.90 ? "≥ 0.90 Excelent" : sCviAve >= 0.80 ? "≥ 0.80 Acceptabil" : "< 0.80 Sub prag"}</td>
+                            </tr>
+                            <tr style={{ background: "#f8fafc" }}>
+                              <td colSpan={5} style={{ padding: "8px 10px", fontWeight: 700, fontSize: 11, color: "#374151" }}>S-CVI/UA (unanimitate)</td>
+                              <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 900, fontSize: 14, fontFamily: "JetBrains Mono, monospace", color: sCviUa >= 0.80 ? "#059669" : "#D97706" }}>{sCviUa.toFixed(3)}</td>
+                              <td colSpan={2} style={{ padding: "8px 10px", textAlign: "center", fontSize: 10, color: "#6B7280" }}>{summary.filter((s: any) => s.cvi_score >= 1.0).length}/{summary.length} itemi unanimi</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* ═══ S7. FLEISS KAPPA INTERPRETARE ═══ */}
+                    <div style={{ background: "#fff", borderLeft: "4px solid #7C3AED", borderRadius: 8, border: "1px solid #e5e7eb", borderLeftWidth: 4, borderLeftColor: "#7C3AED", padding: "20px 24px" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 12 }}>FIABILITATE INTER-EVALUATORI — FLEISS KAPPA</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
+                        <div>
+                          <div style={{ fontSize: 36, fontWeight: 900, color: kappaColor(fleissK), fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>
+                            {fleissK > 0 ? fleissK.toFixed(3) : "—"}
+                          </div>
+                          <span style={{ display: "inline-block", marginTop: 4, padding: "3px 12px", borderRadius: 12, fontSize: 10, fontWeight: 700, background: `${kappaColor(fleissK)}15`, color: kappaColor(fleissK) }}>
+                            {kappaLabel(fleissK).toUpperCase()}
+                          </span>
+                        </div>
+                        {/* Landis & Koch visual scale */}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", marginBottom: 6 }}>
+                            {[
+                              { w: 20, color: "#DC2626", label: "Slab" },
+                              { w: 20, color: "#D97706", label: "Acceptabil" },
+                              { w: 20, color: "#f59e0b", label: "Moderat" },
+                              { w: 20, color: "#10b981", label: "Substanțial" },
+                              { w: 20, color: "#059669", label: "Ap. perfect" },
+                            ].map((seg, i) => (
+                              <div key={i} style={{ width: `${seg.w}%`, background: seg.color, opacity: 0.7 }} />
+                            ))}
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: "#94a3b8" }}>
+                            <span>0.00</span><span>0.20</span><span>0.40</span><span>0.60</span><span>0.80</span><span>1.00</span>
+                          </div>
+                          {/* Marker for actual kappa */}
+                          {fleissK > 0 && (
+                            <div style={{ position: "relative" as const, marginTop: -22 }}>
+                              <div style={{ position: "absolute" as const, left: `${Math.min(fleissK * 100, 100)}%`, transform: "translateX(-50%)" }}>
+                                <div style={{ width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderBottom: "6px solid #111827" }} />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6 }}>
+                        Fleiss &kappa; masoara concordanta dintre {nExperts} evaluatori pe 35 itemi cu 4 categorii.
+                        Valoarea de <strong>{fleissK.toFixed(3)}</strong> indica un acord <strong>{kappaLabel(fleissK).toLowerCase()}</strong> (Landis &amp; Koch, 1977).
+                        {fleissK > 0.61 ? " Expertii au un grad ridicat de concordanta — rezultatele CVI sunt fiabile." : fleissK > 0.40 ? " Acordul este moderat — rezultatele trebuie interpretate cu precautie." : " Acordul este scazut — panelul nu are consens semnificativ."}
+                      </div>
+                      <button
+                        onClick={() => setInterpDrawer({ key: "cvi-fleiss", title: "Fleiss Kappa — Interpretare", value: String(fleissK), context: { fleissK, nExperts, kappaLabel: kappaLabel(fleissK) } })}
+                        style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 10, fontWeight: 600, borderRadius: 4, border: "1px solid #d1d5db", background: "#f9fafb", color: "#6B7280", cursor: "pointer" }}
+                      >
+                        <FileText size={10} /> Interpretare
+                      </button>
+                    </div>
+
+                    {/* ═══ S8. VERDICT DECIZIE PER ITEM ═══ */}
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "20px 24px" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 14 }}>VERDICT DECIZIE — CLASIFICARE ITEMI</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+                        {[
+                          { label: "PASS", count: itemsPass, color: "#059669", bg: "#DCFCE7", desc: "I-CVI ≥ 0.80" },
+                          { label: "REVISE", count: itemsRevise, color: "#D97706", bg: "#FEF3C7", desc: "I-CVI 0.70-0.79" },
+                          { label: "REJECT", count: itemsReject, color: "#DC2626", bg: "#FEE2E2", desc: "I-CVI < 0.70" },
+                        ].map(v => (
+                          <div key={v.label} style={{ textAlign: "center", padding: "16px 10px", borderRadius: 10, background: v.bg }}>
+                            <div style={{ fontSize: 32, fontWeight: 900, color: v.color, fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>{v.count}</div>
+                            <div style={{ fontSize: 11, fontWeight: 800, color: v.color, letterSpacing: 1, marginTop: 4 }}>{v.label}</div>
+                            <div style={{ fontSize: 9, color: "#6B7280", marginTop: 2 }}>{v.desc}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Items REVISE list */}
+                      {itemsRevise > 0 && (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#D97706", marginBottom: 6, letterSpacing: 1 }}>ITEMI DE REVIZUIT ({itemsRevise})</div>
+                          {summary.filter((s: any) => s.status === "REVISE").map((item: any) => (
+                            <div key={item.item_id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12, color: "#374151" }}>
+                              <span style={{ fontWeight: 700, color: "#D97706", fontFamily: "JetBrains Mono, monospace", fontSize: 11, minWidth: 30 }}>{item.item_id}</span>
+                              <span>{item.item_label}</span>
+                              <span style={{ marginLeft: "auto", fontFamily: "JetBrains Mono, monospace", fontSize: 11, color: "#D97706" }}>CVI {item.cvi_score.toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div style={{ fontSize: 11, color: "#64748B", marginTop: 6, fontStyle: "italic" }}>Recomandare: Reformulare si re-evaluare de catre panel.</div>
+                        </div>
+                      )}
+                      {/* Items REJECT list */}
+                      {itemsReject > 0 && (
+                        <div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", marginBottom: 6, letterSpacing: 1 }}>ITEMI RESPINȘI ({itemsReject})</div>
+                          {summary.filter((s: any) => s.status === "REJECT").map((item: any) => (
+                            <div key={item.item_id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", fontSize: 12, color: "#374151" }}>
+                              <span style={{ fontWeight: 700, color: "#DC2626", fontFamily: "JetBrains Mono, monospace", fontSize: 11, minWidth: 30 }}>{item.item_id}</span>
+                              <span>{item.item_label}</span>
+                              <span style={{ marginLeft: "auto", fontFamily: "JetBrains Mono, monospace", fontSize: 11, color: "#DC2626" }}>CVI {item.cvi_score.toFixed(2)}</span>
+                            </div>
+                          ))}
+                          <div style={{ fontSize: 11, color: "#64748B", marginTop: 6, fontStyle: "italic" }}>Recomandare: Eliminare din instrument sau reformulare substantiala si re-evaluare.</div>
+                        </div>
+                      )}
+                      {itemsRevise === 0 && itemsReject === 0 && (
+                        <div style={{ fontSize: 12, color: "#059669", fontWeight: 600 }}>Toti itemii au trecut pragul CVI &ge; 0.80 — nicio revizuire necesara.</div>
+                      )}
+                    </div>
+
+                    {/* ═══ S9. SINTEZA — 4 CONCLUZII ACADEMICE ═══ */}
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>SINTEZĂ — CONCLUZII VALIDARE CVI</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                        {[
+                          {
+                            title: "1. Validitate de conținut",
+                            icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={sCviAve >= 0.90 ? "#059669" : "#D97706"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>,
+                            verdict: sCviAve >= 0.90 ? "EXCELENT" : sCviAve >= 0.80 ? "ACCEPTABIL" : "INSUFICIENT",
+                            color: sCviAve >= 0.90 ? "#059669" : sCviAve >= 0.80 ? "#D97706" : "#DC2626",
+                            text: `S-CVI/Ave = ${sCviAve.toFixed(3)}. ${sCviAve >= 0.90 ? "Instrumentul demonstreaza validitate de continut excelenta conform Polit & Beck (2006)." : sCviAve >= 0.80 ? "Instrumentul are validitate acceptabila, dar sub pragul de excelenta (0.90)." : "S-CVI/Ave sub 0.80 — validitatea de continut este insuficienta."}`,
+                          },
+                          {
+                            title: "2. Acord inter-evaluator",
+                            icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={fleissK > 0.61 ? "#059669" : "#D97706"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+                            verdict: kappaLabel(fleissK).toUpperCase(),
+                            color: kappaColor(fleissK),
+                            text: `Fleiss κ = ${fleissK > 0 ? fleissK.toFixed(3) : "N/A"}. ${fleissK > 0.61 ? "Acordul inter-evaluatori este substantial — panelul are consens semnificativ (Landis & Koch, 1977)." : fleissK > 0.40 ? "Acord moderat — rezultatele trebuie interpretate cu precautie." : "Acord scazut — concordanta insuficienta intre evaluatori."}`,
+                          },
+                          {
+                            title: "3. Itemi problematici",
+                            icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={itemsRevise + itemsReject === 0 ? "#059669" : "#D97706"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+                            verdict: itemsRevise + itemsReject === 0 ? "NICIUN ITEM" : `${itemsRevise + itemsReject} ITEMI`,
+                            color: itemsRevise + itemsReject === 0 ? "#059669" : "#D97706",
+                            text: `${itemsRevise} itemi REVISE, ${itemsReject} itemi REJECT din 35. ${itemsRevise + itemsReject === 0 ? "Toti cei 35 de itemi au CVI ≥ 0.80 — nicio revizuire necesara." : `Itemii sub prag necesita reformulare si re-evaluare.`}`,
+                          },
+                          {
+                            title: "4. Adecvarea panelului",
+                            icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={nExperts >= 5 ? "#059669" : "#D97706"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+                            verdict: nExperts >= 10 ? "EXCELENT" : nExperts >= 5 ? "ACCEPTABIL" : "INSUFICIENT",
+                            color: nExperts >= 10 ? "#059669" : nExperts >= 5 ? "#D97706" : "#DC2626",
+                            text: `N = ${nExperts} experti. ${nExperts >= 10 ? "Panelul depaseste minimul recomandat (≥ 5-10 experti, Lynn 1986)." : nExperts >= 5 ? "Panelul atinge minimul recomandat de 5 experti." : "Panel insuficient — minim 5 experti recomandati (Lynn, 1986). Rezultatele sunt preliminare."}`,
+                          },
+                        ].map(c => (
+                          <div key={c.title} style={{ padding: "16px 18px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                              {c.icon}
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "#1E293B" }}>{c.title}</span>
+                              <span style={{ marginLeft: "auto", fontSize: 9, fontWeight: 800, letterSpacing: 1, padding: "2px 8px", borderRadius: 10, background: `${c.color}15`, color: c.color }}>{c.verdict}</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: "#64748B", lineHeight: 1.6 }}>{c.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* ═══ S10. SUMAR TABEL ACADEMIC ═══ */}
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>SUMAR — INDICATORI VALIDARE CVI</div>
+                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ background: "#f8fafc" }}>
+                              <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Metric</th>
+                              <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Valoare</th>
+                              <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Prag</th>
+                              <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Verdict</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { metric: "S-CVI/Ave", value: sCviAve.toFixed(3), threshold: "≥ 0.90", pass: sCviAve >= 0.90, verdict: sCviAve >= 0.90 ? "EXCELENT" : sCviAve >= 0.80 ? "ACCEPTABIL" : "NEÎNDEPLINIT" },
+                              { metric: "S-CVI/UA", value: sCviUa.toFixed(3), threshold: "≥ 0.80", pass: sCviUa >= 0.80, verdict: sCviUa >= 0.80 ? "ÎNDEPLINIT" : "NEÎNDEPLINIT" },
+                              { metric: "Fleiss κ", value: fleissK > 0 ? fleissK.toFixed(3) : "N/A", threshold: "> 0.61", pass: fleissK > 0.61, verdict: kappaLabel(fleissK).toUpperCase() },
+                              { metric: "Items PASS", value: `${Math.round((itemsPass / 35) * 100)}% (${itemsPass}/35)`, threshold: "≥ 80%", pass: (itemsPass / 35) >= 0.80, verdict: (itemsPass / 35) >= 0.80 ? "ACCEPTABIL" : "NEÎNDEPLINIT" },
+                              { metric: "Panel N", value: String(nExperts), threshold: "≥ 5", pass: nExperts >= 5, verdict: nExperts >= 10 ? "EXCELENT" : nExperts >= 5 ? "ACCEPTABIL" : "INSUFICIENT" },
+                            ].map(row => (
+                              <tr key={row.metric} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                <td style={{ padding: "10px 14px", fontWeight: 600, color: "#374151" }}>{row.metric}</td>
+                                <td style={{ padding: "10px 14px", textAlign: "center", fontWeight: 800, fontFamily: "JetBrains Mono, monospace", color: row.pass ? "#059669" : "#DC2626" }}>{row.value}</td>
+                                <td style={{ padding: "10px 14px", textAlign: "center", color: "#6B7280" }}>{row.threshold}</td>
+                                <td style={{ padding: "10px 14px", textAlign: "center" }}>
+                                  <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 700, background: row.pass ? "#DCFCE7" : "#FEE2E2", color: row.pass ? "#059669" : "#DC2626" }}>{row.verdict}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <div style={{ padding: "10px 14px", background: "#f8fafc", fontSize: 10, color: "#94a3b8", lineHeight: 1.6 }}>
+                          Referinte: Lynn, M. R. (1986). Determination and quantification of content validity. <em>Nursing Research, 35</em>(6), 382-385.
+                          Polit, D. F., &amp; Beck, C. T. (2006). The Content Validity Index: Are you sure you know what&apos;s being reported? <em>Research in Nursing &amp; Health, 29</em>(5), 489-497.
+                          Landis, J. R., &amp; Koch, G. G. (1977). The measurement of observer agreement for categorical data. <em>Biometrics, 33</em>(1), 159-174.
+                        </div>
+                      </div>
+                    </div>
+
+                    </div>
+                  );
+                })()}
 
               </>
             )}
