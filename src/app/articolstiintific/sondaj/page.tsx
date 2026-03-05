@@ -2762,7 +2762,7 @@ export default function StudiuAdminPage() {
 
                             // H5 deltas
                             const h5Valid = scValid.filter(d => d.c_score != null && d.c_score > 0);
-                            const dMult = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i * d.f) / 11 - d.c_score! / 10))) : 0;
+                            const dMult = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i * d.f) / 110 - d.c_score! / 10))) : 0;
                             const dAdit = h5Valid.length >= 2 ? _mean(h5Valid.map(d => Math.abs((d.r + d.i + d.f) / 30 - d.c_score! / 10))) : 0;
                             const h5CastigPct = dAdit > 0 ? Math.round(((dAdit - dMult) / dAdit) * 100) : 0;
 
@@ -5776,14 +5776,14 @@ export default function StudiuAdminPage() {
               }
               case "h5": return { sections: [
                 { heading: "Ce testeaza H5", text: "Ipoteza H5 compara doua modele de combinare a Interesului (I) si Formei (F): modelul multiplicativ (I×F) din RIFC versus un model aditiv alternativ (I+F). Se compara Delta medie (eroarea de predictie absoluta) a fiecarui model fata de C perceput normalizat." },
-                { heading: "Cum se calculeaza", text: "Cf_mult = (R + I×F) / 11, Cf_adit = (R + I + F) / 30, Cp_norm = C_score / 10. Delta_mult = |Cf_mult - Cp_norm|, Delta_adit = |Cf_adit - Cp_norm|. Castigul % = ((Delta_adit - Delta_mult) / Delta_adit) × 100." },
+                { heading: "Cum se calculeaza", text: "Cf_mult = (R + I×F) / 110, Cf_adit = (R + I + F) / 30, Cp_norm = C_score / 10. Toate pe scala 0-1. Delta_mult = |Cf_mult - Cp_norm|, Delta_adit = |Cf_adit - Cp_norm|. Castigul % = ((Delta_adit - Delta_mult) / Delta_adit) × 100." },
                 { heading: "De ce conteaza", text: "Formula RIFC postuleaza ca I si F se amplifica reciproc — un continut foarte interesant dar prost prezentat pierde forta. Modelul aditiv nu capteaza aceasta interdependenta. Daca Delta multiplicativ < Delta aditiv, formula R+(I×F)=C este matematic superioara fata de R+I+F=C." },
                 { heading: "Cum se interpreteaza", text: "Castig > 10%: H5 confirmata — modelul multiplicativ prezice semnificativ mai precis. Castig 0-10%: Diferenta mica, ambele modele similare. Castig < 0%: Modelul aditiv performeaza mai bine — reconsidera structura formulei." },
                 { heading: "Concluzie", text: "Daca modelul multiplicativ castiga, formula RIFC este justificata matematic — sinergia I×F este reala si captureaza interdependenta intre calitatea continutului si calitatea executiei." },
               ]};
               case "h6": return { sections: [
                 { heading: "Ce testeaza H6", text: `Ipoteza H6 testeaza ca atunci cand R (Relevanta) este sub pragul Gate de ${GATE}, produsul I×F devine complet irelevant — C nu mai raspunde la I×F. Aceasta diferentiaza H6 de H1: H1 spune ca R mic = C mic, H6 spune ca sub R=${GATE}, I si F devin irelevante.` },
-                { heading: "Cum se calculeaza", text: `Se filtreaza DOAR raspunsurile cu r_score < ${GATE}. Pe acest subset se calculeaza corelatia Pearson intre I×F (produsul) si C_norm (c_computed/11). Daca |r| ≈ 0, I×F nu influenteaza C sub prag.` },
+                { heading: "Cum se calculeaza", text: `Se filtreaza DOAR raspunsurile cu r_score < ${GATE}. Pe acest subset se calculeaza corelatia Pearson intre I×F (produsul) si C_norm (c_computed/110). Daca |r| ≈ 0, I×F nu influenteaza C sub prag.` },
                 { heading: "Cum se interpreteaza", text: `|r| < 0.2: H6 confirmata — sub R=${GATE}, I×F nu influenteaza C. Poarta Relevantei functioneaza ca gate real. |r| 0.2-0.4: Influenta slaba reziduala a I×F sub prag. |r| > 0.4: H6 neconfirmata — I×F influenteaza C chiar sub R=${GATE}. Pragul poate fi incorect.` },
                 { heading: "De ce conteaza", text: `Daca R < ${GATE} si totusi I×F coreleaza cu C, inseamna ca R e doar o variabila obisnuita, nu un gate. Daca corelatia e ~0 (haos), inseamna ca sub prag, oricat investesti in Interes si Forma, nu produci Claritate. Aceasta ar fi cea mai puternica confirmare a originalitatii RIFC.` },
                 { heading: "Concluzie", text: `Un r aproape de 0 sub gate confirma puternic rolul de "poarta" al Relevantei — cel mai distinctiv element al formulei RIFC fata de alte framework-uri de marketing.` },
@@ -6839,14 +6839,14 @@ export default function StudiuAdminPage() {
                       </div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #059669" }}>
                         <strong>Ce testeaza:</strong> De ce formula foloseste I×F si nu I+F? Ipoteza spune ca Interesul si Forma se amplifica reciproc (model multiplicativ) — un continut interesant dar prost prezentat pierde forta.{" "}
-                        <strong>Metoda:</strong> Se compara Delta medie (eroarea absoluta) a doua modele: R+(I×F)/11 vs (R+I+F)/30, ambele fata de C perceput normalizat.{" "}
+                        <strong>Metoda:</strong> Se compara Delta medie (eroarea absoluta) a doua modele: R+(I×F)/110 vs (R+I+F)/30, ambele normalizate pe scala 0-1 fata de C perceput normalizat (c_score/10).{" "}
                         <strong>Interpretare:</strong> Castig &gt; 10% = multiplicativ justificat, 0-10% = similar, &lt; 0% = aditivul e mai bun.
                       </div>
                       {(() => {
                         const h5Data = scatter.filter(d => d.c_computed > 0 && d.c_score != null && d.c_score > 0);
                         if (h5Data.length < 3) return <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date insuficiente pentru H5.</div>;
-                        // Cf_mult = (r + i*f)/11, Cf_adit = (r + i + f)/30, Cp_norm = c_score/10
-                        const h5Mult = h5Data.map(d => ({ cf: (d.r + d.i * d.f) / 11, cp: d.c_score! / 10 }));
+                        // Cf_mult = (r + i*f)/110, Cf_adit = (r + i + f)/30, Cp_norm = c_score/10 — all on 0-1 scale
+                        const h5Mult = h5Data.map(d => ({ cf: (d.r + d.i * d.f) / 110, cp: d.c_score! / 10 }));
                         const h5Adit = h5Data.map(d => ({ cf: (d.r + d.i + d.f) / 30, cp: d.c_score! / 10 }));
                         const deltaMult = h5Mult.map(d => Math.abs(d.cf - d.cp));
                         const deltaAdit = h5Adit.map(d => Math.abs(d.cf - d.cp));
@@ -6885,7 +6885,7 @@ export default function StudiuAdminPage() {
                               {/* Multiplicative panel */}
                               <div>
                                 <div style={{ fontSize: 10, fontWeight: 700, color: multWins ? "#059669" : "#6B7280", textAlign: "center" as const, marginBottom: 4 }}>
-                                  R+(I×F)/11 (Multiplicativ) — &Delta;={deltaMultMean.toFixed(3)} {multWins && " \u2605"}
+                                  R+(I×F)/110 (Multiplicativ) — &Delta;={deltaMultMean.toFixed(3)} {multWins && " \u2605"}
                                 </div>
                                 <svg width={halfW} height={chartH + 10} style={{ display: "block" }}>
                                   {(() => {
