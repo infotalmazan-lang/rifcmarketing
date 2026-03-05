@@ -6021,13 +6021,16 @@ export default function StudiuAdminPage() {
           };
           const getConclusion = (pct: number, avgR: number, zoneMatch: boolean): string => {
             const gateOk = avgR >= GATE;
+            const rRole = gateOk
+              ? `R = ${avgR.toFixed(1)} (peste Gate ${GATE}) — formula este activata. R functioneaza ca cheie de contact: I×F (motorul) produce claritate actionabila.`
+              : `R = ${avgR.toFixed(1)} (sub Gate ${GATE}) — formula nu este activata. Chiar daca I×F functioneaza tehnic, fara relevanta suficienta mesajul nu produce actiune (CTA).`;
             if (pct >= 80 && gateOk && zoneMatch) {
-              return `Formula R+(I×F)=C este validata. Scorurile calculate si cele percepute se afla in aceeasi zona (${getZone(pct)}), iar Relevance Gate este depasit (R=${avgR.toFixed(1)} >= ${GATE}). Ipoteza este confirmata cu ${pct}% acuratete.`;
+              return `Formula R+(I×F)=C este validata cu ${pct}% acuratete. ${rRole} Scorurile calculate si percepute se afla in aceeasi zona — formula prezice corect claritatea perceputa.`;
             }
             if (pct >= 50) {
-              return `Formula R+(I×F)=C este partial validata (${pct}%). ${!gateOk ? `Relevance Gate nu este depasit (R=${avgR.toFixed(1)} < ${GATE}), ceea ce indica lipsa de relevanta perceputa.` : ""} ${!zoneMatch ? "Scorurile calculate si percepute se afla in zone diferite." : ""} Sunt necesare ajustari.`;
+              return `Formula R+(I×F)=C este partial validata (${pct}%). ${rRole}${!zoneMatch ? " Insa scorurile calculate si percepute se afla in zone diferite — formula necesita calibrare (factori externi: Brand, context, experienta anterioara amplifica/reduc claritatea perceputa dincolo de R+(I×F))." : " Zone Match confirma potrivirea directiei, dar Delta indica spatiu de calibrare."}`;
             }
-            return `Formula R+(I×F)=C nu este validata in acest context (${pct}%). Diferenta semnificativa intre scorul calculat si cel perceput sugereaza ca factorii R, I si F nu explica suficient variabilitatea lui C.`;
+            return `Formula R+(I×F)=C nu este validata in acest context (${pct}%). ${rRole} Diferenta semnificativa sugereaza ca factorii R, I si F nu explica suficient variabilitatea lui C — sunt necesari factori suplimentari (Brand, context).`;
           };
 
           // ── Interpretation content generator ──
@@ -6226,7 +6229,7 @@ export default function StudiuAdminPage() {
                   { heading: "De ce R functioneaza ca Gate", text: `Relevanta este conditia de baza a formulei RIFC. In logica de marketing: daca produsul nu e relevant pentru consumator (nu am masina → nu cumpar anvelope), niciun nivel de executie creativa nu va compensa. Mecanismul: R sub ${GATE} inseamna ca respondentul nu se identifica cu nevoia/problema — procesarea cognitiva se opreste, mesajul e "filtrat". ${_h1dCta > 2 ? "Datele confirma puternic: CTA scade cu " + _h1dCta.toFixed(2) + " puncte sub prag — diferenta de " + Math.round(_h1dCta / _h1ctaAbove * 100) + "% din CTA-ul de baza." : "Datele arata un efect " + (_h1dCta >= 1 ? "partial" : "slab") + " al Gate-ului."}` },
                   { heading: "Brand x Gate — protejeaza brandul?", text: _h1nBrandBelow >= 3 && _h1nNoBrandBelow >= 3 ? `Sub R < ${GATE}, daca respondentul cunoaste brandul: CTA = ${_h1brandCtaBelow.toFixed(2)} (n=${_h1nBrandBelow}). Daca NU cunoaste brandul: CTA = ${_h1brandCtaNoBrand.toFixed(2)} (n=${_h1nNoBrandBelow}). Diferenta = ${(_h1brandCtaBelow - _h1brandCtaNoBrand).toFixed(2)}. ${_h1brandCtaBelow > _h1brandCtaNoBrand + 0.5 ? "Brandul ofera o protectie partiala — chiar sub Gate, familiaritatea cu brandul ridica putin CTA. Dar Gate-ul ramane dominant: chiar cu brand, CTA-ul sub prag e mult sub CTA-ul peste prag." : "Brandul NU protejeaza semnificativ — sub Gate, CTA ramane scazut indiferent de recunoasterea brandului. Gate-ul R este absolut."}` : `Date insuficiente pentru analiza Brand x Gate (sub ${GATE}: brand familiar n=${_h1nBrandBelow}, brand necunoscut n=${_h1nNoBrandBelow}). Sunt necesare minim 3 observatii in fiecare grup.` },
                   { heading: "Legatura cu Claritate si CTA", text: `In cadrul RIFC: C (Claritate) = cat de clar e mesajul. CTA = actiunea (cumpar, dau click, ma inscriu). H2 testeaza direct C → CTA. H1 testeaza precondita: daca R < ${GATE}, C si CTA scad simultan. Rezultatul concret: sub Gate, Cp = ${_h1cpBelow} si CTA = ${_h1ctaBelow}. Peste Gate, Cp = ${_h1cpAbove} si CTA = ${_h1ctaAbove}. ${_h1dCta > 2 ? "Poarta functioneaza: fara R suficient, nici claritate nici actiune." : "Efectul Gate-ului este moderat — R influenteaza dar nu blocheaza complet."}` },
-                  { heading: "Concluzie H1", text: `${_h1dCta > 2 ? "H1 CONFIRMATA" : _h1dCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA"}. Relevanta (R) ${_h1dCta > 2 ? "este conditia de baza a formulei RIFC. Sub R < " + GATE + ", consumatorul nu percepe claritate si nu actioneaza — Gate-ul functioneaza. Formula R+(IxF)=C se valideaza: R seteaza nivelul de baza, iar I×F amplifica doar daca R e suficient." : _h1dCta >= 1 ? "are un efect de prag partial — scade CTA dar nu il blocheaza complet. Posibil ca pragul optim e diferit de " + GATE + " sau ca alti factori (Brand, context) compenseaza partial." : "nu blocheaza CTA asa cum prezice formula. Fie pragul " + GATE + " nu e corect, fie R nu actioneaza ca gate in acest context."}` },
+                  { heading: "Concluzie H1 + 4 Reguli ale Relevantei", text: `${_h1dCta > 2 ? "H1 CONFIRMATA" : _h1dCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA"}. Din analiza H1 + H6 derivam 4 reguli: (1) R = cheie de contact, I×F = motor — R contribuie ~${_h1nTotal > 0 ? Math.round(_h1cpBelow / (_h1cpBelow + (_h1cpAbove - _h1cpBelow)) * 100) : 10}% ca valoare, dar 100% ca conditie de activare. (2) R < ${GATE} = diagnostic, nu condamnare — CTA = ${_h1ctaBelow} (pierdere ~${_h1ctaAbove > 0 ? Math.round((1 - _h1ctaBelow / _h1ctaAbove) * 100) : 0}%), mesajul functioneaza dar nu e actionabil. (3) R >= ${GATE} = formula aplicabila — I×F isi produce efectul, CTA devine masurabil si optimizabil. (4) Delta pozitiv la R mic = claritate imprumutata din context (brand, experienta) — risc; Delta pozitiv la R mare = formula conservatoare — oportunitate. Sinteza: "Creste R, si formula lucreaza pentru tine. Lasa R mic, si audienta lucreaza in locul mesajului."` },
                 ]};
               }
               case "industry": {
@@ -7401,6 +7404,53 @@ export default function StudiuAdminPage() {
                           Ipoteza noua generata: <em>&quot;R modereaza nivelul absolut al CTA (baseline), nu mecanismul I&times;F→C. Influenta I&times;F asupra C ramane constanta indiferent de R, dar fara R suficient, nivelul de baza e sub pragul de actiune.&quot;</em>
                         </div>
                       </div>
+
+                      {/* ═══ SINTEZA R — 4 Reguli ale Relevantei ═══ */}
+                      {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
+                        const diffCta = h1AboveAvgCta - h1BelowAvgCta;
+                        const rContrib = grandR > 0 && grandCf > 0 ? Math.round(grandR / grandCf * 1000) / 10 : 0;
+                        const ixfContrib = Math.round((100 - rContrib) * 10) / 10;
+                        const ctaLossPct = h1AboveAvgCta > 0 ? Math.round((1 - h1BelowAvgCta / h1AboveAvgCta) * 100) : 0;
+                        const rules: { nr: number; title: string; icon: string; color: string; text: string; data: string }[] = [
+                          { nr: 1, title: "R = cheie de contact, I×F = motor", icon: "🔑", color: "#2563EB",
+                            text: "Obiectivul nu e sa maximizezi R, ci sa asiguri R >= " + GATE + " (activare). Apoi maximizezi I×F (amplificare). R deschide usa, I×F construieste experienta.",
+                            data: `R contribuie ${rContrib}% la formula (${grandR.toFixed(2)}/${grandCf.toFixed(2)}). I×F contribuie ${ixfContrib}% (${grandIxF.toFixed(2)}). Puterea vine din I×F, dar fara R >= ${GATE}, motorul nu porneste.` },
+                          { nr: 2, title: "R < 3 = diagnostic, nu condamnare", icon: "🔍", color: "#D97706",
+                            text: "Un mesaj cu R mic functioneaza tehnic (I×F produce claritate relativa), dar nu e actionabil. Diagnosticul: schimba audienta sau reformuleaza propunerea de valoare.",
+                            data: `Sub Gate: Cp = ${h1BelowAvgC} (nu zero!), CTA = ${h1BelowAvgCta} (pierdere ${ctaLossPct}% fata de R>=${GATE}). Cu I>=5, F>=5 si R<${GATE}: CTA = ${h1StrongBelow.length >= 3 ? (_mean(h1StrongBelow.map(d => d.cta!)).toFixed(2)) : "N/A"} — calitatea nu compenseaza irelevanta.` },
+                          { nr: 3, title: "R >= 3 = formula devine aplicabila", icon: "✅", color: "#059669",
+                            text: "Dincolo de prag, I×F isi produce efectul real si CTA devine masurabil. Dar 'aplicabila' nu inseamna 'precisa' — precizia depinde de calibrare (Brand, context).",
+                            data: `Gate pass: ${gatePassRate}% (${gatePassCount}/${n}). Zone Match: ${zoneMatchRate}% (doar ${zoneMatchCount}/${n} prezise corect). Delta: ${grandDelta.toFixed(2)} — formula subestimeaza cu ${Math.round(grandDelta / grandCp * 100)}% din Cp.` },
+                          { nr: 4, title: "Delta = indicator de dependenta contextuala", icon: "⚖️", color: "#7C3AED",
+                            text: "Delta pozitiv la R mic = claritate imprumutata din context (brand, experienta) — risc necontrolat. Delta pozitiv la R mare = formula e conservatoare — oportunitate de calibrare.",
+                            data: `Delta global = +${grandDelta.toFixed(2)} (Cf_norm=${grandCfNorm.toFixed(2)} vs Cp=${grandCp.toFixed(2)}). ${grandCfNorm < grandCp ? "Formula subestimeaza sistematic — factori externi (Brand, context) amplifica claritatea perceputa dincolo de R+(I×F)." : "Formula supraestimeaza — bariere cognitive reduc claritatea perceputa."}` },
+                        ];
+                        return (
+                          <div style={{ marginTop: 12, padding: "14px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#1e40af" }}>SINTEZA R — 4 REGULI ALE RELEVANTEI</span>
+                              <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", marginLeft: "auto" }}>Derivate din H1 + H6 + date</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 10, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
+                              <em>R nu este o poarta de esec, ci conditia de activare a intregii formule. Fara R suficient, I si F exista dar nu produc claritate actionabila — mesajul poate fi frumos si interesant, dar irelevant pentru acea audienta in acel moment.</em>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                              {rules.map(rule => (
+                                <div key={rule.nr} style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid ${rule.color}` }}>
+                                  <div style={{ fontSize: 10, fontWeight: 800, color: rule.color, marginBottom: 3 }}>
+                                    Regula {rule.nr}: {rule.title}
+                                  </div>
+                                  <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 4 }}>{rule.text}</div>
+                                  <div style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.4, padding: "4px 6px", background: "#f9fafb", borderRadius: 3 }}>{rule.data}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 10, color: "#1e40af", fontWeight: 700, textAlign: "center" as const }}>
+                              &quot;Creste R, si formula lucreaza pentru tine. Lasa R mic, si audienta lucreaza in locul mesajului.&quot;
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     {/* ── GRAFIC H2 — Corelatie C → CTA (cu filtru Obiectiv Marketing) ── */}
