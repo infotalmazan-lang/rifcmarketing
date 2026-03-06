@@ -1417,8 +1417,11 @@ export default function StudiuAdminPage() {
         setExpertForm(defaultExpertForm);
         fetchExperts();
         if (!isEdit) setSelectedExpertId(data.expert.id);
+      } else {
+        console.error("saveExpert error:", data);
+        alert(`Eroare la salvare: ${data.error || "Eroare necunoscuta"}`);
       }
-    } catch { /* ignore */ }
+    } catch (err) { console.error("saveExpert exception:", err); alert("Eroare de retea la salvare expert"); }
     setExpertSaving(false);
   };
 
