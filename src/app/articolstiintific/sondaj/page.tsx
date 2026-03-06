@@ -66,6 +66,7 @@ import {
   ImageIcon,
   PartyPopper,
   CheckCircle2,
+  Search,
 } from "lucide-react";
 import * as tus from "tus-js-client";
 
@@ -850,6 +851,8 @@ export default function StudiuAdminPage() {
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
+  const [expertSearch, setExpertSearch] = useState("");
+  const [expertPage, setExpertPage] = useState(0);
   const [h2ObjFilter, setH2ObjFilter] = useState<string[]>(["awareness", "considerare", "conversie"]);
   const [exH2ObjFilter, setExH2ObjFilter] = useState<string[]>(["awareness", "considerare", "conversie"]);
   const [objExplainOpen, setObjExplainOpen] = useState<string | null>(null); // which stimulus_id shows objective explanation card
@@ -5271,146 +5274,192 @@ export default function StudiuAdminPage() {
               </div>
             ) : (
               <>
-                {/* Expert cards grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16, marginBottom: 24 }}>
-                  {experts.map((exp) => {
-                    const evalsCount = expertEvals.filter((e) => e.expert_id === exp.id).length;
-                    const totalStimuli = stimuli.filter((s) => s.is_active).length;
-                    const isSelected = selectedExpertId === exp.id;
-                    const initials = `${exp.first_name[0] || ""}${exp.last_name[0] || ""}`.toUpperCase();
-                    return (
-                      <div
-                        key={exp.id}
-                        onClick={() => setSelectedExpertId(isSelected ? null : exp.id)}
-                        style={{
-                          ...S.configCard,
-                          cursor: "pointer",
-                          borderColor: isSelected ? "#059669" : exp.is_active ? "#e5e7eb" : "#fca5a5",
-                          borderWidth: isSelected ? 2 : 1,
-                          background: isSelected ? "#f0fdf4" : exp.is_active ? "#fff" : "#fef2f2",
-                          transition: "all 0.15s",
-                          padding: "16px 20px",
-                          position: "relative" as const,
-                        }}
-                      >
-                        {/* Status indicator */}
-                        <div style={{ position: "absolute" as const, top: 12, right: 12, display: "flex", gap: 6, alignItems: "center" }}>
-                          {!exp.is_active && (
-                            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#DC2626", background: "#fef2f2", border: "1px solid #fca5a5", padding: "2px 8px", borderRadius: 10 }}>REVOCAT</span>
-                          )}
-                          <span style={{
-                            width: 8, height: 8, borderRadius: "50%",
-                            background: exp.is_active ? "#059669" : "#DC2626",
-                          }} />
+                {/* Expert compact table */}
+                {(() => {
+                  const EXPERTS_PER_PAGE = 50;
+                  const searchLower = expertSearch.toLowerCase();
+                  const filteredExperts = experts.filter((exp) =>
+                    !expertSearch ||
+                    `${exp.first_name} ${exp.last_name}`.toLowerCase().includes(searchLower) ||
+                    (exp.email && exp.email.toLowerCase().includes(searchLower))
+                  );
+                  const totalPages = Math.ceil(filteredExperts.length / EXPERTS_PER_PAGE);
+                  const pagedExperts = filteredExperts.slice(expertPage * EXPERTS_PER_PAGE, (expertPage + 1) * EXPERTS_PER_PAGE);
+                  const totalStimuli = stimuli.filter((s) => s.is_active).length;
+
+                  return (
+                    <div style={{ marginBottom: 24 }}>
+                      {/* Search bar */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                        <div style={{ position: "relative" as const, flex: 1, maxWidth: 320 }}>
+                          <Search size={14} style={{ position: "absolute" as const, left: 10, top: "50%", transform: "translateY(-50%)", color: "#9CA3AF" }} />
+                          <input
+                            type="text"
+                            placeholder="Cauta dupa nume sau email..."
+                            value={expertSearch}
+                            onChange={(e) => { setExpertSearch(e.target.value); setExpertPage(0); }}
+                            style={{ width: "100%", padding: "7px 10px 7px 32px", border: "1px solid #e5e7eb", borderRadius: 6, fontSize: 12, outline: "none", background: "#fff" }}
+                          />
+                        </div>
+                        <span style={{ fontSize: 11, color: "#6B7280" }}>{filteredExperts.length} experti</span>
+                      </div>
+
+                      {/* Table */}
+                      <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+                        {/* Header */}
+                        <div style={{ display: "grid", gridTemplateColumns: "36px 1fr 1fr 100px 90px 50px 130px", background: "#f9fafb", borderBottom: "1px solid #e5e7eb", padding: "8px 0", alignItems: "center", fontSize: 10, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>
+                          <span style={{ textAlign: "center" as const }}>#</span>
+                          <span style={{ paddingLeft: 8 }}>Nume</span>
+                          <span style={{ paddingLeft: 8 }}>Email</span>
+                          <span style={{ paddingLeft: 8 }}>Telefon</span>
+                          <span style={{ textAlign: "center" as const }}>Progres</span>
+                          <span style={{ textAlign: "center" as const }}>Status</span>
+                          <span style={{ textAlign: "center" as const }}>Actiuni</span>
                         </div>
 
-                        {/* Expert info */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                          {exp.photo_url ? (
-                            <img src={exp.photo_url} alt={exp.first_name} style={{ width: 48, height: 48, borderRadius: "50%", objectFit: "cover", border: "2px solid #e5e7eb" }} />
-                          ) : (
-                            <div style={{ width: 48, height: 48, borderRadius: "50%", background: exp.is_active ? "linear-gradient(135deg, #059669, #047857)" : "#d1d5db", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 16, fontWeight: 700 }}>
-                              {initials}
+                        {/* Rows */}
+                        {pagedExperts.map((exp, idx) => {
+                          const evalsCount = expertEvals.filter((e) => e.expert_id === exp.id).length;
+                          const isSelected = selectedExpertId === exp.id;
+                          const initials = `${exp.first_name[0] || ""}${exp.last_name[0] || ""}`.toUpperCase();
+                          const rowIndex = expertPage * EXPERTS_PER_PAGE + idx;
+                          return (
+                            <div
+                              key={exp.id}
+                              onClick={() => setSelectedExpertId(isSelected ? null : exp.id)}
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "36px 1fr 1fr 100px 90px 50px 130px",
+                                alignItems: "center",
+                                padding: "4px 0",
+                                minHeight: 38,
+                                cursor: "pointer",
+                                background: isSelected ? "#f0fdf4" : idx % 2 === 0 ? "#fff" : "#f9fafb",
+                                borderLeft: isSelected ? "3px solid #059669" : "3px solid transparent",
+                                borderBottom: "1px solid #f3f4f6",
+                                transition: "all 0.1s",
+                              }}
+                            >
+                              {/* # */}
+                              <span style={{ textAlign: "center" as const, fontSize: 10, color: "#9CA3AF" }}>{rowIndex + 1}</span>
+
+                              {/* Name with initials */}
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, paddingLeft: 8, overflow: "hidden" }}>
+                                <div style={{ width: 28, height: 28, minWidth: 28, borderRadius: "50%", background: exp.is_active ? "linear-gradient(135deg, #059669, #047857)" : "#d1d5db", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 10, fontWeight: 700 }}>
+                                  {initials}
+                                </div>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: "#111827", whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{exp.first_name} {exp.last_name}</span>
+                              </div>
+
+                              {/* Email */}
+                              <span style={{ fontSize: 11, color: "#6B7280", paddingLeft: 8, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{exp.email || "-"}</span>
+
+                              {/* Phone */}
+                              <span style={{ fontSize: 11, color: "#6B7280", paddingLeft: 8, whiteSpace: "nowrap" as const, overflow: "hidden", textOverflow: "ellipsis" }}>{exp.phone || "-"}</span>
+
+                              {/* Progress */}
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "center" }}>
+                                <span style={{ fontSize: 11, fontWeight: 600, color: evalsCount === totalStimuli ? "#059669" : "#D97706" }}>{evalsCount}/{totalStimuli}</span>
+                                <div style={{ width: 60, height: 4, background: "#e5e7eb", borderRadius: 2, overflow: "hidden" }}>
+                                  <div style={{ height: "100%", background: evalsCount === totalStimuli ? "#059669" : "#D97706", borderRadius: 2, width: totalStimuli > 0 ? `${(evalsCount / totalStimuli) * 100}%` : "0%", transition: "width 0.3s" }} />
+                                </div>
+                              </div>
+
+                              {/* Status dot */}
+                              <div style={{ display: "flex", justifyContent: "center" }}>
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: exp.is_active ? "#059669" : "#DC2626", display: "inline-block" }} />
+                              </div>
+
+                              {/* Actions */}
+                              <div style={{ display: "flex", gap: 2, justifyContent: "center" }} onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  style={{ ...S.galleryEditBtn, padding: 5, fontSize: 0, lineHeight: 0, borderRadius: 4 }}
+                                  onClick={() => {
+                                    setEditingExpertId(exp.id);
+                                    setExpertForm({
+                                      first_name: exp.first_name,
+                                      last_name: exp.last_name,
+                                      email: exp.email || "",
+                                      phone: exp.phone || "",
+                                      photo_url: exp.photo_url || "",
+                                      experience_years: exp.experience_years ? String(exp.experience_years) : "",
+                                      brands_worked: exp.brands_worked || [],
+                                      total_budget_managed: exp.total_budget_managed ? String(exp.total_budget_managed) : "",
+                                      marketing_roles: exp.marketing_roles || [],
+                                    });
+                                    setShowAddExpert(true);
+                                  }}
+                                  title="Editeaza expert"
+                                >
+                                  <Pencil size={13} />
+                                </button>
+                                <button
+                                  style={{ ...S.galleryEditBtn, padding: 5, fontSize: 0, lineHeight: 0, borderRadius: 4, background: expertCopied === exp.id ? "#dcfce7" : undefined }}
+                                  onClick={() => copyExpertLink(exp)}
+                                  title="Copiaza link"
+                                >
+                                  {expertCopied === exp.id ? <Check size={13} style={{ color: "#059669" }} /> : <Copy size={13} />}
+                                </button>
+                                <button
+                                  style={{ ...S.galleryEditBtn, padding: 5, fontSize: 0, lineHeight: 0, borderRadius: 4 }}
+                                  onClick={() => window.open(getExpertLink(exp), "_blank")}
+                                  title="Deschide link expert"
+                                >
+                                  <ExternalLink size={13} />
+                                </button>
+                                <button
+                                  style={{ ...S.galleryEditBtn, padding: 5, fontSize: 0, lineHeight: 0, borderRadius: 4, color: exp.is_active ? "#DC2626" : "#059669" }}
+                                  onClick={() => toggleExpertAccess(exp.id, exp.is_active)}
+                                  title={exp.is_active ? "Revoca acces" : "Restabileste acces"}
+                                >
+                                  {exp.is_active ? <ShieldOff size={13} /> : <ShieldCheck size={13} />}
+                                </button>
+                                <button
+                                  style={{ ...S.galleryEditBtn, padding: 5, fontSize: 0, lineHeight: 0, borderRadius: 4, color: "#DC2626" }}
+                                  onClick={() => deleteExpert(exp.id)}
+                                  title="Sterge expert"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
                             </div>
-                          )}
-                          <div>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{exp.first_name} {exp.last_name}</div>
-                            <div style={{ display: "flex", gap: 12, marginTop: 2 }}>
-                              {exp.email && <span style={{ fontSize: 11, color: "#6B7280", display: "flex", alignItems: "center", gap: 3 }}><Mail size={10} /> {exp.email}</span>}
-                              {exp.phone && <span style={{ fontSize: 11, color: "#6B7280", display: "flex", alignItems: "center", gap: 3 }}><Phone size={10} /> {exp.phone}</span>}
-                            </div>
-                          </div>
-                        </div>
+                          );
+                        })}
 
-                        {/* Progress */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                          <span style={{ fontSize: 11, color: "#6B7280" }}>Progres evaluare</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: evalsCount === totalStimuli ? "#059669" : "#D97706" }}>
-                            {evalsCount} / {totalStimuli}
-                          </span>
-                        </div>
-                        <div style={{ height: 4, background: "#e5e7eb", borderRadius: 2, overflow: "hidden", marginBottom: 12 }}>
-                          <div style={{ height: "100%", background: evalsCount === totalStimuli ? "#059669" : "#D97706", borderRadius: 2, width: totalStimuli > 0 ? `${(evalsCount / totalStimuli) * 100}%` : "0%", transition: "width 0.3s" }} />
-                        </div>
-
-                        {/* Professional info pills */}
-                        {(exp.experience_years || (exp.brands_worked && exp.brands_worked.length > 0) || exp.total_budget_managed || (exp.marketing_roles && exp.marketing_roles.length > 0)) && (
-                          <div style={{ marginBottom: 10, display: "flex", flexWrap: "wrap" as const, gap: 4 }}>
-                            {exp.experience_years && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 8, background: "#f0fdf4", color: "#059669", border: "1px solid #bbf7d0" }}>{exp.experience_years} ani exp.</span>}
-                            {exp.total_budget_managed && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 8, background: "#fef3c7", color: "#D97706", border: "1px solid #fcd34d" }}>{Number(exp.total_budget_managed).toLocaleString("ro-RO")} EUR</span>}
-                            {exp.brands_worked && exp.brands_worked.map((b, i) => (
-                              <span key={i} style={{ fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 8, background: "#dbeafe", color: "#2563EB", border: "1px solid #93c5fd" }}>{b}</span>
-                            ))}
-                            {exp.marketing_roles && exp.marketing_roles.map((r, i) => (
-                              <span key={i} style={{ fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 8, background: "#fce7f3", color: "#EC4899", border: "1px solid #f9a8d4" }}>{r}</span>
-                            ))}
+                        {pagedExperts.length === 0 && (
+                          <div style={{ padding: "20px 16px", textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>
+                            Niciun expert gasit pentru &quot;{expertSearch}&quot;
                           </div>
                         )}
-
-                        {/* Action buttons */}
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }} onClick={(e) => e.stopPropagation()}>
-                          <button
-                            style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px" }}
-                            onClick={() => {
-                              setEditingExpertId(exp.id);
-                              setExpertForm({
-                                first_name: exp.first_name,
-                                last_name: exp.last_name,
-                                email: exp.email || "",
-                                phone: exp.phone || "",
-                                photo_url: exp.photo_url || "",
-                                experience_years: exp.experience_years ? String(exp.experience_years) : "",
-                                brands_worked: exp.brands_worked || [],
-                                total_budget_managed: exp.total_budget_managed ? String(exp.total_budget_managed) : "",
-                                marketing_roles: exp.marketing_roles || [],
-                              });
-                              setShowAddExpert(true);
-                            }}
-                            title="Editeaza expert"
-                          >
-                            <Pencil size={12} /> Editeaza
-                          </button>
-                          <button
-                            style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", background: expertCopied === exp.id ? "#dcfce7" : "#f3f4f6" }}
-                            onClick={() => copyExpertLink(exp)}
-                            title="Copiaza link"
-                          >
-                            {expertCopied === exp.id ? <Check size={12} style={{ color: "#059669" }} /> : <Copy size={12} />}
-                            {expertCopied === exp.id ? "Copiat!" : "Link"}
-                          </button>
-                          <button
-                            style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px" }}
-                            onClick={() => window.open(getExpertLink(exp), "_blank")}
-                            title="Deschide link expert"
-                          >
-                            <ExternalLink size={12} /> Deschide
-                          </button>
-                          <button
-                            style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", color: exp.is_active ? "#DC2626" : "#059669" }}
-                            onClick={() => toggleExpertAccess(exp.id, exp.is_active)}
-                            title={exp.is_active ? "Revoca acces" : "Restabileste acces"}
-                          >
-                            {exp.is_active ? <ShieldOff size={12} /> : <ShieldCheck size={12} />}
-                            {exp.is_active ? "Revoca" : "Restabileste"}
-                          </button>
-                          <button
-                            style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", color: "#DC2626" }}
-                            onClick={() => deleteExpert(exp.id)}
-                            title="Sterge expert"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-
-                        {/* Created date */}
-                        <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 8 }}>
-                          Creat: {new Date(exp.created_at).toLocaleDateString("ro-RO")}
-                          {exp.revoked_at && <span style={{ color: "#DC2626" }}> | Revocat: {new Date(exp.revoked_at).toLocaleDateString("ro-RO")}</span>}
-                        </div>
                       </div>
-                    );
-                  })}
-                </div>
+
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                          <span style={{ fontSize: 11, color: "#6B7280" }}>
+                            Pagina {expertPage + 1} din {totalPages} ({filteredExperts.length} experti)
+                          </span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <button
+                              disabled={expertPage === 0}
+                              onClick={() => setExpertPage(expertPage - 1)}
+                              style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 12px", opacity: expertPage === 0 ? 0.4 : 1, cursor: expertPage === 0 ? "not-allowed" : "pointer" }}
+                            >
+                              Inapoi
+                            </button>
+                            <button
+                              disabled={expertPage >= totalPages - 1}
+                              onClick={() => setExpertPage(expertPage + 1)}
+                              style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 12px", opacity: expertPage >= totalPages - 1 ? 0.4 : 1, cursor: expertPage >= totalPages - 1 ? "not-allowed" : "pointer" }}
+                            >
+                              Inainte
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Expert tabs - show evaluations for selected expert */}
                 {selectedExpertId && (() => {
