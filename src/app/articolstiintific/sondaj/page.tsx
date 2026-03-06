@@ -323,7 +323,7 @@ const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = 
 const TABS_RIGHT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "preview", label: "Preview", icon: PlayCircle },
   { key: "cvi", label: "Evaluare Itemi", icon: Target },
-  { key: "experti", label: "Experti", icon: UserCheck },
+  { key: "experti", label: "EFA (2A)", icon: UserCheck },
   { key: "ai", label: "AI Benchmark", icon: Bot },
   { key: "log", label: "Log", icon: ClipboardList },
 ];
@@ -1036,6 +1036,7 @@ export default function StudiuAdminPage() {
   const [editingExpertId, setEditingExpertId] = useState<string | null>(null);
   const [expandedExpertChannelType, setExpandedExpertChannelType] = useState<string | null>(null);
   const [expertSubTab, setExpertSubTab] = useState<"main" | "interpretare">("main");
+  const [expertInterpSubTab, setExpertInterpSubTab] = useState<"total" | "canal" | "industrie">("total");
 
   // CVI (Evaluare Itemi) state
   const [cviExperts, setCviExperts] = useState<any[]>([]);
@@ -5032,9 +5033,9 @@ export default function StudiuAdminPage() {
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
               <div>
-                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Panel Experti (Stratul 1)</h2>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>EFA — Exploratory Factor Analysis (Layer 2A)</h2>
                 <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
-                  Fiecare expert primeste un link unic, evalueaza R, I, F, C, CTA + recunoastere brand cu justificari.
+                  Fiecare expert primeste un link unic, evalueaza R, I, F, C, CTA + recunoastere brand cu justificari. Validare formula RIFC prin panel de experti.
                 </p>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -5800,6 +5801,156 @@ export default function StudiuAdminPage() {
               const dLabel = Math.abs(brandCohensD) >= 0.80 ? "MARE" : Math.abs(brandCohensD) >= 0.50 ? "MEDIU" : Math.abs(brandCohensD) >= 0.20 ? "MIC" : "NEGLIJABIL";
               const dColor = Math.abs(brandCohensD) >= 0.50 ? "#059669" : Math.abs(brandCohensD) >= 0.20 ? "#D97706" : "#DC2626";
 
+              // ── VALIDARE IPOTEZA: aggregate per material for hypothesis testing ──
+              const EX_GATE = 3;
+              const exNormCf = (cF: number): number => Math.round((cF / 11) * 100) / 100;
+              const exCalcDelta = (cF: number, cP: number): number => Math.round(Math.abs(exNormCf(cF) - cP) * 100) / 100;
+              const exHypothesisPct = (cF: number, cP: number): number => {
+                const delta = Math.abs(exNormCf(cF) - cP);
+                return Math.round(Math.max(0, Math.min(100, 100 - (delta / 10 * 100))) * 10) / 10;
+              };
+              const exGetZone = (score: number): string => {
+                if (score <= 20) return "Critical";
+                if (score <= 50) return "Noise";
+                if (score <= 80) return "Medium";
+                return "Supreme";
+              };
+              const exGetZoneCp = (score: number): string => {
+                if (score <= 2) return "Critical";
+                if (score <= 5) return "Noise";
+                if (score <= 8) return "Medium";
+                return "Supreme";
+              };
+              const exGetZoneColor = (zone: string): string => {
+                if (zone === "Critical") return "#DC2626";
+                if (zone === "Noise") return "#D97706";
+                if (zone === "Medium") return "#2563EB";
+                return "#059669";
+              };
+              const exGetZoneBg = (zone: string): string => {
+                if (zone === "Critical") return "#DC262615";
+                if (zone === "Noise") return "#D9770615";
+                if (zone === "Medium") return "#2563EB15";
+                return "#05966915";
+              };
+              const exGetValidationColor = (pct: number): string => {
+                if (pct >= 80) return "#059669";
+                if (pct >= 50) return "#D97706";
+                return "#DC2626";
+              };
+              const exGetValidationLabel = (pct: number): string => {
+                if (pct >= 90) return "Foarte puternic validata";
+                if (pct >= 80) return "Puternic validata";
+                if (pct >= 70) return "Validata";
+                if (pct >= 50) return "Partial validata";
+                if (pct >= 30) return "Slab validata";
+                return "Nevalidata";
+              };
+              const exGetConclusion = (pct: number, avgR: number, zoneMatch: boolean): string => {
+                const gateOk = avgR >= EX_GATE;
+                const rRole = gateOk
+                  ? `R = ${avgR.toFixed(1)} (peste Gate ${EX_GATE}) — formula este activata.`
+                  : `R = ${avgR.toFixed(1)} (sub Gate ${EX_GATE}) — cheia de contact nu este activata.`;
+                if (pct >= 80 && gateOk && zoneMatch) {
+                  return `Formula R+(I×F)=C este validata cu ${pct}% acuratete (evaluare experti). ${rRole} Scorurile calculate si percepute se afla in aceeasi zona.`;
+                }
+                if (pct >= 50) {
+                  return `Formula R+(I×F)=C este partial validata (${pct}%, evaluare experti). ${rRole}${!zoneMatch ? " Scorurile se afla in zone diferite — formula necesita calibrare." : ""}`;
+                }
+                return `Formula R+(I×F)=C nu este validata in evaluarea expertilor (${pct}%). ${rRole}`;
+              };
+
+              // Aggregate expert evals per material
+              const materialAggs = Array.from(materialMap.entries()).map(([sid, d]) => {
+                const evs = expertEvals.filter(e => e.stimulus_id === sid);
+                const stim = stimLookup.get(sid);
+                const avg_r = _mean(evs.map(e => e.r_score));
+                const avg_i = _mean(evs.map(e => e.i_score));
+                const avg_f = _mean(evs.map(e => e.f_score));
+                const avg_c = avg_r + (avg_i * avg_f); // C_computed = R + I×F
+                const cScoreEvs = evs.filter(e => e.c_score != null);
+                const avg_c_score = cScoreEvs.length > 0 ? _mean(cScoreEvs.map(e => e.c_score!)) : 0;
+                return {
+                  sid, name: d.title, type: stim?.type || "",
+                  industry: stim?.industry || "Neatribuit",
+                  avg_r, avg_i, avg_f, avg_c, avg_c_score,
+                  response_count: evs.length,
+                };
+              }).filter(m => m.response_count > 0 && m.avg_c_score > 0);
+
+              // Grand totals (VALIDARE)
+              const exN = materialAggs.length;
+              const exGrandR = exN > 0 ? Math.round((_mean(materialAggs.map(m => m.avg_r))) * 100) / 100 : 0;
+              const exGrandI = exN > 0 ? Math.round((_mean(materialAggs.map(m => m.avg_i))) * 100) / 100 : 0;
+              const exGrandF = exN > 0 ? Math.round((_mean(materialAggs.map(m => m.avg_f))) * 100) / 100 : 0;
+              const exGrandCf = exN > 0 ? Math.round((_mean(materialAggs.map(m => m.avg_c))) * 100) / 100 : 0;
+              const exGrandCp = exN > 0 ? Math.round((_mean(materialAggs.map(m => m.avg_c_score))) * 100) / 100 : 0;
+              const exGrandIxF = Math.round((exGrandCf - exGrandR) * 100) / 100;
+              const exGrandCfNorm = exNormCf(exGrandCf);
+              const exGrandDelta = exCalcDelta(exGrandCf, exGrandCp);
+              const exGrandHypPct = exHypothesisPct(exGrandCf, exGrandCp);
+              const exGrandZoneCf = exGetZone(exGrandCf);
+              const exGrandZoneCp = exGetZoneCp(exGrandCp);
+              const exGrandZoneMatch = exGrandZoneCf === exGrandZoneCp;
+              const exGatePassCount = materialAggs.filter(m => m.avg_r >= EX_GATE).length;
+              const exGatePassRate = exN > 0 ? Math.round((exGatePassCount / exN) * 100) : 0;
+              const exZoneMatchCount = materialAggs.filter(m => exGetZone(m.avg_c) === exGetZoneCp(m.avg_c_score)).length;
+              const exZoneMatchRate = exN > 0 ? Math.round((exZoneMatchCount / exN) * 100) : 0;
+
+              // Per-channel aggregation
+              const exChByType: Record<string, typeof materialAggs> = {};
+              materialAggs.forEach(m => { if (!exChByType[m.type]) exChByType[m.type] = []; exChByType[m.type].push(m); });
+              const exChAggs = [...categories]
+                .sort((a, b) => a.display_order - b.display_order)
+                .reduce<{ label: string; color: string; code: string; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number }[]>((acc, cat) => {
+                  const items = (exChByType[cat.type] || []);
+                  if (items.length === 0) return acc;
+                  const cn = items.length;
+                  const cf = Math.round((_mean(items.map(m => m.avg_c))) * 100) / 100;
+                  const cp = Math.round((_mean(items.map(m => m.avg_c_score))) * 100) / 100;
+                  const cfN = exNormCf(cf);
+                  const d = exCalcDelta(cf, cp);
+                  const p = exHypothesisPct(cf, cp);
+                  const gp = items.filter(m => m.avg_r >= EX_GATE).length;
+                  const gr = Math.round((gp / cn) * 100);
+                  const direction = cfN > cp ? "over" : cfN < cp ? "under" : "match";
+                  const factor = cp > 0 ? Math.round(Math.abs(cfN - cp) / cp * 100) : 0;
+                  acc.push({ label: cat.label, color: cat.color, code: cat.short_code, n: cn, cfNorm: cfN, cp, delta: d, pct: p, gatePass: gp, gateRate: gr, dir: direction, dirFactor: factor });
+                  return acc;
+                }, []);
+
+              // Per-industry aggregation
+              const exByIndustry: Record<string, typeof materialAggs> = {};
+              materialAggs.forEach(m => { if (!exByIndustry[m.industry]) exByIndustry[m.industry] = []; exByIndustry[m.industry].push(m); });
+              const exIndustryKeys = Object.keys(exByIndustry).sort((a, b) => {
+                if (a === "Neatribuit") return 1;
+                if (b === "Neatribuit") return -1;
+                return exByIndustry[b].length - exByIndustry[a].length;
+              });
+              const EX_INDUSTRY_COLORS = ["#2563EB", "#DC2626", "#059669", "#D97706", "#7C3AED", "#EC4899", "#0D9488", "#EA580C", "#4F46E5", "#CA8A04"];
+              const exIndAggs = exIndustryKeys.map((ind, idx) => {
+                const items = exByIndustry[ind];
+                const cn = items.length;
+                const cf = Math.round((_mean(items.map(m => m.avg_c))) * 100) / 100;
+                const cp = Math.round((_mean(items.map(m => m.avg_c_score))) * 100) / 100;
+                const cfN = exNormCf(cf);
+                const d = exCalcDelta(cf, cp);
+                const p = exHypothesisPct(cf, cp);
+                const gp = items.filter(m => m.avg_r >= EX_GATE).length;
+                const gr = Math.round((gp / cn) * 100);
+                const direction = cfN > cp ? "over" : cfN < cp ? "under" : "match";
+                const factor = cp > 0 ? Math.round(Math.abs(cfN - cp) / cp * 100) : 0;
+                return { label: ind, color: EX_INDUSTRY_COLORS[idx % EX_INDUSTRY_COLORS.length], n: cn, cfNorm: cfN, cp, delta: d, pct: p, gatePass: gp, gateRate: gr, dir: direction, dirFactor: factor };
+              });
+
+              // Sub-tab pill style
+              const exPillStyle = (active: boolean): React.CSSProperties => ({
+                padding: "8px 16px", fontSize: 12, fontWeight: 600, borderRadius: 6,
+                border: "1px solid #e5e7eb", cursor: "pointer",
+                background: active ? "#111827" : "#fff",
+                color: active ? "#fff" : "#6B7280",
+              });
+
               // Local InterpBtn
               const interpBtnHoverE = (e: React.MouseEvent, enter: boolean) => {
                 const el = e.currentTarget as HTMLButtonElement;
@@ -5830,8 +5981,8 @@ export default function StudiuAdminPage() {
                     const _en = _ctx.n as number || 0;
                     const _evals = _ctx.evals as number || 0;
                     return { sections: [
-                      { heading: "Ce este Panelul de Experti", text: `Panelul de experti (Stratul 1) este prima metoda de validare a formulei RIFC. ${_en} experti in marketing cu experienta practica evalueaza 30 de materiale publicitare pe 5 dimensiuni: Relevanta (R), Interes (I), Forma (F), Claritate (C) si Intentie de Actiune (CTA), pe o scala de la 1 la 10.` },
-                      { heading: "De ce este important", text: "Expertii aduc perspectiva profesionala — ei pot evalua materialele din unghiul creatorului si al strategului, nu doar al consumatorului. Aceasta completeaza sondajul respondentilor (Stratul 2) si benchmark-ul AI (Stratul 3), formand o triangulare metodologica." },
+                      { heading: "Ce este EFA (Layer 2A)", text: `EFA (Layer 2A) — Exploratory Factor Analysis — este prima metoda de validare a formulei RIFC. ${_en} experti in marketing cu experienta practica evalueaza 30 de materiale publicitare pe 5 dimensiuni: Relevanta (R), Interes (I), Forma (F), Claritate (C) si Intentie de Actiune (CTA), pe o scala de la 1 la 10.` },
+                      { heading: "De ce este important", text: "Expertii aduc perspectiva profesionala — ei pot evalua materialele din unghiul creatorului si al strategului, nu doar al consumatorului. Aceasta completeaza sondajul respondentilor (Layer 2B) si benchmark-ul AI (Layer 3), formand o triangulare metodologica." },
                       { heading: "Dimensiunea panelului", text: `Cu N = ${_en} experti si ${_evals} evaluari totale, ${_en >= 30 ? "panelul depaseste pragul minim recomandat de 30 pentru validitate statistica." : _en >= 10 ? "panelul este limitat dar utilizabil — se recomanda extinderea la minim 30." : "panelul este insuficient — rezultatele au valoare orientativa, nu concluziva."}` },
                       { heading: "Cum se interpreteaza", text: "Panel adecvat (≥30): rezultate robuste statistic. Panel limitat (10-29): rezultate indicative. Insuficient (<10): date preliminare." },
                     ]};
@@ -5879,7 +6030,40 @@ export default function StudiuAdminPage() {
                       { heading: "Referinta", text: "Hair et al. (2019). Prag: r ≥ 0.40 = corelatie semnificativa." },
                     ]};
                   }
-                  default: return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare a formulei RIFC." }] };
+                  case "expert-hypothesis-total": {
+                    const _cfNorm = _ctx.cfNorm as number || 0;
+                    const _cpVal = _ctx.cp as number || 0;
+                    const _deltaVal = _ctx.delta as number || 0;
+                    const _gateRate = _ctx.gateRate as number || 0;
+                    const _rVal = _ctx.r as number || 0;
+                    const _iVal = _ctx.i as number || 0;
+                    const _fVal = _ctx.f as number || 0;
+                    return { sections: [
+                      { heading: "Ce testeaza", text: `Validarea ipotezei R + (I×F) = C aplicata evaluarilor expertilor. Se compara C calculat prin formula (Cf, normalizat la scala 1-10) cu C perceput direct de experti (Cp). Validare: ${parseFloat(val)}%.` },
+                      { heading: "Mecanismul formulei", text: `R (Relevanta = ${_rVal.toFixed(2)}) activeaza atentia. I×F (Interes × Forma = ${(_iVal * _fVal).toFixed(1)}) genereaza motorul procesarii. Suma R + I×F = Cf (Claritate calculata). Cf normalizat = ${_cfNorm.toFixed(2)}, Cp perceput = ${_cpVal.toFixed(2)}, Delta = ${_deltaVal.toFixed(2)}.` },
+                      { heading: "Gate activation", text: `${_gateRate}% din materiale au R >= ${EX_GATE} (Gate activat). Cand Gate-ul este activ, I×F produce claritate actionabila. Sub Gate, audienta se dezangajeaza indiferent de I×F.` },
+                      { heading: "Interpretare", text: `≥80%: formula validata puternic. 50-79%: partial validata. <50%: nevalidata. Expertii evalueaza din perspectiva profesionala — diferentele fata de consumatori sunt asteptate si informationale.` },
+                    ]};
+                  }
+                  default: {
+                    // Handle dynamic channel/industry keys
+                    if (key.startsWith("expert-channel-") || key.startsWith("expert-industry-")) {
+                      const _label = _ctx.label as string || "";
+                      const _cfNorm = _ctx.cfNorm as number || 0;
+                      const _cpVal = _ctx.cp as number || 0;
+                      const _deltaVal = _ctx.delta as number || 0;
+                      const _gateRate = _ctx.gateRate as number || 0;
+                      const _nMat = _ctx.n as number || 0;
+                      const isChannel = key.startsWith("expert-channel-");
+                      return { sections: [
+                        { heading: `Validare ${isChannel ? "Canal" : "Industrie"}: ${_label}`, text: `Formula R + (I×F) = C testata pe ${_nMat} materiale din ${isChannel ? "canalul" : "industria"} "${_label}". Validare: ${parseFloat(val)}%.` },
+                        { heading: "Comparatie", text: `Cf normalizat = ${_cfNorm.toFixed(2)}, Cp perceput = ${_cpVal.toFixed(2)}, Delta = ${_deltaVal.toFixed(2)}. ${_cfNorm > _cpVal ? "Formula supraestimeaza — expertii percep mai putina claritate decat formula prezice." : _cfNorm < _cpVal ? "Formula subestimeaza — expertii percep mai multa claritate decat formula prezice." : "Potrivire perfecta."}` },
+                        { heading: "Gate activation", text: `${_gateRate}% din materiale au R >= ${EX_GATE} (Gate activat). Aceasta indica nivelul de relevanta perceput de experti in aceasta categorie.` },
+                        { heading: "Implicatii", text: `${parseFloat(val) >= 80 ? "Formula functioneaza excelent in acest context." : parseFloat(val) >= 50 ? "Formula functioneaza partial — calibrare recomandata." : "Formula nu functioneaza in acest context — factori externi dominanti."}` },
+                      ]};
+                    }
+                    return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare a formulei RIFC." }] };
+                  }
                 }
               };
 
@@ -5918,11 +6102,168 @@ export default function StudiuAdminPage() {
                     );
                   })()}
 
+                  {/* ── Sub-sub-tab pills: Total / Per Canal / Per Industrie ── */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+                    {([
+                      { key: "total" as const, label: "Total" },
+                      { key: "canal" as const, label: "Per Canal" },
+                      { key: "industrie" as const, label: "Per Industrie" },
+                    ] as const).map(t => (
+                      <button key={t.key} onClick={() => setExpertInterpSubTab(t.key)} style={exPillStyle(expertInterpSubTab === t.key)}>{t.label}</button>
+                    ))}
+                  </div>
+
+                  {/* ═══ VALIDARE IPOTEZA — EXPERT TOTAL ═══ */}
+                  {expertInterpSubTab === "total" && exN >= 1 && (
+                    <div style={{ background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: "24px 28px", marginBottom: 24 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — EFA TOTAL</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+                        <div style={{ fontSize: 48, fontWeight: 900, color: exGetValidationColor(exGrandHypPct), fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>{exGrandHypPct}%</div>
+                        <div>
+                          <span style={{ display: "inline-block", padding: "4px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#fff", background: exGetValidationColor(exGrandHypPct) }}>{exGetValidationLabel(exGrandHypPct).toUpperCase()}</span>
+                          <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>Acuratete formula R + (I×F) = C pe baza evaluarii expertilor ({exN} materiale, {completedExperts} experti)</div>
+                        </div>
+                      </div>
+                      {/* Cf_norm vs Cp comparison */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, justifyContent: "center" }}>
+                        <div style={{ textAlign: "center" as const, padding: "10px 16px", background: exGetZoneBg(exGrandZoneCf), borderRadius: 8, border: `1px solid ${exGetZoneColor(exGrandZoneCf)}30` }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>Cf NORM</div>
+                          <div style={{ fontSize: 22, fontWeight: 900, color: exGetZoneColor(exGrandZoneCf), fontFamily: "'JetBrains Mono', monospace" }}>{exGrandCfNorm}</div>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: exGetZoneColor(exGrandZoneCf) }}>{exGrandZoneCf}</span>
+                        </div>
+                        <div style={{ textAlign: "center" as const }}>
+                          <div style={{ fontSize: 10, color: "#9CA3AF" }}>Delta</div>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: exGrandDelta <= 1 ? "#059669" : exGrandDelta <= 2 ? "#D97706" : "#DC2626", fontFamily: "'JetBrains Mono', monospace" }}>{exGrandDelta}</div>
+                          <div style={{ fontSize: 16, color: "#9CA3AF" }}>{exGrandCfNorm > exGrandCp ? "→" : exGrandCfNorm < exGrandCp ? "←" : "="}</div>
+                        </div>
+                        <div style={{ textAlign: "center" as const, padding: "10px 16px", background: exGetZoneBg(exGrandZoneCp), borderRadius: 8, border: `1px solid ${exGetZoneColor(exGrandZoneCp)}30` }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>Cp PERCEPUT</div>
+                          <div style={{ fontSize: 22, fontWeight: 900, color: exGetZoneColor(exGrandZoneCp), fontFamily: "'JetBrains Mono', monospace" }}>{exGrandCp}</div>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: exGetZoneColor(exGrandZoneCp) }}>{exGrandZoneCp}</span>
+                        </div>
+                      </div>
+                      {/* R-Synthesis */}
+                      <div style={{ background: "#eff6ff", borderLeft: "3px solid #2563EB", borderRadius: 6, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#1e40af", lineHeight: 1.6 }}>
+                        {exGetConclusion(exGrandHypPct, exGrandR, exGrandZoneMatch)}
+                      </div>
+                      {/* Mini stats */}
+                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const, marginBottom: 8 }}>
+                        {[
+                          { label: "Gate Pass", val: `${exGatePassRate}%`, sub: `${exGatePassCount}/${exN}` },
+                          { label: "Zone Match", val: `${exZoneMatchRate}%`, sub: `${exZoneMatchCount}/${exN}` },
+                          { label: "Materiale", val: String(exN), sub: "cu date" },
+                          { label: "Experti", val: String(completedExperts), sub: "unici" },
+                        ].map((s, i) => (
+                          <div key={i} style={{ background: "#f9fafb", borderRadius: 6, padding: "6px 10px", border: "1px solid #e5e7eb", minWidth: 80 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>{s.label}</div>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", fontFamily: "'JetBrains Mono', monospace" }}>{s.val}</div>
+                            <div style={{ fontSize: 9, color: "#9CA3AF" }}>{s.sub}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <InterpBtnE k="expert-hypothesis-total" title="Validare Ipoteza — EFA Total" val={String(exGrandHypPct)} ctx={{ cf: exGrandCf, cfNorm: exGrandCfNorm, cp: exGrandCp, delta: exGrandDelta, gatePass: exGatePassCount, gateTotal: exN, gateRate: exGatePassRate, r: exGrandR, i: exGrandI, f: exGrandF }} />
+                    </div>
+                  )}
+
+                  {/* ═══ SCORURI MEDII — Comparison Grid (Total sub-tab) ═══ */}
+                  {expertInterpSubTab === "total" && exN >= 1 && (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24 }}>
+                      {[
+                        { label: "R (Relevanta)", val: exGrandR, color: "#DC2626", zone: exGetZoneCp(exGrandR) },
+                        { label: "I (Interes)", val: exGrandI, color: "#2563EB", zone: exGetZoneCp(exGrandI) },
+                        { label: "F (Forma)", val: exGrandF, color: "#059669", zone: exGetZoneCp(exGrandF) },
+                        { label: "I×F (Motor)", val: exGrandIxF, color: "#7C3AED", zone: "" },
+                        { label: "Cf (Formula)", val: exGrandCf, color: "#111827", zone: exGetZone(exGrandCf) },
+                        { label: "Cf Norm", val: exGrandCfNorm, color: "#374151", zone: exGetZoneCp(exGrandCfNorm) },
+                        { label: "Cp (Perceput)", val: exGrandCp, color: "#D97706", zone: exGetZoneCp(exGrandCp) },
+                        { label: "Delta", val: exGrandDelta, color: exGrandDelta <= 1 ? "#059669" : exGrandDelta <= 2 ? "#D97706" : "#DC2626", zone: "" },
+                      ].map((s, i) => (
+                        <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", borderLeft: `3px solid ${s.color}` }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>{s.label}</div>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: s.color, fontFamily: "'JetBrains Mono', monospace" }}>{typeof s.val === "number" ? s.val.toFixed(2) : s.val}</div>
+                          {s.zone && <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 6px", borderRadius: 8, background: `${exGetZoneColor(s.zone)}15`, color: exGetZoneColor(s.zone) }}>{s.zone}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ═══ VALIDARE PER CANAL — Compact Cards ═══ */}
+                  {expertInterpSubTab === "canal" && (
+                    <div style={{ marginBottom: 24 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Validare Formula per Canal — Evaluare Experti</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                        {exChAggs.map((ch, i) => (
+                          <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${ch.color}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{ch.label}</div>
+                              <div style={{ fontSize: 20, fontWeight: 900, color: exGetValidationColor(ch.pct), fontFamily: "'JetBrains Mono', monospace" }}>{ch.pct}%</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 6 }}>
+                              {[
+                                { label: "Cf", val: ch.cfNorm.toFixed(2) },
+                                { label: "Cp", val: ch.cp.toFixed(2) },
+                                { label: "Δ", val: ch.delta.toFixed(2) },
+                                { label: "n", val: String(ch.n) },
+                                { label: "Gate", val: `${ch.gateRate}%` },
+                              ].map((s, j) => (
+                                <span key={j} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280", fontWeight: 600 }}>{s.label}: {s.val}</span>
+                              ))}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: ch.dir === "over" ? "#DC2626" : ch.dir === "under" ? "#2563EB" : "#059669" }}>
+                              {ch.dir === "over" ? "▲" : ch.dir === "under" ? "▼" : "="} Formula {ch.dir === "over" ? "supraestimeaza" : ch.dir === "under" ? "subestimeaza" : "potrivire"} cu {ch.dirFactor}%
+                            </div>
+                            <div style={{ marginTop: 6 }}>
+                              <InterpBtnE k={`expert-channel-${ch.code}`} title={`Validare ${ch.label}`} val={String(ch.pct)} ctx={{ cfNorm: ch.cfNorm, cp: ch.cp, delta: ch.delta, n: ch.n, gateRate: ch.gateRate, label: ch.label }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {exChAggs.length === 0 && <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu sunt suficiente date per canal</div>}
+                    </div>
+                  )}
+
+                  {/* ═══ VALIDARE PER INDUSTRIE — Compact Cards ═══ */}
+                  {expertInterpSubTab === "industrie" && (
+                    <div style={{ marginBottom: 24 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Validare Formula per Industrie — Evaluare Experti</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                        {exIndAggs.map((ind, i) => (
+                          <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${ind.color}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{ind.label}</div>
+                              <div style={{ fontSize: 20, fontWeight: 900, color: exGetValidationColor(ind.pct), fontFamily: "'JetBrains Mono', monospace" }}>{ind.pct}%</div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 6 }}>
+                              {[
+                                { label: "Cf", val: ind.cfNorm.toFixed(2) },
+                                { label: "Cp", val: ind.cp.toFixed(2) },
+                                { label: "Δ", val: ind.delta.toFixed(2) },
+                                { label: "n", val: String(ind.n) },
+                                { label: "Gate", val: `${ind.gateRate}%` },
+                              ].map((s, j) => (
+                                <span key={j} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280", fontWeight: 600 }}>{s.label}: {s.val}</span>
+                              ))}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: ind.dir === "over" ? "#DC2626" : ind.dir === "under" ? "#2563EB" : "#059669" }}>
+                              {ind.dir === "over" ? "▲" : ind.dir === "under" ? "▼" : "="} Formula {ind.dir === "over" ? "supraestimeaza" : ind.dir === "under" ? "subestimeaza" : "potrivire"} cu {ind.dirFactor}%
+                            </div>
+                            <div style={{ marginTop: 6 }}>
+                              <InterpBtnE k={`expert-industry-${ind.label}`} title={`Validare ${ind.label}`} val={String(ind.pct)} ctx={{ cfNorm: ind.cfNorm, cp: ind.cp, delta: ind.delta, n: ind.n, gateRate: ind.gateRate, label: ind.label }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {exIndAggs.length === 0 && <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu sunt suficiente date per industrie</div>}
+                    </div>
+                  )}
+
+                  {/* ═══ EXISTING 12 SECTIONS — shown only on "Total" sub-tab ═══ */}
+                  {expertInterpSubTab === "total" && (<>
                   {/* S1. CHENAR EXPLICATIV PANEL EXPERTI */}
                   <div style={{ background: "#f8fafc", borderLeft: "4px solid #7C3AED", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#7C3AED", marginBottom: 8 }}>CE ESTE PANELUL DE EXPERTI?</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#7C3AED", marginBottom: 8 }}>CE ESTE EFA (LAYER 2A)?</div>
                     <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.7, margin: "0 0 10px" }}>
-                      Stratul 1 al validarii RIFC: <strong>{completedExperts} experti in marketing</strong> evalueaza <strong>30 materiale</strong> pe 5 dimensiuni (R, I, F, C, CTA) folosind o scala de la 1 la 10 (scala Likert extinsa). Se testeaza daca formula <strong>R + (I x F) = C</strong> prezice Claritatea perceputa, daca CTA coreleaza cu C si daca recunoasterea brandului influenteaza scorurile.
+                      Layer 2A (EFA) al validarii RIFC: <strong>{completedExperts} experti in marketing</strong> evalueaza <strong>30 materiale</strong> pe 5 dimensiuni (R, I, F, C, CTA) folosind o scala de la 1 la 10 (scala Likert extinsa). Se testeaza daca formula <strong>R + (I x F) = C</strong> prezice Claritatea perceputa, daca CTA coreleaza cu C si daca recunoasterea brandului influenteaza scorurile.
                     </p>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                       {[
@@ -6364,6 +6705,7 @@ export default function StudiuAdminPage() {
                       Referinte: Cronbach (1951), Cohen (1988), Hair et al. (2019). Praguri conform standardelor acceptate in cercetarea de marketing.
                     </div>
                   </div>
+                  </>)}
                 </div>
               );
             })()}
@@ -7019,8 +7361,8 @@ export default function StudiuAdminPage() {
                 const _en = _ctx.n as number || 0;
                 const _evals = _ctx.evals as number || 0;
                 return { sections: [
-                  { heading: "Ce este Panelul de Experti", text: `Panelul de experti (Stratul 1) este prima metoda de validare a formulei RIFC. ${_en} experti in marketing cu experienta practica evalueaza 30 de materiale publicitare pe 5 dimensiuni: Relevanta (R), Interes (I), Forma (F), Claritate (C) si Intentie de Actiune (CTA), pe o scala de la 1 la 10.` },
-                  { heading: "De ce este important", text: `Expertii aduc perspectiva profesionala — ei pot evalua materialele din unghiul creatorului si al strategului, nu doar al consumatorului. Aceasta completeaza sondajul respondentilor (Stratul 2) si benchmark-ul AI (Stratul 3), formand o triangulare metodologica.` },
+                  { heading: "Ce este EFA (Layer 2A)", text: `EFA (Layer 2A) — Exploratory Factor Analysis — este prima metoda de validare a formulei RIFC. ${_en} experti in marketing cu experienta practica evalueaza 30 de materiale publicitare pe 5 dimensiuni: Relevanta (R), Interes (I), Forma (F), Claritate (C) si Intentie de Actiune (CTA), pe o scala de la 1 la 10.` },
+                  { heading: "De ce este important", text: `Expertii aduc perspectiva profesionala — ei pot evalua materialele din unghiul creatorului si al strategului, nu doar al consumatorului. Aceasta completeaza sondajul respondentilor (Layer 2B) si benchmark-ul AI (Layer 3), formand o triangulare metodologica.` },
                   { heading: "Dimensiunea panelului", text: `Cu N = ${_en} experti si ${_evals} evaluari totale, ${_en >= 30 ? "panelul depaseste pragul minim recomandat de 30 pentru validitate statistica." : _en >= 10 ? "panelul este limitat dar utilizabil — se recomanda extinderea la minim 30 pentru putere statistica adecvata." : "panelul este insuficient — rezultatele au valoare orientativa, nu concluziva. Sunt necesari minim 30 de experti."}` },
                   { heading: "Cum se interpreteaza", text: "Panelul adecvat (≥30): rezultate robuste statistic. Panel limitat (10-29): rezultate indicative. Insuficient (<10): date preliminare, nu pot sustine concluzii." },
                 ]};
