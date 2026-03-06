@@ -234,6 +234,87 @@ function ExpertPageContent() {
     };
   }, []);
 
+  // ── FIX: Auto-sync drafts on page load ──
+  // When page loads and finds localStorage drafts not on server, auto-push them
+  const [syncingDrafts, setSyncingDrafts] = useState(false);
+  const [syncResults, setSyncResults] = useState<{ synced: number; failed: number } | null>(null);
+
+  const syncAllDrafts = useCallback(async () => {
+    if (!token || !expert) return;
+    const draftIds = Object.entries(autoSaveStatus)
+      .filter(([, status]) => status === "draft" || status === "error")
+      .map(([id]) => id);
+    if (draftIds.length === 0) return;
+
+    setSyncingDrafts(true);
+    let synced = 0;
+    let failed = 0;
+    for (const stimId of draftIds) {
+      const form = formsRef.current[stimId];
+      if (!form) continue;
+      setAutoSaveStatus((prev) => ({ ...prev, [stimId]: "saving" }));
+      try {
+        const res = await fetch("/api/survey/expert-evaluations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token, stimulus_id: stimId,
+            r_score: form.r_score, i_score: form.i_score, f_score: form.f_score,
+            c_score: form.c_score, cta_score: form.cta_score,
+            r_justification: form.r_justification, i_justification: form.i_justification,
+            f_justification: form.f_justification, c_justification: form.c_justification,
+            cta_justification: form.cta_justification, brand_familiar: form.brand_familiar,
+            brand_justification: form.brand_justification, notes: form.notes,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setAutoSaveStatus((prev) => ({ ...prev, [stimId]: "saved" }));
+          setEvaluations((prev) => {
+            const idx = prev.findIndex((e) => e.stimulus_id === stimId);
+            if (idx >= 0) { const u = [...prev]; u[idx] = data.evaluation; return u; }
+            return [data.evaluation, ...prev];
+          });
+          synced++;
+        } else {
+          setAutoSaveStatus((prev) => ({ ...prev, [stimId]: "error" }));
+          failed++;
+        }
+      } catch {
+        setAutoSaveStatus((prev) => ({ ...prev, [stimId]: "error" }));
+        failed++;
+      }
+    }
+    setSyncingDrafts(false);
+    setSyncResults({ synced, failed });
+    setTimeout(() => setSyncResults(null), 5000);
+  }, [token, expert, autoSaveStatus]);
+
+  // Auto-sync drafts once after page load (if any found)
+  const hasAutoSynced = useRef(false);
+  useEffect(() => {
+    if (hasAutoSynced.current) return;
+    const hasDrafts = Object.values(autoSaveStatus).some(s => s === "draft" || s === "error");
+    if (hasDrafts && expert && token && !loading) {
+      hasAutoSynced.current = true;
+      // Small delay to let UI render first
+      setTimeout(() => syncAllDrafts(), 1000);
+    }
+  }, [autoSaveStatus, expert, token, loading, syncAllDrafts]);
+
+  // ── FIX: beforeunload warning for unsaved drafts ──
+  useEffect(() => {
+    const hasPending = Object.values(autoSaveStatus).some(s => s === "draft" || s === "saving");
+    const handler = (e: BeforeUnloadEvent) => {
+      if (hasPending) {
+        e.preventDefault();
+        e.returnValue = "Ai evaluari nesalvate. Esti sigur ca vrei sa parasesti pagina?";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [autoSaveStatus]);
+
   // Save evaluation for a stimulus (explicit button click)
   const saveEvaluation = async (stimulusId: string) => {
     if (!token || !expert) return;
@@ -315,12 +396,8 @@ function ExpertPageContent() {
     if (!token || !expert) return;
     const form = formsRef.current[stimulusId];
     if (!form) return;
-    // Check if there's any actual content (not just defaults)
-    const hasContent = form.r_justification || form.i_justification || form.f_justification ||
-      form.c_justification || form.cta_justification || form.brand_justification || form.notes ||
-      form.brand_familiar !== null ||
-      form.r_score !== 5 || form.i_score !== 5 || form.f_score !== 5 || form.c_score !== 5 || form.cta_score !== 5;
-    if (!hasContent) return; // Don't autosave empty forms
+    // FIX: Always autosave when updateForm was called — the user interacted with this form
+    // The old check skipped forms where all scores were at default 5 even if expert intentionally evaluated with 5
     setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "saving" }));
     try {
       const res = await fetch("/api/survey/expert-evaluations", {
@@ -738,6 +815,50 @@ function ExpertPageContent() {
           </div>
         </div>
       )}
+
+      {/* ── Sync banner for unsaved drafts ── */}
+      {(() => {
+        const draftCount = Object.values(autoSaveStatus).filter(s => s === "draft" || s === "error").length;
+        if (draftCount === 0 && !syncResults && !syncingDrafts) return null;
+        return (
+          <div style={{
+            margin: "0 auto 12px", maxWidth: 1200, padding: "10px 20px",
+            background: syncResults ? (syncResults.failed > 0 ? "#fef2f2" : "#f0fdf4") : "#fffbeb",
+            border: `1px solid ${syncResults ? (syncResults.failed > 0 ? "#fecaca" : "#bbf7d0") : "#fde68a"}`,
+            borderRadius: 8, display: "flex", alignItems: "center", gap: 12,
+            fontSize: 13, fontWeight: 500,
+          }}>
+            {syncingDrafts ? (
+              <>
+                <div style={{ width: 14, height: 14, border: "2px solid #D97706", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+                <span style={{ color: "#92400e" }}>Se sincronizeaza evaluarile nesalvate cu serverul...</span>
+              </>
+            ) : syncResults ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={syncResults.failed > 0 ? "#DC2626" : "#059669"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span style={{ color: syncResults.failed > 0 ? "#991b1b" : "#166534" }}>
+                  {syncResults.synced > 0 && `${syncResults.synced} evaluari sincronizate cu succes.`}
+                  {syncResults.failed > 0 && ` ${syncResults.failed} evaluari nu s-au putut salva.`}
+                </span>
+              </>
+            ) : draftCount > 0 ? (
+              <>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span style={{ color: "#92400e" }}>{draftCount} evaluari nesincronizate cu serverul.</span>
+                <button
+                  onClick={syncAllDrafts}
+                  style={{
+                    marginLeft: "auto", padding: "4px 14px", background: "#D97706", color: "#fff",
+                    border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  }}
+                >
+                  Sincronizeaza acum
+                </button>
+              </>
+            ) : null}
+          </div>
+        );
+      })()}
 
       {/* Main layout: sidebar stimulus list + evaluation area */}
       <div style={P.main}>
