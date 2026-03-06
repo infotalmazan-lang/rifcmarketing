@@ -6690,6 +6690,13 @@ export default function StudiuAdminPage() {
                     const exH1DiffCta = exH1CtaAbove.length > 0 && exH1CtaBelow.length > 0 ? exH1AboveAvgCta - exH1BelowAvgCta : 0;
                     const exH1CohenDCta = _cohensD(exH1CtaBelow.map(d => d.cta!), exH1CtaAbove.map(d => d.cta!));
                     const exH1XMin = 0, exH1XMax = 11, exH1YMin = 0, exH1YMax = 10;
+                    // Strong gate test (I>=5, F>=5)
+                    const exH1StrongBelow = exH1CtaData.filter(d => d.r < EX_GATE && d.i >= 5 && d.f >= 5);
+                    const exH1StrongAbove = exH1CtaData.filter(d => d.r >= EX_GATE && d.i >= 5 && d.f >= 5);
+                    const exH1GatePct = exH1CtaData.length > 0 ? Math.round((exH1CtaBelow.length / exH1CtaData.length) * 100 * 10) / 10 : 0;
+                    const exH1N = exH1Data.length;
+                    // CTA scatter data (for dual scatter)
+                    const exH1CtaScatterData = exH1CtaData.filter(d => d.r > 0);
 
                     // H2: C_computed vs CTA
                     const exH2Data = exScatter.filter(d => d.c_computed > 0 && d.cta != null && d.cta! > 0);
@@ -6824,31 +6831,252 @@ export default function StudiuAdminPage() {
                           </div>
                         </div>
 
-                        {/* H1: R-Gate scatter */}
-                        {exH1Data.length >= 3 && (
-                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                              <span style={{ fontSize: 14, fontWeight: 800, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>H1</span>
-                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Poarta Relevantei (R-Gate)</span>
-                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: Math.abs(exH1DiffCp) > 2 ? "#dcfce7" : Math.abs(exH1DiffCp) >= 1 ? "#fef9c3" : "#fee2e2", color: Math.abs(exH1DiffCp) > 2 ? "#059669" : Math.abs(exH1DiffCp) >= 1 ? "#D97706" : "#DC2626" }}>{Math.abs(exH1DiffCp) > 2 ? "CONFIRMATA" : Math.abs(exH1DiffCp) >= 1 ? "PARTIAL" : "NECONFIRMATA"}</span>
+                        {/* ── GRAFIC H1 — Poarta Relevantei (Full Format) ── */}
+                        <div style={{ ...S.configItem, marginBottom: 20 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>Ipoteza H1: Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
+                            <InterpBtnE k="expert-h1" title="H1 — Poarta Relevantei" val={`ΔCTA=${exH1DiffCta.toFixed(2)}`} ctx={{ diffCp: exH1DiffCp, diffCta: exH1DiffCta, cohenDCp: exH1CohenD, cohenDCta: exH1CohenDCta, nBelow: exH1CtaBelow.length, nAbove: exH1CtaAbove.length, cpBelow: exH1BelowAvgC, cpAbove: exH1AboveAvgC, ctaBelow: exH1BelowAvgCta, ctaAbove: exH1AboveAvgCta }} />
+                          </div>
+                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
+                            <strong>Ce testeaza:</strong> R functioneaza ca cheie de contact — sub R={EX_GATE}, expertii evalueaza ca audienta se dezangajeaza: CTA scade, chiar daca Cp nu scade la zero. R nu opreste formula, opreste audienta din a actiona.{" "}
+                            <strong>Metoda:</strong> Comparatie medii C<sub>perceput</sub> si CTA pe doua grupuri (R&lt;{EX_GATE} vs R&ge;{EX_GATE}). Testul foloseste c_score (perceptia expertului), nu C din formula.{" "}
+                            <strong>Interpretare:</strong> ΔCTA &gt; 2 = confirmat, 1-2 = partial, &lt; 1 = neconfirmat.
+                            <span style={{ marginLeft: 8, padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 700, background: "#f3f4f6", color: "#6B7280" }}>{exH1GatePct}% sub Gate ({exH1CtaBelow.length}/{exH1CtaData.length})</span>
+                          </div>
+                          {/* Stats banner — 3 rows: C_perceput, CTA, Gate puternic */}
+                          {exH1Below.length > 0 && exH1Above.length > 0 && (() => {
+                            const diffCp = Math.round((exH1AboveAvgC - exH1BelowAvgC) * 100) / 100;
+                            const diffCta = Math.round((exH1AboveAvgCta - exH1BelowAvgCta) * 100) / 100;
+                            const strongBelowCta = exH1StrongBelow.length > 0 ? Math.round(_mean(exH1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                            const strongAboveCta = exH1StrongAbove.length > 0 ? Math.round(_mean(exH1StrongAbove.map(d => d.cta!)) * 100) / 100 : 0;
+                            const diffStrong = Math.round((strongAboveCta - strongBelowCta) * 100) / 100;
+                            const verdict = diffCta > 2 ? "H1 CONFIRMATA" : diffCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
+                            const verdColor = diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626";
+                            const verdIcon = diffCta > 2 ? "\u2705" : diffCta >= 1 ? "\u26A0\uFE0F" : "\u274C";
+                            const rowLbl: React.CSSProperties = { fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: 0.5, padding: "4px 0 2px", gridColumn: "1 / -1" };
+                            const cellStyle = (border: string): React.CSSProperties => ({ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${border}` });
+                            return (
+                              <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                                  {/* ROW A: C perceput */}
+                                  <div style={rowLbl}>A. Claritate perceputa (c_score)</div>
+                                  <div style={cellStyle("#fee2e2")}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&lt;{EX_GATE}</div>
+                                    <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{exH1BelowAvgC}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={exH1Below.length}</div>
+                                  </div>
+                                  <div style={cellStyle("#d1fae5")}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&ge;{EX_GATE}</div>
+                                    <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{exH1AboveAvgC}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={exH1Above.length}</div>
+                                  </div>
+                                  <div style={cellStyle("#e5e7eb")}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;C<sub>perceput</sub></div>
+                                    <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{diffCp.toFixed(2)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={exH1CohenD.toFixed(2)}</div>
+                                  </div>
+                                  {/* Annotation A */}
+                                  <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fef2f2", borderRadius: 4, borderLeft: "3px solid #DC2626", margin: "2px 0 6px" }}>
+                                    <strong style={{ color: diffCp >= 2 ? "#059669" : diffCp >= 1 ? "#D97706" : "#DC2626" }}>{diffCp >= 2 ? "\u2705 CONFIRMAT" : diffCp >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                    Claritate perceputa (c_score 1-10): cat de clar a evaluat expertul mesajul. Media {exH1BelowAvgC} sub prag vs {exH1AboveAvgC} peste prag = &Delta;{diffCp.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={exH1CohenD.toFixed(2)} ({Math.abs(exH1CohenD) >= 0.8 ? "efect mare" : Math.abs(exH1CohenD) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                    <span style={{ color: "#6B7280" }}>n={exH1Below.length}+{exH1Above.length} = evaluari cu c_score valid.</span>
+                                  </div>
+                                  {/* ROW B: CTA */}
+                                  <div style={rowLbl}>B. Intentie de actiune (CTA)</div>
+                                  <div style={cellStyle("#fee2e2")}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&lt;{EX_GATE}</div>
+                                    <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{exH1BelowAvgCta}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={exH1CtaBelow.length}</div>
+                                  </div>
+                                  <div style={cellStyle("#d1fae5")}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&ge;{EX_GATE}</div>
+                                    <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{exH1AboveAvgCta}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={exH1CtaAbove.length}</div>
+                                  </div>
+                                  <div style={cellStyle("#e5e7eb")}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA</div>
+                                    <div style={{ fontSize: 16, fontWeight: 900, color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffCta.toFixed(2)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={exH1CohenDCta.toFixed(2)}</div>
+                                  </div>
+                                  {/* Annotation B */}
+                                  <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#eff6ff", borderRadius: 4, borderLeft: "3px solid #2563EB", margin: "2px 0 6px" }}>
+                                    <strong style={{ color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626" }}>{diffCta > 2 ? "\u2705 CONFIRMAT" : diffCta >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                    <strong>METRICA DECISIVA.</strong> Intentia de actiune (CTA 1-10): ar cumpara consumatorul sau nu? CTA {exH1BelowAvgCta} sub prag vs {exH1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={exH1CohenDCta.toFixed(2)} ({Math.abs(exH1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(exH1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                    {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, consumatorul NU cumpara.</strong>}{" "}
+                                    <span style={{ color: "#6B7280" }}>n={exH1CtaBelow.length}+{exH1CtaAbove.length} = evaluari cu CTA valid.</span>
+                                  </div>
+                                  {/* ROW C: Gate puternic */}
+                                  {exH1StrongBelow.length >= 3 && exH1StrongAbove.length >= 3 && (<>
+                                    <div style={rowLbl}>C. Gate puternic (I&ge;5, F&ge;5 — continut excelent)</div>
+                                    <div style={cellStyle("#fef3c7")}>
+                                      <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 dar R&lt;{EX_GATE}</div>
+                                      <div style={{ fontSize: 16, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>{strongBelowCta}</div>
+                                      <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={exH1StrongBelow.length}</div>
+                                    </div>
+                                    <div style={cellStyle("#d1fae5")}>
+                                      <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 si R&ge;{EX_GATE}</div>
+                                      <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{strongAboveCta}</div>
+                                      <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={exH1StrongAbove.length}</div>
+                                    </div>
+                                    <div style={cellStyle("#e5e7eb")}>
+                                      <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA (gate)</div>
+                                      <div style={{ fontSize: 16, fontWeight: 900, color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffStrong.toFixed(2)}</div>
+                                      <div style={{ fontSize: 8, color: "#9CA3AF" }}>chiar cu I,F excelente</div>
+                                    </div>
+                                    {/* Annotation C */}
+                                    <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fefce8", borderRadius: 4, borderLeft: "3px solid #D97706", margin: "2px 0 4px" }}>
+                                      <strong style={{ color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626" }}>{diffStrong > 2 ? "\u2705 CONFIRMAT" : diffStrong >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                      <strong>TEST MAXIM.</strong> Doar cazuri cu I&ge;5 SI F&ge;5 (continut+forma excelente). CTA {strongBelowCta} fara relevanta vs {strongAboveCta} cu relevanta = &Delta;{diffStrong.toFixed(2)}.{" "}
+                                      {diffStrong > 2 ? <strong style={{ color: "#059669" }}>&quot;Chiar super frumos si chiar am prins, dar fara relevanta — nu cumpar.&quot;</strong> : diffStrong >= 1 ? <strong style={{ color: "#D97706" }}>Calitatea compenseaza partial dar nu suficient.</strong> : <strong style={{ color: "#DC2626" }}>Calitatea compenseaza lipsa relevantei.</strong>}{" "}
+                                      <span style={{ color: "#6B7280" }}>n={exH1StrongBelow.length}+{exH1StrongAbove.length} = subset cu I&ge;5, F&ge;5 (din {exH1CtaData.length} total).</span>
+                                    </div>
+                                  </>)}
+                                </div>
+                                {/* N explanation */}
+                                <div style={{ marginTop: 6, padding: "4px 10px", background: "#f9fafb", borderRadius: 4, fontSize: 9, color: "#6B7280", lineHeight: 1.4 }}>
+                                  <strong>De ce N difera intre metrici?</strong> Fiecare rand filtreaza evaluarile care au valoarea respectiva completata: A = {exH1Below.length}+{exH1Above.length} cu c_score valid, B = {exH1CtaBelow.length}+{exH1CtaAbove.length} cu CTA valid{exH1StrongBelow.length >= 3 && exH1StrongAbove.length >= 3 ? `, C = ${exH1StrongBelow.length}+${exH1StrongAbove.length} (subset I≥5, F≥5)` : ""}. N nu e &quot;date lipsa&quot; — e cate evaluari au acea valoare completata.
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280" }}>Cohen&apos;s d(CTA)={exH1CohenDCta.toFixed(2)} ({Math.abs(exH1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(exH1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}) &middot; N(Cp)={exH1N} &middot; N(CTA)={exH1CtaData.length}</div>
+                                  <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          {/* ═══ DUAL SCATTER: R vs Cp + R vs CTA ═══ */}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                            {/* Scatter 1: R vs C perceput */}
+                            <div style={{ overflowX: "auto" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs C perceput (Claritate)</div>
+                              <svg viewBox={`0 0 ${exChartW} ${exChartH + 10}`} style={{ width: "100%", height: "auto" }}>
+                                {exRenderGrid(exH1XMin, exH1XMax, exH1YMin, exH1YMax, "R (Relevanta)", "C perceput (c_score 1-10)")}
+                                {/* Gate line */}
+                                <line x1={exToX(EX_GATE, exH1XMin, exH1XMax)} y1={exPad.t} x2={exToX(EX_GATE, exH1XMin, exH1XMax)} y2={exChartH - exPad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
+                                <text x={exToX(EX_GATE, exH1XMin, exH1XMax) + 3} y={exPad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={EX_GATE}</text>
+                                {/* Mean lines */}
+                                <line x1={exPad.l} y1={exToY(exH1BelowAvgC, exH1YMin, exH1YMax)} x2={exToX(EX_GATE, exH1XMin, exH1XMax)} y2={exToY(exH1BelowAvgC, exH1YMin, exH1YMax)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                                <text x={exPad.l + 4} y={exToY(exH1BelowAvgC, exH1YMin, exH1YMax) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={exH1BelowAvgC}</text>
+                                <line x1={exToX(EX_GATE, exH1XMin, exH1XMax)} y1={exToY(exH1AboveAvgC, exH1YMin, exH1YMax)} x2={exChartW - exPad.r} y2={exToY(exH1AboveAvgC, exH1YMin, exH1YMax)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                                <text x={exChartW - exPad.r - 50} y={exToY(exH1AboveAvgC, exH1YMin, exH1YMax) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={exH1AboveAvgC}</text>
+                                {/* Dots with jitter */}
+                                {exH1Data.map((d, i) => {
+                                  const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
+                                  const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
+                                  return <circle key={i} cx={exToX(d.r, exH1XMin, exH1XMax) + jx} cy={exToY(d.c_score!, exH1YMin, exH1YMax) + jy} r={2.5} fill={d.r < EX_GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
+                                })}
+                                {/* Legend */}
+                                <circle cx={exPad.l + 10} cy={exChartH - 2} r={3} fill="#DC2626" />
+                                <text x={exPad.l + 18} y={exChartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{EX_GATE} ({exH1Below.length})</text>
+                                <circle cx={exPad.l + 100} cy={exChartH - 2} r={3} fill="#059669" />
+                                <text x={exPad.l + 108} y={exChartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{EX_GATE} ({exH1Above.length})</text>
+                              </svg>
                             </div>
-                            <svg viewBox={`0 0 ${exChartW} ${exChartH}`} style={{ width: "100%", height: "auto" }}>
-                              {exRenderGrid(exH1XMin, exH1XMax, exH1YMin, exH1YMax, "R (Relevanta)", "C perceput")}
-                              <line x1={exToX(EX_GATE, exH1XMin, exH1XMax)} y1={exPad.t} x2={exToX(EX_GATE, exH1XMin, exH1XMax)} y2={exChartH - exPad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 2" />
-                              <text x={exToX(EX_GATE, exH1XMin, exH1XMax) + 4} y={exPad.t + 10} fontSize={8} fill="#DC2626" fontWeight={700}>Gate={EX_GATE}</text>
-                              {exH1Data.map((d, i) => (
-                                <circle key={i} cx={exToX(d.r, exH1XMin, exH1XMax)} cy={exToY(d.c_score!, exH1YMin, exH1YMax)} r={3} fill={d.r >= EX_GATE ? "#059669" : "#DC2626"} opacity={0.6}>
-                                  <title>R={d.r}, Cp={d.c_score}</title>
-                                </circle>
-                              ))}
-                            </svg>
-                            <div style={exCardStyle}>
-                              <strong>Cp mediu sub Gate:</strong> {exH1BelowAvgC.toFixed(2)} (n={exH1Below.length}) vs <strong>peste Gate:</strong> {exH1AboveAvgC.toFixed(2)} (n={exH1Above.length}).
-                              {" \u0394Cp="}{exH1DiffCp.toFixed(2)}, d={exH1CohenD.toFixed(2)}.
-                              {exH1CtaData.length > 0 && <> CTA: sub={exH1BelowAvgCta.toFixed(2)}, peste={exH1AboveAvgCta.toFixed(2)}, \u0394CTA={exH1DiffCta.toFixed(2)}, d={exH1CohenDCta.toFixed(2)}.</>}
+                            {/* Scatter 2: R vs CTA */}
+                            <div style={{ overflowX: "auto" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs CTA (Intentie de actiune)</div>
+                              <svg viewBox={`0 0 ${exChartW} ${exChartH + 10}`} style={{ width: "100%", height: "auto" }}>
+                                {exRenderGrid(exH1XMin, exH1XMax, 0, 10, "R (Relevanta)", "CTA (1-10)")}
+                                {/* Gate line */}
+                                <line x1={exToX(EX_GATE, exH1XMin, exH1XMax)} y1={exPad.t} x2={exToX(EX_GATE, exH1XMin, exH1XMax)} y2={exChartH - exPad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
+                                <text x={exToX(EX_GATE, exH1XMin, exH1XMax) + 3} y={exPad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={EX_GATE}</text>
+                                {/* Mean lines */}
+                                <line x1={exPad.l} y1={exToY(exH1BelowAvgCta, 0, 10)} x2={exToX(EX_GATE, exH1XMin, exH1XMax)} y2={exToY(exH1BelowAvgCta, 0, 10)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                                <text x={exPad.l + 4} y={exToY(exH1BelowAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={exH1BelowAvgCta}</text>
+                                <line x1={exToX(EX_GATE, exH1XMin, exH1XMax)} y1={exToY(exH1AboveAvgCta, 0, 10)} x2={exChartW - exPad.r} y2={exToY(exH1AboveAvgCta, 0, 10)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                                <text x={exChartW - exPad.r - 50} y={exToY(exH1AboveAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={exH1AboveAvgCta}</text>
+                                {/* Dots with jitter */}
+                                {exH1CtaScatterData.map((d, i) => {
+                                  const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
+                                  const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
+                                  return <circle key={i} cx={exToX(d.r, exH1XMin, exH1XMax) + jx} cy={exToY(d.cta!, 0, 10) + jy} r={2.5} fill={d.r < EX_GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
+                                })}
+                                {/* Legend */}
+                                <circle cx={exPad.l + 10} cy={exChartH - 2} r={3} fill="#DC2626" />
+                                <text x={exPad.l + 18} y={exChartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{EX_GATE} ({exH1CtaBelow.length})</text>
+                                <circle cx={exPad.l + 100} cy={exChartH - 2} r={3} fill="#059669" />
+                                <text x={exPad.l + 108} y={exChartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{EX_GATE} ({exH1CtaAbove.length})</text>
+                              </svg>
                             </div>
                           </div>
-                        )}
+                          {/* ═══ INTERPRETARE H1 ═══ */}
+                          <div style={{ marginTop: 10, padding: "14px 16px", background: "#f0fdf4", borderRadius: 8, border: "2px solid #059669" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                              <CheckCircle2 size={16} style={{ color: "#059669" }} />
+                              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE H1</span>
+                            </div>
+                            <div style={{ fontSize: 12, color: "#111827", lineHeight: 1.7 }}>
+                              <strong>Formula e validata?</strong>{" "}
+                              {(() => {
+                                const diffCta = exH1AboveAvgCta - exH1BelowAvgCta;
+                                const diffCp = exH1AboveAvgC - exH1BelowAvgC;
+                                const strongN = exH1StrongBelow.length;
+                                const strongBelowCta = strongN > 0 ? Math.round(_mean(exH1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                                return (<>
+                                  {diffCta > 2
+                                    ? <strong style={{ color: "#059669" }}>DA — Poarta Relevantei functioneaza.</strong>
+                                    : diffCta >= 1
+                                      ? <strong style={{ color: "#D97706" }}>PARTIAL — efect prezent dar moderat.</strong>
+                                      : <strong style={{ color: "#DC2626" }}>NU — R nu actioneaza ca gate.</strong>}
+                                  <br />
+                                  <span style={{ fontSize: 11 }}>
+                                    Testul A (perceptie): Cand R&lt;{EX_GATE}, claritatea perceputa scade cu {diffCp.toFixed(2)} puncte ({exH1BelowAvgC} vs {exH1AboveAvgC}).{" "}
+                                    <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({exH1BelowAvgCta} vs {exH1AboveAvgCta}) — consumatorul nu cumpara.</strong>{" "}
+                                    {strongN >= 3 && <>Testul C (test maxim): Chiar cu I&ge;5, F&ge;5, CTA ramane {strongBelowCta} fara relevanta vs {exH1AboveAvgCta} cu relevanta. <strong>Calitatea NU compenseaza lipsa relevantei.</strong></>}
+                                  </span>
+                                </>);
+                              })()}
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 11, color: "#374151", padding: "6px 10px", background: "#dcfce7", borderRadius: 4 }}>
+                              <strong>Concluzie:</strong> R (relevanta) e conditia de baza a formulei RIFC. Sub pragul R&lt;{EX_GATE}, indiferent cat de bun e continutul (I) sau prezentarea (F), audienta se dezangajeaza si <strong>CTA scade semnificativ</strong>. Formula se valideaza empiric.
+                            </div>
+                          </div>
+                          {/* ═══ SINTEZA R — 4 Reguli ale Relevantei ═══ */}
+                          {exH1Below.length > 0 && exH1Above.length > 0 && (() => {
+                            const diffCta = exH1AboveAvgCta - exH1BelowAvgCta;
+                            const rContrib = exGrandR > 0 && exGrandCf > 0 ? Math.round(exGrandR / exGrandCf * 1000) / 10 : 0;
+                            const ixfContrib = Math.round((100 - rContrib) * 10) / 10;
+                            const ctaLossPct = exH1AboveAvgCta > 0 ? Math.round((1 - exH1BelowAvgCta / exH1AboveAvgCta) * 100) : 0;
+                            const rules: { nr: number; title: string; color: string; text: string; data: string }[] = [
+                              { nr: 1, title: "R = cheie de contact, I×F = motor", color: "#2563EB",
+                                text: "Obiectivul nu e sa maximizezi R, ci sa asiguri R >= " + EX_GATE + " (activare). Apoi maximizezi I×F (amplificare). R deschide usa, I×F construieste experienta.",
+                                data: `R contribuie ${rContrib}% la formula (${exGrandR.toFixed(2)}/${exGrandCf.toFixed(2)}). I×F contribuie ${ixfContrib}% (${exGrandIxF.toFixed(2)}). Puterea vine din I×F, dar fara R >= ${EX_GATE}, motorul nu porneste.` },
+                              { nr: 2, title: "R < 3 = diagnostic, nu condamnare", color: "#D97706",
+                                text: "Un mesaj cu R mic functioneaza tehnic (I×F produce claritate relativa), dar nu e actionabil. Diagnosticul: schimba audienta sau reformuleaza propunerea de valoare.",
+                                data: `Sub Gate: Cp = ${exH1BelowAvgC} (nu zero!), CTA = ${exH1BelowAvgCta} (pierdere ${ctaLossPct}% fata de R>=${EX_GATE}). Cu I>=5, F>=5 si R<${EX_GATE}: CTA = ${exH1StrongBelow.length >= 3 ? (_mean(exH1StrongBelow.map(d => d.cta!)).toFixed(2)) : "N/A"} — calitatea nu compenseaza irelevanta.` },
+                              { nr: 3, title: "R >= 3 = formula devine aplicabila", color: "#059669",
+                                text: "Dincolo de prag, I×F isi produce efectul real si CTA devine masurabil. Dar 'aplicabila' nu inseamna 'precisa' — precizia depinde de calibrare (Brand, context).",
+                                data: `Gate pass: ${exGatePassRate}% (${exGatePassCount}/${exN}). Zone Match: ${exZoneMatchRate}% (doar ${exZoneMatchCount}/${exN} prezise corect). Delta: ${exGrandDelta.toFixed(2)} — formula subestimeaza cu ${exGrandCp > 0 ? Math.round(exGrandDelta / exGrandCp * 100) : 0}% din Cp.` },
+                              { nr: 4, title: "Delta = indicator de dependenta contextuala", color: "#7C3AED",
+                                text: "Delta pozitiv la R mic = claritate imprumutata din context (brand, experienta) — risc necontrolat. Delta pozitiv la R mare = formula e conservatoare — oportunitate de calibrare.",
+                                data: `Delta global = +${exGrandDelta.toFixed(2)} (Cf_norm=${exGrandCfNorm.toFixed(2)} vs Cp=${exGrandCp.toFixed(2)}). ${exGrandCfNorm < exGrandCp ? "Formula subestimeaza sistematic — factori externi (Brand, context) amplifica claritatea perceputa dincolo de R+(I×F)." : "Formula supraestimeaza — bariere cognitive reduc claritatea perceputa."}` },
+                            ];
+                            return (
+                              <div style={{ marginTop: 12, padding: "14px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#1e40af" }}>SINTEZA R — 4 REGULI ALE RELEVANTEI</span>
+                                  <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", marginLeft: "auto" }}>Derivate din H1 + date</span>
+                                </div>
+                                <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 10, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
+                                  <em>R nu este o poarta de esec, ci conditia de activare a intregii formule. Fara R suficient, I si F exista dar nu produc claritate actionabila — mesajul poate fi frumos si interesant, dar irelevant pentru acea audienta in acel moment.</em>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                                  {rules.map(rule => (
+                                    <div key={rule.nr} style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid ${rule.color}` }}>
+                                      <div style={{ fontSize: 10, fontWeight: 800, color: rule.color, marginBottom: 3 }}>
+                                        Regula {rule.nr}: {rule.title}
+                                      </div>
+                                      <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 4 }}>{rule.text}</div>
+                                      <div style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.4, padding: "4px 6px", background: "#f9fafb", borderRadius: 3 }}>{rule.data}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{ marginTop: 8, fontSize: 10, color: "#1e40af", fontWeight: 700, textAlign: "center" as const }}>
+                                  &quot;Creste R, si formula lucreaza pentru tine. Lasa R mic, si audienta lucreaza in locul mesajului.&quot;
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
 
                         {/* H2: C_computed vs CTA scatter */}
                         {exH2Data.length >= 3 && (
