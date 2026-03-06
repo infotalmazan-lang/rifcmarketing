@@ -10351,8 +10351,8 @@ export default function StudiuAdminPage() {
                         <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={h3Known.length}) vs necunoscut (portocaliu, n={h3Unknown.length}).{" "}
                         <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
                       </div>
-                      <div style={{ overflowX: "auto" as const }}>
-                        <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
+                      <div style={{ maxWidth: "50%" }}>
+                        <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
                           {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
                           {/* Trend lines */}
                           {h3Known.length >= 2 && (() => {
