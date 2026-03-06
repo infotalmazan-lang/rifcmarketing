@@ -7442,20 +7442,17 @@ export default function StudiuAdminPage() {
                                 ))}
                               </div>
 
-                              {/* Dual scatter plots — Spearman rank */}
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                              {/* All 3 scatter plots in one row */}
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
                                 {scatterSVG4(rankMult4, rankCp4, "Rang Multiplicativ vs Rang C perceput", exH4RhoM, "#2563EB")}
                                 {scatterSVG4(rankAdit4, rankCp4, "Rang Aditiv vs Rang C perceput", exH4RhoA, "#D97706")}
-                              </div>
 
-                              {/* Residual scatter — Partial correlation */}
-                              <div style={{ marginBottom: 12 }}>
-                                <svg viewBox={`0 0 ${exH4ChartW2 * 2 + 10} ${exH4ChartH2}`} style={{ width: "100%", height: "auto", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                                  <text x={(exH4ChartW2 * 2 + 10) / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">Partial Correlation: I{"\u00D7"}F vs Rezidual din C ~ (R+I+F)</text>
+                                {/* Residual scatter — Partial correlation */}
+                                <svg viewBox={`0 0 ${exH4ChartW2} ${exH4ChartH2}`} style={{ width: "100%", height: "auto", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                                  <text x={exH4ChartW2 / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">Partial Correlation: I{"\u00D7"}F vs Rezidual din C ~ (R+I+F)</text>
                                   {(() => {
-                                    const fullW4 = exH4ChartW2 * 2 + 10;
                                     const rPad4 = { t: 25, r: 20, b: 35, l: 50 };
-                                    const rW4 = fullW4 - rPad4.l - rPad4.r, rH4 = exH4ChartH2 - rPad4.t - rPad4.b;
+                                    const rW4 = exH4ChartW2 - rPad4.l - rPad4.r, rH4 = exH4ChartH2 - rPad4.t - rPad4.b;
                                     const minIxF4 = Math.min(...ixf4), maxIxF4 = Math.max(...ixf4);
                                     const minRes4 = Math.min(...residuals4), maxRes4 = Math.max(...residuals4);
                                     const rangeIxF4 = maxIxF4 - minIxF4 || 1, rangeRes4 = maxRes4 - minRes4 || 1;
@@ -7478,7 +7475,7 @@ export default function StudiuAdminPage() {
                                           return <line x1={rPad4.l} y1={rPad4.t + rH4 * (1 - (y1v4b - minRes4) / rangeRes4)} x2={rPad4.l + rW4} y2={rPad4.t + rH4 * (1 - (y2v4b - minRes4) / rangeRes4)} stroke="#7C3AED" strokeWidth={1.5} strokeDasharray="4,3" />;
                                         })()}
                                         <text x={rPad4.l + 4} y={rPad4.t + 12} fontSize={8} fill="#6B7280">r = {exH4PartR.toFixed(3)}, p = {_fmtP(exH4PartP)}</text>
-                                        <text x={fullW4 / 2} y={exH4ChartH2 - 4} textAnchor="middle" fontSize={8} fill="#6B7280">I {"\u00D7"} F (produs brut)</text>
+                                        <text x={exH4ChartW2 / 2} y={exH4ChartH2 - 4} textAnchor="middle" fontSize={8} fill="#6B7280">I {"\u00D7"} F (produs brut)</text>
                                         <text x={14} y={exH4ChartH2 / 2} textAnchor="middle" fontSize={8} fill="#6B7280" transform={`rotate(-90, 14, ${exH4ChartH2 / 2})`}>Rezidual (C - predictat de R+I+F)</text>
                                       </g>
                                     );
@@ -7841,44 +7838,6 @@ export default function StudiuAdminPage() {
                     </div>
                   </div>
 
-                  {/* S4. DISTRIBUTIA SCORURILOR — Bar Chart SVG */}
-                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Distributia Scorurilor per Dimensiune</div>
-                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Histograma scorurilor 1-10 pentru R, I, F, C, CTA</div>
-                    <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: "auto" }}>
-                      {dimKeys.map((dim, di) => {
-                        const bins = Array.from({ length: 10 }, (_, s) => dim.scores.filter(v => Math.round(v) === s + 1).length);
-                        const maxBin = Math.max(...bins, 1);
-                        const groupW = plotW / 5;
-                        const barW = (groupW - 20) / 10;
-                        const gx = pad.left + di * groupW + 10;
-                        return (
-                          <g key={dim.key}>
-                            {bins.map((count, bi) => {
-                              const bh = (count / maxBin) * plotH;
-                              return (
-                                <rect key={bi} x={gx + bi * barW} y={pad.top + plotH - bh} width={barW - 1} height={bh} fill={dim.color} opacity={0.7} rx={1}>
-                                  <title>{dim.label} scor {bi + 1}: {count} evaluari</title>
-                                </rect>
-                              );
-                            })}
-                            {/* Mean line */}
-                            {dim.scores.length > 0 && (() => {
-                              const meanVal = _mean(dim.scores);
-                              const meanX = gx + ((meanVal - 1) / 9) * (groupW - 20);
-                              return <line x1={meanX} y1={pad.top} x2={meanX} y2={pad.top + plotH} stroke={dim.color} strokeWidth={2} strokeDasharray="4,3" opacity={0.9} />;
-                            })()}
-                            {/* Label */}
-                            <text x={gx + (groupW - 20) / 2} y={svgH - 10} textAnchor="middle" fontSize={11} fontWeight={700} fill={dim.color}>{dim.label} ({dim.scores.length > 0 ? _mean(dim.scores).toFixed(1) : "—"})</text>
-                          </g>
-                        );
-                      })}
-                      {/* Y axis labels */}
-                      {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => (
-                        <text key={i} x={pad.left - 5} y={pad.top + plotH * (1 - pct)} textAnchor="end" fontSize={9} fill="#9CA3AF" dominantBaseline="middle">{Math.round(pct * Math.max(...dimKeys.flatMap(d => { const bins = Array.from({ length: 10 }, (_, s) => d.scores.filter(v => Math.round(v) === s + 1).length); return bins; }), 1))}</text>
-                      ))}
-                    </svg>
-                  </div>
 
                   {/* S5. PERFORMANTA PER CANAL — Horizontal Bar Chart */}
                   <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
