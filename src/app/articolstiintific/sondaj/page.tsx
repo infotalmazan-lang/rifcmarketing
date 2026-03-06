@@ -1043,6 +1043,8 @@ export default function StudiuAdminPage() {
   const [expertInterpSubTab, setExpertInterpSubTab] = useState<"total" | "canal" | "industrie">("total");
   const [exCanalCollapsed, setExCanalCollapsed] = useState(true);
   const [exIndustrieCollapsed, setExIndustrieCollapsed] = useState(true);
+  const [mainCanalCollapsed, setMainCanalCollapsed] = useState(true);
+  const [mainIndustrieCollapsed, setMainIndustrieCollapsed] = useState(true);
 
   // CVI (Evaluare Itemi) state
   const [cviExperts, setCviExperts] = useState<any[]>([]);
@@ -6141,6 +6143,16 @@ export default function StudiuAdminPage() {
                       { heading: "Interpretare", text: `≥80%: formula validata puternic. 50-79%: partial validata. <50%: nevalidata. Expertii evalueaza din perspectiva profesionala — diferentele fata de consumatori sunt asteptate si informationale.` },
                     ]};
                   }
+                  case "score_r": return { sections: [{ heading: "R — Relevanta", text: "Scorul de Relevanta (R) masoara cat de relevant percepe expertul materialul pentru audienta tinta. R functioneaza ca GATE: daca R >= 3, materialul trece pragul de atentie. Sub R=3, I×F nu mai conteaza — audienta nu proceseaza mesajul." }, { heading: "Rezultat EFA", text: `R mediu = ${val}. ${parseFloat(val) >= 3 ? "Gate-ul este activat — materialele sunt considerate relevante de experti." : "Gate-ul nu este activat — materialele nu sunt considerate suficient de relevante."}` }] };
+                  case "score_i": return { sections: [{ heading: "I — Interes", text: "Scorul de Interes (I) masoara cat de captivant, intrigant sau atractiv percepe expertul materialul. I contribuie la Sinergia I×F — motorul procesarii cognitive." }, { heading: "Rezultat EFA", text: `I mediu = ${val}. Contribuie la sinergia I×F impreuna cu Forma (F).` }] };
+                  case "score_f": return { sections: [{ heading: "F — Forma", text: "Scorul de Forma (F) masoara calitatea executiei vizuale, design-ului, tipografiei, compozitiei. F amplifica (sau diminueaza) Interesul prin sinergia I×F." }, { heading: "Rezultat EFA", text: `F mediu = ${val}. Forma amplifica Interesul prin sinergia I×F.` }] };
+                  case "score_ixf": return { sections: [{ heading: "I×F — Sinergia", text: "Produsul Interes × Forma (I×F) reprezinta motorul de procesare a mesajului. Un I mare cu F mic (sau invers) produce o sinergie slaba. Ambele trebuie sa fie ridicate pentru impact maxim." }, { heading: "Rezultat EFA", text: `I×F mediu = ${val}. ${parseFloat(val) >= 36 ? "Sinergie buna." : parseFloat(val) >= 20 ? "Sinergie moderata." : "Sinergie slaba."}` }] };
+                  case "score_cf": return { sections: [{ heading: "Cf — Claritate Formula", text: "Cf = R + I×F (pe scala 0-110). Cf normalizat pe scala 1-10 permite comparatia cu Cp (Claritatea perceputa). Delta |Cf_norm - Cp| masoara precizia formulei." }, { heading: "Rezultat EFA", text: `Cf mediu = ${val}. Se compara cu Cp perceput pentru a calcula Delta.` }] };
+                  case "score_cp": return { sections: [{ heading: "Cp — Claritate Perceputa", text: "Cp este scorul direct de Claritate acordat de expert (1-10). Reprezinta verdictul subiectiv al expertului despre cat de clar este mesajul materialului." }, { heading: "Rezultat EFA", text: `Cp mediu = ${val}. Se compara cu Cf normalizat.` }] };
+                  case "score_delta": return { sections: [{ heading: "Delta |Cf - Cp|", text: "Delta masoara distanta intre ce prezice formula (Cf normalizat) si ce percepe expertul (Cp). Delta mica = formula prezice corect. Delta mare = factori externi neacoperiti de formula." }, { heading: "Rezultat EFA", text: `Delta = ${val}. ${parseFloat(val) < 1.5 ? "Formula este foarte precisa." : parseFloat(val) < 2.5 ? "Formula are precizie moderata." : "Formula necesita calibrare."}` }] };
+                  case "gate": return { sections: [{ heading: "Gate — Pragul de Relevanta", text: `R >= ${EX_GATE} activeaza Gate-ul: audienta acorda atentie materialului. Sub acest prag, I×F nu mai conteaza — materialul nu este procesat.` }, { heading: "Rezultat EFA", text: `${val}% din materiale au Gate activat (R >= ${EX_GATE}).` }] };
+                  case "zonematch": return { sections: [{ heading: "Zone Match", text: "Zone Match masoara procentul materialelor la care zona Cf (formula) coincide cu zona Cp (perceput). Zonele: Critical, Noise, Medium, Supreme." }, { heading: "Rezultat EFA", text: `${val}% din materiale au potrivire de zona intre formula si perceptie.` }] };
+                  case "materials": return { sections: [{ heading: "Materiale Analizate", text: "Numarul de materiale publicitare evaluate de experti. Fiecare material este evaluat pe 5 dimensiuni (R, I, F, C, CTA)." }, { heading: "Rezultat EFA", text: `${val} materiale au fost evaluate de experti.` }] };
                   default: {
                     // Handle dynamic channel/industry keys
                     if (key.startsWith("expert-channel-") || key.startsWith("expert-industry-")) {
@@ -7907,135 +7919,7 @@ export default function StudiuAdminPage() {
                   </div>
 
 
-                  {/* S5. PERFORMANTA PER CANAL — Horizontal Bar Chart */}
-                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Performanta per Canal de Marketing</div>
-                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Scor mediu RIFC per canal, sortat descrescator</div>
-                    {channelPerf.length > 0 && (() => {
-                      const maxVal = Math.max(...channelPerf.map(c => c.mean), 1);
-                      const globalMean = _mean(channelPerf.map(c => c.mean));
-                      return (
-                        <div>
-                          {channelPerf.map((ch, i) => {
-                            const pct = (ch.mean / 10) * 100;
-                            const barColor = ch.mean >= 7 ? "#059669" : ch.mean >= 5 ? "#D97706" : "#DC2626";
-                            return (
-                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                                <div style={{ width: 120, fontSize: 11, fontWeight: 600, color: "#374151", textAlign: "right" as const }}>{ch.channel}</div>
-                                <div style={{ flex: 1, height: 18, background: "#f3f4f6", borderRadius: 4, position: "relative" as const, overflow: "hidden" }}>
-                                  <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 4, transition: "width 0.3s" }} />
-                                  {/* Global mean line */}
-                                  <div style={{ position: "absolute" as const, left: `${(globalMean / 10) * 100}%`, top: 0, bottom: 0, width: 2, background: "#111827", opacity: 0.4 }} />
-                                </div>
-                                <div style={{ width: 40, fontSize: 12, fontWeight: 800, color: barColor, fontFamily: "'JetBrains Mono', monospace" }}>{ch.mean}</div>
-                                <div style={{ width: 50, fontSize: 10, color: "#9CA3AF" }}>n={ch.count}</div>
-                              </div>
-                            );
-                          })}
-                          <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4 }}>Linia verticala = media globala ({globalMean.toFixed(2)})</div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  {/* S6+S7. VALIDARE FORMULA + CTA — Side by side */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Validare Formula R + (I x F) = C</div>
-                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${corrColor(formulaR)}15`, color: corrColor(formulaR) }}>CORELATIE {corrLabel(formulaR)}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>C_computed (R + I×F) vs C_perceived (scor direct expert) — Pearson r = {formulaR.toFixed(3)}, {_fmtP(formulaP)}</div>
-                    {formulaEvals.length >= 3 ? (
-                      <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: "auto" }}>
-                        {/* Axes */}
-                        <line x1={pad.left} y1={pad.top + plotH} x2={pad.left + plotW} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
-                        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
-                        {/* X axis labels */}
-                        {[0, 20, 40, 60, 80, 100].map(v => (
-                          <text key={v} x={pad.left + (v / 100) * plotW} y={svgH - 15} textAnchor="middle" fontSize={9} fill="#9CA3AF">{v}</text>
-                        ))}
-                        <text x={pad.left + plotW / 2} y={svgH - 2} textAnchor="middle" fontSize={10} fill="#6B7280">C_computed = R + (I × F)</text>
-                        {/* Y axis labels */}
-                        {[1, 3, 5, 7, 10].map(v => (
-                          <text key={v} x={pad.left - 5} y={pad.top + plotH - ((v - 1) / 9) * plotH} textAnchor="end" fontSize={9} fill="#9CA3AF" dominantBaseline="middle">{v}</text>
-                        ))}
-                        <text x={12} y={pad.top + plotH / 2} textAnchor="middle" fontSize={10} fill="#6B7280" transform={`rotate(-90, 12, ${pad.top + plotH / 2})`}>C_perceived</text>
-                        {/* Dots */}
-                        {formulaEvals.map((ev, i) => {
-                          const maxComp = Math.max(...cComputedArr, 1);
-                          const cx = pad.left + (ev.c_computed / Math.max(maxComp, 100)) * plotW;
-                          const cy = pad.top + plotH - ((ev.c_score! - 1) / 9) * plotH;
-                          const chColors: Record<string, string> = { "Social Media": "#2563EB", Email: "#059669", Website: "#D97706", Print: "#DC2626", Video: "#7C3AED", Outdoor: "#0D9488" };
-                          return <circle key={i} cx={cx} cy={cy} r={3.5} fill={chColors[getChannel(ev)] || "#6B7280"} opacity={0.6}><title>{getMaterialName(ev)}: C_comp={ev.c_computed.toFixed(1)}, C_perc={ev.c_score}</title></circle>;
-                        })}
-                        {/* Trend line */}
-                        {(() => {
-                          const maxComp = Math.max(...cComputedArr, 100);
-                          const mx = _mean(cComputedArr), my = _mean(cPerceivedArr);
-                          const slope = cComputedArr.reduce((a, x, i) => a + (x - mx) * (cPerceivedArr[i] - my), 0) / (cComputedArr.reduce((a, x) => a + (x - mx) ** 2, 0) || 1);
-                          const intercept = my - slope * mx;
-                          const y1 = intercept;
-                          const y2 = slope * maxComp + intercept;
-                          const sx1 = pad.left;
-                          const sy1 = pad.top + plotH - ((Math.max(1, Math.min(10, y1)) - 1) / 9) * plotH;
-                          const sx2 = pad.left + plotW;
-                          const sy2 = pad.top + plotH - ((Math.max(1, Math.min(10, y2)) - 1) / 9) * plotH;
-                          return <line x1={sx1} y1={sy1} x2={sx2} y2={sy2} stroke="#111827" strokeWidth={1.5} strokeDasharray="6,4" opacity={0.5} />;
-                        })()}
-                        {/* R value in corner */}
-                        <text x={svgW - pad.right - 5} y={pad.top + 15} textAnchor="end" fontSize={11} fontWeight={700} fill={corrColor(formulaR)}>r = {formulaR.toFixed(3)}, {_fmtP(formulaP)}</text>
-                      </svg>
-                    ) : (
-                      <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Insuficiente date (minim 3 evaluari cu C perceput)</div>
-                    )}
-                    <div style={{ marginTop: 8 }}>
-                      <InterpBtnE k="expert-formula" title="Validare Formula RIFC" val={formulaR.toFixed(3)} ctx={{ r: formulaR, p: formulaP, n: formulaEvals.length }} />
-                    </div>
-                  </div>
-
-                  {/* S7. CORELATIE CTA-C — Scatter Plot */}
-                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Corelatie CTA — Claritate (C)</div>
-                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${corrColor(ctaCr)}15`, color: corrColor(ctaCr) }}>CORELATIE {corrLabel(ctaCr)}</span>
-                    </div>
-                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>C_perceived vs CTA — Pearson r = {ctaCr.toFixed(3)}, {_fmtP(ctaCp)}</div>
-                    {ctaCevals.length >= 3 ? (
-                      <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: "auto" }}>
-                        <line x1={pad.left} y1={pad.top + plotH} x2={pad.left + plotW} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
-                        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
-                        {[1, 3, 5, 7, 10].map(v => (
-                          <g key={v}>
-                            <text x={pad.left + ((v - 1) / 9) * plotW} y={svgH - 15} textAnchor="middle" fontSize={9} fill="#9CA3AF">{v}</text>
-                            <text x={pad.left - 5} y={pad.top + plotH - ((v - 1) / 9) * plotH} textAnchor="end" fontSize={9} fill="#9CA3AF" dominantBaseline="middle">{v}</text>
-                          </g>
-                        ))}
-                        <text x={pad.left + plotW / 2} y={svgH - 2} textAnchor="middle" fontSize={10} fill="#6B7280">C_perceived</text>
-                        <text x={12} y={pad.top + plotH / 2} textAnchor="middle" fontSize={10} fill="#6B7280" transform={`rotate(-90, 12, ${pad.top + plotH / 2})`}>CTA</text>
-                        {ctaCevals.map((ev, i) => {
-                          const cx = pad.left + ((ev.c_score! - 1) / 9) * plotW;
-                          const cy = pad.top + plotH - ((ev.cta_score! - 1) / 9) * plotH;
-                          return <circle key={i} cx={cx} cy={cy} r={3.5} fill="#7C3AED" opacity={0.5}><title>C={ev.c_score}, CTA={ev.cta_score}</title></circle>;
-                        })}
-                        {/* Trend line */}
-                        {(() => {
-                          const mx = _mean(cForCtaArr), my = _mean(ctaArr);
-                          const slope = cForCtaArr.reduce((a, x, i) => a + (x - mx) * (ctaArr[i] - my), 0) / (cForCtaArr.reduce((a, x) => a + (x - mx) ** 2, 0) || 1);
-                          const intercept = my - slope * mx;
-                          const y1v = slope * 1 + intercept, y2v = slope * 10 + intercept;
-                          return <line x1={pad.left} y1={pad.top + plotH - ((Math.max(1, Math.min(10, y1v)) - 1) / 9) * plotH} x2={pad.left + plotW} y2={pad.top + plotH - ((Math.max(1, Math.min(10, y2v)) - 1) / 9) * plotH} stroke="#111827" strokeWidth={1.5} strokeDasharray="6,4" opacity={0.5} />;
-                        })()}
-                        <text x={svgW - pad.right - 5} y={pad.top + 15} textAnchor="end" fontSize={11} fontWeight={700} fill={corrColor(ctaCr)}>r = {ctaCr.toFixed(3)}, {_fmtP(ctaCp)}</text>
-                      </svg>
-                    ) : (
-                      <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Insuficiente date (minim 3 evaluari cu C si CTA)</div>
-                    )}
-                    <div style={{ marginTop: 8 }}>
-                      <InterpBtnE k="expert-cta-correlation" title="Corelatie CTA-C" val={ctaCr.toFixed(3)} ctx={{ r: ctaCr, p: ctaCp, n: ctaCevals.length }} />
-                    </div>
-                  </div>
-                  </div>{/* end S6+S7 grid */}
+                  {/* S5, S6, S7 — REMOVED: duplicate with VALIDARE PER CANAL (collapsible) and H1/H2 hypothesis testing */}
 
                   {/* S8. EFECT BRAND RECOGNITION */}
                   <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
@@ -9312,28 +9196,36 @@ export default function StudiuAdminPage() {
 
                     return (
                       <>
-                        {/* Per Canale */}
+                        {/* Per Canale — Collapsible */}
                         {chAggs.length > 1 && (
-                          <div style={{ marginBottom: 20 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+                            <div onClick={() => setMainCanalCollapsed(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", cursor: "pointer", background: "#f9fafb", userSelect: "none" as const }}>
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
-                              Validare per Canal
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", flex: 1 }}>Validare per Canal</span>
+                              <span style={{ fontSize: 10, color: "#6B7280", background: "#e5e7eb", padding: "1px 8px", borderRadius: 10, fontWeight: 600 }}>{chAggs.length}</span>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ transition: "transform 0.2s", transform: mainCanalCollapsed ? "rotate(0deg)" : "rotate(180deg)" }}><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
-                              {chAggs.map(ch => compactCard(ch, "val_channel", { ...ch, type: "canal", grandPct: grandHypPct }))}
-                            </div>
+                            {!mainCanalCollapsed && (
+                              <div style={{ padding: "8px 14px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                                {chAggs.map(ch => compactCard(ch, "val_channel", { ...ch, type: "canal", grandPct: grandHypPct }))}
+                              </div>
+                            )}
                           </div>
                         )}
-                        {/* Per Industrie */}
+                        {/* Per Industrie — Collapsible */}
                         {indAggs.length > 1 && (
-                          <div style={{ marginBottom: 20 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+                            <div onClick={() => setMainIndustrieCollapsed(p => !p)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", cursor: "pointer", background: "#f9fafb", userSelect: "none" as const }}>
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
-                              Validare per Industrie
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827", flex: 1 }}>Validare per Industrie</span>
+                              <span style={{ fontSize: 10, color: "#6B7280", background: "#e5e7eb", padding: "1px 8px", borderRadius: 10, fontWeight: 600 }}>{indAggs.length}</span>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ transition: "transform 0.2s", transform: mainIndustrieCollapsed ? "rotate(0deg)" : "rotate(180deg)" }}><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
-                              {indAggs.map(ia => compactCard(ia, "val_industry", { ...ia, type: "industrie", grandPct: grandHypPct }))}
-                            </div>
+                            {!mainIndustrieCollapsed && (
+                              <div style={{ padding: "8px 14px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                                {indAggs.map(ia => compactCard(ia, "val_industry", { ...ia, type: "industrie", grandPct: grandHypPct }))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </>
@@ -10311,8 +10203,11 @@ export default function StudiuAdminPage() {
                         }}>Toate</button>
                       </div>
 
+                      {/* ── Side-by-side: Scatter + Heatmap ── */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
+                      {/* LEFT: Scatter chart */}
                       <div style={{ overflowX: "auto" as const }}>
-                        <svg width={chartW} height={chartH + 10} style={{ display: "block" }}>
+                        <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
                           {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
                           {/* Trend line */}
                           {h2Pts.length >= 2 && (() => {
@@ -10345,8 +10240,8 @@ export default function StudiuAdminPage() {
                         </svg>
                       </div>
 
-                      {/* ── H2 Heatmap Densitate (vizualizare alternativa) ── */}
-                      {h2Data.length >= 5 && (() => {
+                      {/* RIGHT: H2 Heatmap Densitate */}
+                      {h2Data.length >= 5 ? (() => {
                         const hmBins = 10;
                         const hmW = chartW;
                         const hmLegendW = 50;
@@ -10376,10 +10271,10 @@ export default function StudiuAdminPage() {
                         };
                         const textColor = (count: number): string => count / Math.max(hmMax, 1) > 0.4 ? "#fff" : "#374151";
                         return (
-                          <div style={{ marginTop: 14 }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Vizualizare alternativa: Heatmap Densitate</div>
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Heatmap Densitate</div>
                             <div style={{ overflowX: "auto" as const }}>
-                              <svg width={hmW} height={hmH} style={{ display: "block" }}>
+                              <svg viewBox={`0 0 ${hmW} ${hmH}`} style={{ width: "100%", height: "auto" }}>
                                 {/* Cells */}
                                 {grid.map((row, ri) => row.map((count, ci) => {
                                   const x = hmPad.l + ci * cellW;
@@ -10427,12 +10322,13 @@ export default function StudiuAdminPage() {
                                 })()}
                               </svg>
                             </div>
-                            <div style={{ fontSize: 10, color: "#6B7280", lineHeight: 1.5, marginTop: 6, padding: "6px 10px", background: "#f9fafb", borderRadius: 6 }}>
-                              Fiecare celula arata cate raspunsuri au C=x si CTA=y. Culorile mai intense (rosu) = concentratie mai mare. Un pattern diagonal stanga-jos → dreapta-sus confirma corelatia pozitiva C→CTA.
-                            </div>
                           </div>
                         );
-                      })()}
+                      })() : <div />}
+                      </div>{/* end scatter+heatmap grid */}
+                      <div style={{ fontSize: 10, color: "#6B7280", lineHeight: 1.5, padding: "6px 10px", background: "#f9fafb", borderRadius: 6, marginBottom: 8 }}>
+                        Fiecare celula arata cate raspunsuri au C=x si CTA=y. Culorile mai intense (rosu) = concentratie mai mare. Un pattern diagonal stanga-jos {"\u2192"} dreapta-sus confirma corelatia pozitiva C{"\u2192"}CTA.
+                      </div>
 
                       <div style={cardStyle}>
                         <strong>H2 — Formula prezice actiunea:</strong> Daca RIFC functioneaza, materialele cu scor C mai mare ar trebui sa genereze intentie de actiune mai mare. Corelatia pozitiva confirma ca formula nu e doar teoretica — prezice comportamentul real.{" "}
