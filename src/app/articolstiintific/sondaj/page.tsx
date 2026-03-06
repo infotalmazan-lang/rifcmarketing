@@ -6350,7 +6350,7 @@ export default function StudiuAdminPage() {
                   })()}
 
                   {/* ═══ Gate + Zone Match + Materials stats (identical to main Interpretare) ═══ */}
-                  {expertInterpSubTab === "total" && exN >= 1 && (
+                  {expertInterpSubTab === "total" && exN >= 1 && (<>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, marginBottom: 20 }}>
                     {/* Relevance Gate */}
                     <div style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
@@ -6404,7 +6404,125 @@ export default function StudiuAdminPage() {
                       <div style={{ marginTop: 6 }}><InterpBtnE k="materials" title="Materiale Analizate" val={String(exN)} ctx={{ responses: exTotalEvalResponses, avgPerMaterial: exAvgEvalPerMaterial, channels: exUniqueChannels, industries: exUniqueIndustries, respondents: completedExperts }} /></div>
                     </div>
                   </div>
-                  )}
+
+                  {/* ═══ DISTRIBUTIE PE ZONE — Cf vs Cp dual bars ═══ */}
+                  {(() => {
+                    const shiftUp = exZones.filter(z => exZoneDistPerceived[z] > exZoneDistFormula[z] && ["Medium", "Supreme"].includes(z)).length;
+                    const shiftDown = exZones.filter(z => exZoneDistPerceived[z] > exZoneDistFormula[z] && ["Critical", "Noise"].includes(z)).length;
+                    const shiftDir = shiftUp > shiftDown ? "subestimeaza" : shiftUp < shiftDown ? "supraestimeaza" : "aliniata";
+                    const maxCount = Math.max(...exZones.map(z => Math.max(exZoneDistFormula[z], exZoneDistPerceived[z])), 1);
+                    return (
+                      <div style={{ ...S.configItem, marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", flex: 1 }}>DISTRIBUTIE PE ZONE</div>
+                          <InterpBtnE k="expert-zones" title="Distributie pe Zone" val={`${exN} materiale`} ctx={{ zf: JSON.stringify(exZoneDistFormula), zp: JSON.stringify(exZoneDistPerceived), n: exN, shiftDir, zoneMatch: exZoneMatchRate }} />
+                        </div>
+                        {/* Legend */}
+                        <div style={{ display: "flex", gap: 16, marginBottom: 10, fontSize: 10, color: "#6B7280" }}>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 4, borderRadius: 2, background: "#6B7280" }} /> Cf (Formula)</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ width: 10, height: 4, borderRadius: 2, background: "#2563EB" }} /> Cp (Perceput)</span>
+                        </div>
+                        {/* Grouped bars per zone */}
+                        {exZones.map(z => {
+                          const cf = exZoneDistFormula[z];
+                          const cp = exZoneDistPerceived[z];
+                          const cfPct = Math.round((cf / exN) * 100);
+                          const cpPct = Math.round((cp / exN) * 100);
+                          const cfBar = Math.round((cf / maxCount) * 100);
+                          const cpBar = Math.round((cp / maxCount) * 100);
+                          const diff = cp - cf;
+                          return (
+                            <div key={z} style={{ marginBottom: 10 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: "50%", background: exGetZoneColor(z), flexShrink: 0 }} />
+                                <span style={{ fontSize: 11, fontWeight: 700, color: "#374151", minWidth: 65 }}>{z}</span>
+                                {diff !== 0 && <span style={{ fontSize: 9, fontWeight: 600, padding: "0 4px", borderRadius: 3, background: diff > 0 ? "#dbeafe" : "#fef3c7", color: diff > 0 ? "#2563EB" : "#D97706" }}>{diff > 0 ? "+" : ""}{diff} Cp</span>}
+                                {cf === cp && <span style={{ fontSize: 9, fontWeight: 600, padding: "0 4px", borderRadius: 3, background: "#d1fae5", color: "#059669" }}>MATCH</span>}
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                                <span style={{ fontSize: 9, color: "#9CA3AF", minWidth: 18 }}>Cf</span>
+                                <div style={{ flex: 1, height: 5, background: "#f3f4f6", borderRadius: 2, overflow: "hidden" }}>
+                                  <div style={{ width: `${cfBar}%`, height: "100%", borderRadius: 2, background: "#6B7280", transition: "width 0.3s" }} />
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#374151", minWidth: 50, textAlign: "right" as const }}>{cf} ({cfPct}%)</span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ fontSize: 9, color: "#9CA3AF", minWidth: 18 }}>Cp</span>
+                                <div style={{ flex: 1, height: 5, background: "#f3f4f6", borderRadius: 2, overflow: "hidden" }}>
+                                  <div style={{ width: `${cpBar}%`, height: "100%", borderRadius: 2, background: "#2563EB", transition: "width 0.3s" }} />
+                                </div>
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#374151", minWidth: 50, textAlign: "right" as const }}>{cp} ({cpPct}%)</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {/* Shift summary */}
+                        <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: shiftDir === "aliniata" ? "#d1fae5" : "#fef3c7", fontSize: 11, color: shiftDir === "aliniata" ? "#059669" : "#92400e" }}>
+                          <strong>Shift:</strong> Formula {shiftDir === "subestimeaza" ? "subestimeaza — expertii percep claritate mai mare decat prezice modelul. Posibile cauze: Brand, experienta anterioara, context favorabil." : shiftDir === "supraestimeaza" ? "supraestimeaza — expertii percep claritate mai mica decat prezice modelul. Posibile cauze: bariere cognitive, distractori, asteptari ridicate." : "e aliniata cu perceptia — distributiile sunt similare."}
+                          {" "}Zone Match: {exZoneMatchRate}% ({exZoneMatchCount}/{exN}).
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ═══ CONCLUZIE GENERALA — R1-R4 Rules ═══ */}
+                  {(() => {
+                    const _rContrib = exGrandCf > 0 ? Math.round(exGrandR / exGrandCf * 1000) / 10 : 0;
+                    const _ixfVal = Math.round((exGrandCf - exGrandR) * 100) / 100;
+                    const _ixfContrib = Math.round((100 - _rContrib) * 10) / 10;
+                    const _gapPct = Math.round((100 - exGrandHypPct) * 10) / 10;
+                    const _cfNorm = exGrandCfNorm;
+                    const _deltaFactor = _cfNorm > 0 ? Math.round(exGrandCp / _cfNorm * 100) / 100 : 1;
+                    return (
+                      <div style={{ background: `${exGetValidationColor(exGrandHypPct)}08`, border: `1px solid ${exGetValidationColor(exGrandHypPct)}30`, borderRadius: 10, padding: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                          <Brain size={16} style={{ color: exGetValidationColor(exGrandHypPct) }} />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: exGetValidationColor(exGrandHypPct) }}>CONCLUZIE GENERALA</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.6, marginBottom: 12 }}>
+                          Formula <strong>R+(I×F)=C</strong> este <strong>{exGetValidationLabel(exGrandHypPct).toLowerCase()}</strong> ({exGrandHypPct}%). Diferenta de {_gapPct}% fata de 100% se explica prin 4 reguli derivate din analiza H1:
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                          {/* Rule 1 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #2563EB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#2563EB", marginBottom: 3 }}>R1: R = cheie de contact, I×F = motor</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              R = {exGrandR.toFixed(2)} contribuie <strong>{_rContrib}%</strong> la formula. I×F = {_ixfVal.toFixed(2)} contribuie <strong>{_ixfContrib}%</strong>. Gate-ul (R ≥ {EX_GATE}) este {exGrandR >= EX_GATE ? <strong style={{ color: "#059669" }}>ACTIVAT</strong> : <strong style={{ color: "#DC2626" }}>INACTIV</strong>} — {exGrandR >= EX_GATE ? "motorul (I×F) functioneaza." : "motorul exista dar nu produce actiune."}
+                            </div>
+                          </div>
+                          {/* Rule 2 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #D97706" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#D97706", marginBottom: 3 }}>R2: R &lt; {EX_GATE} = diagnostic, nu condamnare</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              {exGatePassRate >= 100
+                                ? <>Toate {exN} materialele trec Gate-ul. Nu exista materiale irelevante in set — formula e aplicabila pe intregul esantion.</>
+                                : <>{exN - exGatePassCount} materiale ({Math.round((1 - exGatePassRate / 100) * 100)}%) au R &lt; {EX_GATE}. Acestea functioneaza tehnic dar nu sunt actionabile — diagnosticul: schimba audienta sau propunerea de valoare.</>}
+                            </div>
+                          </div>
+                          {/* Rule 3 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #059669" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#059669", marginBottom: 3 }}>R3: R ≥ {EX_GATE} = aplicabila, nu precisa</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              Formula prezice <strong>{exGrandHypPct}%</strong> din claritate. Zone Match <strong>{exZoneMatchRate}%</strong> ({exZoneMatchCount}/{exN} materiale in aceeasi zona). {exZoneMatchRate >= 70 ? "Potrivire puternica — formula clasifica corect." : exZoneMatchRate >= 50 ? "Potrivire moderata — formula necesita calibrare pe factori externi." : "Potrivire slaba — factori externi domina perceptia."}
+                            </div>
+                          </div>
+                          {/* Rule 4 */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: "3px solid #7C3AED" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#7C3AED", marginBottom: 3 }}>R4: Delta = dependenta contextuala</div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              Δ = {exGrandDelta.toFixed(2)} (Cf_norm {_cfNorm.toFixed(2)} vs Cp {exGrandCp.toFixed(2)}, factor ×{_deltaFactor}). {_cfNorm < exGrandCp ? <>Formula <strong>subestimeaza</strong> — {_gapPct}% gap provine din Brand, experienta, context care amplifica claritatea perceputa.</> : _cfNorm > exGrandCp ? <>Formula <strong>supraestimeaza</strong> — bariere cognitive reduc claritatea perceputa sub predictie.</> : <>Aliniere perfecta.</>}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 10, padding: "8px 12px", background: exGrandR >= EX_GATE ? "#eff6ff" : "#fef2f2", borderRadius: 6, fontSize: 11, color: exGrandR >= EX_GATE ? "#1e40af" : "#991b1b", fontWeight: 600, textAlign: "center" as const }}>
+                          {exGrandR >= EX_GATE
+                            ? <>&quot;Creste I×F si calibreaza pentru Brand — formula lucreaza pentru tine.&quot; R={exGrandR.toFixed(1)} activeaza, I×F={_ixfVal.toFixed(1)} amplifica, dar {_gapPct}% din perceptie vine din afara formulei.</>
+                            : <>&quot;Creste R mai intai — fara relevanta, audienta lucreaza in locul mesajului.&quot; Prioritate absoluta: targetare si propunere de valoare.</>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  </>)}
 
                   {/* ═══ VALIDARE PER CANAL — Compact Cards (separate sub-tab) ═══ */}
                   {expertInterpSubTab === "canal" && (() => {
