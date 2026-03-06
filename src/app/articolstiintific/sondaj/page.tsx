@@ -5897,6 +5897,47 @@ export default function StudiuAdminPage() {
               const exZoneMatchCount = materialAggs.filter(m => exGetZone(m.avg_c) === exGetZoneCp(m.avg_c_score)).length;
               const exZoneMatchRate = exN > 0 ? Math.round((exZoneMatchCount / exN) * 100) : 0;
 
+              // R min/max + avg evals per material
+              const exRMin = exN > 0 ? Math.round(Math.min(...materialAggs.map(m => m.avg_r)) * 100) / 100 : 0;
+              const exRMax = exN > 0 ? Math.round(Math.max(...materialAggs.map(m => m.avg_r)) * 100) / 100 : 0;
+              const exAvgEvalPerMaterial = exN > 0 ? Math.round(materialAggs.reduce((a, m) => a + m.response_count, 0) / exN) : 0;
+              const exUniqueChannels = new Set(materialAggs.map(m => m.type).filter(Boolean)).size;
+              const exUniqueIndustries = new Set(materialAggs.map(m => m.industry).filter(Boolean)).size;
+              const exTotalEvalResponses = materialAggs.reduce((a, m) => a + m.response_count, 0);
+
+              // Zone distribution for zone match breakdown
+              const exZones = ["Critical", "Noise", "Medium", "Supreme"] as const;
+              const exZoneDistFormula: Record<string, number> = {};
+              const exZoneDistPerceived: Record<string, number> = {};
+              const exZoneMatchBreakdown: Record<string, { matched: number; total: number }> = {};
+              for (const z of exZones) {
+                exZoneDistFormula[z] = materialAggs.filter(m => exGetZone(m.avg_c) === z).length;
+                exZoneDistPerceived[z] = materialAggs.filter(m => exGetZoneCp(m.avg_c_score) === z).length;
+                const inZone = materialAggs.filter(m => exGetZone(m.avg_c) === z || exGetZoneCp(m.avg_c_score) === z);
+                const matched = inZone.filter(m => exGetZone(m.avg_c) === exGetZoneCp(m.avg_c_score)).length;
+                exZoneMatchBreakdown[z] = { matched, total: inZone.length };
+              }
+
+              // Expert scatter data for 5H hypothesis testing
+              const exScatter = expertEvals.filter(e => e.r_score > 0 && e.i_score > 0 && e.f_score > 0).map(e => ({
+                stimulus_id: e.stimulus_id,
+                r: e.r_score,
+                i: e.i_score,
+                f: e.f_score,
+                c_computed: e.r_score + (e.i_score * e.f_score),
+                c_score: e.c_score,
+                cta: e.cta_score,
+                brand: e.brand_familiar,
+              }));
+              // Brand recognition per material (for H5)
+              const exMaterialBrand = materialAggs.map(m => {
+                const evs = expertEvals.filter(e => e.stimulus_id === m.sid);
+                const brandYes = evs.filter(e => e.brand_familiar === true).length;
+                const brandNo = evs.filter(e => e.brand_familiar === false).length;
+                const brandTotal = brandYes + brandNo;
+                return { ...m, brand_yes: brandYes, brand_no: brandNo, brand_rate: brandTotal > 0 ? Math.round((brandYes / brandTotal) * 100) : 0 };
+              });
+
               // Per-channel aggregation
               const exChByType: Record<string, typeof materialAggs> = {};
               materialAggs.forEach(m => { if (!exChByType[m.type]) exChByType[m.type] = []; exChByType[m.type].push(m); });
@@ -6113,149 +6154,713 @@ export default function StudiuAdminPage() {
                     ))}
                   </div>
 
-                  {/* ═══ VALIDARE IPOTEZA — EXPERT TOTAL ═══ */}
-                  {expertInterpSubTab === "total" && exN >= 1 && (
-                    <div style={{ background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: "24px 28px", marginBottom: 24 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — EFA TOTAL</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
-                        <div style={{ fontSize: 48, fontWeight: 900, color: exGetValidationColor(exGrandHypPct), fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>{exGrandHypPct}%</div>
-                        <div>
-                          <span style={{ display: "inline-block", padding: "4px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#fff", background: exGetValidationColor(exGrandHypPct) }}>{exGetValidationLabel(exGrandHypPct).toUpperCase()}</span>
-                          <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>Acuratete formula R + (I×F) = C pe baza evaluarii expertilor ({exN} materiale, {completedExperts} experti)</div>
-                        </div>
+                  {/* ═══ VALIDARE IPOTEZA — EXPERT TOTAL (identical to main Interpretare) ═══ */}
+                  {expertInterpSubTab === "total" && exN >= 1 && (() => {
+                    const _exDirection = exGrandCfNorm < exGrandCp ? "subestimeaza" : exGrandCfNorm > exGrandCp ? "supraevalueaza" : "coincide cu";
+                    const _exDirColor = exGrandCfNorm < exGrandCp ? "#D97706" : exGrandCfNorm > exGrandCp ? "#DC2626" : "#059669";
+                    return (
+                  <div style={{
+                    background: "#fff", border: "2px solid #e5e7eb", borderRadius: 12, padding: 24, marginBottom: 20, textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 4 }}>VALIDARE IPOTEZA — EFA TOTAL</div>
+                    <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 8 }}>Bazat pe <strong style={{ color: "#374151" }}>{completedExperts}</strong> experti cu <strong style={{ color: "#374151" }}>{exTotalEvalResponses}</strong> evaluari individuale pe <strong style={{ color: "#374151" }}>{exN}</strong> materiale</div>
+                    <div style={{ fontSize: 48, fontWeight: 900, color: exGetValidationColor(exGrandHypPct), lineHeight: 1 }}>{exGrandHypPct}%</div>
+                    <div style={{
+                      display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+                      background: `${exGetValidationColor(exGrandHypPct)}15`, color: exGetValidationColor(exGrandHypPct),
+                    }}>{exGetValidationLabel(exGrandHypPct)}</div>
+                    <div style={{ fontSize: 12, color: "#6B7280", marginTop: 12, maxWidth: 500, margin: "12px auto 0" }}>
+                      Formula <strong>R+(I&times;F)=C</strong> prezice scorul de claritate cu o acuratete de <strong>{exGrandHypPct}%</strong> fata de perceptia expertilor.
+                    </div>
+
+                    {/* Cf_norm vs Cp comparison — inline badges */}
+                    <div style={{ marginTop: 14, display: "flex", justifyContent: "center", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 6, background: "#f9fafb", border: "1px solid #e5e7eb", fontSize: 11 }}>
+                        <span style={{ color: "#6B7280" }}>C<sub>f</sub>/11 =</span>
+                        <strong style={{ color: "#111827", fontSize: 13 }}>{exGrandCfNorm.toFixed(2)}</strong>
                       </div>
-                      {/* Cf_norm vs Cp comparison */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, justifyContent: "center" }}>
-                        <div style={{ textAlign: "center" as const, padding: "10px 16px", background: exGetZoneBg(exGrandZoneCf), borderRadius: 8, border: `1px solid ${exGetZoneColor(exGrandZoneCf)}30` }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>Cf NORM</div>
-                          <div style={{ fontSize: 22, fontWeight: 900, color: exGetZoneColor(exGrandZoneCf), fontFamily: "'JetBrains Mono', monospace" }}>{exGrandCfNorm}</div>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: exGetZoneColor(exGrandZoneCf) }}>{exGrandZoneCf}</span>
-                        </div>
-                        <div style={{ textAlign: "center" as const }}>
-                          <div style={{ fontSize: 10, color: "#9CA3AF" }}>Delta</div>
-                          <div style={{ fontSize: 16, fontWeight: 800, color: exGrandDelta <= 1 ? "#059669" : exGrandDelta <= 2 ? "#D97706" : "#DC2626", fontFamily: "'JetBrains Mono', monospace" }}>{exGrandDelta}</div>
-                          <div style={{ fontSize: 16, color: "#9CA3AF" }}>{exGrandCfNorm > exGrandCp ? "→" : exGrandCfNorm < exGrandCp ? "←" : "="}</div>
-                        </div>
-                        <div style={{ textAlign: "center" as const, padding: "10px 16px", background: exGetZoneBg(exGrandZoneCp), borderRadius: 8, border: `1px solid ${exGetZoneColor(exGrandZoneCp)}30` }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>Cp PERCEPUT</div>
-                          <div style={{ fontSize: 22, fontWeight: 900, color: exGetZoneColor(exGrandZoneCp), fontFamily: "'JetBrains Mono', monospace" }}>{exGrandCp}</div>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: exGetZoneColor(exGrandZoneCp) }}>{exGrandZoneCp}</span>
-                        </div>
+                      <span style={{ fontSize: 12, color: "#9CA3AF" }}>vs</span>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 6, background: "#f9fafb", border: "1px solid #e5e7eb", fontSize: 11 }}>
+                        <span style={{ color: "#6B7280" }}>C<sub>p</sub> =</span>
+                        <strong style={{ color: "#059669", fontSize: 13 }}>{exGrandCp.toFixed(2)}</strong>
                       </div>
-                      {/* R-Synthesis */}
-                      <div style={{ background: "#eff6ff", borderLeft: "3px solid #2563EB", borderRadius: 6, padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#1e40af", lineHeight: 1.6 }}>
-                        {exGetConclusion(exGrandHypPct, exGrandR, exGrandZoneMatch)}
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 6, background: "#f9fafb", border: "1px solid #e5e7eb", fontSize: 11 }}>
+                        <span style={{ color: "#6B7280" }}>&Delta; =</span>
+                        <strong style={{ color: "#374151", fontSize: 13 }}>{exGrandDelta.toFixed(2)}</strong>
                       </div>
-                      {/* Mini stats */}
-                      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const, marginBottom: 8 }}>
-                        {[
-                          { label: "Gate Pass", val: `${exGatePassRate}%`, sub: `${exGatePassCount}/${exN}` },
-                          { label: "Zone Match", val: `${exZoneMatchRate}%`, sub: `${exZoneMatchCount}/${exN}` },
-                          { label: "Materiale", val: String(exN), sub: "cu date" },
-                          { label: "Experti", val: String(completedExperts), sub: "unici" },
-                        ].map((s, i) => (
-                          <div key={i} style={{ background: "#f9fafb", borderRadius: 6, padding: "6px 10px", border: "1px solid #e5e7eb", minWidth: 80 }}>
-                            <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>{s.label}</div>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", fontFamily: "'JetBrains Mono', monospace" }}>{s.val}</div>
-                            <div style={{ fontSize: 9, color: "#9CA3AF" }}>{s.sub}</div>
+                    </div>
+
+                    {/* Error direction + Gate pass */}
+                    <div style={{ marginTop: 10, display: "flex", justifyContent: "center", gap: 12, flexWrap: "wrap" }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: _exDirColor, fontWeight: 600 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          {exGrandCfNorm < exGrandCp ? <><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></> : exGrandCfNorm > exGrandCp ? <><path d="M12 5v14"/><path d="M19 12l-7 7-7-7"/></> : <path d="M5 12h14"/>}
+                        </svg>
+                        Formula {_exDirection} ({exGrandCfNorm < exGrandCp ? `\u00D7${(exGrandCp / exGrandCfNorm).toFixed(2)}` : exGrandCfNorm > exGrandCp ? `\u00D7${(exGrandCfNorm / exGrandCp).toFixed(2)}` : "="})
+                      </div>
+                      <div style={{ width: 1, height: 14, background: "#e5e7eb" }} />
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, color: exGatePassRate >= 80 ? "#059669" : exGatePassRate >= 50 ? "#D97706" : "#DC2626", fontWeight: 600 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Gate R&ge;{EX_GATE}: {exGatePassCount}/{exN} materiale ({exGatePassRate}%)
+                      </div>
+                    </div>
+
+                    {/* R-Synthesis explanation — orange box */}
+                    {(() => {
+                      const rContrib = exGrandCf > 0 ? Math.round(exGrandR / exGrandCf * 1000) / 10 : 0;
+                      const ixfVal = Math.round((exGrandCf - exGrandR) * 100) / 100;
+                      const ixfContrib = Math.round((100 - rContrib) * 10) / 10;
+                      const gateActivated = exGrandR >= EX_GATE;
+                      const deltaDir = exGrandCfNorm < exGrandCp ? "subestimeaza" : exGrandCfNorm > exGrandCp ? "supraestimeaza" : "aliniata";
+                      return (
+                        <div style={{ marginTop: 14, textAlign: "left" as const, padding: "12px 14px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
+                          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, color: "#1e40af", marginBottom: 6 }}>DE CE {exGrandHypPct}% SI NU 100%?</div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                            <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 4, border: "1px solid #e5e7eb" }}>
+                              <div style={{ fontWeight: 700, color: gateActivated ? "#059669" : "#DC2626", marginBottom: 2 }}>
+                                {gateActivated ? "R activat" : "R sub Gate"} (R={exGrandR.toFixed(2)})
+                              </div>
+                              {gateActivated
+                                ? <>R &ge; {EX_GATE} — formula este activata. R contribuie {rContrib}% la Cf ({exGrandR.toFixed(1)}/{exGrandCf.toFixed(1)}), I&times;F contribuie {ixfContrib}% ({ixfVal.toFixed(1)}). Motorul (I&times;F) functioneaza, cheia (R) e in contact.</>
+                                : <>R &lt; {EX_GATE} — formula NU este activata. Chiar daca I&times;F = {ixfVal.toFixed(1)}, fara relevanta suficienta mesajul nu produce actiune.</>}
+                            </div>
+                            <div style={{ padding: "6px 8px", background: "#fff", borderRadius: 4, border: "1px solid #e5e7eb" }}>
+                              <div style={{ fontWeight: 700, color: "#7C3AED", marginBottom: 2 }}>
+                                Delta = {deltaDir} (+{exGrandDelta.toFixed(2)})
+                              </div>
+                              {deltaDir === "subestimeaza"
+                                ? <>Cp ({exGrandCp.toFixed(2)}) &gt; Cf_norm ({exGrandCfNorm.toFixed(2)}). Expertii percep mai multa claritate decat prezice R+(I&times;F). Factori externi (Brand, context, experienta) amplifica perceptia cu &times;{(exGrandCp / exGrandCfNorm).toFixed(2)}. Formula e conservatoare — oportunitate de calibrare.</>
+                                : deltaDir === "supraestimeaza"
+                                  ? <>Cf_norm ({exGrandCfNorm.toFixed(2)}) &gt; Cp ({exGrandCp.toFixed(2)}). Formula prezice mai mult decat se percepe. Bariere cognitive sau asteptari ridicate reduc claritatea perceputa.</>
+                                  : <>Aliniere perfecta intre predictie si perceptie.</>}
+                            </div>
                           </div>
-                        ))}
-                      </div>
+                          <div style={{ marginTop: 8, fontSize: 10, color: "#475569", lineHeight: 1.5, padding: "6px 8px", background: "#eff6ff", borderRadius: 4 }}>
+                            <strong>Interpretare {exGrandHypPct}%:</strong>{" "}
+                            {gateActivated
+                              ? `Formula este activata (R=${exGrandR.toFixed(1)} >= ${EX_GATE}), dar prezice doar ${exGrandHypPct}% din claritatea perceputa. Diferenta de ${(100 - exGrandHypPct).toFixed(1)}% provine din factori neincorporati in R+(I×F): recunoasterea Brandului, experienta anterioara a expertilor, contextul de evaluare. Zone Match ${exZoneMatchRate}% confirma: formula clasifica corect doar ${exZoneMatchCount}/${exN} materiale in aceeasi zona cu perceptia.`
+                              : `Formula NU este activata (R=${exGrandR.toFixed(1)} < ${EX_GATE}). Cele ${exGrandHypPct}% reflecta o potrivire intamplatoare, nu predictie reala. Prioritate: creste R prin imbunatatirea targetarii.`}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    <div style={{ marginTop: 12 }}>
                       <InterpBtnE k="expert-hypothesis-total" title="Validare Ipoteza — EFA Total" val={String(exGrandHypPct)} ctx={{ cf: exGrandCf, cfNorm: exGrandCfNorm, cp: exGrandCp, delta: exGrandDelta, gatePass: exGatePassCount, gateTotal: exN, gateRate: exGatePassRate, r: exGrandR, i: exGrandI, f: exGrandF }} />
                     </div>
-                  )}
+                  </div>
+                    );
+                  })()}
 
-                  {/* ═══ SCORURI MEDII — Comparison Grid (Total sub-tab) ═══ */}
-                  {expertInterpSubTab === "total" && exN >= 1 && (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24 }}>
-                      {[
-                        { label: "R (Relevanta)", val: exGrandR, color: "#DC2626", zone: exGetZoneCp(exGrandR) },
-                        { label: "I (Interes)", val: exGrandI, color: "#2563EB", zone: exGetZoneCp(exGrandI) },
-                        { label: "F (Forma)", val: exGrandF, color: "#059669", zone: exGetZoneCp(exGrandF) },
-                        { label: "I×F (Motor)", val: exGrandIxF, color: "#7C3AED", zone: "" },
-                        { label: "Cf (Formula)", val: exGrandCf, color: "#111827", zone: exGetZone(exGrandCf) },
-                        { label: "Cf Norm", val: exGrandCfNorm, color: "#374151", zone: exGetZoneCp(exGrandCfNorm) },
-                        { label: "Cp (Perceput)", val: exGrandCp, color: "#D97706", zone: exGetZoneCp(exGrandCp) },
-                        { label: "Delta", val: exGrandDelta, color: exGrandDelta <= 1 ? "#059669" : exGrandDelta <= 2 ? "#D97706" : "#DC2626", zone: "" },
-                      ].map((s, i) => (
-                        <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", borderLeft: `3px solid ${s.color}` }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>{s.label}</div>
-                          <div style={{ fontSize: 18, fontWeight: 900, color: s.color, fontFamily: "'JetBrains Mono', monospace" }}>{typeof s.val === "number" ? s.val.toFixed(2) : s.val}</div>
-                          {s.zone && <span style={{ fontSize: 8, fontWeight: 700, padding: "1px 6px", borderRadius: 8, background: `${exGetZoneColor(s.zone)}15`, color: exGetZoneColor(s.zone) }}>{s.zone}</span>}
+                  {/* ═══ VALIDARE PER CANALE + INDUSTRIE (compact cards — identical to main Interpretare) ═══ */}
+                  {expertInterpSubTab === "total" && exN >= 1 && (() => {
+                    // Compact card renderer (same as main Interpretare)
+                    const exCompactCard = (item: { label: string; color: string; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number }, interpKey: string) => (
+                      <div key={item.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${item.color}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{item.label}</div>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: exGetValidationColor(item.pct) }}>{item.pct}%</div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* ═══ VALIDARE PER CANAL — Compact Cards ═══ */}
-                  {expertInterpSubTab === "canal" && (
-                    <div style={{ marginBottom: 24 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Validare Formula per Canal — Evaluare Experti</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-                        {exChAggs.map((ch, i) => (
-                          <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${ch.color}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{ch.label}</div>
-                              <div style={{ fontSize: 20, fontWeight: 900, color: exGetValidationColor(ch.pct), fontFamily: "'JetBrains Mono', monospace" }}>{ch.pct}%</div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 9, color: "#6B7280", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>Cf/11={item.cfNorm.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#059669", padding: "2px 6px", background: "#f0fdf4", borderRadius: 4 }}>Cp={item.cp.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#374151", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>&Delta;={item.delta.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 9, color: "#6B7280" }}>
+                            <span style={{ color: item.dir === "under" ? "#D97706" : item.dir === "over" ? "#DC2626" : "#059669", fontWeight: 600 }}>
+                              {item.dir === "under" ? `\u2191 sub. \u00D7${(item.cp / item.cfNorm).toFixed(2)}` : item.dir === "over" ? `\u2193 supra. \u00D7${(item.cfNorm / item.cp).toFixed(2)}` : "= perfect"}
+                            </span>
+                            <span>Gate: {item.gatePass}/{item.n}</span>
+                            <span>{item.n} mat.</span>
+                          </div>
+                          <InterpBtnE k={interpKey} title={`Validare — ${item.label}`} val={String(item.pct)} ctx={{ cfNorm: item.cfNorm, cp: item.cp, delta: item.delta, n: item.n, gateRate: item.gateRate, label: item.label }} />
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <>
+                        {/* Per Canale */}
+                        {exChAggs.length > 1 && (
+                          <div style={{ marginBottom: 20 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                              Validare per Canal — Evaluare Experti
                             </div>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 6 }}>
-                              {[
-                                { label: "Cf", val: ch.cfNorm.toFixed(2) },
-                                { label: "Cp", val: ch.cp.toFixed(2) },
-                                { label: "Δ", val: ch.delta.toFixed(2) },
-                                { label: "n", val: String(ch.n) },
-                                { label: "Gate", val: `${ch.gateRate}%` },
-                              ].map((s, j) => (
-                                <span key={j} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280", fontWeight: 600 }}>{s.label}: {s.val}</span>
-                              ))}
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: ch.dir === "over" ? "#DC2626" : ch.dir === "under" ? "#2563EB" : "#059669" }}>
-                              {ch.dir === "over" ? "▲" : ch.dir === "under" ? "▼" : "="} Formula {ch.dir === "over" ? "supraestimeaza" : ch.dir === "under" ? "subestimeaza" : "potrivire"} cu {ch.dirFactor}%
-                            </div>
-                            <div style={{ marginTop: 6 }}>
-                              <InterpBtnE k={`expert-channel-${ch.code}`} title={`Validare ${ch.label}`} val={String(ch.pct)} ctx={{ cfNorm: ch.cfNorm, cp: ch.cp, delta: ch.delta, n: ch.n, gateRate: ch.gateRate, label: ch.label }} />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                              {exChAggs.map(ch => exCompactCard(ch, `expert-channel-${ch.code}`))}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                      {exChAggs.length === 0 && <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu sunt suficiente date per canal</div>}
-                    </div>
-                  )}
-
-                  {/* ═══ VALIDARE PER INDUSTRIE — Compact Cards ═══ */}
-                  {expertInterpSubTab === "industrie" && (
-                    <div style={{ marginBottom: 24 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Validare Formula per Industrie — Evaluare Experti</div>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
-                        {exIndAggs.map((ind, i) => (
-                          <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${ind.color}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{ind.label}</div>
-                              <div style={{ fontSize: 20, fontWeight: 900, color: exGetValidationColor(ind.pct), fontFamily: "'JetBrains Mono', monospace" }}>{ind.pct}%</div>
+                        )}
+                        {/* Per Industrie */}
+                        {exIndAggs.length > 1 && (
+                          <div style={{ marginBottom: 20 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+                              Validare per Industrie — Evaluare Experti
                             </div>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 6 }}>
-                              {[
-                                { label: "Cf", val: ind.cfNorm.toFixed(2) },
-                                { label: "Cp", val: ind.cp.toFixed(2) },
-                                { label: "Δ", val: ind.delta.toFixed(2) },
-                                { label: "n", val: String(ind.n) },
-                                { label: "Gate", val: `${ind.gateRate}%` },
-                              ].map((s, j) => (
-                                <span key={j} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280", fontWeight: 600 }}>{s.label}: {s.val}</span>
-                              ))}
-                            </div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: ind.dir === "over" ? "#DC2626" : ind.dir === "under" ? "#2563EB" : "#059669" }}>
-                              {ind.dir === "over" ? "▲" : ind.dir === "under" ? "▼" : "="} Formula {ind.dir === "over" ? "supraestimeaza" : ind.dir === "under" ? "subestimeaza" : "potrivire"} cu {ind.dirFactor}%
-                            </div>
-                            <div style={{ marginTop: 6 }}>
-                              <InterpBtnE k={`expert-industry-${ind.label}`} title={`Validare ${ind.label}`} val={String(ind.pct)} ctx={{ cfNorm: ind.cfNorm, cp: ind.cp, delta: ind.delta, n: ind.n, gateRate: ind.gateRate, label: ind.label }} />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                              {exIndAggs.map(ia => exCompactCard(ia, `expert-industry-${ia.label}`))}
                             </div>
                           </div>
-                        ))}
+                        )}
+                      </>
+                    );
+                  })()}
+
+                  {/* ═══ Score comparison cards (identical to main Interpretare — with progress bars) ═══ */}
+                  {expertInterpSubTab === "total" && exN >= 1 && (() => {
+                    const exScoreCards: { label: string; value: number; color: string; k: string; scale: string; max: number; sub?: string; badge?: { text: string; color: string } }[] = [
+                      { label: "R (Relevanta)", value: exGrandR, color: "#DC2626", k: "score_r", scale: "/10", max: 10, badge: exGrandR >= EX_GATE ? { text: "GATE PASS", color: "#059669" } : { text: "GATE FAIL", color: "#DC2626" } },
+                      { label: "I (Interes)", value: exGrandI, color: "#D97706", k: "score_i", scale: "/10", max: 10 },
+                      { label: "F (Forma)", value: exGrandF, color: "#7C3AED", k: "score_f", scale: "/10", max: 10 },
+                      { label: "I×F (Sinergia)", value: exGrandIxF, color: "#8B5CF6", k: "score_ixf", scale: "/100", max: 100 },
+                      { label: "C formula", value: exGrandCf, color: "#2563EB", k: "score_cf", scale: "/110", max: 110, sub: `= ${exGrandCfNorm} /10` },
+                      { label: "C perceput", value: exGrandCp, color: "#059669", k: "score_cp", scale: "/10", max: 10 },
+                      { label: "Delta |Cf-Cp|", value: exGrandDelta, color: "#6B7280", k: "score_delta", scale: "/10", max: 10, sub: exGrandCfNorm < exGrandCp ? "Subestimeaza" : exGrandCfNorm > exGrandCp ? "Supraestimeaza" : "Exact" },
+                    ];
+                    const exScoreCtx = { r: exGrandR, i: exGrandI, f: exGrandF, cf: exGrandCf, cp: exGrandCp, delta: exGrandDelta, ixf: exGrandIxF, cfNorm: exGrandCfNorm };
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))", gap: 10, marginBottom: 20 }}>
+                        {exScoreCards.map(c => {
+                          const pct = Math.min((c.value / c.max) * 100, 100);
+                          const barColor = c.k === "score_delta" ? (c.value < 1.5 ? "#059669" : c.value < 2.5 ? "#D97706" : "#DC2626") : c.color;
+                          return (
+                            <div key={c.label} style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
+                              {c.badge && (
+                                <div style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: c.badge.color, color: "#fff", letterSpacing: 0.5 }}>{c.badge.text}</div>
+                              )}
+                              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>{c.label.toUpperCase()}</div>
+                              <div style={{ fontSize: 22, fontWeight: 800, color: c.color }}>
+                                {c.value}<span style={{ fontSize: 11, fontWeight: 500, color: "#9CA3AF" }}>{c.scale}</span>
+                              </div>
+                              {c.sub && <div style={{ fontSize: 10, color: "#6B7280", marginTop: 1 }}>{c.sub}</div>}
+                              {/* Mini progress bar */}
+                              <div style={{ margin: "6px auto 0", width: "80%", height: 4, borderRadius: 2, background: "#e5e7eb" }}>
+                                <div style={{ width: `${c.k === "score_delta" ? Math.min((c.value / 5) * 100, 100) : pct}%`, height: "100%", borderRadius: 2, background: barColor, transition: "width 0.3s" }} />
+                              </div>
+                              <div style={{ marginTop: 6 }}>
+                                <InterpBtnE k={c.k} title={c.label} val={String(c.value)} ctx={exScoreCtx} />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                      {exIndAggs.length === 0 && <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu sunt suficiente date per industrie</div>}
+                    );
+                  })()}
+
+                  {/* ═══ Gate + Zone Match + Materials stats (identical to main Interpretare) ═══ */}
+                  {expertInterpSubTab === "total" && exN >= 1 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12, marginBottom: 20 }}>
+                    {/* Relevance Gate */}
+                    <div style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
+                      <div style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: exGatePassRate >= 80 ? "#059669" : exGatePassRate >= 50 ? "#D97706" : "#DC2626", color: "#fff" }}>{exGatePassRate >= 80 ? "EXCELENT" : exGatePassRate >= 50 ? "ACCEPTABIL" : "PROBLEMATIC"}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>RELEVANCE GATE (R &ge; {EX_GATE})</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: exGatePassRate >= 70 ? "#059669" : exGatePassRate >= 40 ? "#D97706" : "#DC2626" }}>{exGatePassRate}%</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>{exGatePassCount} din {exN} materiale</div>
+                      <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 4, flexWrap: "wrap" as const }}>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>R min={exRMin}</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>R med={exGrandR}</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>R max={exRMax}</span>
+                      </div>
+                      <div style={{ margin: "6px auto 0", width: "80%", height: 4, borderRadius: 2, background: "#e5e7eb" }}>
+                        <div style={{ width: `${exGatePassRate}%`, height: "100%", borderRadius: 2, background: exGatePassRate >= 70 ? "#059669" : exGatePassRate >= 40 ? "#D97706" : "#DC2626", transition: "width 0.3s" }} />
+                      </div>
+                      <div style={{ marginTop: 6 }}><InterpBtnE k="gate" title="Relevance Gate" val={String(exGatePassRate)} ctx={{ pass: exGatePassCount, total: exN, rMin: exRMin, rMax: exRMax, rMean: exGrandR }} /></div>
                     </div>
+                    {/* Zone Match */}
+                    <div style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
+                      <div style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: exZoneMatchRate >= 70 ? "#059669" : exZoneMatchRate >= 40 ? "#D97706" : "#DC2626", color: "#fff" }}>{exZoneMatchRate >= 70 ? "SOLID" : exZoneMatchRate >= 40 ? "PARTIAL" : "SLAB"}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>ZONE MATCH (Cf ≈ Cp)</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: exZoneMatchRate >= 70 ? "#059669" : exZoneMatchRate >= 40 ? "#D97706" : "#DC2626" }}>{exZoneMatchRate}%</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>{exZoneMatchCount} din {exN} materiale in aceeasi zona</div>
+                      <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 4, flexWrap: "wrap" as const }}>
+                        {exZones.map(z => {
+                          const zb = exZoneMatchBreakdown[z];
+                          return zb && zb.total > 0 ? (
+                            <span key={z} style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: `${exGetZoneColor(z)}15`, color: exGetZoneColor(z), fontWeight: 600 }}>{z.charAt(0)}: {zb.matched}/{zb.total}</span>
+                          ) : null;
+                        })}
+                      </div>
+                      <div style={{ margin: "6px auto 0", width: "80%", height: 4, borderRadius: 2, background: "#e5e7eb" }}>
+                        <div style={{ width: `${exZoneMatchRate}%`, height: "100%", borderRadius: 2, background: exZoneMatchRate >= 70 ? "#059669" : exZoneMatchRate >= 40 ? "#D97706" : "#DC2626", transition: "width 0.3s" }} />
+                      </div>
+                      <div style={{ marginTop: 6 }}><InterpBtnE k="zonematch" title="Zone Match" val={String(exZoneMatchRate)} ctx={{ match: exZoneMatchCount, total: exN, breakdown: JSON.stringify(exZoneMatchBreakdown) }} /></div>
+                    </div>
+                    {/* Materiale Analizate */}
+                    <div style={{ ...S.configItem, textAlign: "center" as const, position: "relative" as const }}>
+                      <div style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 700, padding: "1px 5px", borderRadius: 3, background: "#2563EB", color: "#fff" }}>{exN >= 20 ? "SOLID" : exN >= 10 ? "ACCEPTABIL" : "MIC"}</div>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>MATERIALE ANALIZATE</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: "#2563EB" }}>{exN}</div>
+                      <div style={{ fontSize: 11, color: "#6B7280" }}>N={exTotalEvalResponses} evaluari ({exAvgEvalPerMaterial} eval/material)</div>
+                      <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 4, flexWrap: "wrap" as const }}>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{exUniqueChannels} canale</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{exUniqueIndustries} industrii</span>
+                        <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: "#f3f4f6", color: "#6B7280" }}>{completedExperts} experti</span>
+                      </div>
+                      <div style={{ margin: "6px auto 0", width: "80%", height: 4, borderRadius: 2, background: "#e5e7eb" }}>
+                        <div style={{ width: `${Math.min((exN / 50) * 100, 100)}%`, height: "100%", borderRadius: 2, background: "#2563EB", transition: "width 0.3s" }} />
+                      </div>
+                      <div style={{ marginTop: 6 }}><InterpBtnE k="materials" title="Materiale Analizate" val={String(exN)} ctx={{ responses: exTotalEvalResponses, avgPerMaterial: exAvgEvalPerMaterial, channels: exUniqueChannels, industries: exUniqueIndustries, respondents: completedExperts }} /></div>
+                    </div>
+                  </div>
                   )}
+
+                  {/* ═══ VALIDARE PER CANAL — Compact Cards (separate sub-tab) ═══ */}
+                  {expertInterpSubTab === "canal" && (() => {
+                    const exCompactCardCh = (item: { label: string; color: string; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number }, interpKey: string) => (
+                      <div key={item.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${item.color}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{item.label}</div>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: exGetValidationColor(item.pct) }}>{item.pct}%</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 9, color: "#6B7280", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>Cf/11={item.cfNorm.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#059669", padding: "2px 6px", background: "#f0fdf4", borderRadius: 4 }}>Cp={item.cp.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#374151", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>&Delta;={item.delta.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 9, color: "#6B7280" }}>
+                            <span style={{ color: item.dir === "under" ? "#D97706" : item.dir === "over" ? "#DC2626" : "#059669", fontWeight: 600 }}>
+                              {item.dir === "under" ? `\u2191 sub. \u00D7${(item.cp / item.cfNorm).toFixed(2)}` : item.dir === "over" ? `\u2193 supra. \u00D7${(item.cfNorm / item.cp).toFixed(2)}` : "= perfect"}
+                            </span>
+                            <span>Gate: {item.gatePass}/{item.n}</span>
+                            <span>{item.n} mat.</span>
+                          </div>
+                          <InterpBtnE k={interpKey} title={`Validare — ${item.label}`} val={String(item.pct)} ctx={{ cfNorm: item.cfNorm, cp: item.cp, delta: item.delta, n: item.n, gateRate: item.gateRate, label: item.label }} />
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                          Validare Formula per Canal — Evaluare Experti
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                          {exChAggs.map(ch => exCompactCardCh(ch, `expert-channel-${ch.code}`))}
+                        </div>
+                        {exChAggs.length === 0 && <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu sunt suficiente date per canal</div>}
+                      </div>
+                    );
+                  })()}
+
+                  {/* ═══ VALIDARE PER INDUSTRIE — Compact Cards (separate sub-tab) ═══ */}
+                  {expertInterpSubTab === "industrie" && (() => {
+                    const exCompactCardInd = (item: { label: string; color: string; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number }, interpKey: string) => (
+                      <div key={item.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${item.color}` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{item.label}</div>
+                          <div style={{ fontSize: 20, fontWeight: 900, color: exGetValidationColor(item.pct) }}>{item.pct}%</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginBottom: 6 }}>
+                          <span style={{ fontSize: 9, color: "#6B7280", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>Cf/11={item.cfNorm.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#059669", padding: "2px 6px", background: "#f0fdf4", borderRadius: 4 }}>Cp={item.cp.toFixed(2)}</span>
+                          <span style={{ fontSize: 9, color: "#374151", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>&Delta;={item.delta.toFixed(2)}</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 9, color: "#6B7280" }}>
+                            <span style={{ color: item.dir === "under" ? "#D97706" : item.dir === "over" ? "#DC2626" : "#059669", fontWeight: 600 }}>
+                              {item.dir === "under" ? `\u2191 sub. \u00D7${(item.cp / item.cfNorm).toFixed(2)}` : item.dir === "over" ? `\u2193 supra. \u00D7${(item.cfNorm / item.cp).toFixed(2)}` : "= perfect"}
+                            </span>
+                            <span>Gate: {item.gatePass}/{item.n}</span>
+                            <span>{item.n} mat.</span>
+                          </div>
+                          <InterpBtnE k={interpKey} title={`Validare — ${item.label}`} val={String(item.pct)} ctx={{ cfNorm: item.cfNorm, cp: item.cp, delta: item.delta, n: item.n, gateRate: item.gateRate, label: item.label }} />
+                        </div>
+                      </div>
+                    );
+                    return (
+                      <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+                          Validare Formula per Industrie — Evaluare Experti
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                          {exIndAggs.map(ia => exCompactCardInd(ia, `expert-industry-${ia.label}`))}
+                        </div>
+                        {exIndAggs.length === 0 && <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu sunt suficiente date per industrie</div>}
+                      </div>
+                    );
+                  })()}
+
+                  {/* ═══ TESTARE IPOTEZE H1-H5 — EFA (identical to main Interpretare) ═══ */}
+                  {expertInterpSubTab === "total" && exN >= 1 && (() => {
+                    if (exScatter.length === 0) return null;
+
+                    // Stimulus → type lookup for H2 objective
+                    const exStimTypeMap: Record<string, string> = {};
+                    for (const s of stimuli) {
+                      exStimTypeMap[s.id] = s.type || "social_media";
+                    }
+
+                    const exChartW = 520;
+                    const exChartH = 260;
+                    const exPad = { l: 38, r: 12, t: 12, b: 28 };
+                    const exPlotW = exChartW - exPad.l - exPad.r;
+                    const exPlotH = exChartH - exPad.t - exPad.b;
+
+                    // Linear regression helper (local)
+                    const exLinReg = (pts: { x: number; y: number }[]): { slope: number; intercept: number; r2: number } => {
+                      const n2 = pts.length;
+                      if (n2 < 2) return { slope: 0, intercept: 0, r2: 0 };
+                      const sx = pts.reduce((a, p) => a + p.x, 0);
+                      const sy = pts.reduce((a, p) => a + p.y, 0);
+                      const sxy = pts.reduce((a, p) => a + p.x * p.y, 0);
+                      const sx2 = pts.reduce((a, p) => a + p.x * p.x, 0);
+                      const sl = (n2 * sxy - sx * sy) / (n2 * sx2 - sx * sx) || 0;
+                      const inter = (sy - sl * sx) / n2;
+                      const yMn = sy / n2;
+                      const ssTot = pts.reduce((a, p) => a + (p.y - yMn) ** 2, 0);
+                      const ssRes = pts.reduce((a, p) => a + (p.y - (sl * p.x + inter)) ** 2, 0);
+                      const r2 = ssTot > 0 ? 1 - ssRes / ssTot : 0;
+                      return { slope: sl, intercept: inter, r2 };
+                    };
+
+                    // Axis helpers
+                    const exToX = (val: number, minV: number, maxV: number) => exPad.l + ((val - minV) / (maxV - minV || 1)) * exPlotW;
+                    const exToY = (val: number, minV: number, maxV: number) => exPad.t + exPlotH - ((val - minV) / (maxV - minV || 1)) * exPlotH;
+
+                    const exGridLines = (minV: number, maxV: number, isX: boolean, steps = 5) => {
+                      const stepSize = (maxV - minV) / steps;
+                      return Array.from({ length: steps + 1 }, (_, i) => {
+                        const v = Math.round((minV + i * stepSize) * 10) / 10;
+                        const pos = isX ? exToX(v, minV, maxV) : exToY(v, minV, maxV);
+                        return { v, pos };
+                      });
+                    };
+
+                    const exRenderGrid = (xMin: number, xMax: number, yMin: number, yMax: number, xLabel: string, yLabel: string) => (
+                      <>
+                        {exGridLines(yMin, yMax, false).map((g, i) => (
+                          <g key={`yg-${i}`}>
+                            <line x1={exPad.l} y1={g.pos} x2={exChartW - exPad.r} y2={g.pos} stroke="#f3f4f6" strokeWidth={0.5} />
+                            <text x={exPad.l - 4} y={g.pos + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{g.v}</text>
+                          </g>
+                        ))}
+                        {exGridLines(xMin, xMax, true).map((g, i) => (
+                          <g key={`xg-${i}`}>
+                            <line x1={g.pos} y1={exPad.t} x2={g.pos} y2={exChartH - exPad.b} stroke="#f3f4f6" strokeWidth={0.5} />
+                            <text x={g.pos} y={exChartH - exPad.b + 14} textAnchor="middle" fontSize={8} fill="#9CA3AF">{g.v}</text>
+                          </g>
+                        ))}
+                        <text x={exChartW / 2} y={exChartH - 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280">{xLabel}</text>
+                        <text x={8} y={exChartH / 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280" transform={`rotate(-90 8 ${exChartH / 2})`}>{yLabel}</text>
+                        <rect x={exPad.l} y={exPad.t} width={exPlotW} height={exPlotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                      </>
+                    );
+
+                    const exCardStyle: React.CSSProperties = {
+                      background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 16px",
+                      fontSize: 12, color: "#374151", lineHeight: 1.6, marginTop: 10,
+                    };
+
+                    // H1: R-Gate effect on C_perceived + CTA
+                    const exH1Data = exScatter.filter(d => d.c_score != null && d.c_score! > 0);
+                    const exH1Below = exH1Data.filter(d => d.r < EX_GATE);
+                    const exH1Above = exH1Data.filter(d => d.r >= EX_GATE);
+                    const exH1BelowAvgC = exH1Below.length > 0 ? Math.round(_mean(exH1Below.map(d => d.c_score!)) * 100) / 100 : 0;
+                    const exH1AboveAvgC = exH1Above.length > 0 ? Math.round(_mean(exH1Above.map(d => d.c_score!)) * 100) / 100 : 0;
+                    const exH1DiffCp = exH1Above.length > 0 && exH1Below.length > 0 ? exH1AboveAvgC - exH1BelowAvgC : 0;
+                    const exH1CohenD = _cohensD(exH1Below.map(d => d.c_score!), exH1Above.map(d => d.c_score!));
+                    // CTA
+                    const exH1CtaData = exScatter.filter(d => d.cta != null && d.cta! > 0);
+                    const exH1CtaBelow = exH1CtaData.filter(d => d.r < EX_GATE);
+                    const exH1CtaAbove = exH1CtaData.filter(d => d.r >= EX_GATE);
+                    const exH1BelowAvgCta = exH1CtaBelow.length > 0 ? Math.round(_mean(exH1CtaBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                    const exH1AboveAvgCta = exH1CtaAbove.length > 0 ? Math.round(_mean(exH1CtaAbove.map(d => d.cta!)) * 100) / 100 : 0;
+                    const exH1DiffCta = exH1CtaAbove.length > 0 && exH1CtaBelow.length > 0 ? exH1AboveAvgCta - exH1BelowAvgCta : 0;
+                    const exH1CohenDCta = _cohensD(exH1CtaBelow.map(d => d.cta!), exH1CtaAbove.map(d => d.cta!));
+                    const exH1XMin = 0, exH1XMax = 11, exH1YMin = 0, exH1YMax = 10;
+
+                    // H2: C_computed vs CTA
+                    const exH2Data = exScatter.filter(d => d.c_computed > 0 && d.cta != null && d.cta! > 0);
+                    const exH2Pts = exH2Data.map(d => ({ x: d.c_computed / 11, y: d.cta! }));
+                    const exH2Reg = exLinReg(exH2Pts);
+                    const exH2PearsonR = _pearsonR(exH2Pts.map(p => p.x), exH2Pts.map(p => p.y));
+                    const exH2P = _pValuePearson(exH2PearsonR, exH2Data.length);
+                    const exH2XMin = 0, exH2XMax = 10, exH2YMin = 0, exH2YMax = 11;
+
+                    // H3: C vs CTA split by brand
+                    const exH3Known = exH2Data.filter(d => d.brand === true);
+                    const exH3Unknown = exH2Data.filter(d => d.brand === false);
+                    const exH3RegKnown = exLinReg(exH3Known.map(d => ({ x: d.c_computed / 11, y: d.cta! })));
+                    const exH3RegUnknown = exLinReg(exH3Unknown.map(d => ({ x: d.c_computed / 11, y: d.cta! })));
+                    const exH3PearsonKnown = _pearsonR(exH3Known.map(d => d.c_computed / 11), exH3Known.map(d => d.cta!));
+                    const exH3PearsonUnknown = _pearsonR(exH3Unknown.map(d => d.c_computed / 11), exH3Unknown.map(d => d.cta!));
+                    const exH3Fz = _fisherZTest(exH3PearsonKnown, exH3PearsonUnknown, exH3Known.length, exH3Unknown.length);
+
+                    // H4: Multiplicative vs Additive
+                    const exH4V = exScatter.filter(d => d.c_score != null && d.c_score! > 0);
+                    const exH4RhoM = exH4V.length >= 3 ? _spearmanRho(exH4V.map(d => d.r + d.i * d.f), exH4V.map(d => d.c_score!)) : 0;
+                    const exH4RhoA = exH4V.length >= 3 ? _spearmanRho(exH4V.map(d => d.r + d.i + d.f), exH4V.map(d => d.c_score!)) : 0;
+                    const exH4Fz = _fisherZTest(exH4RhoM, exH4RhoA, exH4V.length, exH4V.length);
+                    const exH4Reg = _linReg(exH4V.map(d => d.r + d.i + d.f), exH4V.map(d => d.c_score!));
+                    const exH4PartR = exH4V.length >= 3 ? _pearsonR(exH4V.map((d, _i2) => d.c_score! - (exH4Reg.slope * (d.r + d.i + d.f) + exH4Reg.intercept)), exH4V.map(d => d.i * d.f)) : 0;
+                    const exH4PartP = _pValuePearson(exH4PartR, exH4V.length);
+                    const exH4SpSig = exH4Fz.p < 0.05 && (exH4RhoM - exH4RhoA) > 0;
+                    const exH4PaSig = exH4PartP < 0.05 && Math.abs(exH4PartR) > 0.1;
+                    const exH4Verd = exH4SpSig && exH4PaSig ? "CONFIRMATA" : (exH4SpSig || exH4PaSig) ? "PARTIAL" : "NECONFIRMATA";
+                    const exH4VerdColor = exH4Verd === "CONFIRMATA" ? "#059669" : exH4Verd === "PARTIAL" ? "#D97706" : "#DC2626";
+
+                    // H5: C vs Brand recognition bar chart
+                    const exH5Materials = exMaterialBrand
+                      .filter(m => m.response_count > 0 && (m.brand_yes + m.brand_no) > 0)
+                      .map(m => ({
+                        name: m.name.length > 18 ? m.name.slice(0, 16) + "\u2026" : m.name,
+                        fullName: m.name,
+                        cNorm: Math.round((m.avg_c / 110) * 100),
+                        brandRate: m.brand_rate,
+                      }))
+                      .sort((a, b) => b.cNorm - a.cNorm)
+                      .slice(0, 20);
+                    const exH5BarW = exH5Materials.length > 0 ? Math.min(28, Math.floor((exChartW - exPad.l - exPad.r - 20) / exH5Materials.length / 2)) : 20;
+
+                    return (
+                      <div style={{ marginTop: 32, borderTop: "2px solid #e5e7eb", paddingTop: 24, marginBottom: 24 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                          <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
+                          <div>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H5) — Evaluare Experti</div>
+                            <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {exTotalEvalResponses} evaluari de la {completedExperts} experti pe {exN} materiale.</div>
+                          </div>
+                        </div>
+
+                        {/* CHENAR EXPLICATIV RIFC */}
+                        <div style={{ padding: "16px 18px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB", marginBottom: 24 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+                            <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: 1, color: "#1e40af" }}>MODELUL RIFC — EFA</span>
+                            <span style={{ fontSize: 10, color: "#6B7280", fontStyle: "italic" }}>Validare prin evaluare experti</span>
+                          </div>
+                          <div style={{ textAlign: "center" as const, padding: "14px 0", marginBottom: 12, background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                            <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "JetBrains Mono, monospace", letterSpacing: 2 }}>
+                              <span style={{ color: "#DC2626" }}>R</span>
+                              <span style={{ color: "#6B7280", margin: "0 6px" }}>+</span>
+                              <span style={{ color: "#6B7280" }}>(</span>
+                              <span style={{ color: "#D97706" }}>I</span>
+                              <span style={{ color: "#6B7280", margin: "0 4px" }}>{"\u00D7"}</span>
+                              <span style={{ color: "#7C3AED" }}>F</span>
+                              <span style={{ color: "#6B7280" }}>)</span>
+                              <span style={{ color: "#6B7280", margin: "0 6px" }}>=</span>
+                              <span style={{ color: "#059669" }}>C</span>
+                            </div>
+                            <div style={{ fontSize: 10, color: "#6B7280", marginTop: 4, fontStyle: "italic" }}>
+                              <span style={{ color: "#DC2626", fontWeight: 700 }}>Relevanta</span> + <span style={{ color: "#D97706", fontWeight: 700 }}>Interesul</span> {"\u00D7"} <span style={{ color: "#7C3AED", fontWeight: 700 }}>Forma</span> = <span style={{ color: "#059669", fontWeight: 700 }}>Claritatea</span>
+                            </div>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+                            <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #DC2626` }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, color: "#DC2626", marginBottom: 3 }}>R — Relevanta (cheia de contact)</div>
+                              <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>~10% din magnitudinea C, dar 100% conditie de activare. Sub R &lt; {EX_GATE} (Gate), expertii considera ca mesajul nu va produce actiune.</div>
+                            </div>
+                            <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #D97706` }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, color: "#D97706", marginBottom: 3 }}>I — Interesul (continut)</div>
+                              <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>Cat de captivant si interesant este mesajul. Impreuna cu F formeaza motorul I{"\u00D7"}F — produce ~90% din magnitudinea Claritatii (C).</div>
+                            </div>
+                            <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #7C3AED` }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, color: "#7C3AED", marginBottom: 3 }}>F — Forma (executie)</div>
+                              <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>Calitatea executiei vizuale si creative. I{"\u00D7"}F se amplifica multiplicativ: I=8, F=2 = 16, dar I=8, F=8 = 64.</div>
+                            </div>
+                            <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid #059669` }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, color: "#059669", marginBottom: 3 }}>C — Claritatea (output)</div>
+                              <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>Rezultatul formulei: cat de clar este mesajul. C {"\u2260"} CTA — claritatea prezice actiunea, dar sunt pasi separati.</div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* H1: R-Gate scatter */}
+                        {exH1Data.length >= 3 && (
+                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>H1</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Poarta Relevantei (R-Gate)</span>
+                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: Math.abs(exH1DiffCp) > 2 ? "#dcfce7" : Math.abs(exH1DiffCp) >= 1 ? "#fef9c3" : "#fee2e2", color: Math.abs(exH1DiffCp) > 2 ? "#059669" : Math.abs(exH1DiffCp) >= 1 ? "#D97706" : "#DC2626" }}>{Math.abs(exH1DiffCp) > 2 ? "CONFIRMATA" : Math.abs(exH1DiffCp) >= 1 ? "PARTIAL" : "NECONFIRMATA"}</span>
+                            </div>
+                            <svg viewBox={`0 0 ${exChartW} ${exChartH}`} style={{ width: "100%", height: "auto" }}>
+                              {exRenderGrid(exH1XMin, exH1XMax, exH1YMin, exH1YMax, "R (Relevanta)", "C perceput")}
+                              <line x1={exToX(EX_GATE, exH1XMin, exH1XMax)} y1={exPad.t} x2={exToX(EX_GATE, exH1XMin, exH1XMax)} y2={exChartH - exPad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 2" />
+                              <text x={exToX(EX_GATE, exH1XMin, exH1XMax) + 4} y={exPad.t + 10} fontSize={8} fill="#DC2626" fontWeight={700}>Gate={EX_GATE}</text>
+                              {exH1Data.map((d, i) => (
+                                <circle key={i} cx={exToX(d.r, exH1XMin, exH1XMax)} cy={exToY(d.c_score!, exH1YMin, exH1YMax)} r={3} fill={d.r >= EX_GATE ? "#059669" : "#DC2626"} opacity={0.6}>
+                                  <title>R={d.r}, Cp={d.c_score}</title>
+                                </circle>
+                              ))}
+                            </svg>
+                            <div style={exCardStyle}>
+                              <strong>Cp mediu sub Gate:</strong> {exH1BelowAvgC.toFixed(2)} (n={exH1Below.length}) vs <strong>peste Gate:</strong> {exH1AboveAvgC.toFixed(2)} (n={exH1Above.length}).
+                              {" \u0394Cp="}{exH1DiffCp.toFixed(2)}, d={exH1CohenD.toFixed(2)}.
+                              {exH1CtaData.length > 0 && <> CTA: sub={exH1BelowAvgCta.toFixed(2)}, peste={exH1AboveAvgCta.toFixed(2)}, \u0394CTA={exH1DiffCta.toFixed(2)}, d={exH1CohenDCta.toFixed(2)}.</>}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* H2: C_computed vs CTA scatter */}
+                        {exH2Data.length >= 3 && (
+                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>H2</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>C prezice CTA</span>
+                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: Math.abs(exH2PearsonR) > 0.7 ? "#dcfce7" : Math.abs(exH2PearsonR) >= 0.4 ? "#fef9c3" : "#fee2e2", color: Math.abs(exH2PearsonR) > 0.7 ? "#059669" : Math.abs(exH2PearsonR) >= 0.4 ? "#D97706" : "#DC2626" }}>{Math.abs(exH2PearsonR) > 0.7 ? "CONFIRMATA" : Math.abs(exH2PearsonR) >= 0.4 ? "PARTIAL" : "NECONFIRMATA"}</span>
+                            </div>
+                            <svg viewBox={`0 0 ${exChartW} ${exChartH}`} style={{ width: "100%", height: "auto" }}>
+                              {exRenderGrid(exH2XMin, exH2XMax, exH2YMin, exH2YMax, "C formula / 11 (normalizat)", "CTA")}
+                              {/* Regression line */}
+                              {exH2Pts.length >= 2 && (
+                                <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(exH2Reg.slope * exH2XMin + exH2Reg.intercept, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(exH2Reg.slope * exH2XMax + exH2Reg.intercept, exH2YMin, exH2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" />
+                              )}
+                              {exH2Data.map((d, i) => (
+                                <circle key={i} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3} fill="#D97706" opacity={0.6}>
+                                  <title>Cf/11={+(d.c_computed / 11).toFixed(2)}, CTA={d.cta}</title>
+                                </circle>
+                              ))}
+                            </svg>
+                            <div style={exCardStyle}>
+                              <strong>Pearson r = {exH2PearsonR.toFixed(3)}</strong>, r{"\u00B2"} = {(exH2PearsonR * exH2PearsonR).toFixed(3)}, {_fmtP(exH2P)}, N = {exH2Data.length}.
+                              {Math.abs(exH2PearsonR) >= 0.4 ? " Corelatie semnificativa intre formula si CTA." : " Corelatie slaba — formula nu prezice CTA direct."}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* H3: Brand moderare */}
+                        {exH3Known.length >= 3 && exH3Unknown.length >= 3 && (
+                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: "#7C3AED", fontFamily: "JetBrains Mono, monospace" }}>H3</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Brand modereaza C{"\u2192"}CTA</span>
+                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: exH3Fz.p < 0.05 ? "#dcfce7" : "#fef9c3", color: exH3Fz.p < 0.05 ? "#059669" : "#D97706" }}>{exH3Fz.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "CONFIRMATA" : exH3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA"}</span>
+                            </div>
+                            <svg viewBox={`0 0 ${exChartW} ${exChartH}`} style={{ width: "100%", height: "auto" }}>
+                              {exRenderGrid(exH2XMin, exH2XMax, exH2YMin, exH2YMax, "C formula / 11", "CTA")}
+                              {/* Known regression */}
+                              <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(exH3RegKnown.slope * exH2XMin + exH3RegKnown.intercept, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(exH3RegKnown.slope * exH2XMax + exH3RegKnown.intercept, exH2YMin, exH2YMax)} stroke="#7C3AED" strokeWidth={1.5} strokeDasharray="6 3" />
+                              {/* Unknown regression */}
+                              <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(exH3RegUnknown.slope * exH2XMin + exH3RegUnknown.intercept, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(exH3RegUnknown.slope * exH2XMax + exH3RegUnknown.intercept, exH2YMin, exH2YMax)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" />
+                              {exH3Known.map((d, i) => (
+                                <circle key={`k-${i}`} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3} fill="#7C3AED" opacity={0.6} />
+                              ))}
+                              {exH3Unknown.map((d, i) => (
+                                <circle key={`u-${i}`} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3} fill="#059669" opacity={0.6} />
+                              ))}
+                            </svg>
+                            <div style={exCardStyle}>
+                              <strong>Brand cunoscut:</strong> r={exH3PearsonKnown.toFixed(3)} (n={exH3Known.length}). <strong>Brand necunoscut:</strong> r={exH3PearsonUnknown.toFixed(3)} (n={exH3Unknown.length}).
+                              Fisher Z={exH3Fz.z.toFixed(2)}, {_fmtP(exH3Fz.p)}.
+                            </div>
+                          </div>
+                        )}
+
+                        {/* H4: Multiplicativ vs Aditiv */}
+                        {exH4V.length >= 3 && (
+                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>H4</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Scale-Independent I{"\u00D7"}F</span>
+                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: exH4Verd === "CONFIRMATA" ? "#dcfce7" : exH4Verd === "PARTIAL" ? "#fef9c3" : "#fee2e2", color: exH4VerdColor }}>{exH4Verd}</span>
+                            </div>
+                            <div style={exCardStyle}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                                <div>
+                                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Spearman {"\u03C1"}</div>
+                                  <div>Multiplicativ (R+I{"\u00D7"}F): <strong>{exH4RhoM.toFixed(3)}</strong></div>
+                                  <div>Aditiv (R+I+F): <strong>{exH4RhoA.toFixed(3)}</strong></div>
+                                  <div style={{ fontSize: 10, color: "#6B7280" }}>Fisher Z={exH4Fz.z.toFixed(2)}, {_fmtP(exH4Fz.p)}</div>
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: 700, marginBottom: 4 }}>Partial r (I{"\u00D7"}F)</div>
+                                  <div>r<sub>partial</sub> = <strong>{exH4PartR.toFixed(3)}</strong></div>
+                                  <div style={{ fontSize: 10, color: "#6B7280" }}>{_fmtP(exH4PartP)}, N={exH4V.length}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* H5: C vs Brand recognition */}
+                        {exH5Materials.length > 0 && (
+                          <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>H5</span>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Claritate vs Recognoscibilitate Brand</span>
+                              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 700, background: "#f3f4f6", color: "#6B7280" }}>CALITATIVA</span>
+                            </div>
+                            <svg viewBox={`0 0 ${exChartW} ${exChartH}`} style={{ width: "100%", height: "auto" }}>
+                              {exRenderGrid(0, exH5Materials.length, 0, 100, "Material", "%")}
+                              {exH5Materials.map((m, i) => {
+                                const x1 = exPad.l + (i / exH5Materials.length) * exPlotW + 4;
+                                return (
+                                  <g key={i}>
+                                    <rect x={x1} y={exToY(m.cNorm, 0, 100)} width={exH5BarW} height={exToY(0, 0, 100) - exToY(m.cNorm, 0, 100)} fill="#2563EB" opacity={0.7} rx={2}>
+                                      <title>{m.fullName}: C norm={m.cNorm}%</title>
+                                    </rect>
+                                    <rect x={x1 + exH5BarW + 1} y={exToY(m.brandRate, 0, 100)} width={exH5BarW} height={exToY(0, 0, 100) - exToY(m.brandRate, 0, 100)} fill="#059669" opacity={0.7} rx={2}>
+                                      <title>{m.fullName}: Brand={m.brandRate}%</title>
+                                    </rect>
+                                    <text x={x1 + exH5BarW} y={exChartH - exPad.b + 12} textAnchor="middle" fontSize={6} fill="#9CA3AF" transform={`rotate(-45 ${x1 + exH5BarW} ${exChartH - exPad.b + 12})`}>{m.name}</text>
+                                  </g>
+                                );
+                              })}
+                              {/* Legend */}
+                              <rect x={exChartW - 120} y={4} width={8} height={8} fill="#2563EB" opacity={0.7} rx={1} />
+                              <text x={exChartW - 108} y={11} fontSize={8} fill="#6B7280">C norm %</text>
+                              <rect x={exChartW - 60} y={4} width={8} height={8} fill="#059669" opacity={0.7} rx={1} />
+                              <text x={exChartW - 48} y={11} fontSize={8} fill="#6B7280">Brand %</text>
+                            </svg>
+                          </div>
+                        )}
+
+                        {/* ═══ TABEL SUMAR IPOTEZE (Academic Summary) ═══ */}
+                        {(() => {
+                          const exRows: { code: string; name: string; metric: string; n: string; pVal: string; verdict: string; color: string }[] = [
+                            { code: "H1", name: "Poarta Relevantei", metric: `\u0394Cp=${exH1DiffCp.toFixed(2)}, \u0394CTA=${exH1DiffCta.toFixed(2)}, d=${exH1CohenD.toFixed(2)}`, n: `${exH1Data.length}`, pVal: "\u2014", verdict: Math.abs(exH1DiffCp) > 2 ? "CONFIRMATA" : Math.abs(exH1DiffCp) >= 1 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(exH1DiffCp) > 2 ? "#059669" : Math.abs(exH1DiffCp) >= 1 ? "#D97706" : "#DC2626" },
+                            { code: "H2", name: "C prezice CTA", metric: `r=${exH2PearsonR.toFixed(3)}, r\u00B2=${(exH2PearsonR * exH2PearsonR).toFixed(3)}`, n: `${exH2Data.length}`, pVal: _fmtP(exH2P), verdict: Math.abs(exH2PearsonR) > 0.7 ? "CONFIRMATA" : Math.abs(exH2PearsonR) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(exH2PearsonR) > 0.7 ? "#059669" : Math.abs(exH2PearsonR) >= 0.4 ? "#D97706" : "#DC2626" },
+                            { code: "H3", name: "Brand modereaza C\u2192CTA", metric: `r\u2096=${exH3PearsonKnown.toFixed(3)}, r\u1D64=${exH3PearsonUnknown.toFixed(3)}`, n: `${exH3Known.length + exH3Unknown.length}`, pVal: `Z=${exH3Fz.z.toFixed(2)}, ${_fmtP(exH3Fz.p)}`, verdict: exH3Fz.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "CONFIRMATA" : exH3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: exH3Fz.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "#059669" : exH3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
+                            { code: "H4", name: "Scale-Independent I\u00D7F", metric: `\u03C1m=${exH4RhoM.toFixed(3)}, \u03C1a=${exH4RhoA.toFixed(3)}, pr=${exH4PartR.toFixed(3)}`, n: `${exH4V.length}`, pVal: `Z=${exH4Fz.z.toFixed(2)}, ${_fmtP(exH4Fz.p)}; pr ${_fmtP(exH4PartP)}`, verdict: exH4Verd, color: exH4VerdColor },
+                            { code: "H5", name: "Claritate vs Recognoscibilitate", metric: "Bar chart comparativ C vs Brand", n: `${exH5Materials.length}`, pVal: "\u2014", verdict: "CALITATIVA", color: "#6B7280" },
+                          ];
+                          return (
+                            <div style={{ marginTop: 30 }}>
+                              <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
+                                Sumar Ipoteze — EFA (Tabel Academic)
+                              </div>
+                              <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Rezumatul ipotezelor testate cu date din evaluarea expertilor ({completedExperts} experti, {exTotalEvalResponses} evaluari).</div>
+                              <div style={{ overflowX: "auto" as const }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+                                  <thead>
+                                    <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                                      <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Ipoteza</th>
+                                      <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Descriere</th>
+                                      <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Metric</th>
+                                      <th style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>N</th>
+                                      <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Semnificatie</th>
+                                      <th style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>Verdict</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {exRows.map((r, i) => (
+                                      <tr key={r.code} style={{ borderBottom: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                        <td style={{ padding: "8px 10px", fontWeight: 800, color: r.color, fontFamily: "JetBrains Mono, monospace" }}>{r.code}</td>
+                                        <td style={{ padding: "8px 10px", color: "#374151" }}>{r.name}</td>
+                                        <td style={{ padding: "8px 10px", fontFamily: "JetBrains Mono, monospace", fontSize: 10, color: "#111827" }}>{r.metric}</td>
+                                        <td style={{ padding: "8px 10px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#6B7280" }}>{r.n}</td>
+                                        <td style={{ padding: "8px 10px", fontSize: 10, color: "#6B7280" }}>{r.pVal}</td>
+                                        <td style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 800, color: r.color, fontSize: 10 }}>{r.verdict}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
+                                N = dimensiunea esantionului per ipoteza. p-values calculate prin aproximare normala. Fisher Z-test pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). H5 este calitativa.
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                      </div>
+                    );
+                  })()}
 
                   {/* ═══ EXISTING 12 SECTIONS — shown only on "Total" sub-tab ═══ */}
                   {expertInterpSubTab === "total" && (<>
