@@ -188,11 +188,12 @@ function CviForm() {
   }, [ratings, success]);
 
   const ratedCount = Object.keys(ratings).length;
-  const commentedCount = ALL_ITEMS.filter(i => (comments[i.id] || "").trim().length > 0).length;
+  const MIN_COMMENT_CHARS = 50;
+  const commentedCount = ALL_ITEMS.filter(i => (comments[i.id] || "").trim().length >= MIN_COMMENT_CHARS).length;
   const pct = Math.round(((ratedCount + commentedCount) / (TOTAL * 2)) * 100);
   const canSubmit = ratedCount === TOTAL && commentedCount === TOTAL && expert.name.trim() && expert.role && expert.experience && !submitting;
   const missingRatings = ALL_ITEMS.filter(i => !ratings[i.id]);
-  const missingComments = ALL_ITEMS.filter(i => !(comments[i.id] || "").trim());
+  const missingComments = ALL_ITEMS.filter(i => (comments[i.id] || "").trim().length < MIN_COMMENT_CHARS);
 
   const handleRate = useCallback((itemId: string, value: number) => {
     setRatings(prev => {
@@ -622,7 +623,8 @@ function CviForm() {
             {/* Items */}
             {items.map(item => {
               const rated = ratings[item.id];
-              const commented = (comments[item.id] || "").trim().length > 0;
+              const commentLen = (comments[item.id] || "").trim().length;
+              const commented = commentLen >= MIN_COMMENT_CHARS;
               const isIncomplete = attemptedSubmit && (!rated || !commented);
               const borderColor = isIncomplete ? "#EF4444" : rated === 1 ? "#FECACA" : rated === 2 ? "#FED7AA" : rated === 3 ? "#FEF08A" : rated === 4 ? "#BBF7D0" : border;
               return (
@@ -641,7 +643,7 @@ function CviForm() {
                     </div>
                     {isIncomplete && (
                       <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "#FEF2F2", color: "#EF4444", flexShrink: 0, whiteSpace: "nowrap" }}>
-                        {!rated && !commented ? "Selecteaza scorul + comentariu" : !rated ? "Selecteaza scorul" : "Adauga comentariu"}
+                        {!rated && !commented ? "Selecteaza scorul + comentariu" : !rated ? "Selecteaza scorul" : `Comentariu prea scurt (${commentLen}/${MIN_COMMENT_CHARS} car.)`}
                       </span>
                     )}
                   </div>
@@ -670,12 +672,12 @@ function CviForm() {
                   {/* Comment textarea */}
                   <div style={{ padding: "8px 20px 16px" }}>
                     <div style={{ fontSize: 12, color: attemptedSubmit && !commented ? "#EF4444" : muted, fontWeight: 600, marginBottom: 6 }}>
-                      Comentariu / Justificare *
+                      Comentariu / Justificare * <span style={{ fontWeight: 400, fontSize: 10 }}>({commentLen}/{MIN_COMMENT_CHARS} car. min.)</span>
                     </div>
                     <textarea
                       value={comments[item.id] || ""}
                       onChange={e => handleComment(item.id, e.target.value)}
-                      placeholder="Explicati de ce ati ales acest scor (obligatoriu)..."
+                      placeholder={`Explicati de ce ati ales acest scor — minim ${MIN_COMMENT_CHARS} caractere (obligatoriu)...`}
                       rows={2}
                       style={{
                         width: "100%", border: `1.5px solid ${attemptedSubmit && !commented ? "#EF4444" : border}`,
@@ -728,14 +730,14 @@ function CviForm() {
               )}
               {missingComments.length > 0 && (
                 <div style={{ fontSize: 12, color: "#DC2626", marginBottom: 4 }}>
-                  • {missingComments.length} itemi fara comentariu: {missingComments.slice(0, 8).map(i => i.id).join(", ")}{missingComments.length > 8 ? ` + inca ${missingComments.length - 8}` : ""}
+                  • {missingComments.length} itemi fara comentariu suficient (min. {MIN_COMMENT_CHARS} car.): {missingComments.slice(0, 8).map(i => i.id).join(", ")}{missingComments.length > 8 ? ` + inca ${missingComments.length - 8}` : ""}
                 </div>
               )}
             </div>
           )}
 
           <p style={{ color: muted, fontSize: 14, marginBottom: 20 }}>
-            Completati scorurile si comentariile pentru toti cei {TOTAL} de itemi + profilul profesional.
+            Completati scorurile si comentariile (min. {MIN_COMMENT_CHARS} caractere fiecare) pentru toti cei {TOTAL} de itemi + profilul profesional.
           </p>
           {submitError && <p style={{ color: "#DC2626", fontSize: 14, marginBottom: 16 }}>{submitError}</p>}
           <button

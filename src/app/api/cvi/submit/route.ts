@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // ── Validate comments completeness ──
+    // ── Validate comments completeness (min 50 chars each) ──
+    const MIN_COMMENT_CHARS = 50;
     if (comments && typeof comments === "object") {
       const missingComments = CVI_ITEMS.filter(
         item => !comments[item] || !String(comments[item]).trim()
@@ -63,6 +64,15 @@ export async function POST(req: NextRequest) {
       if (missingComments.length > 0) {
         return NextResponse.json(
           { error: `Lipsesc comentarii pentru: ${missingComments.slice(0, 10).join(", ")}${missingComments.length > 10 ? ` + inca ${missingComments.length - 10}` : ""}` },
+          { status: 422 }
+        );
+      }
+      const shortComments = CVI_ITEMS.filter(
+        item => comments[item] && String(comments[item]).trim().length < MIN_COMMENT_CHARS
+      );
+      if (shortComments.length > 0) {
+        return NextResponse.json(
+          { error: `Comentarii prea scurte (min. ${MIN_COMMENT_CHARS} caractere) la: ${shortComments.slice(0, 10).join(", ")}${shortComments.length > 10 ? ` + inca ${shortComments.length - 10}` : ""}` },
           { status: 422 }
         );
       }

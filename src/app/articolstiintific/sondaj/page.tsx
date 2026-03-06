@@ -9702,7 +9702,7 @@ export default function StudiuAdminPage() {
                             { label: "Completat", value: _cviCompleted, color: "#10b981" },
                             { label: "Pending", value: _cviPending, color: "#f59e0b" },
                             { label: "Rata", value: `${_cviRate}%`, color: _cviRate >= 80 ? "#10b981" : _cviRate >= 50 ? "#f59e0b" : "#ef4444", isText: true },
-                            { label: "Fleiss κ", value: cviResults?.fleissKappa > 0 ? cviResults.fleissKappa.toFixed(3) : "—", color: "#a78bfa", isText: true },
+                            { label: "Fleiss κ", value: cviResults && !isNaN(cviResults.fleissKappa) && (cviExperts?.filter((e: any) => e.status === "completed").length || 0) >= 2 ? cviResults.fleissKappa.toFixed(3) : "N/A", color: "#a78bfa", isText: true },
                             { label: "S-CVI/Ave", value: _sCviAve > 0 ? _sCviAve.toFixed(2) : "—", color: "#6366f1", isText: true },
                           ].map((s: any) => (
                             <div key={s.label} style={{ textAlign: "center" as const, minWidth: 56, padding: "4px 6px" }}>
@@ -10355,7 +10355,7 @@ export default function StudiuAdminPage() {
                         {[
                           { label: "S-CVI/Ave", value: sCviAve.toFixed(3), threshold: "≥ 0.90", pass: sCviAve >= 0.90 },
                           { label: "S-CVI/UA", value: sCviUa.toFixed(3), threshold: "≥ 0.80", pass: sCviUa >= 0.80 },
-                          { label: "Fleiss κ", value: fleissK > 0 ? fleissK.toFixed(3) : "—", threshold: "> 0.61", pass: fleissK > 0.61 },
+                          { label: "Fleiss κ", value: !isNaN(fleissK) && nExperts >= 2 ? fleissK.toFixed(3) : "N/A", threshold: "> 0.61", pass: fleissK > 0.61 },
                           { label: "Items PASS", value: `${itemsPass}/35`, threshold: "≥ 80%", pass: (itemsPass / 35) >= 0.80 },
                         ].map(m => (
                           <div key={m.label} style={{ padding: "14px 10px", borderRadius: 10, background: m.pass ? "#f0fdf4" : "#fef2f2", border: `1px solid ${m.pass ? "#bbf7d0" : "#fecaca"}` }}>
@@ -10597,7 +10597,7 @@ export default function StudiuAdminPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
                         <div>
                           <div style={{ fontSize: 36, fontWeight: 900, color: kappaColor(fleissK), fontFamily: "JetBrains Mono, monospace", lineHeight: 1 }}>
-                            {fleissK > 0 ? fleissK.toFixed(3) : "—"}
+                            {!isNaN(fleissK) && nExperts >= 2 ? fleissK.toFixed(3) : "N/A"}
                           </div>
                           <span style={{ display: "inline-block", marginTop: 4, padding: "3px 12px", borderRadius: 12, fontSize: 10, fontWeight: 700, background: `${kappaColor(fleissK)}15`, color: kappaColor(fleissK) }}>
                             {kappaLabel(fleissK).toUpperCase()}
@@ -10620,9 +10620,9 @@ export default function StudiuAdminPage() {
                             <span>0.00</span><span>0.20</span><span>0.40</span><span>0.60</span><span>0.80</span><span>1.00</span>
                           </div>
                           {/* Marker for actual kappa */}
-                          {fleissK > 0 && (
+                          {!isNaN(fleissK) && nExperts >= 2 && (
                             <div style={{ position: "relative" as const, marginTop: -22 }}>
-                              <div style={{ position: "absolute" as const, left: `${Math.min(fleissK * 100, 100)}%`, transform: "translateX(-50%)" }}>
+                              <div style={{ position: "absolute" as const, left: `${Math.max(0, Math.min(fleissK * 100, 100))}%`, transform: "translateX(-50%)" }}>
                                 <div style={{ width: 0, height: 0, borderLeft: "5px solid transparent", borderRight: "5px solid transparent", borderBottom: "6px solid #111827" }} />
                               </div>
                             </div>
@@ -10631,9 +10631,18 @@ export default function StudiuAdminPage() {
                       </div>
                       <div style={{ fontSize: 12, color: "#64748B", lineHeight: 1.6 }}>
                         Fleiss &kappa; masoara concordanta dintre {nExperts} evaluatori pe 35 itemi cu 4 categorii.
-                        Valoarea de <strong>{fleissK.toFixed(3)}</strong> indica un acord <strong>{kappaLabel(fleissK).toLowerCase()}</strong> (Landis &amp; Koch, 1977).
+                        Valoarea de <strong>{!isNaN(fleissK) && nExperts >= 2 ? fleissK.toFixed(3) : "N/A"}</strong> indica un acord <strong>{kappaLabel(fleissK).toLowerCase()}</strong> (Landis &amp; Koch, 1977).
                         {fleissK > 0.61 ? " Expertii au un grad ridicat de concordanta — rezultatele CVI sunt fiabile." : fleissK > 0.40 ? " Acordul este moderat — rezultatele trebuie interpretate cu precautie." : " Acordul este scazut — panelul nu are consens semnificativ."}
                       </div>
+                      {sCviAve >= 0.85 && fleissK <= 0.40 && nExperts >= 2 && (
+                        <div style={{ marginTop: 12, padding: "12px 16px", background: "#FFF7ED", border: "1px solid #FED7AA", borderRadius: 8, fontSize: 11, color: "#92400E", lineHeight: 1.6 }}>
+                          <strong style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            Paradoxul Kappa (Feinstein &amp; Cicchetti, 1990)
+                          </strong>
+                          Cand S-CVI/Ave este foarte ridicat ({(sCviAve * 100).toFixed(1)}%), aproape toti evaluatorii acorda scoruri 3-4 (relevant). Aceasta creeaza o distributie dezechilibrata (prevalence effect) unde acordul asteptat aleator (P<sub>e</sub>) este si el foarte ridicat, rezultand un &kappa; paradoxal scazut sau negativ. <strong>Aceasta NU invalideaza acordul real excelent indicat de S-CVI/Ave.</strong> In acest caz, S-CVI/Ave si S-CVI/UA sunt indicatorii de referinta, nu Fleiss &kappa;.
+                        </div>
+                      )}
                       <InterpBtnCvi k="cvi-fleiss" title="Fleiss Kappa — Interpretare" val={String(fleissK)} ctx={{ fleissK, nExperts, kappaLabel: kappaLabel(fleissK) }} />
                     </div>
 
@@ -10706,7 +10715,7 @@ export default function StudiuAdminPage() {
                             icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={fleissK > 0.61 ? "#059669" : "#D97706"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
                             verdict: kappaLabel(fleissK).toUpperCase(),
                             color: kappaColor(fleissK),
-                            text: `Fleiss κ = ${fleissK > 0 ? fleissK.toFixed(3) : "N/A"}. ${fleissK > 0.61 ? "Acordul inter-evaluatori este substantial — panelul are consens semnificativ (Landis & Koch, 1977)." : fleissK > 0.40 ? "Acord moderat — rezultatele trebuie interpretate cu precautie." : "Acord scazut — concordanta insuficienta intre evaluatori."}`,
+                            text: `Fleiss κ = ${!isNaN(fleissK) && nExperts >= 2 ? fleissK.toFixed(3) : "N/A"}. ${fleissK > 0.61 ? "Acordul inter-evaluatori este substantial — panelul are consens semnificativ (Landis & Koch, 1977)." : fleissK > 0.40 ? "Acord moderat — rezultatele trebuie interpretate cu precautie." : sCviAve >= 0.90 && fleissK <= 0 ? "NOTA: Paradoxul Kappa — cand S-CVI/Ave este foarte ridicat (≥0.90), κ poate fi scazut/negativ deoarece acordul asteptat aleator este si el ridicat. Aceasta NU invalideaza rezultatele." : "Acord scazut — concordanta insuficienta intre evaluatori."}`,
                           },
                           {
                             title: "3. Itemi problematici",
@@ -10752,7 +10761,7 @@ export default function StudiuAdminPage() {
                             {[
                               { metric: "S-CVI/Ave", value: sCviAve.toFixed(3), threshold: "≥ 0.90", pass: sCviAve >= 0.90, verdict: sCviAve >= 0.90 ? "EXCELENT" : sCviAve >= 0.80 ? "ACCEPTABIL" : "NEÎNDEPLINIT" },
                               { metric: "S-CVI/UA", value: sCviUa.toFixed(3), threshold: "≥ 0.80", pass: sCviUa >= 0.80, verdict: sCviUa >= 0.80 ? "ÎNDEPLINIT" : "NEÎNDEPLINIT" },
-                              { metric: "Fleiss κ", value: fleissK > 0 ? fleissK.toFixed(3) : "N/A", threshold: "> 0.61", pass: fleissK > 0.61, verdict: kappaLabel(fleissK).toUpperCase() },
+                              { metric: "Fleiss κ", value: !isNaN(fleissK) && nExperts >= 2 ? fleissK.toFixed(3) : "N/A", threshold: "> 0.61", pass: fleissK > 0.61, verdict: kappaLabel(fleissK).toUpperCase() + (sCviAve >= 0.85 && fleissK <= 0.40 ? " *" : "") },
                               { metric: "Items PASS", value: `${Math.round((itemsPass / 35) * 100)}% (${itemsPass}/35)`, threshold: "≥ 80%", pass: (itemsPass / 35) >= 0.80, verdict: (itemsPass / 35) >= 0.80 ? "ACCEPTABIL" : "NEÎNDEPLINIT" },
                               { metric: "Panel N", value: String(nExperts), threshold: "≥ 5", pass: nExperts >= 5, verdict: nExperts >= 10 ? "EXCELENT" : nExperts >= 5 ? "ACCEPTABIL" : "INSUFICIENT" },
                             ].map(row => (
