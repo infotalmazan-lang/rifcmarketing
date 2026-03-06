@@ -7157,122 +7157,121 @@ export default function StudiuAdminPage() {
                             }}>Toate</button>
                           </div>
 
-                          <svg viewBox={`0 0 ${exChartW} ${exChartH + 10}`} style={{ width: "100%", height: "auto" }}>
-                            {exRenderGrid(exH2XMin, exH2XMax, exH2YMin, exH2YMax, "C formula (norm. 0-10)", "CTA")}
-                            {/* Trend line */}
-                            {exH2Pts.length >= 2 && (() => {
-                              const y1v = Math.max(exH2YMin, Math.min(exH2YMax, exH2Reg.slope * exH2XMin + exH2Reg.intercept));
-                              const y2v = Math.max(exH2YMin, Math.min(exH2YMax, exH2Reg.slope * exH2XMax + exH2Reg.intercept));
-                              return <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(y1v, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(y2v, exH2YMin, exH2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
-                            })()}
-                            {/* Color-coded dots by objective (normalized X) */}
-                            {exH2Filtered.map((d, i) => {
-                              const obj = exStimObjMap[d.stimulus_id] || "conversie";
-                              const mo = MARKETING_OBJECTIVES.find(o => o.value === obj);
-                              return <circle key={i} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3.5} fill={mo?.color || "#2563EB"} opacity={0.55} />;
-                            })}
-                            {/* Legend — per objective counts */}
-                            {(() => {
-                              const items = MARKETING_OBJECTIVES.filter(o => exH2ObjFilter.includes(o.value) && (exH2ByObj[o.value] || []).length > 0);
-                              return items.map((o, idx) => {
-                                const lx = exPad.l + 4 + idx * Math.floor((exChartW - exPad.l - exPad.r - 10) / Math.max(items.length, 1));
-                                return (
-                                  <g key={o.value}>
-                                    <circle cx={lx} cy={exChartH + 8} r={3} fill={o.color} />
-                                    <text x={lx + 6} y={exChartH + 11} fontSize={7} fill={o.color} fontWeight={600}>{o.label} ({(exH2ByObj[o.value] || []).length})</text>
-                                  </g>
-                                );
-                              });
-                            })()}
-                            <text x={exChartW - exPad.r - 5} y={exPad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill="#2563EB">r = {exH2PearsonR.toFixed(3)} | r{"\u00B2"} = {exH2Reg.r2.toFixed(3)}</text>
-                          </svg>
-
-                          {/* ── H2 Heatmap Densitate (vizualizare alternativa) ── */}
-                          {exH2Filtered.length >= 5 && (() => {
-                            const hmBins = 10;
-                            const hmW = exChartW;
-                            const hmLegendW = 50;
-                            const hmPad2 = { l: 42, r: hmLegendW + 16, t: 14, b: 38 };
-                            const hmPlotW2 = hmW - hmPad2.l - hmPad2.r;
-                            const hmPlotH2 = 220;
-                            const hmH = hmPlotH2 + hmPad2.t + hmPad2.b;
-                            const cellW = hmPlotW2 / hmBins;
-                            const cellH2 = hmPlotH2 / hmBins;
-                            // Build count grid
-                            const grid2: number[][] = Array.from({ length: hmBins }, () => Array(hmBins).fill(0));
-                            let hmMax2 = 0;
-                            for (const d of exH2Filtered) {
-                              const cx2 = Math.min(hmBins - 1, Math.max(0, Math.floor((d.c_computed / 11) - 0.5)));
-                              const cy2 = Math.min(hmBins - 1, Math.max(0, Math.floor(d.cta! - 0.5)));
-                              grid2[cy2][cx2]++;
-                              hmMax2 = Math.max(hmMax2, grid2[cy2][cx2]);
-                            }
-                            const heatColor2 = (count: number): string => {
-                              if (count === 0) return "#fafafa";
-                              const t2 = count / Math.max(hmMax2, 1);
-                              if (t2 < 0.15) return "#fef3c7";
-                              if (t2 < 0.3) return "#fde68a";
-                              if (t2 < 0.5) return "#f59e0b";
-                              if (t2 < 0.7) return "#ea580c";
-                              return "#dc2626";
-                            };
-                            const textColor2 = (count: number): string => count / Math.max(hmMax2, 1) > 0.4 ? "#fff" : "#374151";
-                            return (
-                              <div style={{ marginTop: 14 }}>
-                                <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Vizualizare alternativa: Heatmap Densitate</div>
-                                <svg viewBox={`0 0 ${hmW} ${hmH}`} style={{ width: "100%", height: "auto" }}>
-                                  {/* Cells */}
-                                  {grid2.map((row, ri) => row.map((count, ci) => {
-                                    const x2 = hmPad2.l + ci * cellW;
-                                    const y2 = hmPad2.t + (hmBins - 1 - ri) * cellH2;
+                          {/* ── Side-by-side: Scatter + Heatmap ── */}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
+                            {/* LEFT: Scatter chart */}
+                            <div>
+                              <svg viewBox={`0 0 ${exChartW} ${exChartH + 10}`} style={{ width: "100%", height: "auto" }}>
+                                {exRenderGrid(exH2XMin, exH2XMax, exH2YMin, exH2YMax, "C formula (norm. 0-10)", "CTA")}
+                                {/* Trend line */}
+                                {exH2Pts.length >= 2 && (() => {
+                                  const y1v = Math.max(exH2YMin, Math.min(exH2YMax, exH2Reg.slope * exH2XMin + exH2Reg.intercept));
+                                  const y2v = Math.max(exH2YMin, Math.min(exH2YMax, exH2Reg.slope * exH2XMax + exH2Reg.intercept));
+                                  return <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(y1v, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(y2v, exH2YMin, exH2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
+                                })()}
+                                {/* Color-coded dots by objective (normalized X) */}
+                                {exH2Filtered.map((d, i) => {
+                                  const obj = exStimObjMap[d.stimulus_id] || "conversie";
+                                  const mo = MARKETING_OBJECTIVES.find(o => o.value === obj);
+                                  return <circle key={i} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3.5} fill={mo?.color || "#2563EB"} opacity={0.55} />;
+                                })}
+                                {/* Legend — per objective counts */}
+                                {(() => {
+                                  const items = MARKETING_OBJECTIVES.filter(o => exH2ObjFilter.includes(o.value) && (exH2ByObj[o.value] || []).length > 0);
+                                  return items.map((o, idx) => {
+                                    const lx = exPad.l + 4 + idx * Math.floor((exChartW - exPad.l - exPad.r - 10) / Math.max(items.length, 1));
                                     return (
-                                      <g key={`hm-${ri}-${ci}`}>
-                                        <rect x={x2} y={y2} width={cellW} height={cellH2} fill={heatColor2(count)} stroke="#fff" strokeWidth={1} rx={2} />
-                                        {count > 0 && (
-                                          <text x={x2 + cellW / 2} y={y2 + cellH2 / 2 + 4} textAnchor="middle" fontSize={count > 9 ? 8 : 9} fontWeight={700} fill={textColor2(count)}>{count}</text>
-                                        )}
+                                      <g key={o.value}>
+                                        <circle cx={lx} cy={exChartH + 8} r={3} fill={o.color} />
+                                        <text x={lx + 6} y={exChartH + 11} fontSize={7} fill={o.color} fontWeight={600}>{o.label} ({(exH2ByObj[o.value] || []).length})</text>
                                       </g>
                                     );
-                                  }))}
-                                  {/* Y axis labels */}
-                                  {Array.from({ length: hmBins }, (_, i) => (
-                                    <text key={`hy-${i}`} x={hmPad2.l - 5} y={hmPad2.t + (hmBins - 1 - i) * cellH2 + cellH2 / 2 + 3} textAnchor="end" fontSize={9} fill="#9CA3AF">{i + 1}</text>
-                                  ))}
-                                  {/* X axis labels */}
-                                  {Array.from({ length: hmBins }, (_, i) => (
-                                    <text key={`hx-${i}`} x={hmPad2.l + i * cellW + cellW / 2} y={hmH - hmPad2.b + 16} textAnchor="middle" fontSize={9} fill="#9CA3AF">{i + 1}</text>
-                                  ))}
-                                  {/* Axis labels */}
-                                  <text x={hmPad2.l + hmPlotW2 / 2} y={hmH - 4} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280">C formula (norm. 1-10)</text>
-                                  <text x={8} y={hmPad2.t + hmPlotH2 / 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280" transform={`rotate(-90 8 ${hmPad2.t + hmPlotH2 / 2})`}>CTA (1-10)</text>
-                                  {/* Border */}
-                                  <rect x={hmPad2.l} y={hmPad2.t} width={hmPlotW2} height={hmPlotH2} fill="none" stroke="#e5e7eb" strokeWidth={1} />
-                                  {/* Color legend */}
-                                  {(() => {
-                                    const lgX = hmW - hmLegendW + 4;
-                                    const lgW2 = 14;
-                                    const lgH2 = hmPlotH2;
-                                    const lgTop = hmPad2.t;
-                                    const colors = ["#fafafa", "#fef3c7", "#fde68a", "#f59e0b", "#ea580c", "#dc2626"];
-                                    const segH2 = lgH2 / colors.length;
-                                    return (
-                                      <>
-                                        {colors.map((c, i) => (
-                                          <rect key={`lg-${i}`} x={lgX} y={lgTop + (colors.length - 1 - i) * segH2} width={lgW2} height={segH2} fill={c} stroke="#e5e7eb" strokeWidth={0.5} />
-                                        ))}
-                                        <text x={lgX + lgW2 + 4} y={lgTop + 10} fontSize={8} fill="#6B7280">{hmMax2}</text>
-                                        <text x={lgX + lgW2 + 4} y={lgTop + lgH2} fontSize={8} fill="#6B7280">0</text>
-                                        <text x={lgX + lgW2 / 2} y={lgTop - 5} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">N</text>
-                                      </>
-                                    );
-                                  })()}
-                                </svg>
-                                <div style={{ fontSize: 10, color: "#6B7280", lineHeight: 1.5, marginTop: 6, padding: "6px 10px", background: "#f9fafb", borderRadius: 6 }}>
-                                  Fiecare celula arata cate raspunsuri au C=x si CTA=y. Culorile mai intense (rosu) = concentratie mai mare. Un pattern diagonal stanga-jos {"\u2192"} dreapta-sus confirma corelatia pozitiva C{"\u2192"}CTA.
+                                  });
+                                })()}
+                                <text x={exChartW - exPad.r - 5} y={exPad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill="#2563EB">r = {exH2PearsonR.toFixed(3)} | r{"\u00B2"} = {exH2Reg.r2.toFixed(3)}</text>
+                              </svg>
+                            </div>
+
+                            {/* RIGHT: Heatmap Densitate */}
+                            {exH2Filtered.length >= 5 ? (() => {
+                              const hmBins = 10;
+                              const hmW = exChartW;
+                              const hmLegendW = 50;
+                              const hmPad2 = { l: 42, r: hmLegendW + 16, t: 14, b: 38 };
+                              const hmPlotW2 = hmW - hmPad2.l - hmPad2.r;
+                              const hmPlotH2 = 220;
+                              const hmH = hmPlotH2 + hmPad2.t + hmPad2.b;
+                              const cellW = hmPlotW2 / hmBins;
+                              const cellH2 = hmPlotH2 / hmBins;
+                              const grid2: number[][] = Array.from({ length: hmBins }, () => Array(hmBins).fill(0));
+                              let hmMax2 = 0;
+                              for (const d of exH2Filtered) {
+                                const cx2 = Math.min(hmBins - 1, Math.max(0, Math.floor((d.c_computed / 11) - 0.5)));
+                                const cy2 = Math.min(hmBins - 1, Math.max(0, Math.floor(d.cta! - 0.5)));
+                                grid2[cy2][cx2]++;
+                                hmMax2 = Math.max(hmMax2, grid2[cy2][cx2]);
+                              }
+                              const heatColor2 = (count: number): string => {
+                                if (count === 0) return "#fafafa";
+                                const t2 = count / Math.max(hmMax2, 1);
+                                if (t2 < 0.15) return "#fef3c7";
+                                if (t2 < 0.3) return "#fde68a";
+                                if (t2 < 0.5) return "#f59e0b";
+                                if (t2 < 0.7) return "#ea580c";
+                                return "#dc2626";
+                              };
+                              const textColor2 = (count: number): string => count / Math.max(hmMax2, 1) > 0.4 ? "#fff" : "#374151";
+                              return (
+                                <div>
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Heatmap Densitate</div>
+                                  <svg viewBox={`0 0 ${hmW} ${hmH}`} style={{ width: "100%", height: "auto" }}>
+                                    {grid2.map((row, ri) => row.map((count, ci) => {
+                                      const x2 = hmPad2.l + ci * cellW;
+                                      const y2 = hmPad2.t + (hmBins - 1 - ri) * cellH2;
+                                      return (
+                                        <g key={`hm-${ri}-${ci}`}>
+                                          <rect x={x2} y={y2} width={cellW} height={cellH2} fill={heatColor2(count)} stroke="#fff" strokeWidth={1} rx={2} />
+                                          {count > 0 && (
+                                            <text x={x2 + cellW / 2} y={y2 + cellH2 / 2 + 4} textAnchor="middle" fontSize={count > 9 ? 8 : 9} fontWeight={700} fill={textColor2(count)}>{count}</text>
+                                          )}
+                                        </g>
+                                      );
+                                    }))}
+                                    {Array.from({ length: hmBins }, (_, i) => (
+                                      <text key={`hy-${i}`} x={hmPad2.l - 5} y={hmPad2.t + (hmBins - 1 - i) * cellH2 + cellH2 / 2 + 3} textAnchor="end" fontSize={9} fill="#9CA3AF">{i + 1}</text>
+                                    ))}
+                                    {Array.from({ length: hmBins }, (_, i) => (
+                                      <text key={`hx-${i}`} x={hmPad2.l + i * cellW + cellW / 2} y={hmH - hmPad2.b + 16} textAnchor="middle" fontSize={9} fill="#9CA3AF">{i + 1}</text>
+                                    ))}
+                                    <text x={hmPad2.l + hmPlotW2 / 2} y={hmH - 4} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280">C formula (norm. 1-10)</text>
+                                    <text x={8} y={hmPad2.t + hmPlotH2 / 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280" transform={`rotate(-90 8 ${hmPad2.t + hmPlotH2 / 2})`}>CTA (1-10)</text>
+                                    <rect x={hmPad2.l} y={hmPad2.t} width={hmPlotW2} height={hmPlotH2} fill="none" stroke="#e5e7eb" strokeWidth={1} />
+                                    {(() => {
+                                      const lgX = hmW - hmLegendW + 4;
+                                      const lgW2 = 14;
+                                      const lgH2 = hmPlotH2;
+                                      const lgTop = hmPad2.t;
+                                      const colors = ["#fafafa", "#fef3c7", "#fde68a", "#f59e0b", "#ea580c", "#dc2626"];
+                                      const segH2 = lgH2 / colors.length;
+                                      return (
+                                        <>
+                                          {colors.map((c, i) => (
+                                            <rect key={`lg-${i}`} x={lgX} y={lgTop + (colors.length - 1 - i) * segH2} width={lgW2} height={segH2} fill={c} stroke="#e5e7eb" strokeWidth={0.5} />
+                                          ))}
+                                          <text x={lgX + lgW2 + 4} y={lgTop + 10} fontSize={8} fill="#6B7280">{hmMax2}</text>
+                                          <text x={lgX + lgW2 + 4} y={lgTop + lgH2} fontSize={8} fill="#6B7280">0</text>
+                                          <text x={lgX + lgW2 / 2} y={lgTop - 5} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">N</text>
+                                        </>
+                                      );
+                                    })()}
+                                  </svg>
                                 </div>
-                              </div>
-                            );
-                          })()}
+                              );
+                            })() : <div />}
+                          </div>
+                          <div style={{ fontSize: 10, color: "#6B7280", lineHeight: 1.5, padding: "6px 10px", background: "#f9fafb", borderRadius: 6, marginBottom: 8 }}>
+                            Fiecare celula arata cate raspunsuri au C=x si CTA=y. Culorile mai intense (rosu) = concentratie mai mare. Un pattern diagonal stanga-jos {"\u2192"} dreapta-sus confirma corelatia pozitiva C{"\u2192"}CTA.
+                          </div>
 
                           <div style={exCardStyle}>
                             <strong>H2 — Formula prezice actiunea:</strong> Daca RIFC functioneaza, materialele cu scor C mai mare ar trebui sa genereze intentie de actiune mai mare. Corelatia pozitiva confirma ca formula nu e doar teoretica — prezice comportamentul real.{" "}
