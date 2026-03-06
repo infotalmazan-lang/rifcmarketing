@@ -1041,6 +1041,8 @@ export default function StudiuAdminPage() {
   const [expandedExpertChannelType, setExpandedExpertChannelType] = useState<string | null>(null);
   const [expertSubTab, setExpertSubTab] = useState<"main" | "interpretare">("main");
   const [expertInterpSubTab, setExpertInterpSubTab] = useState<"total" | "canal" | "industrie">("total");
+  const [exCanalCollapsed, setExCanalCollapsed] = useState(true);
+  const [exIndustrieCollapsed, setExIndustrieCollapsed] = useState(true);
 
   // CVI (Evaluare Itemi) state
   const [cviExperts, setCviExperts] = useState<any[]>([]);
@@ -6333,28 +6335,42 @@ export default function StudiuAdminPage() {
                     );
                     return (
                       <>
-                        {/* Per Canale */}
+                        {/* Per Canale — collapsible */}
                         {exChAggs.length > 1 && (
-                          <div style={{ marginBottom: 20 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ marginBottom: 20, border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+                            <div
+                              onClick={() => setExCanalCollapsed(!exCanalCollapsed)}
+                              style={{ fontSize: 13, fontWeight: 700, color: "#111827", padding: "10px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", background: "#f9fafb", userSelect: "none" as const }}
+                            >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
                               Validare per Canal — Evaluare Experti
+                              <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 400, marginLeft: 4 }}>({exChAggs.length} canale)</span>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", transform: exCanalCollapsed ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
-                              {exChAggs.map(ch => exCompactCard(ch, `expert-channel-${ch.code}`))}
-                            </div>
+                            {!exCanalCollapsed && (
+                              <div style={{ padding: "10px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                                {exChAggs.map(ch => exCompactCard(ch, `expert-channel-${ch.code}`))}
+                              </div>
+                            )}
                           </div>
                         )}
-                        {/* Per Industrie */}
+                        {/* Per Industrie — collapsible */}
                         {exIndAggs.length > 1 && (
-                          <div style={{ marginBottom: 20 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <div style={{ marginBottom: 20, border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+                            <div
+                              onClick={() => setExIndustrieCollapsed(!exIndustrieCollapsed)}
+                              style={{ fontSize: 13, fontWeight: 700, color: "#111827", padding: "10px 14px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", background: "#f9fafb", userSelect: "none" as const }}
+                            >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
                               Validare per Industrie — Evaluare Experti
+                              <span style={{ fontSize: 11, color: "#9CA3AF", fontWeight: 400, marginLeft: 4 }}>({exIndAggs.length} industrii)</span>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: "auto", transform: exIndustrieCollapsed ? "rotate(0deg)" : "rotate(180deg)", transition: "transform 0.2s" }}><polyline points="6 9 12 15 18 9"/></svg>
                             </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
-                              {exIndAggs.map(ia => exCompactCard(ia, `expert-industry-${ia.label}`))}
-                            </div>
+                            {!exIndustrieCollapsed && (
+                              <div style={{ padding: "10px 14px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                                {exIndAggs.map(ia => exCompactCard(ia, `expert-industry-${ia.label}`))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </>
