@@ -531,15 +531,16 @@ function ExpertPageContent() {
   return (
     <div style={P.page}>
       {/* Header — with PROFILUL MEU button */}
-      <div style={P.header}>
+      <div className="expert-header" style={P.header}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img src="/images/rifc-logo-black.png" alt="R IF C" style={{ height: 32, width: "auto", borderRadius: 4 }} />
           <span style={P.badge}>EXPERT</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div className="expert-header-right" style={{ display: "flex", alignItems: "center", gap: 16 }}>
           {/* Profile button — always visible in header */}
           <button
+            className="expert-profile-btn"
             onClick={() => { setShowProfileModal(true); setProfileError(null); setProfileSaved(false); }}
             style={{
               display: "inline-flex", alignItems: "center", gap: 8,
@@ -556,7 +557,7 @@ function ExpertPageContent() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
             </svg>
-            Profilul meu
+            <span className="expert-profile-label">Profilul meu</span>
             {!profileComplete && (
               <span style={{
                 position: "absolute", top: -6, right: -6,
@@ -575,7 +576,7 @@ function ExpertPageContent() {
             )}
           </button>
 
-          <div style={{ textAlign: "right" }}>
+          <div className="expert-user-info" style={{ textAlign: "right" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
               {expert.first_name} {expert.last_name}
             </div>
@@ -861,9 +862,9 @@ function ExpertPageContent() {
       })()}
 
       {/* Main layout: sidebar stimulus list + evaluation area */}
-      <div style={P.main}>
+      <div className="expert-main" style={P.main}>
         {/* Sidebar: stimulus cards */}
-        <div style={P.sidebar}>
+        <div className="expert-sidebar" style={P.sidebar}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", padding: "12px 16px 8px", textTransform: "uppercase" }}>
             Materiale de evaluat ({totalCount})
           </div>
@@ -909,11 +910,47 @@ function ExpertPageContent() {
         </div>
 
         {/* Evaluation area */}
-        <div style={P.evalArea}>
+        <div className="expert-eval" style={P.evalArea}>
           {activeStim && activeForm ? (
             <>
+              {/* Mobile navigation — prev/next stimulus */}
+              <div className="expert-mobile-nav" style={{ display: "none", gap: 8, marginBottom: 12, alignItems: "center" }}>
+                <button
+                  onClick={() => {
+                    const idx = stimuli.findIndex(s => s.id === activeStim.id);
+                    if (idx > 0) setActiveStimulus(stimuli[idx - 1].id);
+                  }}
+                  disabled={stimuli.findIndex(s => s.id === activeStim.id) === 0}
+                  style={{
+                    padding: "10px 14px", borderRadius: 8, border: "1px solid #e5e7eb",
+                    background: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#374151",
+                    opacity: stimuli.findIndex(s => s.id === activeStim.id) === 0 ? 0.4 : 1,
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div style={{ flex: 1, textAlign: "center", fontSize: 13, fontWeight: 700, color: "#111827" }}>
+                  {stimuli.findIndex(s => s.id === activeStim.id) + 1} / {stimuli.length}
+                  <span style={{ display: "block", fontSize: 10, fontWeight: 400, color: "#6B7280" }}>{activeStim.name}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const idx = stimuli.findIndex(s => s.id === activeStim.id);
+                    if (idx < stimuli.length - 1) setActiveStimulus(stimuli[idx + 1].id);
+                  }}
+                  disabled={stimuli.findIndex(s => s.id === activeStim.id) === stimuli.length - 1}
+                  style={{
+                    padding: "10px 14px", borderRadius: 8, border: "1px solid #e5e7eb",
+                    background: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600, color: "#374151",
+                    opacity: stimuli.findIndex(s => s.id === activeStim.id) === stimuli.length - 1 ? 0.4 : 1,
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+
               {/* Stimulus preview */}
-              <div style={P.stimPreview}>
+              <div className="expert-stim-preview" style={P.stimPreview}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div>
                     <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>{activeStim.name}</h3>
@@ -968,7 +1005,7 @@ function ExpertPageContent() {
               </div>
 
               {/* Calculator / Scoring section */}
-              <div style={P.scoringSection}>
+              <div className="expert-scoring" style={P.scoringSection}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 16, textTransform: "uppercase" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 6 }}><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
                   Calculator R IF C
@@ -1155,10 +1192,118 @@ function ExpertPageContent() {
       <style>{`
         @keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
         @keyframes pulse-badge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-        @media (max-width: 768px) {
-          .expert-main { flex-direction: column !important; }
-          .expert-sidebar { max-height: 200px !important; width: 100% !important; flex-direction: row !important; overflow-x: auto !important; }
-          .expert-sidebar button { min-width: 200px !important; }
+        *, *::before, *::after { box-sizing: border-box; }
+
+        /* ── Mobile & Tablet Responsive ── */
+        @media (max-width: 860px) {
+          /* Header: stack vertically */
+          .expert-header {
+            flex-wrap: wrap !important;
+            padding: 10px 12px !important;
+            gap: 8px !important;
+          }
+          .expert-header-right {
+            gap: 8px !important;
+          }
+          .expert-profile-btn {
+            padding: 6px 10px !important;
+            font-size: 12px !important;
+          }
+          .expert-profile-label {
+            display: none !important;
+          }
+          .expert-user-info {
+            font-size: 12px !important;
+          }
+          .expert-user-info > div:first-child {
+            font-size: 12px !important;
+          }
+          .expert-user-info > div:last-child {
+            font-size: 10px !important;
+          }
+
+          /* Main: stack vertically */
+          .expert-main {
+            flex-direction: column !important;
+            min-height: auto !important;
+          }
+
+          /* Sidebar: horizontal scroll strip */
+          .expert-sidebar {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-height: none !important;
+            position: relative !important;
+            border-right: none !important;
+            border-bottom: 1px solid #e5e7eb !important;
+            display: none !important;
+          }
+
+          /* Evaluation area: full width, less padding */
+          .expert-eval {
+            padding: 12px !important;
+            max-height: none !important;
+            overflow-y: visible !important;
+          }
+
+          /* Show mobile navigation */
+          .expert-mobile-nav {
+            display: flex !important;
+          }
+
+          /* Stimulus preview */
+          .expert-stim-preview {
+            padding: 16px !important;
+            border-radius: 8px !important;
+            margin-bottom: 12px !important;
+          }
+
+          /* Scoring section */
+          .expert-scoring {
+            padding: 16px !important;
+            border-radius: 8px !important;
+          }
+        }
+
+        /* ── Small phones (< 400px) ── */
+        @media (max-width: 400px) {
+          .expert-header {
+            padding: 8px 10px !important;
+          }
+          .expert-eval {
+            padding: 8px !important;
+          }
+          .expert-stim-preview {
+            padding: 12px !important;
+          }
+          .expert-scoring {
+            padding: 12px !important;
+          }
+        }
+
+        /* ── Tablet (861px - 1024px): show sidebar collapsed ── */
+        @media (min-width: 861px) and (max-width: 1024px) {
+          .expert-sidebar {
+            width: 220px !important;
+            min-width: 220px !important;
+          }
+          .expert-eval {
+            padding: 16px !important;
+          }
+        }
+
+        /* ── Touch-friendly score buttons ── */
+        @media (pointer: coarse) {
+          .expert-scoring button {
+            min-height: 44px !important;
+            min-width: 36px !important;
+          }
+          .expert-scoring textarea {
+            font-size: 16px !important;
+          }
+          .expert-scoring input[type="range"] {
+            height: 8px !important;
+          }
         }
       `}</style>
     </div>
@@ -1171,6 +1316,7 @@ const P: Record<string, React.CSSProperties> = {
     minHeight: "100vh",
     background: "#f8f9fa",
     fontFamily: "Outfit, system-ui, sans-serif",
+    overflowX: "hidden" as const,
   },
   header: {
     display: "flex",
