@@ -794,13 +794,65 @@ function ExpertPageContent() {
                     Tara / regiune
                     {!profileForm.country && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={profileForm.country}
                     onChange={(e) => setProfileForm((p) => ({ ...p, country: e.target.value }))}
-                    placeholder="ex: Romania, Moldova, UK"
                     style={{ ...P.profileInput, borderColor: !profileForm.country ? "#fbbf24" : "#e5e7eb" }}
-                  />
+                  >
+                    <option value="">— Selecteaza tara —</option>
+                    <option value="Moldova">Moldova</option>
+                    <option value="Romania">Romania</option>
+                    <option disabled style={{ fontSize: 10 }}>──────────</option>
+                    <option value="Albania">Albania</option>
+                    <option value="Austria">Austria</option>
+                    <option value="Belarus">Belarus</option>
+                    <option value="Belgia">Belgia</option>
+                    <option value="Bosnia si Hertegovina">Bosnia si Hertegovina</option>
+                    <option value="Bulgaria">Bulgaria</option>
+                    <option value="Cehia">Cehia</option>
+                    <option value="Cipru">Cipru</option>
+                    <option value="Croatia">Croatia</option>
+                    <option value="Danemarca">Danemarca</option>
+                    <option value="Elvetia">Elvetia</option>
+                    <option value="Estonia">Estonia</option>
+                    <option value="Finlanda">Finlanda</option>
+                    <option value="Franta">Franta</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Germania">Germania</option>
+                    <option value="Grecia">Grecia</option>
+                    <option value="Irlanda">Irlanda</option>
+                    <option value="Islanda">Islanda</option>
+                    <option value="Italia">Italia</option>
+                    <option value="Letonia">Letonia</option>
+                    <option value="Lituania">Lituania</option>
+                    <option value="Luxemburg">Luxemburg</option>
+                    <option value="Macedonia de Nord">Macedonia de Nord</option>
+                    <option value="Malta">Malta</option>
+                    <option value="Muntenegru">Muntenegru</option>
+                    <option value="Norvegia">Norvegia</option>
+                    <option value="Olanda">Olanda</option>
+                    <option value="Polonia">Polonia</option>
+                    <option value="Portugalia">Portugalia</option>
+                    <option value="Regatul Unit">Regatul Unit (UK)</option>
+                    <option value="Serbia">Serbia</option>
+                    <option value="Slovacia">Slovacia</option>
+                    <option value="Slovenia">Slovenia</option>
+                    <option value="Spania">Spania</option>
+                    <option value="Suedia">Suedia</option>
+                    <option value="Turcia">Turcia</option>
+                    <option value="Ucraina">Ucraina</option>
+                    <option value="Ungaria">Ungaria</option>
+                    <option disabled style={{ fontSize: 10 }}>──────────</option>
+                    <option value="SUA">SUA</option>
+                    <option value="Canada">Canada</option>
+                    <option value="Australia">Australia</option>
+                    <option value="Israel">Israel</option>
+                    <option value="Japonia">Japonia</option>
+                    <option value="China">China</option>
+                    <option value="India">India</option>
+                    <option value="Brazilia">Brazilia</option>
+                    <option value="Altul">Alta tara</option>
+                  </select>
                 </div>
               </div>
 

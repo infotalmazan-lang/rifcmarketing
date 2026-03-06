@@ -137,8 +137,8 @@ export async function PUT(req: NextRequest) {
       .select("id, first_name, last_name, email, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain")
       .single();
 
-    // If columns don't exist yet, auto-migrate and retry
-    if (error && (error.message.includes("column") || error.code === "42703")) {
+    // If columns don't exist yet (schema cache or missing column), auto-migrate and retry
+    if (error && (error.message.includes("column") || error.message.includes("schema") || error.code === "42703" || error.code === "PGRST204")) {
       await supabase.rpc("exec_sql", {
         sql_text: `ALTER TABLE public.survey_experts
           ADD COLUMN IF NOT EXISTS experience_years smallint,
@@ -159,6 +159,26 @@ export async function PUT(req: NextRequest) {
         .eq("id", expert.id)
         .select("id, first_name, last_name, email, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain")
         .single();
+      if (!retry.error) {
+        return NextResponse.json({ success: true, expert: retry.data });
+      }
+      // Fallback 2: update only basic fields that are known to exist
+      const basicUpdates: Record<string, unknown> = {};
+      const basicFields = ["experience_years", "brands_worked", "total_budget_managed", "marketing_roles"];
+      for (const k of basicFields) {
+        if (updates[k] !== undefined) basicUpdates[k] = updates[k];
+      }
+      if (Object.keys(basicUpdates).length > 0) {
+        const retry2 = await supabase
+          .from("survey_experts")
+          .update(basicUpdates)
+          .eq("id", expert.id)
+          .select("id, first_name, last_name, email, experience_years, brands_worked, total_budget_managed, marketing_roles")
+          .single();
+        if (!retry2.error) {
+          return NextResponse.json({ success: true, expert: retry2.data });
+        }
+      }
       data = retry.data;
       error = retry.error;
     }
