@@ -7870,8 +7870,9 @@ export default function StudiuAdminPage() {
                     })()}
                   </div>
 
-                  {/* S6. VALIDARE FORMULA RIFC — Scatter Plot */}
-                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                  {/* S6+S7. VALIDARE FORMULA + CTA — Side by side */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Validare Formula R + (I x F) = C</div>
                       <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${corrColor(formulaR)}15`, color: corrColor(formulaR) }}>CORELATIE {corrLabel(formulaR)}</span>
@@ -7926,7 +7927,7 @@ export default function StudiuAdminPage() {
                   </div>
 
                   {/* S7. CORELATIE CTA-C — Scatter Plot */}
-                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Corelatie CTA — Claritate (C)</div>
                       <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${corrColor(ctaCr)}15`, color: corrColor(ctaCr) }}>CORELATIE {corrLabel(ctaCr)}</span>
@@ -7966,6 +7967,7 @@ export default function StudiuAdminPage() {
                       <InterpBtnE k="expert-cta-correlation" title="Corelatie CTA-C" val={ctaCr.toFixed(3)} ctx={{ r: ctaCr, p: ctaCp, n: ctaCevals.length }} />
                     </div>
                   </div>
+                  </div>{/* end S6+S7 grid */}
 
                   {/* S8. EFECT BRAND RECOGNITION */}
                   <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
