@@ -48,25 +48,26 @@ export async function POST(req: NextRequest) {
 
     const access_token = generateToken();
 
-    const insertData = {
+    // Only include optional fields if they have values — avoids errors when columns don't exist yet
+    const insertData: Record<string, unknown> = {
       first_name,
       last_name,
-      email: email || null,
-      phone: phone || null,
-      photo_url: photo_url || null,
-      experience_range: experience_range || null,
-      gender: gender || null,
-      age_range: age_range || null,
-      country: country || null,
-      education_level: education_level || null,
-      industry_domain: industry_domain || null,
-      experience_years: experience_years || null,
-      brands_worked: brands_worked || [],
-      total_budget_managed: total_budget_managed || null,
-      marketing_roles: marketing_roles || [],
       access_token,
       is_active: true,
     };
+    if (email) insertData.email = email;
+    if (phone) insertData.phone = phone;
+    if (photo_url) insertData.photo_url = photo_url;
+    if (experience_years) insertData.experience_years = experience_years;
+    if (brands_worked && brands_worked.length > 0) insertData.brands_worked = brands_worked;
+    if (total_budget_managed) insertData.total_budget_managed = total_budget_managed;
+    if (marketing_roles && marketing_roles.length > 0) insertData.marketing_roles = marketing_roles;
+    if (experience_range) insertData.experience_range = experience_range;
+    if (gender) insertData.gender = gender;
+    if (age_range) insertData.age_range = age_range;
+    if (country) insertData.country = country;
+    if (education_level) insertData.education_level = education_level;
+    if (industry_domain) insertData.industry_domain = industry_domain;
 
     let { data, error } = await supabase
       .from("survey_experts")
