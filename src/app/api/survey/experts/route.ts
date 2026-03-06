@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createServiceRole();
     const body = await req.json();
-    const { first_name, last_name, email, phone, photo_url, experience_years, brands_worked, total_budget_managed, marketing_roles } = body;
+    const { first_name, last_name, email, phone, photo_url, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain } = body;
 
     if (!first_name || !last_name) {
       return NextResponse.json(
@@ -54,6 +54,12 @@ export async function POST(req: NextRequest) {
       email: email || null,
       phone: phone || null,
       photo_url: photo_url || null,
+      experience_range: experience_range || null,
+      gender: gender || null,
+      age_range: age_range || null,
+      country: country || null,
+      education_level: education_level || null,
+      industry_domain: industry_domain || null,
       experience_years: experience_years || null,
       brands_worked: brands_worked || [],
       total_budget_managed: total_budget_managed || null,
@@ -75,7 +81,13 @@ export async function POST(req: NextRequest) {
           ADD COLUMN IF NOT EXISTS experience_years smallint,
           ADD COLUMN IF NOT EXISTS brands_worked text[] DEFAULT '{}',
           ADD COLUMN IF NOT EXISTS total_budget_managed numeric,
-          ADD COLUMN IF NOT EXISTS marketing_roles text[] DEFAULT '{}';`
+          ADD COLUMN IF NOT EXISTS marketing_roles text[] DEFAULT '{}',
+          ADD COLUMN IF NOT EXISTS experience_range text,
+          ADD COLUMN IF NOT EXISTS gender text,
+          ADD COLUMN IF NOT EXISTS age_range text,
+          ADD COLUMN IF NOT EXISTS country text,
+          ADD COLUMN IF NOT EXISTS education_level text,
+          ADD COLUMN IF NOT EXISTS industry_domain text;`
       });
       const retry = await supabase.from("survey_experts").insert(insertData).select().single();
       data = retry.data;
@@ -105,7 +117,8 @@ export async function PUT(req: NextRequest) {
 
     const updates: Record<string, unknown> = {};
     const allowed = ["first_name", "last_name", "email", "phone", "photo_url", "is_active",
-      "experience_years", "brands_worked", "total_budget_managed", "marketing_roles"];
+      "experience_years", "brands_worked", "total_budget_managed", "marketing_roles",
+      "experience_range", "gender", "age_range", "country", "education_level", "industry_domain"];
     for (const key of allowed) {
       if (fields[key] !== undefined) updates[key] = fields[key];
     }
@@ -134,7 +147,13 @@ export async function PUT(req: NextRequest) {
           ADD COLUMN IF NOT EXISTS experience_years smallint,
           ADD COLUMN IF NOT EXISTS brands_worked text[] DEFAULT '{}',
           ADD COLUMN IF NOT EXISTS total_budget_managed numeric,
-          ADD COLUMN IF NOT EXISTS marketing_roles text[] DEFAULT '{}';`
+          ADD COLUMN IF NOT EXISTS marketing_roles text[] DEFAULT '{}',
+          ADD COLUMN IF NOT EXISTS experience_range text,
+          ADD COLUMN IF NOT EXISTS gender text,
+          ADD COLUMN IF NOT EXISTS age_range text,
+          ADD COLUMN IF NOT EXISTS country text,
+          ADD COLUMN IF NOT EXISTS education_level text,
+          ADD COLUMN IF NOT EXISTS industry_domain text;`
       });
       const retry = await supabase.from("survey_experts").update(updates).eq("id", id).select().single();
       data = retry.data;

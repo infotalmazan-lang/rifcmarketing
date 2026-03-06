@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     // Try with professional fields first
     const { data: expertFull, error: errFull } = await supabase
       .from("survey_experts")
-      .select("id, first_name, last_name, email, is_active, created_at, experience_years, brands_worked, total_budget_managed, marketing_roles")
+      .select("id, first_name, last_name, email, is_active, created_at, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain")
       .eq("access_token", token)
       .single();
 
@@ -68,6 +68,12 @@ export async function GET(req: NextRequest) {
         first_name: expert.first_name,
         last_name: expert.last_name,
         email: expert.email,
+        experience_range: expert.experience_range ?? null,
+        gender: expert.gender ?? null,
+        age_range: expert.age_range ?? null,
+        country: expert.country ?? null,
+        education_level: expert.education_level ?? null,
+        industry_domain: expert.industry_domain ?? null,
         experience_years: expert.experience_years ?? null,
         brands_worked: expert.brands_worked ?? null,
         total_budget_managed: expert.total_budget_managed ?? null,
@@ -86,7 +92,7 @@ export async function PUT(req: NextRequest) {
   try {
     const supabase = createServiceRole();
     const body = await req.json();
-    const { token, experience_years, brands_worked, total_budget_managed, marketing_roles } = body;
+    const { token, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain } = body;
 
     if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
@@ -107,8 +113,14 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Accesul a fost revocat" }, { status: 403 });
     }
 
-    // Build updates — only professional fields allowed for self-edit
+    // Build updates — demographic + professional fields allowed for self-edit
     const updates: Record<string, unknown> = {};
+    if (experience_range !== undefined) updates.experience_range = experience_range;
+    if (gender !== undefined) updates.gender = gender;
+    if (age_range !== undefined) updates.age_range = age_range;
+    if (country !== undefined) updates.country = country;
+    if (education_level !== undefined) updates.education_level = education_level;
+    if (industry_domain !== undefined) updates.industry_domain = industry_domain;
     if (experience_years !== undefined) updates.experience_years = experience_years;
     if (brands_worked !== undefined) updates.brands_worked = brands_worked;
     if (total_budget_managed !== undefined) updates.total_budget_managed = total_budget_managed;
@@ -122,7 +134,7 @@ export async function PUT(req: NextRequest) {
       .from("survey_experts")
       .update(updates)
       .eq("id", expert.id)
-      .select("id, first_name, last_name, email, experience_years, brands_worked, total_budget_managed, marketing_roles")
+      .select("id, first_name, last_name, email, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain")
       .single();
 
     // If columns don't exist yet, auto-migrate and retry
@@ -132,14 +144,20 @@ export async function PUT(req: NextRequest) {
           ADD COLUMN IF NOT EXISTS experience_years smallint,
           ADD COLUMN IF NOT EXISTS brands_worked text[] DEFAULT '{}',
           ADD COLUMN IF NOT EXISTS total_budget_managed numeric,
-          ADD COLUMN IF NOT EXISTS marketing_roles text[] DEFAULT '{}';`
+          ADD COLUMN IF NOT EXISTS marketing_roles text[] DEFAULT '{}',
+          ADD COLUMN IF NOT EXISTS experience_range text,
+          ADD COLUMN IF NOT EXISTS gender text,
+          ADD COLUMN IF NOT EXISTS age_range text,
+          ADD COLUMN IF NOT EXISTS country text,
+          ADD COLUMN IF NOT EXISTS education_level text,
+          ADD COLUMN IF NOT EXISTS industry_domain text;`
       });
       // Retry update after migration
       const retry = await supabase
         .from("survey_experts")
         .update(updates)
         .eq("id", expert.id)
-        .select("id, first_name, last_name, email, experience_years, brands_worked, total_budget_managed, marketing_roles")
+        .select("id, first_name, last_name, email, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain")
         .single();
       data = retry.data;
       error = retry.error;

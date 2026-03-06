@@ -28,6 +28,14 @@ interface ExpertInfo {
   first_name: string;
   last_name: string;
   email: string;
+  // Anonymous demographic fields
+  experience_range: string | null;
+  gender: string | null;
+  age_range: string | null;
+  country: string | null;
+  education_level: string | null;
+  industry_domain: string | null;
+  // Legacy/optional professional fields
   experience_years: number | null;
   brands_worked: string[] | null;
   total_budget_managed: number | null;
@@ -69,22 +77,31 @@ const DIMENSIONS = [
   { key: "cta", label: "CTA", full: "Call-to-Action", color: "#059669", desc: "Cit de eficient este apelul la actiune?" },
 ] as const;
 
-// Check if expert profile is complete (has at least experience_years filled)
+// Check if expert profile is complete (all 6 demographic fields required)
 function isProfileComplete(expert: ExpertInfo): boolean {
   return !!(
-    expert.experience_years &&
-    expert.brands_worked && expert.brands_worked.length > 0 &&
-    expert.marketing_roles && expert.marketing_roles.length > 0
+    expert.experience_range &&
+    expert.gender &&
+    expert.age_range &&
+    expert.country &&
+    expert.education_level &&
+    expert.industry_domain
   );
 }
 
-// Count how many profile fields are filled
+// Count how many profile fields are filled (6 required + 3 optional = 9 total)
 function profileFilledCount(expert: ExpertInfo): number {
   let count = 0;
-  if (expert.experience_years) count++;
+  if (expert.experience_range) count++;
+  if (expert.gender) count++;
+  if (expert.age_range) count++;
+  if (expert.country) count++;
+  if (expert.education_level) count++;
+  if (expert.industry_domain) count++;
+  // Optional bonus fields
   if (expert.brands_worked && expert.brands_worked.length > 0) count++;
-  if (expert.total_budget_managed) count++;
   if (expert.marketing_roles && expert.marketing_roles.length > 0) count++;
+  if (expert.total_budget_managed) count++;
   return count;
 }
 
@@ -144,6 +161,13 @@ function ExpertPageContent() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileDismissed, setProfileDismissed] = useState(false);
   const [profileForm, setProfileForm] = useState({
+    experience_range: "" as string,
+    gender: "" as string,
+    age_range: "" as string,
+    country: "" as string,
+    education_level: "" as string,
+    industry_domain: "" as string,
+    // Legacy/optional
     experience_years: "" as string,
     brands_worked: [] as string[],
     total_budget_managed: "" as string,
@@ -172,6 +196,12 @@ function ExpertPageContent() {
 
       // Initialize profile form from expert data
       setProfileForm({
+        experience_range: data.expert.experience_range || "",
+        gender: data.expert.gender || "",
+        age_range: data.expert.age_range || "",
+        country: data.expert.country || "",
+        education_level: data.expert.education_level || "",
+        industry_domain: data.expert.industry_domain || "",
         experience_years: data.expert.experience_years != null ? String(data.expert.experience_years) : "",
         brands_worked: data.expert.brands_worked || [],
         total_budget_managed: data.expert.total_budget_managed != null ? String(data.expert.total_budget_managed) : "",
@@ -441,6 +471,12 @@ function ExpertPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           token,
+          experience_range: profileForm.experience_range || null,
+          gender: profileForm.gender || null,
+          age_range: profileForm.age_range || null,
+          country: profileForm.country || null,
+          education_level: profileForm.education_level || null,
+          industry_domain: profileForm.industry_domain || null,
           experience_years: profileForm.experience_years ? parseInt(profileForm.experience_years) : null,
           brands_worked: profileForm.brands_worked,
           total_budget_managed: profileForm.total_budget_managed ? parseFloat(profileForm.total_budget_managed) : null,
@@ -578,9 +614,9 @@ function ExpertPageContent() {
 
           <div className="expert-user-info" style={{ textAlign: "right" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>
-              {expert.first_name} {expert.last_name}
+              Expert #{expert.id.slice(-4).toUpperCase()}
             </div>
-            <div style={{ fontSize: 11, color: "#9CA3AF" }}>{expert.email}</div>
+            <div style={{ fontSize: 11, color: "#9CA3AF" }}>Evaluare anonima</div>
           </div>
         </div>
       </div>
@@ -593,7 +629,7 @@ function ExpertPageContent() {
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
             <span style={{ fontSize: 13, color: "#92400e", fontWeight: 500 }}>
-              <strong>Completeaza profilul profesional</strong> inainte de a incepe evaluarea ({filledCount}/4 campuri completate)
+              <strong>Completeaza profilul profesional</strong> inainte de a incepe evaluarea ({filledCount}/9 campuri completate)
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -647,11 +683,11 @@ function ExpertPageContent() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   color: "#fff", fontSize: 16, fontWeight: 800,
                 }}>
-                  {expert.first_name[0]}{expert.last_name[0]}
+                  {"E"}
                 </div>
                 <div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Profilul meu profesional</div>
-                  <div style={{ fontSize: 12, color: "#6B7280" }}>{expert.first_name} {expert.last_name} — {expert.email}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Profilul meu — Screening Anonim</div>
+                  <div style={{ fontSize: 12, color: "#6B7280" }}>Expert #{expert.id.slice(-4).toUpperCase()} — datele sunt anonime</div>
                 </div>
               </div>
               <button onClick={() => setShowProfileModal(false)} style={P.modalClose}>
@@ -665,34 +701,157 @@ function ExpertPageContent() {
             <div style={{ padding: "12px 24px", background: profileComplete ? "#f0fdf4" : "#fffbeb", borderBottom: "1px solid #e5e7eb" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: profileComplete ? "#059669" : "#92400e" }}>
-                  {profileComplete ? "Profil complet" : "Profil incomplet"} — {filledCount}/4 campuri
+                  {profileComplete ? "Profil complet" : "Profil incomplet"} — {filledCount}/9 campuri
                 </span>
               </div>
               <div style={{ height: 4, background: profileComplete ? "#bbf7d0" : "#fef3c7", borderRadius: 2, overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${(filledCount / 4) * 100}%`, background: profileComplete ? "#059669" : "#D97706", borderRadius: 2, transition: "width 0.3s" }} />
+                <div style={{ height: "100%", width: `${(filledCount / 9) * 100}%`, background: profileComplete ? "#059669" : "#D97706", borderRadius: 2, transition: "width 0.3s" }} />
               </div>
             </div>
 
             {/* Form body */}
             <div style={{ padding: 24, display: "flex", flexDirection: "column" as const, gap: 18, overflowY: "auto" as const, maxHeight: "calc(80vh - 200px)" }}>
-              {/* Row 1: Experience + Budget */}
+
+              {/* Section header: Demographics */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#2563EB" }}>DATE DEMOGRAFICE (obligatorii)</span>
+                </div>
+                <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 12 }}>Datele sunt complet anonime — nu colectam nume, email sau informatii identificabile.</div>
+              </div>
+
+              {/* Row 1: Experience + Industry */}
               <div style={{ display: "flex", gap: 16, flexWrap: "wrap" as const }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <label style={P.profileLabel}>
-                    Experienta in marketing (ani)
-                    {!profileForm.experience_years && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
+                    Experienta in marketing
+                    {!profileForm.experience_range && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
+                  </label>
+                  <select
+                    value={profileForm.experience_range}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, experience_range: e.target.value }))}
+                    style={{ ...P.profileInput, borderColor: !profileForm.experience_range ? "#fbbf24" : "#e5e7eb" }}
+                  >
+                    <option value="">— Selecteaza —</option>
+                    <option value="2-5">2 – 5 ani</option>
+                    <option value="5-7">5 – 7 ani</option>
+                    <option value="7-10">7 – 10 ani</option>
+                    <option value="10-15">10 – 15 ani</option>
+                    <option value="15+">15+ ani</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={P.profileLabel}>
+                    Industrie / domeniu
+                    {!profileForm.industry_domain && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
+                  </label>
+                  <select
+                    value={profileForm.industry_domain}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, industry_domain: e.target.value }))}
+                    style={{ ...P.profileInput, borderColor: !profileForm.industry_domain ? "#fbbf24" : "#e5e7eb" }}
+                  >
+                    <option value="">— Selecteaza —</option>
+                    <option value="FMCG">FMCG</option>
+                    <option value="IT & Tech">IT & Tech</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Finance & Banking">Finance & Banking</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Auto">Auto</option>
+                    <option value="Telecom">Telecom</option>
+                    <option value="Media & Entertainment">Media & Entertainment</option>
+                    <option value="E-commerce">E-commerce</option>
+                    <option value="Education">Education</option>
+                    <option value="Real Estate">Real Estate</option>
+                    <option value="HoReCa">HoReCa</option>
+                    <option value="Altul">Altul</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Education + Country */}
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" as const }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={P.profileLabel}>
+                    Nivel educatie
+                    {!profileForm.education_level && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
+                  </label>
+                  <select
+                    value={profileForm.education_level}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, education_level: e.target.value }))}
+                    style={{ ...P.profileInput, borderColor: !profileForm.education_level ? "#fbbf24" : "#e5e7eb" }}
+                  >
+                    <option value="">— Selecteaza —</option>
+                    <option value="Liceu">Liceu</option>
+                    <option value="Licenta">Licenta (Bachelor)</option>
+                    <option value="Master">Master</option>
+                    <option value="Doctorat">Doctorat (PhD)</option>
+                    <option value="Altul">Altul</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={P.profileLabel}>
+                    Tara / regiune
+                    {!profileForm.country && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
                   </label>
                   <input
-                    type="number" min={0} max={60}
-                    value={profileForm.experience_years}
-                    onChange={(e) => setProfileForm((p) => ({ ...p, experience_years: e.target.value }))}
-                    placeholder="ex: 10"
-                    style={{
-                      ...P.profileInput,
-                      borderColor: !profileForm.experience_years ? "#fbbf24" : "#e5e7eb",
-                    }}
+                    type="text"
+                    value={profileForm.country}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, country: e.target.value }))}
+                    placeholder="ex: Romania, Moldova, UK"
+                    style={{ ...P.profileInput, borderColor: !profileForm.country ? "#fbbf24" : "#e5e7eb" }}
                   />
                 </div>
+              </div>
+
+              {/* Row 3: Age + Gender */}
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" as const }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={P.profileLabel}>
+                    Varsta
+                    {!profileForm.age_range && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
+                  </label>
+                  <select
+                    value={profileForm.age_range}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, age_range: e.target.value }))}
+                    style={{ ...P.profileInput, borderColor: !profileForm.age_range ? "#fbbf24" : "#e5e7eb" }}
+                  >
+                    <option value="">— Selecteaza —</option>
+                    <option value="18-25">18 – 25 ani</option>
+                    <option value="26-35">26 – 35 ani</option>
+                    <option value="36-45">36 – 45 ani</option>
+                    <option value="46-55">46 – 55 ani</option>
+                    <option value="55+">55+ ani</option>
+                  </select>
+                </div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={P.profileLabel}>
+                    Gen
+                    {!profileForm.gender && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
+                  </label>
+                  <select
+                    value={profileForm.gender}
+                    onChange={(e) => setProfileForm((p) => ({ ...p, gender: e.target.value }))}
+                    style={{ ...P.profileInput, borderColor: !profileForm.gender ? "#fbbf24" : "#e5e7eb" }}
+                  >
+                    <option value="">— Selecteaza —</option>
+                    <option value="Masculin">Masculin</option>
+                    <option value="Feminin">Feminin</option>
+                    <option value="Prefer sa nu spun">Prefer sa nu spun</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Separator */}
+              <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16, marginTop: 4 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#9CA3AF" }}>PROFIL PROFESIONAL (optional)</span>
+                </div>
+              </div>
+
+              {/* Row 4: Budget (optional) */}
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" as const }}>
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <label style={P.profileLabel}>Buget total administrat (EUR)</label>
                   <input
@@ -705,12 +864,9 @@ function ExpertPageContent() {
                 </div>
               </div>
 
-              {/* Row 2: Brands (tag input) */}
+              {/* Row 5: Brands (tag input, optional) */}
               <div>
-                <label style={P.profileLabel}>
-                  Branduri cu care ai lucrat
-                  {profileForm.brands_worked.length === 0 && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
-                </label>
+                <label style={P.profileLabel}>Branduri cu care ai lucrat</label>
                 <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 6 }}>
                   {profileForm.brands_worked.map((b) => (
                     <span key={b} style={P.tagPill}>
@@ -730,19 +886,13 @@ function ExpertPageContent() {
                     }
                   }}
                   placeholder="Scrie un brand si apasa Enter..."
-                  style={{
-                    ...P.profileInput,
-                    borderColor: profileForm.brands_worked.length === 0 ? "#fbbf24" : "#e5e7eb",
-                  }}
+                  style={P.profileInput}
                 />
               </div>
 
-              {/* Row 3: Marketing roles (tag input) */}
+              {/* Row 6: Marketing roles (tag input, optional) */}
               <div>
-                <label style={P.profileLabel}>
-                  Functii de marketing detinute
-                  {profileForm.marketing_roles.length === 0 && <span style={{ color: "#DC2626", marginLeft: 4 }}>*</span>}
-                </label>
+                <label style={P.profileLabel}>Functii de marketing detinute</label>
                 <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 6 }}>
                   {profileForm.marketing_roles.map((r) => (
                     <span key={r} style={{ ...P.tagPill, background: "#fdf2f8", color: "#be185d", border: "1px solid #fbcfe8" }}>
@@ -762,10 +912,7 @@ function ExpertPageContent() {
                     }
                   }}
                   placeholder="Scrie o functie si apasa Enter..."
-                  style={{
-                    ...P.profileInput,
-                    borderColor: profileForm.marketing_roles.length === 0 ? "#fbbf24" : "#e5e7eb",
-                  }}
+                  style={P.profileInput}
                 />
               </div>
             </div>
