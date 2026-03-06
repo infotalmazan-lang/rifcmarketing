@@ -70,12 +70,14 @@ function youtubeEmbed(url: string | null): string | null {
 
 // ── Score dimension config ──
 const DIMENSIONS = [
+  { key: "c", label: "C", full: "Claritate", color: "#2563EB", desc: "Cit de clar este mesajul principal transmis?" },
   { key: "r", label: "R", full: "Relevanta", color: "#DC2626", desc: "Cit de relevant este mesajul pentru publicul-tinta?" },
   { key: "i", label: "I", full: "Interes", color: "#D97706", desc: "Cit de mult capteaza atentia si trezeste interesul?" },
   { key: "f", label: "F", full: "Forma", color: "#7C3AED", desc: "Cit de buna este executia (design, claritate, calitate)?" },
-  { key: "c", label: "C", full: "Claritate", color: "#2563EB", desc: "Cit de clar este mesajul principal transmis?" },
   { key: "cta", label: "CTA", full: "Call-to-Action", color: "#059669", desc: "Cit de eficient este apelul la actiune?" },
 ] as const;
+
+const MIN_JUSTIFICATION_CHARS = 40;
 
 // Check if expert profile is complete (all 6 demographic fields required)
 function isProfileComplete(expert: ExpertInfo): boolean {
@@ -239,7 +241,7 @@ function ExpertPageContent() {
           initStatus[stim.id] = "draft";
         } else {
           initForms[stim.id] = {
-            r_score: 5, i_score: 5, f_score: 5, c_score: 5, cta_score: 5,
+            r_score: 0, i_score: 0, f_score: 0, c_score: 0, cta_score: 0,
             r_justification: "", i_justification: "", f_justification: "",
             c_justification: "", cta_justification: "",
             brand_familiar: null, brand_justification: "", notes: "",
@@ -351,6 +353,22 @@ function ExpertPageContent() {
     const form = forms[stimulusId];
     if (!form) return;
 
+    // Validate: all scores must be selected (> 0) and justifications meet minimum
+    if (!form.r_score || !form.i_score || !form.f_score || !form.c_score || !form.cta_score) {
+      setSaveError("Selecteaza toate scorurile (C, R, I, F, CTA) inainte de a salva.");
+      return;
+    }
+    const requiredJust = [
+      { key: "c_justification", label: "C" }, { key: "r_justification", label: "R" },
+      { key: "i_justification", label: "I" }, { key: "f_justification", label: "F" },
+      { key: "cta_justification", label: "CTA" },
+    ];
+    const shortJust = requiredJust.filter(j => ((form as Record<string, unknown>)[j.key] as string || "").length < MIN_JUSTIFICATION_CHARS);
+    if (shortJust.length > 0) {
+      setSaveError(`Justificarile ${shortJust.map(j => j.label).join(", ")} trebuie sa aiba minim ${MIN_JUSTIFICATION_CHARS} caractere.`);
+      return;
+    }
+
     // Cancel any pending autosave for this stimulus
     if (autoSaveTimers.current[stimulusId]) clearTimeout(autoSaveTimers.current[stimulusId]);
 
@@ -426,8 +444,11 @@ function ExpertPageContent() {
     if (!token || !expert) return;
     const form = formsRef.current[stimulusId];
     if (!form) return;
-    // FIX: Always autosave when updateForm was called — the user interacted with this form
-    // The old check skipped forms where all scores were at default 5 even if expert intentionally evaluated with 5
+    // Only autosave to server if all 5 scores are selected (> 0) — skip incomplete forms
+    if (!form.r_score || !form.i_score || !form.f_score || !form.c_score || !form.cta_score) {
+      // Keep as draft (saved locally only)
+      return;
+    }
     setAutoSaveStatus((prev) => ({ ...prev, [stimulusId]: "saving" }));
     try {
       const res = await fetch("/api/survey/expert-evaluations", {
@@ -560,6 +581,58 @@ function ExpertPageContent() {
   const completedCount = evaluations.length;
   const totalCount = stimuli.length;
   const isCompleted = (stimId: string) => evaluations.some((e) => e.stimulus_id === stimId);
+
+  // ── Validation: check if current stimulus form is complete enough to navigate away ──
+  const isFormValid = (stimId: string): boolean => {
+    const form = forms[stimId];
+    if (!form) return false;
+    // All 5 scores must be selected (> 0)
+    if (!form.r_score || !form.i_score || !form.f_score || !form.c_score || !form.cta_score) return false;
+    // All 5 justifications must have MIN_JUSTIFICATION_CHARS characters (brand + notes are optional)
+    if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
+    if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
+    if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
+    if ((form.c_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
+    if ((form.cta_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
+    return true;
+  };
+
+  const getValidationMissing = (stimId: string): string[] => {
+    const form = forms[stimId];
+    if (!form) return ["Formular inexistent"];
+    const missing: string[] = [];
+    if (!form.c_score) missing.push("Scor C (Claritate)");
+    if (!form.r_score) missing.push("Scor R (Relevanta)");
+    if (!form.i_score) missing.push("Scor I (Interes)");
+    if (!form.f_score) missing.push("Scor F (Forma)");
+    if (!form.cta_score) missing.push("Scor CTA");
+    if ((form.c_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare C (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare R (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare I (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare F (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.cta_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare CTA (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    return missing;
+  };
+
+  // Navigation with validation — only allow switching if current form is valid (or already saved on server, or empty/new)
+  const navigateToStimulus = (targetStimId: string) => {
+    if (!activeStimulus || activeStimulus === targetStimId) {
+      setActiveStimulus(targetStimId);
+      return;
+    }
+    const currentForm = forms[activeStimulus];
+    // Allow navigation if: form is untouched (all scores 0), already saved on server, or valid
+    const isUntouched = currentForm && !currentForm.r_score && !currentForm.i_score && !currentForm.f_score && !currentForm.c_score && !currentForm.cta_score;
+    const isSaved = isCompleted(activeStimulus);
+    if (isUntouched || isSaved || isFormValid(activeStimulus)) {
+      setActiveStimulus(targetStimId);
+    } else {
+      // Show alert with missing fields
+      const missing = getValidationMissing(activeStimulus);
+      alert(`Nu poti trece la alt material pana nu completezi evaluarea curenta:\n\n${missing.map(m => "• " + m).join("\n")}\n\n(Brand si Note suplimentare sunt optionale)`);
+    }
+  };
+
   const profileComplete = isProfileComplete(expert);
   const filledCount = profileFilledCount(expert);
   const showProfileBanner = !profileComplete && !profileDismissed;
@@ -1075,7 +1148,7 @@ function ExpertPageContent() {
             return (
               <button
                 key={stim.id}
-                onClick={() => setActiveStimulus(stim.id)}
+                onClick={() => navigateToStimulus(stim.id)}
                 style={{
                   ...P.stimCard,
                   background: isActive ? "#fef3c7" : done ? "#f0fdf4" : hasDraft ? "#fffbeb" : "#fff",
@@ -1117,7 +1190,7 @@ function ExpertPageContent() {
                 <button
                   onClick={() => {
                     const idx = stimuli.findIndex(s => s.id === activeStim.id);
-                    if (idx > 0) setActiveStimulus(stimuli[idx - 1].id);
+                    if (idx > 0) navigateToStimulus(stimuli[idx - 1].id);
                   }}
                   disabled={stimuli.findIndex(s => s.id === activeStim.id) === 0}
                   style={{
@@ -1135,7 +1208,7 @@ function ExpertPageContent() {
                 <button
                   onClick={() => {
                     const idx = stimuli.findIndex(s => s.id === activeStim.id);
-                    if (idx < stimuli.length - 1) setActiveStimulus(stimuli[idx + 1].id);
+                    if (idx < stimuli.length - 1) navigateToStimulus(stimuli[idx + 1].id);
                   }}
                   disabled={stimuli.findIndex(s => s.id === activeStim.id) === stimuli.length - 1}
                   style={{
@@ -1212,13 +1285,17 @@ function ExpertPageContent() {
 
                 {/* Formula display */}
                 <div style={P.formulaBar}>
-                  <span style={{ color: "#DC2626", fontWeight: 800 }}>{activeForm.r_score}</span>
+                  <span style={{ color: "#DC2626", fontWeight: 800 }}>{activeForm.r_score || "—"}</span>
                   <span style={{ color: "#9CA3AF" }}>+</span>
-                  <span style={{ color: "#D97706", fontWeight: 800 }}>{activeForm.i_score}</span>
+                  <span style={{ color: "#D97706", fontWeight: 800 }}>{activeForm.i_score || "—"}</span>
                   <span style={{ color: "#9CA3AF" }}>x</span>
-                  <span style={{ color: "#7C3AED", fontWeight: 800 }}>{activeForm.f_score}</span>
+                  <span style={{ color: "#7C3AED", fontWeight: 800 }}>{activeForm.f_score || "—"}</span>
                   <span style={{ color: "#9CA3AF" }}>=</span>
-                  <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>{activeForm.r_score + (activeForm.i_score * activeForm.f_score)}</span>
+                  <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
+                    {activeForm.r_score && activeForm.i_score && activeForm.f_score
+                      ? activeForm.r_score + (activeForm.i_score * activeForm.f_score)
+                      : "—"}
+                  </span>
                 </div>
 
                 {/* Score dimensions */}
@@ -1226,6 +1303,9 @@ function ExpertPageContent() {
                   const scoreKey = `${dim.key}_score` as keyof typeof activeForm;
                   const justKey = `${dim.key}_justification` as keyof typeof activeForm;
                   const score = activeForm[scoreKey] as number;
+                  const justText = (activeForm[justKey] as string) || "";
+                  const justLen = justText.length;
+                  const justValid = justLen >= MIN_JUSTIFICATION_CHARS;
                   return (
                     <div key={dim.key} style={P.dimBlock}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -1233,44 +1313,47 @@ function ExpertPageContent() {
                           <span style={{ ...P.dimBadge, background: dim.color }}>{dim.label}</span>
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{dim.full}</span>
                         </div>
-                        <span style={{ fontSize: 24, fontWeight: 800, color: dim.color }}>{score}</span>
+                        <span style={{ fontSize: 24, fontWeight: 800, color: score ? dim.color : "#d1d5db" }}>{score || "—"}</span>
                       </div>
                       <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 8px" }}>{dim.desc}</p>
-                      {/* Slider */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 11, color: "#9CA3AF", minWidth: 12 }}>1</span>
-                        <input
-                          type="range" min={1} max={10} step={1}
-                          value={score}
-                          onChange={(e) => updateForm(activeStim.id, `${dim.key}_score`, parseInt(e.target.value))}
-                          style={{ flex: 1, accentColor: dim.color, height: 6 }}
-                        />
-                        <span style={{ fontSize: 11, color: "#9CA3AF", minWidth: 16 }}>10</span>
-                      </div>
-                      {/* Number buttons */}
-                      <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+                      {/* Number buttons only — no slider */}
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         {[1,2,3,4,5,6,7,8,9,10].map((n) => (
                           <button
                             key={n}
                             onClick={() => updateForm(activeStim.id, `${dim.key}_score`, n)}
                             style={{
-                              width: 32, height: 32, borderRadius: 6, border: "none",
-                              background: score === n ? dim.color : "#f3f4f6",
+                              width: 34, height: 34, borderRadius: 8,
+                              border: score === n ? `2px solid ${dim.color}` : "2px solid #e5e7eb",
+                              background: score === n ? dim.color : "#fff",
                               color: score === n ? "#fff" : "#374151",
-                              fontSize: 13, fontWeight: score === n ? 700 : 400,
+                              fontSize: 14, fontWeight: score === n ? 700 : 500,
                               cursor: "pointer", transition: "all 0.15s",
                             }}
                           >{n}</button>
                         ))}
                       </div>
-                      {/* Justification */}
-                      <textarea
-                        value={(activeForm[justKey] as string) || ""}
-                        onChange={(e) => updateForm(activeStim.id, `${dim.key}_justification`, e.target.value)}
-                        placeholder={`Justificare ${dim.full}...`}
-                        rows={2}
-                        style={P.textarea}
-                      />
+                      {/* Justification with character counter */}
+                      <div style={{ position: "relative", marginTop: 8 }}>
+                        <textarea
+                          value={justText}
+                          onChange={(e) => updateForm(activeStim.id, `${dim.key}_justification`, e.target.value)}
+                          placeholder={`Justificare ${dim.full} (minim ${MIN_JUSTIFICATION_CHARS} caractere)...`}
+                          rows={2}
+                          style={{
+                            ...P.textarea,
+                            borderColor: justLen > 0 && !justValid ? "#fbbf24" : justValid ? "#059669" : "#e5e7eb",
+                          }}
+                        />
+                        <div style={{
+                          display: "flex", justifyContent: "flex-end", marginTop: 2,
+                          fontSize: 10, fontWeight: 600,
+                          color: justValid ? "#059669" : justLen > 0 ? "#D97706" : "#9CA3AF",
+                        }}>
+                          {justLen}/{MIN_JUSTIFICATION_CHARS} caractere
+                          {justValid && <span style={{ marginLeft: 4 }}>✓</span>}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -1324,8 +1407,26 @@ function ExpertPageContent() {
                   />
                 </div>
 
+                {/* Validation summary */}
+                {(() => {
+                  const missing = getValidationMissing(activeStim.id);
+                  if (missing.length === 0) return null;
+                  return (
+                    <div style={{ marginTop: 16, padding: "12px 16px", background: "#fffbeb", borderRadius: 10, border: "1px solid #fbbf24" }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        Lipsesc {missing.length} campuri obligatorii:
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {missing.map((m, i) => (
+                          <span key={i} style={{ fontSize: 10, padding: "2px 8px", background: "#fef3c7", borderRadius: 4, color: "#92400e" }}>{m}</span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Save button + autosave status */}
-                <div style={{ marginTop: 20, padding: "16px 20px", background: "#f0fdf4", borderRadius: 10, border: "2px solid #059669" }}>
+                <div style={{ marginTop: 20, padding: "16px 20px", background: isFormValid(activeStim.id) ? "#f0fdf4" : "#f9fafb", borderRadius: 10, border: `2px solid ${isFormValid(activeStim.id) ? "#059669" : "#d1d5db"}` }}>
                   {/* Autosave status indicator */}
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, fontSize: 12 }}>
                     {autoSaveStatus[activeStim.id] === "saved" && (
@@ -1347,14 +1448,15 @@ function ExpertPageContent() {
                   {/* Big save button */}
                   <button
                     onClick={() => saveEvaluation(activeStim.id)}
-                    disabled={saving}
+                    disabled={saving || !isFormValid(activeStim.id)}
                     style={{
                       ...P.saveBtn,
                       width: "100%",
                       padding: "14px 24px",
                       fontSize: 15,
                       fontWeight: 800,
-                      opacity: saving ? 0.6 : 1,
+                      opacity: (saving || !isFormValid(activeStim.id)) ? 0.5 : 1,
+                      cursor: !isFormValid(activeStim.id) ? "not-allowed" : "pointer",
                     }}
                   >
                     {saving ? (
@@ -1375,7 +1477,9 @@ function ExpertPageContent() {
                     </div>
                   )}
                   <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280", textAlign: "center" }}>
-                    Datele se salveaza automat dupa 3 secunde. Apasa butonul pentru salvare imediata.
+                    {isFormValid(activeStim.id)
+                      ? "Datele se salveaza automat dupa 3 secunde. Apasa butonul pentru salvare imediata."
+                      : "Completeaza toate scorurile si justificarile (min 40 car.) pentru a salva. Brand si Note sunt optionale."}
                   </div>
                 </div>
               </div>
