@@ -10351,68 +10351,68 @@ export default function StudiuAdminPage() {
                         <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={h3Known.length}) vs necunoscut (portocaliu, n={h3Unknown.length}).{" "}
                         <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
                       </div>
-                      <div style={{ maxWidth: "50%" }}>
-                        <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
-                          {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
-                          {/* Trend lines */}
-                          {h3Known.length >= 2 && (() => {
-                            const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMin + h3RegKnown.intercept));
-                            const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMax + h3RegKnown.intercept));
-                            return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
-                          })()}
-                          {h3Unknown.length >= 2 && (() => {
-                            const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMin + h3RegUnknown.intercept));
-                            const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMax + h3RegUnknown.intercept));
-                            return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
-                          })()}
-                          {/* Known brand dots (normalized X) */}
-                          {h3Known.map((d, i) => (
-                            <circle key={`k-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#2563EB" opacity={0.5} />
-                          ))}
-                          {/* Unknown brand dots (normalized X) */}
-                          {h3Unknown.map((d, i) => (
-                            <circle key={`u-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#D97706" opacity={0.5} />
-                          ))}
-                          {/* Legend with Pearson R — evenly spaced */}
-                          <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#2563EB" />
-                          <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#2563EB" fontWeight={600}>Brand cunoscut (n={h3Known.length}, r={h3PearsonKnown.toFixed(2)})</text>
-                          <circle cx={chartW / 2 + 20} cy={chartH - 2} r={3} fill="#D97706" />
-                          <text x={chartW / 2 + 28} y={chartH + 1} fontSize={8} fill="#D97706" fontWeight={600}>Brand necunoscut (n={h3Unknown.length}, r={h3PearsonUnknown.toFixed(2)})</text>
-                        </svg>
-                      </div>
-                      {/* Stats banner H3 */}
-                      {h3Known.length > 0 && h3Unknown.length > 0 && (() => {
-                        const unknownStronger = Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown);
-                        const diff = Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown));
-                        const fisherZ = _fisherZTest(h3PearsonKnown, h3PearsonUnknown, h3Known.length, h3Unknown.length);
-                        // Use Fisher Z-test p-value for rigorous verdict (p < 0.05 = significant difference)
-                        const sigDiff = fisherZ.p < 0.05;
-                        const verdict = !sigDiff ? "H3 NEUTRA" : unknownStronger ? "H3 CONFIRMATA" : "H3 INVERSATA";
-                        const verdColor = !sigDiff ? "#D97706" : unknownStronger ? "#059669" : "#2563EB";
-                        const verdIcon = !sigDiff ? "\u26A0\uFE0F" : unknownStronger ? "\u2705" : "\u21C4";
-                        const pK = _pValuePearson(h3PearsonKnown, h3Known.length);
-                        const pU = _pValuePearson(h3PearsonUnknown, h3Unknown.length);
-                        return (
-                          <div style={{ marginBottom: 0, marginTop: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={h3Known.length})</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonKnown.toFixed(3)}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pK)}</div>
+                      {/* ── Side-by-side: Scatter + Stats ── */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
+                        {/* LEFT: Scatter chart */}
+                        <div>
+                          <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
+                            {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
+                            {/* Trend lines */}
+                            {h3Known.length >= 2 && (() => {
+                              const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMin + h3RegKnown.intercept));
+                              const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMax + h3RegKnown.intercept));
+                              return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                            })()}
+                            {h3Unknown.length >= 2 && (() => {
+                              const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMin + h3RegUnknown.intercept));
+                              const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMax + h3RegUnknown.intercept));
+                              return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                            })()}
+                            {h3Known.map((d, i) => (
+                              <circle key={`k-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#2563EB" opacity={0.5} />
+                            ))}
+                            {h3Unknown.map((d, i) => (
+                              <circle key={`u-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#D97706" opacity={0.5} />
+                            ))}
+                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#2563EB" />
+                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#2563EB" fontWeight={600}>Brand cunoscut (n={h3Known.length}, r={h3PearsonKnown.toFixed(2)})</text>
+                            <circle cx={chartW / 2 + 20} cy={chartH - 2} r={3} fill="#D97706" />
+                            <text x={chartW / 2 + 28} y={chartH + 1} fontSize={8} fill="#D97706" fontWeight={600}>Brand necunoscut (n={h3Unknown.length}, r={h3PearsonUnknown.toFixed(2)})</text>
+                          </svg>
+                        </div>
+                        {/* RIGHT: Stats banner H3 */}
+                        {h3Known.length > 0 && h3Unknown.length > 0 ? (() => {
+                          const unknownStronger = Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown);
+                          const diff = Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown));
+                          const fisherZ = _fisherZTest(h3PearsonKnown, h3PearsonUnknown, h3Known.length, h3Unknown.length);
+                          const sigDiff = fisherZ.p < 0.05;
+                          const verdict = !sigDiff ? "H3 NEUTRA" : unknownStronger ? "H3 CONFIRMATA" : "H3 INVERSATA";
+                          const verdColor = !sigDiff ? "#D97706" : unknownStronger ? "#059669" : "#2563EB";
+                          const verdIcon = !sigDiff ? "\u26A0\uFE0F" : unknownStronger ? "\u2705" : "\u21C4";
+                          const pK = _pValuePearson(h3PearsonKnown, h3Known.length);
+                          const pU = _pValuePearson(h3PearsonUnknown, h3Unknown.length);
+                          return (
+                            <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const, justifyContent: "center" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={h3Known.length})</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonKnown.toFixed(3)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pK)}</div>
+                                </div>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={h3Unknown.length})</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonUnknown.toFixed(3)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pU)}</div>
+                                </div>
                               </div>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={h3Unknown.length})</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonUnknown.toFixed(3)}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pU)}</div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280" }}>Fisher Z={fisherZ.z.toFixed(2)}, {_fmtP(fisherZ.p)} &middot; &Delta;r={diff.toFixed(3)}</div>
+                                <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
                               </div>
                             </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <div style={{ fontSize: 9, color: "#6B7280" }}>Fisher Z={fisherZ.z.toFixed(2)}, {_fmtP(fisherZ.p)} &middot; &Delta;r={diff.toFixed(3)}</div>
-                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
-                            </div>
-                          </div>
-                        );
-                      })()}
+                          );
+                        })() : <div />}
+                      </div>{/* end H3 grid */}
                       <div style={cardStyle}>
                         <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
                         {h3Known.length > 0 && h3Unknown.length > 0 ? (
