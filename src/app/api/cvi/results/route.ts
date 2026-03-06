@@ -24,10 +24,10 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch responses" }, { status: 500 });
     }
 
-    // Fetch expert stats (including hidden flag)
+    // Fetch expert stats (including hidden flag if column exists)
     const { data: experts } = await supabase
       .from("cvi_experts")
-      .select("id, status, name, role, experience, completed_at, hidden")
+      .select("*")
       .order("created_at", { ascending: true });
 
     // Build set of hidden expert IDs to exclude from calculations
