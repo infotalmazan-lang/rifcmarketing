@@ -81,6 +81,35 @@ export async function GET() {
       return row;
     });
 
+    // ── Comments data: per-expert per-item justifications ──
+    // Links expert_id → comments JSONB, plus their scores for context
+    const commentsData: {
+      expert_id: string;
+      expert_name: string;
+      expert_role: string;
+      comments: Record<string, string>;
+      scores: Record<string, number>;
+    }[] = [];
+
+    for (const r of responseData) {
+      const rawComments = (r.comments && typeof r.comments === "object") ? r.comments as Record<string, string> : {};
+      // Only include if there are actual comments
+      if (Object.keys(rawComments).length === 0) continue;
+      const exp = (experts || []).find(e => e.id === r.expert_id);
+      const scores: Record<string, number> = {};
+      for (const item of CVI_ITEMS) {
+        const val = r[item];
+        if (typeof val === "number") scores[item] = val;
+      }
+      commentsData.push({
+        expert_id: String(r.expert_id || ""),
+        expert_name: exp?.name || "Expert anonim",
+        expert_role: exp?.role || "",
+        comments: rawComments,
+        scores,
+      });
+    }
+
     return NextResponse.json({
       summary,
       dimensionCvi: dimCvi,
@@ -93,6 +122,7 @@ export async function GET() {
       },
       itemsBelowThreshold,
       exportData,
+      commentsData,
       experts: (experts || []).map(e => ({
         id: e.id,
         name: e.name,

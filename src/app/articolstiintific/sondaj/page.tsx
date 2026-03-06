@@ -1054,6 +1054,7 @@ export default function StudiuAdminPage() {
   // CVI item editor state (for Editează sub-tab)
   const [cviItemEdits, setCviItemEdits] = useState<Record<string, { text?: string; sub?: string }>>({});
   const [cviEditExpanded, setCviEditExpanded] = useState<string | null>(null); // expanded dimension: R, I, F, C
+  const [expandedCviItem, setExpandedCviItem] = useState<string | null>(null); // expanded item in CVI comment viewer
 
   // AI benchmark state
   const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
@@ -10643,6 +10644,284 @@ export default function StudiuAdminPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {/* ═══ S11-S15. ANALIZA CALITATIVA — COMENTARII EXPERTI ═══ */}
+                    {/* ═══════════════════════════════════════════════════════ */}
+                    {(() => {
+                      const cd: { expert_id: string; expert_name: string; expert_role: string; comments: Record<string, string>; scores: Record<string, number> }[] = cviResults.commentsData || [];
+                      const hasComments = cd.length > 0;
+                      const allItems = _itemOrder;
+
+                      // ── Compute statistics ──
+                      // Total comments across all experts
+                      let totalComments = 0;
+                      let totalLength = 0;
+                      const lengths: number[] = [];
+                      const commentsPerItem: Record<string, { texts: { expert: string; text: string; score: number }[]; }> = {};
+
+                      for (const item of allItems) commentsPerItem[item] = { texts: [] };
+
+                      for (const ex of cd) {
+                        for (const item of allItems) {
+                          const txt = (ex.comments[item] || "").trim();
+                          if (txt) {
+                            totalComments++;
+                            totalLength += txt.length;
+                            lengths.push(txt.length);
+                            commentsPerItem[item].texts.push({ expert: ex.expert_name, text: txt, score: ex.scores[item] || 0 });
+                          }
+                        }
+                      }
+                      const avgLength = lengths.length > 0 ? Math.round(totalLength / lengths.length) : 0;
+                      const maxLen = lengths.length > 0 ? Math.max(...lengths) : 0;
+                      const minLen = lengths.length > 0 ? Math.min(...lengths) : 0;
+                      // Short comments (< 20 chars) — might indicate low effort
+                      const shortComments = lengths.filter(l => l < 20).length;
+                      // Detailed comments (> 100 chars) — high quality
+                      const detailedComments = lengths.filter(l => l > 100).length;
+
+                      // Items with low scores (1-2) = REJECTIONS — their comments are most important
+                      const rejectComments: { item: string; expert: string; score: number; text: string; label: string }[] = [];
+                      for (const item of allItems) {
+                        const itemInfo = summary.find((s: any) => s.item_id === item);
+                        for (const c of commentsPerItem[item].texts) {
+                          if (c.score <= 2) {
+                            rejectComments.push({ item, expert: c.expert, score: c.score, text: c.text, label: itemInfo?.item_label || item });
+                          }
+                        }
+                      }
+
+                      return (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 20, marginTop: 28 }}>
+                          {/* Section header */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 4, height: 24, borderRadius: 2, background: "#7C3AED" }} />
+                            <div>
+                              <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Analiza Calitativa — Comentarii Experti</div>
+                              <div style={{ fontSize: 11, color: "#6B7280" }}>Justificarile expertilor pentru fiecare item evaluat (date calitative CVI)</div>
+                            </div>
+                          </div>
+
+                          {!hasComments ? (
+                            <div style={{ background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 12, padding: 24, textAlign: "center" }}>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#92400E", marginBottom: 6 }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 6 }}><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                Comentariile expertilor nu sunt inca disponibile
+                              </div>
+                              <div style={{ fontSize: 12, color: "#92400E" }}>
+                                Ruleaza SQL-ul <code style={{ background: "#FEF3C7", padding: "2px 6px", borderRadius: 4 }}>ALTER TABLE cvi_responses ADD COLUMN comments JSONB DEFAULT {`'{}'`}</code> in Supabase SQL Editor, apoi expertii care vor completa formularul vor avea comentariile salvate automat.
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {/* ═══ S11. KPI CARDS — STATISTICI COMENTARII ═══ */}
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+                                {[
+                                  { label: "Total comentarii", value: totalComments, sub: `din ${cd.length} experti × 35 itemi`, color: "#2563EB" },
+                                  { label: "Lungime medie", value: `${avgLength} car.`, sub: `min ${minLen} / max ${maxLen}`, color: "#059669" },
+                                  { label: "Detaliate (>100 car.)", value: detailedComments, sub: `${lengths.length > 0 ? Math.round((detailedComments / lengths.length) * 100) : 0}% din total`, color: "#7C3AED" },
+                                  { label: "Scurte (<20 car.)", value: shortComments, sub: `${lengths.length > 0 ? Math.round((shortComments / lengths.length) * 100) : 0}% — posibil superficiale`, color: shortComments > lengths.length * 0.3 ? "#DC2626" : "#D97706" },
+                                  { label: "Respingeri (scor 1-2)", value: rejectComments.length, sub: "comentarii critice pt. revizuire", color: "#DC2626" },
+                                ].map((kpi, ki) => (
+                                  <div key={ki} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px" }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: "#6B7280", textTransform: "uppercase", marginBottom: 6 }}>{kpi.label}</div>
+                                    <div style={{ fontSize: 22, fontWeight: 800, color: kpi.color, fontFamily: "JetBrains Mono, monospace" }}>{kpi.value}</div>
+                                    <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 2 }}>{kpi.sub}</div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* ═══ S12. COMENTARII CRITICE — RESPINGERI (scor 1-2) ═══ */}
+                              {rejectComments.length > 0 && (
+                                <div>
+                                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#DC2626", marginBottom: 10 }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 4 }}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                    COMENTARII CRITICE — ITEMI RESPINSI (SCOR 1-2)
+                                  </div>
+                                  <div style={{ fontSize: 10, color: "#6B7280", marginBottom: 10 }}>Aceste justificari indica de ce expertii considera itemii irelevanti sau partial relevanti — esential pentru revizuire.</div>
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                    {rejectComments.map((rc, ri) => (
+                                      <div key={ri} style={{ background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 10, padding: "12px 16px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                            <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 800, background: "#DC2626", color: "#fff", fontFamily: "JetBrains Mono, monospace" }}>{rc.item}</span>
+                                            <span style={{ fontSize: 11, color: "#374151", fontWeight: 600 }}>{rc.label}</span>
+                                          </div>
+                                          <span style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>Scor: {rc.score}/4</span>
+                                        </div>
+                                        <div style={{ fontSize: 12, color: "#7F1D1D", lineHeight: 1.6, fontStyle: "italic" }}>"{rc.text}"</div>
+                                        <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4 }}>— {rc.expert}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* ═══ S13. DISTRIBUTIA LUNGIMII COMENTARIILOR ═══ */}
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>DISTRIBUTIA CALITATII COMENTARIILOR</div>
+                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: 20 }}>
+                                  {(() => {
+                                    const bins = [
+                                      { label: "< 20 car.", min: 0, max: 20, color: "#DC2626", quality: "Superficial" },
+                                      { label: "20-50 car.", min: 20, max: 50, color: "#D97706", quality: "Minimal" },
+                                      { label: "50-100 car.", min: 50, max: 100, color: "#2563EB", quality: "Adecvat" },
+                                      { label: "100-200 car.", min: 100, max: 200, color: "#059669", quality: "Detaliat" },
+                                      { label: "> 200 car.", min: 200, max: Infinity, color: "#7C3AED", quality: "Foarte detaliat" },
+                                    ];
+                                    const maxBin = Math.max(...bins.map(b => lengths.filter(l => l >= b.min && l < b.max).length), 1);
+                                    return (
+                                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                        {bins.map(b => {
+                                          const count = lengths.filter(l => l >= b.min && l < b.max).length;
+                                          const pct = lengths.length > 0 ? Math.round((count / lengths.length) * 100) : 0;
+                                          return (
+                                            <div key={b.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                              <div style={{ width: 90, fontSize: 10, fontWeight: 600, color: "#374151", textAlign: "right" }}>{b.label}</div>
+                                              <div style={{ flex: 1, height: 20, background: "#f1f5f9", borderRadius: 4, overflow: "hidden" }}>
+                                                <div style={{ width: `${(count / maxBin) * 100}%`, height: "100%", background: b.color, borderRadius: 4, transition: "width 0.5s ease", minWidth: count > 0 ? 4 : 0 }} />
+                                              </div>
+                                              <div style={{ width: 50, fontSize: 10, fontWeight: 700, color: b.color, fontFamily: "JetBrains Mono, monospace" }}>{count} ({pct}%)</div>
+                                              <div style={{ width: 80, fontSize: 9, color: "#9CA3AF" }}>{b.quality}</div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+
+                              {/* ═══ S14. TABEL COMENTARII PER ITEM — EXPANDABIL ═══ */}
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>COMENTARII PER ITEM — CLICK PENTRU DETALII</div>
+                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+                                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                    <thead>
+                                      <tr style={{ background: "#f8fafc" }}>
+                                        <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Item</th>
+                                        <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Denumire</th>
+                                        <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>I-CVI</th>
+                                        <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Nr. Comentarii</th>
+                                        <th style={{ padding: "10px 14px", textAlign: "center", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Lung. medie</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {allItems.map(item => {
+                                        const info = summary.find((s: any) => s.item_id === item);
+                                        const itemComments = commentsPerItem[item]?.texts || [];
+                                        const avgLen = itemComments.length > 0 ? Math.round(itemComments.reduce((s, c) => s + c.text.length, 0) / itemComments.length) : 0;
+                                        const hasReject = itemComments.some(c => c.score <= 2);
+                                        const isExpanded = expandedCviItem === item;
+                                        const dim = item.match(/^[A-Z]+/)?.[0] || "";
+                                        const dimCol = dim === "R" ? "#DC2626" : dim === "I" ? "#2563EB" : dim === "F" ? "#059669" : "#D97706";
+
+                                        return (
+                                          <React.Fragment key={item}>
+                                            <tr
+                                              onClick={() => setExpandedCviItem(isExpanded ? null : item)}
+                                              style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer", background: isExpanded ? "#F8FAFC" : hasReject ? "#FEF2F2" : "transparent", transition: "background 0.15s" }}
+                                            >
+                                              <td style={{ padding: "8px 14px" }}>
+                                                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 800, background: dimCol, color: "#fff", fontFamily: "JetBrains Mono, monospace" }}>{item}</span>
+                                              </td>
+                                              <td style={{ padding: "8px 14px", fontSize: 11, color: "#374151" }}>{info?.item_label || item}</td>
+                                              <td style={{ padding: "8px 14px", textAlign: "center", fontWeight: 700, fontFamily: "JetBrains Mono, monospace", color: (info?.cvi_score || 0) >= 0.80 ? "#059669" : "#DC2626" }}>
+                                                {(info?.cvi_score || 0).toFixed(2)}
+                                              </td>
+                                              <td style={{ padding: "8px 14px", textAlign: "center", fontWeight: 600, color: "#374151" }}>{itemComments.length}</td>
+                                              <td style={{ padding: "8px 14px", textAlign: "center", color: "#6B7280", fontFamily: "JetBrains Mono, monospace" }}>{avgLen} car.</td>
+                                            </tr>
+                                            {isExpanded && itemComments.length > 0 && (
+                                              <tr>
+                                                <td colSpan={5} style={{ padding: "0 14px 12px", background: "#F8FAFC" }}>
+                                                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                                                    {itemComments.map((c, ci) => (
+                                                      <div key={ci} style={{
+                                                        padding: "8px 12px", borderRadius: 8,
+                                                        background: c.score <= 2 ? "#FEF2F2" : c.score >= 4 ? "#F0FDF4" : "#fff",
+                                                        border: `1px solid ${c.score <= 2 ? "#FECACA" : c.score >= 4 ? "#BBF7D0" : "#e5e7eb"}`,
+                                                      }}>
+                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                                          <span style={{ fontSize: 10, fontWeight: 600, color: "#374151" }}>{c.expert}</span>
+                                                          <span style={{
+                                                            fontSize: 10, fontWeight: 700, fontFamily: "JetBrains Mono, monospace", padding: "1px 6px", borderRadius: 4,
+                                                            background: c.score <= 2 ? "#DC2626" : c.score >= 4 ? "#059669" : "#D97706", color: "#fff",
+                                                          }}>Scor: {c.score}/4</span>
+                                                        </div>
+                                                        <div style={{ fontSize: 11, color: "#4B5563", lineHeight: 1.5 }}>{c.text}</div>
+                                                      </div>
+                                                    ))}
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            )}
+                                          </React.Fragment>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+
+                              {/* ═══ S15. CONCORDANTA SCOR vs COMENTARIU ═══ */}
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#6B7280", marginBottom: 10 }}>CONCORDANTA SCOR — COMENTARIU</div>
+                                <div style={{ fontSize: 10, color: "#6B7280", marginBottom: 10 }}>Itemi unde scorul numeric si lungimea comentariului sunt discordante (scor mare = comentariu scurt, sau scor mic = comentariu scurt). Poate indica evaluare superficiala.</div>
+                                <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, overflow: "hidden" }}>
+                                  {(() => {
+                                    // Find discordant cases
+                                    const discordant: { item: string; label: string; expert: string; score: number; length: number; issue: string }[] = [];
+                                    for (const item of allItems) {
+                                      const itemInfo = summary.find((s: any) => s.item_id === item);
+                                      for (const c of commentsPerItem[item]?.texts || []) {
+                                        // Low score (1-2) but very short comment — should explain WHY
+                                        if (c.score <= 2 && c.text.length < 30) {
+                                          discordant.push({ item, label: itemInfo?.item_label || item, expert: c.expert, score: c.score, length: c.text.length, issue: "Scor mic, comentariu insuficient" });
+                                        }
+                                      }
+                                    }
+                                    if (discordant.length === 0) {
+                                      return (
+                                        <div style={{ padding: 20, textAlign: "center", fontSize: 13, color: "#059669", fontWeight: 600 }}>
+                                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 6 }}><polyline points="20 6 9 17 4 12"/></svg>
+                                          Nicio discordanta semnificativa — comentariile sunt coerente cu scorurile.
+                                        </div>
+                                      );
+                                    }
+                                    return (
+                                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                                        <thead>
+                                          <tr style={{ background: "#FEF2F2" }}>
+                                            <th style={{ padding: "8px 14px", textAlign: "left", fontWeight: 700, borderBottom: "1px solid #FECACA" }}>Item</th>
+                                            <th style={{ padding: "8px 14px", textAlign: "left", fontWeight: 700, borderBottom: "1px solid #FECACA" }}>Expert</th>
+                                            <th style={{ padding: "8px 14px", textAlign: "center", fontWeight: 700, borderBottom: "1px solid #FECACA" }}>Scor</th>
+                                            <th style={{ padding: "8px 14px", textAlign: "center", fontWeight: 700, borderBottom: "1px solid #FECACA" }}>Lung. com.</th>
+                                            <th style={{ padding: "8px 14px", textAlign: "left", fontWeight: 700, borderBottom: "1px solid #FECACA" }}>Problema</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {discordant.map((d, di) => (
+                                            <tr key={di} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                                              <td style={{ padding: "8px 14px", fontWeight: 600 }}>{d.item} — {d.label}</td>
+                                              <td style={{ padding: "8px 14px", color: "#6B7280" }}>{d.expert}</td>
+                                              <td style={{ padding: "8px 14px", textAlign: "center", fontWeight: 700, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{d.score}/4</td>
+                                              <td style={{ padding: "8px 14px", textAlign: "center", fontFamily: "JetBrains Mono, monospace" }}>{d.length} car.</td>
+                                              <td style={{ padding: "8px 14px", color: "#D97706", fontSize: 11 }}>{d.issue}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     </div>
                   );
