@@ -1035,6 +1035,7 @@ export default function StudiuAdminPage() {
   const [expertCopied, setExpertCopied] = useState<string | null>(null);
   const [editingExpertId, setEditingExpertId] = useState<string | null>(null);
   const [expandedExpertChannelType, setExpandedExpertChannelType] = useState<string | null>(null);
+  const [expertSubTab, setExpertSubTab] = useState<"main" | "interpretare">("main");
 
   // CVI (Evaluare Itemi) state
   const [cviExperts, setCviExperts] = useState<any[]>([]);
@@ -5024,12 +5025,36 @@ export default function StudiuAdminPage() {
                   Fiecare expert primeste un link unic, evalueaza R, I, F, C, CTA + recunoastere brand cu justificari.
                 </p>
               </div>
-              <button style={{ ...S.addCatBtn, background: "#059669" }} onClick={() => setShowAddExpert(true)}>
-                <Plus size={16} />
-                ADAUGA EXPERT
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {/* Sub-tabs: Pagina / Interpretare */}
+                <div style={{ display: "flex", borderRadius: 8, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                  {([
+                    { key: "main" as const, label: "Pagina", icon: <Users size={13} /> },
+                    ...(expertEvals.length >= 3 ? [{ key: "interpretare" as const, label: "Interpretare", icon: <Brain size={13} /> }] : []),
+                  ]).map(t => (
+                    <button
+                      key={t.key}
+                      onClick={() => setExpertSubTab(t.key)}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 5,
+                        padding: "7px 16px", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                        background: expertSubTab === t.key ? "#059669" : "#fff",
+                        color: expertSubTab === t.key ? "#fff" : "#6B7280",
+                        transition: "all 0.15s",
+                      }}
+                    >
+                      {t.icon} {t.label}
+                    </button>
+                  ))}
+                </div>
+                <button style={{ ...S.addCatBtn, background: "#059669" }} onClick={() => setShowAddExpert(true)}>
+                  <Plus size={16} />
+                  ADAUGA EXPERT
+                </button>
+              </div>
             </div>
 
+            {expertSubTab === "main" && (<>
             {/* ═══ HERO KPI BANNER ═══ */}
             {(() => {
               const TARGET_EXPERTS = 350;
@@ -5661,6 +5686,675 @@ export default function StudiuAdminPage() {
                 })()}
               </>
             )}
+            </>)}
+
+            {/* ═══ EXPERT INTERPRETARE SUB-TAB ═══ */}
+            {expertSubTab === "interpretare" && (() => {
+              // ── Data preparation ──
+              const totalEvals = expertEvals.length;
+              const uniqueExperts = Array.from(new Set(expertEvals.map(e => e.expert_id)));
+              const completedExperts = uniqueExperts.length;
+              const totalStimuli = stimuli.filter(s => s.is_active).length;
+
+              // Build stimulus lookup for channel_type / name
+              const stimLookup = new Map(stimuli.map(s => [s.id, s]));
+              const getChannel = (ev: ExpertEvaluation) => stimLookup.get(ev.stimulus_id)?.type || "";
+              const getMaterialName = (ev: ExpertEvaluation) => stimLookup.get(ev.stimulus_id)?.name || "Material";
+              const getMaterialNum = (ev: ExpertEvaluation) => stimLookup.get(ev.stimulus_id)?.display_order || 0;
+              const channels = Array.from(new Set(expertEvals.map(e => getChannel(e)).filter(Boolean)));
+
+              // Per-expert matrices for Cronbach Alpha
+              const rScores = uniqueExperts.map(eid => _mean(expertEvals.filter(e => e.expert_id === eid).map(e => e.r_score)));
+              const iScores = uniqueExperts.map(eid => _mean(expertEvals.filter(e => e.expert_id === eid).map(e => e.i_score)));
+              const fScores = uniqueExperts.map(eid => _mean(expertEvals.filter(e => e.expert_id === eid).map(e => e.f_score)));
+              const cPercScores = uniqueExperts.map(eid => {
+                const evals = expertEvals.filter(e => e.expert_id === eid && e.c_score != null);
+                return evals.length > 0 ? _mean(evals.map(e => e.c_score!)) : 0;
+              });
+              const cronbachMatrix = [rScores, iScores, fScores, cPercScores].filter(arr => arr.some(v => v > 0));
+              const cronbachAlpha = cronbachMatrix.length >= 2 ? _cronbachAlpha(cronbachMatrix) : 0;
+
+              // Grand means
+              const grandR = _mean(expertEvals.map(e => e.r_score));
+              const grandI = _mean(expertEvals.map(e => e.i_score));
+              const grandF = _mean(expertEvals.map(e => e.f_score));
+              const evalsWithC = expertEvals.filter(e => e.c_score != null);
+              const grandCperc = evalsWithC.length > 0 ? _mean(evalsWithC.map(e => e.c_score!)) : 0;
+              const evalsWithCTA = expertEvals.filter(e => e.cta_score != null);
+              const grandCTA = evalsWithCTA.length > 0 ? _mean(evalsWithCTA.map(e => e.cta_score!)) : 0;
+              const grandMean = _mean([grandR, grandI, grandF, grandCperc].filter(v => v > 0));
+
+              // Formula validation: Pearson r (C_computed vs C_perceived)
+              const formulaEvals = expertEvals.filter(e => e.c_score != null && e.c_computed != null);
+              const cComputedArr = formulaEvals.map(e => e.c_computed);
+              const cPerceivedArr = formulaEvals.map(e => e.c_score!);
+              const formulaR = formulaEvals.length >= 3 ? _pearsonR(cComputedArr, cPerceivedArr) : 0;
+              const formulaP = formulaEvals.length >= 3 ? _pValuePearson(formulaR, formulaEvals.length) : 1;
+
+              // CTA-C correlation
+              const ctaCevals = expertEvals.filter(e => e.c_score != null && e.cta_score != null);
+              const ctaArr = ctaCevals.map(e => e.cta_score!);
+              const cForCtaArr = ctaCevals.map(e => e.c_score!);
+              const ctaCr = ctaCevals.length >= 3 ? _pearsonR(cForCtaArr, ctaArr) : 0;
+              const ctaCp = ctaCevals.length >= 3 ? _pValuePearson(ctaCr, ctaCevals.length) : 1;
+
+              // Brand recognition — Cohen's d
+              const brandFamiliar = expertEvals.filter(e => e.brand_familiar === true);
+              const brandUnknown = expertEvals.filter(e => e.brand_familiar === false);
+              const famScoresArr = brandFamiliar.map(e => (e.r_score + e.i_score + e.f_score + (e.c_score || 0)) / (e.c_score != null ? 4 : 3));
+              const unkScoresArr = brandUnknown.map(e => (e.r_score + e.i_score + e.f_score + (e.c_score || 0)) / (e.c_score != null ? 4 : 3));
+              const brandCohensD = famScoresArr.length >= 2 && unkScoresArr.length >= 2 ? _cohensD(famScoresArr, unkScoresArr) : 0;
+
+              // Channel performance
+              const channelPerf = channels.map(ch => {
+                const chEvals = expertEvals.filter(e => getChannel(e) === ch);
+                const mean = _mean(chEvals.map(e => (e.r_score + e.i_score + e.f_score + (e.c_score || 0)) / (e.c_score != null ? 4 : 3)));
+                return { channel: ch, mean: Number(mean.toFixed(2)), count: chEvals.length };
+              }).sort((a, b) => b.mean - a.mean);
+
+              // Material rankings
+              const materialMap = new Map<string, { title: string; channel: string; scores: number[]; count: number }>();
+              expertEvals.forEach(e => {
+                const sid = e.stimulus_id;
+                if (!materialMap.has(sid)) {
+                  materialMap.set(sid, { title: getMaterialName(e), channel: getChannel(e), scores: [], count: 0 });
+                }
+                const m = materialMap.get(sid)!;
+                m.scores.push((e.r_score + e.i_score + e.f_score + (e.c_score || 0)) / (e.c_score != null ? 4 : 3));
+                m.count++;
+              });
+              const materialRankings = Array.from(materialMap.entries()).map(([sid, d]) => ({
+                sid, ...d, mean: Number(_mean(d.scores).toFixed(2)),
+              })).sort((a, b) => b.mean - a.mean);
+              const top5 = materialRankings.slice(0, 5);
+              const bottom5 = materialRankings.slice(-5).reverse();
+
+              // Score distributions per dimension
+              const dimKeys = [
+                { key: "r", label: "R", color: "#DC2626", scores: expertEvals.map(e => e.r_score) },
+                { key: "i", label: "I", color: "#2563EB", scores: expertEvals.map(e => e.i_score) },
+                { key: "f", label: "F", color: "#059669", scores: expertEvals.map(e => e.f_score) },
+                { key: "c", label: "C", color: "#D97706", scores: evalsWithC.map(e => e.c_score!) },
+                { key: "cta", label: "CTA", color: "#7C3AED", scores: evalsWithCTA.map(e => e.cta_score!) },
+              ];
+
+              // Helpers
+              const alphaLabel = cronbachAlpha >= 0.90 ? "EXCELENT" : cronbachAlpha >= 0.80 ? "BUN" : cronbachAlpha >= 0.70 ? "ACCEPTABIL" : "SLAB";
+              const alphaColor = cronbachAlpha >= 0.80 ? "#059669" : cronbachAlpha >= 0.70 ? "#D97706" : "#DC2626";
+              const panelLabel = completedExperts >= 30 ? "PANEL ADECVAT" : completedExperts >= 10 ? "PANEL LIMITAT" : "INSUFICIENT";
+              const panelColor = completedExperts >= 30 ? "#059669" : completedExperts >= 10 ? "#D97706" : "#DC2626";
+              const corrLabel = (r: number) => Math.abs(r) >= 0.70 ? "PUTERNICA" : Math.abs(r) >= 0.40 ? "MODERATA" : "SLABA";
+              const corrColor = (r: number) => Math.abs(r) >= 0.70 ? "#059669" : Math.abs(r) >= 0.40 ? "#D97706" : "#DC2626";
+              const dLabel = Math.abs(brandCohensD) >= 0.80 ? "MARE" : Math.abs(brandCohensD) >= 0.50 ? "MEDIU" : Math.abs(brandCohensD) >= 0.20 ? "MIC" : "NEGLIJABIL";
+              const dColor = Math.abs(brandCohensD) >= 0.50 ? "#059669" : Math.abs(brandCohensD) >= 0.20 ? "#D97706" : "#DC2626";
+
+              // Local InterpBtn
+              const interpBtnHoverE = (e: React.MouseEvent, enter: boolean) => {
+                const el = e.currentTarget as HTMLButtonElement;
+                el.style.background = enter ? "#111827" : "#f9fafb";
+                el.style.color = enter ? "#fff" : "#6B7280";
+                el.style.borderColor = enter ? "#111827" : "#d1d5db";
+              };
+              const InterpBtnE = ({ k, title, val, ctx }: { k: string; title: string; val: string; ctx?: Record<string, unknown> }) => (
+                <button
+                  onClick={(ev) => { ev.stopPropagation(); setInterpDrawer({ key: k, title, value: val, context: ctx }); }}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 10, fontWeight: 600,
+                    borderRadius: 4, border: "1px solid #d1d5db", background: "#f9fafb", color: "#6B7280",
+                    cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" as const,
+                  }}
+                  onMouseEnter={ev => interpBtnHoverE(ev, true)}
+                  onMouseLeave={ev => interpBtnHoverE(ev, false)}
+                >
+                  <FileText size={10} /> Interpretare
+                </button>
+              );
+
+              // Local expert interpretation function
+              const getExpertInterp = (key: string, val: string, ctx?: Record<string, unknown>): { sections: { heading: string; text: string }[] } => {
+                const _ctx = ctx || {};
+                switch (key) {
+                  case "expert-panel": {
+                    const _en = _ctx.n as number || 0;
+                    const _evals = _ctx.evals as number || 0;
+                    return { sections: [
+                      { heading: "Ce este Panelul de Experti", text: `Panelul de experti (Stratul 1) este prima metoda de validare a formulei RIFC. ${_en} experti in marketing cu experienta practica evalueaza 30 de materiale publicitare pe 5 dimensiuni: Relevanta (R), Interes (I), Forma (F), Claritate (C) si Intentie de Actiune (CTA), pe o scala de la 1 la 10.` },
+                      { heading: "De ce este important", text: "Expertii aduc perspectiva profesionala — ei pot evalua materialele din unghiul creatorului si al strategului, nu doar al consumatorului. Aceasta completeaza sondajul respondentilor (Stratul 2) si benchmark-ul AI (Stratul 3), formand o triangulare metodologica." },
+                      { heading: "Dimensiunea panelului", text: `Cu N = ${_en} experti si ${_evals} evaluari totale, ${_en >= 30 ? "panelul depaseste pragul minim recomandat de 30 pentru validitate statistica." : _en >= 10 ? "panelul este limitat dar utilizabil — se recomanda extinderea la minim 30." : "panelul este insuficient — rezultatele au valoare orientativa, nu concluziva."}` },
+                      { heading: "Cum se interpreteaza", text: "Panel adecvat (≥30): rezultate robuste statistic. Panel limitat (10-29): rezultate indicative. Insuficient (<10): date preliminare." },
+                    ]};
+                  }
+                  case "expert-reliability": {
+                    const _alpha = _ctx.alpha as number || 0;
+                    const _nExp = _ctx.n as number || 0;
+                    return { sections: [
+                      { heading: "Ce masoara Cronbach Alpha", text: `Cronbach Alpha (α) masoara consistenta interna a evaluarilor — cat de similare sunt scorurile acordate de ${_nExp} experti pe aceleasi dimensiuni.` },
+                      { heading: "Praguri", text: "α ≥ 0.90: Excelent. α 0.80-0.89: Bun. α 0.70-0.79: Acceptabil. α < 0.70: Slab." },
+                      { heading: "Rezultat", text: `α = ${_alpha.toFixed(3)} → ${_alpha >= 0.90 ? "excelent" : _alpha >= 0.80 ? "bun" : _alpha >= 0.70 ? "acceptabil" : "slab"}. ${_alpha >= 0.70 ? "Evaluarile sunt fiabile." : "Se recomanda clarificarea criteriilor."}` },
+                      { heading: "Referinta", text: "Cronbach, L. J. (1951). Coefficient alpha and the internal structure of tests. Psychometrika, 16(3), 297-334." },
+                    ]};
+                  }
+                  case "expert-formula": {
+                    const _r = _ctx.r as number || 0;
+                    const _p = _ctx.p as number || 1;
+                    const _n = _ctx.n as number || 0;
+                    return { sections: [
+                      { heading: "Ce testeaza", text: "Se compara C_computed (R + I×F, normalizat) cu C_perceived (scorul direct de Claritate). Daca formula RIFC este valida, cele doua trebuie sa coreleze puternic." },
+                      { heading: "Rezultat", text: `Pearson r = ${_r.toFixed(3)}, ${_fmtP(_p)}, N = ${_n}. ${Math.abs(_r) >= 0.70 ? "Corelatie puternica — formula validata." : Math.abs(_r) >= 0.40 ? "Corelatie moderata — formula partial validata." : "Corelatie slaba — formula necesita revizuire."}` },
+                      { heading: "Interpretare", text: `r ≥ 0.70: puternica. r 0.40-0.69: moderata. r < 0.40: slaba. ${_p < 0.05 ? "Semnificativ statistic." : "Nesemnificativ statistic."}` },
+                      { heading: "Referinta", text: "Hair, J. F. et al. (2019). Multivariate Data Analysis (8th ed.). Cengage." },
+                    ]};
+                  }
+                  case "expert-brand": {
+                    const _d = _ctx.d as number || 0;
+                    const _famN = _ctx.famN as number || 0;
+                    const _unkN = _ctx.unkN as number || 0;
+                    return { sections: [
+                      { heading: "Ce testeaza", text: `Se compara scorurile RIFC pentru brand familiar (n=${_famN}) vs necunoscut (n=${_unkN}). Cohen's d masoara magnitudinea diferentei.` },
+                      { heading: "Rezultat", text: `d = ${_d.toFixed(3)}. ${Math.abs(_d) >= 0.80 ? "Efect mare." : Math.abs(_d) >= 0.50 ? "Efect mediu." : Math.abs(_d) >= 0.20 ? "Efect mic." : "Efect neglijabil."}` },
+                      { heading: "Praguri Cohen (1988)", text: "d ≥ 0.80: mare. d 0.50-0.79: mediu. d 0.20-0.49: mic. d < 0.20: neglijabil." },
+                      { heading: "Implicatii", text: `${Math.abs(_d) >= 0.50 ? "Expertii acorda scoruri mai mari brandurilor familiare — bias de familiaritate detectat." : "Brandingul nu influenteaza semnificativ evaluarile."}` },
+                    ]};
+                  }
+                  case "expert-cta-correlation": {
+                    const _r = _ctx.r as number || 0;
+                    const _p = _ctx.p as number || 1;
+                    const _n = _ctx.n as number || 0;
+                    return { sections: [
+                      { heading: "Ce testeaza", text: "Corelatia intre Claritatea perceputa (C) si Intentia de Actiune (CTA). C mare ar trebui sa prezica CTA mare." },
+                      { heading: "Rezultat", text: `r = ${_r.toFixed(3)}, ${_fmtP(_p)}, N = ${_n}. ${Math.abs(_r) >= 0.40 ? "Corelatie semnificativa — C prezice CTA." : "Corelatie slaba."}` },
+                      { heading: "De ce conteaza", text: "Daca C coreleaza cu CTA, formula RIFC descrie calea: R + I×F → C → Actiune." },
+                      { heading: "Referinta", text: "Hair et al. (2019). Prag: r ≥ 0.40 = corelatie semnificativa." },
+                    ]};
+                  }
+                  default: return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare a formulei RIFC." }] };
+                }
+              };
+
+              // SVG helpers
+              const svgW = 700, svgH = 320, pad = { top: 30, right: 20, bottom: 60, left: 50 };
+              const plotW = svgW - pad.left - pad.right;
+              const plotH = svgH - pad.top - pad.bottom;
+
+              return (
+                <div style={{ position: "relative" }}>
+                  {/* Drawer overlay for expert interpretare */}
+                  {interpDrawer && (() => {
+                    const info = getExpertInterp(interpDrawer.key, interpDrawer.value, interpDrawer.context);
+                    return (
+                      <>
+                        <div onClick={() => setInterpDrawer(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9998, transition: "opacity 0.2s" }} />
+                        <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 90vw)", background: "#fff", zIndex: 9999, boxShadow: "-4px 0 24px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", animation: "slideInRight 0.25s ease-out" }}>
+                          <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 10 }}>
+                            <Brain size={18} style={{ color: "#111827" }} />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{interpDrawer.title}</div>
+                              <div style={{ fontSize: 11, color: "#6B7280" }}>Valoare: {interpDrawer.value}</div>
+                            </div>
+                            <button onClick={() => setInterpDrawer(null)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #e5e7eb", background: "#f9fafb", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={14} /></button>
+                          </div>
+                          <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+                            {info.sections.map((sec, i) => (
+                              <div key={i} style={{ marginBottom: 20 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#111827", marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid #f3f4f6" }}>{sec.heading}</div>
+                                <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, margin: 0 }}>{sec.text}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  {/* S1. CHENAR EXPLICATIV PANEL EXPERTI */}
+                  <div style={{ background: "#f8fafc", borderLeft: "4px solid #7C3AED", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#7C3AED", marginBottom: 8 }}>CE ESTE PANELUL DE EXPERTI?</div>
+                    <p style={{ fontSize: 12, color: "#374151", lineHeight: 1.7, margin: "0 0 10px" }}>
+                      Stratul 1 al validarii RIFC: <strong>{completedExperts} experti in marketing</strong> evalueaza <strong>30 materiale</strong> pe 5 dimensiuni (R, I, F, C, CTA) folosind o scala de la 1 la 10 (scala Likert extinsa). Se testeaza daca formula <strong>R + (I x F) = C</strong> prezice Claritatea perceputa, daca CTA coreleaza cu C si daca recunoasterea brandului influenteaza scorurile.
+                    </p>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      {[
+                        { label: "Cronbach Alpha", desc: "Consistenta interna ≥ 0.70", val: cronbachAlpha.toFixed(3), color: alphaColor },
+                        { label: "Pearson r (Formula)", desc: "Corelatie C_comp vs C_perc ≥ 0.50", val: formulaR.toFixed(3), color: corrColor(formulaR) },
+                        { label: "Cohen's d (Brand)", desc: "Efect recunoastere ≥ 0.50", val: brandCohensD.toFixed(3), color: dColor },
+                        { label: "CTA-C Corelatie", desc: "Predictie CTA ≥ 0.40", val: ctaCr.toFixed(3), color: corrColor(ctaCr) },
+                      ].map((m, i) => (
+                        <div key={i} style={{ background: "#fff", borderRadius: 6, padding: "8px 12px", border: "1px solid #e5e7eb" }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>{m.label}</div>
+                          <div style={{ fontSize: 16, fontWeight: 800, color: m.color, fontFamily: "'JetBrains Mono', monospace" }}>{m.val}</div>
+                          <div style={{ fontSize: 10, color: "#9CA3AF" }}>{m.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 10, fontSize: 10, color: "#9CA3AF" }}>Referinte: Cronbach (1951), Cohen (1988), Hair et al. (2019)</div>
+                  </div>
+
+                  {/* S2. HERO PANEL STATUS */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "24px 32px", marginBottom: 20, textAlign: "center" as const }}>
+                    <div style={{ fontSize: 52, fontWeight: 900, color: panelColor, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>{completedExperts}</div>
+                    <div style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>experti au evaluat</div>
+                    <span style={{ display: "inline-block", marginTop: 8, padding: "4px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#fff", background: panelColor }}>{panelLabel}</span>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginTop: 20 }}>
+                      {[
+                        { label: "EVALUARI TOTALE", val: totalEvals.toString() },
+                        { label: "MEDIE GLOBALA", val: grandMean.toFixed(2) },
+                        { label: "CRONBACH ALPHA", val: cronbachAlpha.toFixed(3) },
+                        { label: "MATERIALE", val: totalStimuli.toString() },
+                      ].map((m, i) => (
+                        <div key={i} style={{ background: "#f9fafb", borderRadius: 8, padding: "10px 8px", border: "1px solid #e5e7eb" }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>{m.label}</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: "#111827", fontFamily: "'JetBrains Mono', monospace" }}>{m.val}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 12 }}>
+                      <InterpBtnE k="expert-panel" title="Panel Experti" val={completedExperts.toString()} ctx={{ n: completedExperts, evals: totalEvals }} />
+                    </div>
+                  </div>
+
+                  {/* S3. INTER-RATER RELIABILITY — Cronbach Alpha */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderLeft: "4px solid #7C3AED", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, marginBottom: 2 }}>CRONBACH ALPHA</div>
+                        <div style={{ fontSize: 28, fontWeight: 900, color: alphaColor, fontFamily: "'JetBrains Mono', monospace" }}>{cronbachAlpha.toFixed(3)}</div>
+                      </div>
+                      <span style={{ padding: "3px 10px", borderRadius: 12, fontSize: 10, fontWeight: 700, background: `${alphaColor}15`, color: alphaColor, letterSpacing: 0.5 }}>{alphaLabel}</span>
+                      <div style={{ marginLeft: "auto" }}>
+                        <InterpBtnE k="expert-reliability" title="Cronbach Alpha" val={cronbachAlpha.toFixed(3)} ctx={{ alpha: cronbachAlpha, n: completedExperts }} />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 10 }}>Consistenta interna a evaluarilor expertilor pe dimensiunile R, I, F, C</div>
+                    {/* Visual scale */}
+                    <div style={{ position: "relative" as const, height: 16, background: "#f3f4f6", borderRadius: 8, overflow: "hidden" }}>
+                      <div style={{ position: "absolute" as const, left: 0, top: 0, bottom: 0, width: "70%", background: "linear-gradient(90deg, #DC2626, #D97706, #EAB308, #059669)", borderRadius: 8, opacity: 0.3 }} />
+                      <div style={{ position: "absolute" as const, left: `${Math.min(100, cronbachAlpha * 100)}%`, top: -2, width: 3, height: 20, background: "#111827", borderRadius: 2 }} />
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 9, color: "#9CA3AF" }}>
+                      <span>0 — Slab</span><span>0.70 — Acceptabil</span><span>0.80 — Bun</span><span>0.90 — Excelent</span><span>1.0</span>
+                    </div>
+                  </div>
+
+                  {/* S4. DISTRIBUTIA SCORURILOR — Bar Chart SVG */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Distributia Scorurilor per Dimensiune</div>
+                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Histograma scorurilor 1-10 pentru R, I, F, C, CTA</div>
+                    <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: "auto" }}>
+                      {dimKeys.map((dim, di) => {
+                        const bins = Array.from({ length: 10 }, (_, s) => dim.scores.filter(v => Math.round(v) === s + 1).length);
+                        const maxBin = Math.max(...bins, 1);
+                        const groupW = plotW / 5;
+                        const barW = (groupW - 20) / 10;
+                        const gx = pad.left + di * groupW + 10;
+                        return (
+                          <g key={dim.key}>
+                            {bins.map((count, bi) => {
+                              const bh = (count / maxBin) * plotH;
+                              return (
+                                <rect key={bi} x={gx + bi * barW} y={pad.top + plotH - bh} width={barW - 1} height={bh} fill={dim.color} opacity={0.7} rx={1}>
+                                  <title>{dim.label} scor {bi + 1}: {count} evaluari</title>
+                                </rect>
+                              );
+                            })}
+                            {/* Mean line */}
+                            {dim.scores.length > 0 && (() => {
+                              const meanVal = _mean(dim.scores);
+                              const meanX = gx + ((meanVal - 1) / 9) * (groupW - 20);
+                              return <line x1={meanX} y1={pad.top} x2={meanX} y2={pad.top + plotH} stroke={dim.color} strokeWidth={2} strokeDasharray="4,3" opacity={0.9} />;
+                            })()}
+                            {/* Label */}
+                            <text x={gx + (groupW - 20) / 2} y={svgH - 10} textAnchor="middle" fontSize={11} fontWeight={700} fill={dim.color}>{dim.label} ({dim.scores.length > 0 ? _mean(dim.scores).toFixed(1) : "—"})</text>
+                          </g>
+                        );
+                      })}
+                      {/* Y axis labels */}
+                      {[0, 0.25, 0.5, 0.75, 1].map((pct, i) => (
+                        <text key={i} x={pad.left - 5} y={pad.top + plotH * (1 - pct)} textAnchor="end" fontSize={9} fill="#9CA3AF" dominantBaseline="middle">{Math.round(pct * Math.max(...dimKeys.flatMap(d => { const bins = Array.from({ length: 10 }, (_, s) => d.scores.filter(v => Math.round(v) === s + 1).length); return bins; }), 1))}</text>
+                      ))}
+                    </svg>
+                  </div>
+
+                  {/* S5. PERFORMANTA PER CANAL — Horizontal Bar Chart */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Performanta per Canal de Marketing</div>
+                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Scor mediu RIFC per canal, sortat descrescator</div>
+                    {channelPerf.length > 0 && (() => {
+                      const maxVal = Math.max(...channelPerf.map(c => c.mean), 1);
+                      const globalMean = _mean(channelPerf.map(c => c.mean));
+                      return (
+                        <div>
+                          {channelPerf.map((ch, i) => {
+                            const pct = (ch.mean / 10) * 100;
+                            const barColor = ch.mean >= 7 ? "#059669" : ch.mean >= 5 ? "#D97706" : "#DC2626";
+                            return (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                                <div style={{ width: 120, fontSize: 11, fontWeight: 600, color: "#374151", textAlign: "right" as const }}>{ch.channel}</div>
+                                <div style={{ flex: 1, height: 18, background: "#f3f4f6", borderRadius: 4, position: "relative" as const, overflow: "hidden" }}>
+                                  <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 4, transition: "width 0.3s" }} />
+                                  {/* Global mean line */}
+                                  <div style={{ position: "absolute" as const, left: `${(globalMean / 10) * 100}%`, top: 0, bottom: 0, width: 2, background: "#111827", opacity: 0.4 }} />
+                                </div>
+                                <div style={{ width: 40, fontSize: 12, fontWeight: 800, color: barColor, fontFamily: "'JetBrains Mono', monospace" }}>{ch.mean}</div>
+                                <div style={{ width: 50, fontSize: 10, color: "#9CA3AF" }}>n={ch.count}</div>
+                              </div>
+                            );
+                          })}
+                          <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4 }}>Linia verticala = media globala ({globalMean.toFixed(2)})</div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* S6. VALIDARE FORMULA RIFC — Scatter Plot */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Validare Formula R + (I x F) = C</div>
+                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${corrColor(formulaR)}15`, color: corrColor(formulaR) }}>CORELATIE {corrLabel(formulaR)}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>C_computed (R + I×F) vs C_perceived (scor direct expert) — Pearson r = {formulaR.toFixed(3)}, {_fmtP(formulaP)}</div>
+                    {formulaEvals.length >= 3 ? (
+                      <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: "auto" }}>
+                        {/* Axes */}
+                        <line x1={pad.left} y1={pad.top + plotH} x2={pad.left + plotW} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
+                        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
+                        {/* X axis labels */}
+                        {[0, 20, 40, 60, 80, 100].map(v => (
+                          <text key={v} x={pad.left + (v / 100) * plotW} y={svgH - 15} textAnchor="middle" fontSize={9} fill="#9CA3AF">{v}</text>
+                        ))}
+                        <text x={pad.left + plotW / 2} y={svgH - 2} textAnchor="middle" fontSize={10} fill="#6B7280">C_computed = R + (I × F)</text>
+                        {/* Y axis labels */}
+                        {[1, 3, 5, 7, 10].map(v => (
+                          <text key={v} x={pad.left - 5} y={pad.top + plotH - ((v - 1) / 9) * plotH} textAnchor="end" fontSize={9} fill="#9CA3AF" dominantBaseline="middle">{v}</text>
+                        ))}
+                        <text x={12} y={pad.top + plotH / 2} textAnchor="middle" fontSize={10} fill="#6B7280" transform={`rotate(-90, 12, ${pad.top + plotH / 2})`}>C_perceived</text>
+                        {/* Dots */}
+                        {formulaEvals.map((ev, i) => {
+                          const maxComp = Math.max(...cComputedArr, 1);
+                          const cx = pad.left + (ev.c_computed / Math.max(maxComp, 100)) * plotW;
+                          const cy = pad.top + plotH - ((ev.c_score! - 1) / 9) * plotH;
+                          const chColors: Record<string, string> = { "Social Media": "#2563EB", Email: "#059669", Website: "#D97706", Print: "#DC2626", Video: "#7C3AED", Outdoor: "#0D9488" };
+                          return <circle key={i} cx={cx} cy={cy} r={3.5} fill={chColors[getChannel(ev)] || "#6B7280"} opacity={0.6}><title>{getMaterialName(ev)}: C_comp={ev.c_computed.toFixed(1)}, C_perc={ev.c_score}</title></circle>;
+                        })}
+                        {/* Trend line */}
+                        {(() => {
+                          const maxComp = Math.max(...cComputedArr, 100);
+                          const mx = _mean(cComputedArr), my = _mean(cPerceivedArr);
+                          const slope = cComputedArr.reduce((a, x, i) => a + (x - mx) * (cPerceivedArr[i] - my), 0) / (cComputedArr.reduce((a, x) => a + (x - mx) ** 2, 0) || 1);
+                          const intercept = my - slope * mx;
+                          const y1 = intercept;
+                          const y2 = slope * maxComp + intercept;
+                          const sx1 = pad.left;
+                          const sy1 = pad.top + plotH - ((Math.max(1, Math.min(10, y1)) - 1) / 9) * plotH;
+                          const sx2 = pad.left + plotW;
+                          const sy2 = pad.top + plotH - ((Math.max(1, Math.min(10, y2)) - 1) / 9) * plotH;
+                          return <line x1={sx1} y1={sy1} x2={sx2} y2={sy2} stroke="#111827" strokeWidth={1.5} strokeDasharray="6,4" opacity={0.5} />;
+                        })()}
+                        {/* R value in corner */}
+                        <text x={svgW - pad.right - 5} y={pad.top + 15} textAnchor="end" fontSize={11} fontWeight={700} fill={corrColor(formulaR)}>r = {formulaR.toFixed(3)}, {_fmtP(formulaP)}</text>
+                      </svg>
+                    ) : (
+                      <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Insuficiente date (minim 3 evaluari cu C perceput)</div>
+                    )}
+                    <div style={{ marginTop: 8 }}>
+                      <InterpBtnE k="expert-formula" title="Validare Formula RIFC" val={formulaR.toFixed(3)} ctx={{ r: formulaR, p: formulaP, n: formulaEvals.length }} />
+                    </div>
+                  </div>
+
+                  {/* S7. CORELATIE CTA-C — Scatter Plot */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Corelatie CTA — Claritate (C)</div>
+                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${corrColor(ctaCr)}15`, color: corrColor(ctaCr) }}>CORELATIE {corrLabel(ctaCr)}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>C_perceived vs CTA — Pearson r = {ctaCr.toFixed(3)}, {_fmtP(ctaCp)}</div>
+                    {ctaCevals.length >= 3 ? (
+                      <svg viewBox={`0 0 ${svgW} ${svgH}`} style={{ width: "100%", height: "auto" }}>
+                        <line x1={pad.left} y1={pad.top + plotH} x2={pad.left + plotW} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
+                        <line x1={pad.left} y1={pad.top} x2={pad.left} y2={pad.top + plotH} stroke="#e5e7eb" strokeWidth={1} />
+                        {[1, 3, 5, 7, 10].map(v => (
+                          <g key={v}>
+                            <text x={pad.left + ((v - 1) / 9) * plotW} y={svgH - 15} textAnchor="middle" fontSize={9} fill="#9CA3AF">{v}</text>
+                            <text x={pad.left - 5} y={pad.top + plotH - ((v - 1) / 9) * plotH} textAnchor="end" fontSize={9} fill="#9CA3AF" dominantBaseline="middle">{v}</text>
+                          </g>
+                        ))}
+                        <text x={pad.left + plotW / 2} y={svgH - 2} textAnchor="middle" fontSize={10} fill="#6B7280">C_perceived</text>
+                        <text x={12} y={pad.top + plotH / 2} textAnchor="middle" fontSize={10} fill="#6B7280" transform={`rotate(-90, 12, ${pad.top + plotH / 2})`}>CTA</text>
+                        {ctaCevals.map((ev, i) => {
+                          const cx = pad.left + ((ev.c_score! - 1) / 9) * plotW;
+                          const cy = pad.top + plotH - ((ev.cta_score! - 1) / 9) * plotH;
+                          return <circle key={i} cx={cx} cy={cy} r={3.5} fill="#7C3AED" opacity={0.5}><title>C={ev.c_score}, CTA={ev.cta_score}</title></circle>;
+                        })}
+                        {/* Trend line */}
+                        {(() => {
+                          const mx = _mean(cForCtaArr), my = _mean(ctaArr);
+                          const slope = cForCtaArr.reduce((a, x, i) => a + (x - mx) * (ctaArr[i] - my), 0) / (cForCtaArr.reduce((a, x) => a + (x - mx) ** 2, 0) || 1);
+                          const intercept = my - slope * mx;
+                          const y1v = slope * 1 + intercept, y2v = slope * 10 + intercept;
+                          return <line x1={pad.left} y1={pad.top + plotH - ((Math.max(1, Math.min(10, y1v)) - 1) / 9) * plotH} x2={pad.left + plotW} y2={pad.top + plotH - ((Math.max(1, Math.min(10, y2v)) - 1) / 9) * plotH} stroke="#111827" strokeWidth={1.5} strokeDasharray="6,4" opacity={0.5} />;
+                        })()}
+                        <text x={svgW - pad.right - 5} y={pad.top + 15} textAnchor="end" fontSize={11} fontWeight={700} fill={corrColor(ctaCr)}>r = {ctaCr.toFixed(3)}, {_fmtP(ctaCp)}</text>
+                      </svg>
+                    ) : (
+                      <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Insuficiente date (minim 3 evaluari cu C si CTA)</div>
+                    )}
+                    <div style={{ marginTop: 8 }}>
+                      <InterpBtnE k="expert-cta-correlation" title="Corelatie CTA-C" val={ctaCr.toFixed(3)} ctx={{ r: ctaCr, p: ctaCp, n: ctaCevals.length }} />
+                    </div>
+                  </div>
+
+                  {/* S8. EFECT BRAND RECOGNITION */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Efectul Recunoasterii Brandului</div>
+                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${dColor}15`, color: dColor }}>EFECT {dLabel}</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Brand familiar (n={brandFamiliar.length}) vs necunoscut (n={brandUnknown.length}) — Cohen&apos;s d = {brandCohensD.toFixed(3)}</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                      {/* Familiar vs Unknown per dimension */}
+                      {["R", "I", "F", "C", "CTA"].map(dim => {
+                        const famVals = brandFamiliar.map(e => dim === "R" ? e.r_score : dim === "I" ? e.i_score : dim === "F" ? e.f_score : dim === "C" ? (e.c_score || 0) : (e.cta_score || 0)).filter(v => v > 0);
+                        const unkVals = brandUnknown.map(e => dim === "R" ? e.r_score : dim === "I" ? e.i_score : dim === "F" ? e.f_score : dim === "C" ? (e.c_score || 0) : (e.cta_score || 0)).filter(v => v > 0);
+                        const famM = famVals.length > 0 ? _mean(famVals) : 0;
+                        const unkM = unkVals.length > 0 ? _mean(unkVals) : 0;
+                        const dimColor = dim === "R" ? "#DC2626" : dim === "I" ? "#2563EB" : dim === "F" ? "#059669" : dim === "C" ? "#D97706" : "#7C3AED";
+                        return (
+                          <div key={dim} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                            <div style={{ width: 30, fontSize: 11, fontWeight: 700, color: dimColor }}>{dim}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                                <div style={{ height: 8, background: `${dimColor}40`, borderRadius: 4, width: `${Math.min(100, (famM / 10) * 100)}%` }} />
+                                <span style={{ fontSize: 10, fontWeight: 700, color: dimColor }}>{famM.toFixed(1)}</span>
+                                <span style={{ fontSize: 9, color: "#9CA3AF" }}>fam</span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <div style={{ height: 8, background: "#d1d5db", borderRadius: 4, width: `${Math.min(100, (unkM / 10) * 100)}%` }} />
+                                <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>{unkM.toFixed(1)}</span>
+                                <span style={{ fontSize: 9, color: "#9CA3AF" }}>nec</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ marginTop: 12, textAlign: "center" as const }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>COHEN&apos;S D</div>
+                      <div style={{ fontSize: 24, fontWeight: 900, color: dColor, fontFamily: "'JetBrains Mono', monospace" }}>{brandCohensD.toFixed(3)}</div>
+                      <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${dColor}15`, color: dColor }}>{dLabel}</span>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <InterpBtnE k="expert-brand" title="Efect Brand Recognition" val={brandCohensD.toFixed(3)} ctx={{ d: brandCohensD, famN: brandFamiliar.length, unkN: brandUnknown.length }} />
+                    </div>
+                  </div>
+
+                  {/* S9. TOP/BOTTOM MATERIALE */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                    {/* Top 5 */}
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px" }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#059669", marginBottom: 10 }}>TOP 5 Materiale</div>
+                      {top5.map((m, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                          <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#059669" }}>{i + 1}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{m.title}</div>
+                            <div style={{ fontSize: 9, color: "#9CA3AF" }}>{m.channel} | n={m.count}</div>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#059669", fontFamily: "'JetBrains Mono', monospace" }}>{m.mean}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Bottom 5 */}
+                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px" }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#DC2626", marginBottom: 10 }}>BOTTOM 5 Materiale</div>
+                      {bottom5.map((m, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                          <div style={{ width: 20, height: 20, borderRadius: "50%", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#DC2626" }}>{materialRankings.length - bottom5.length + i + 1}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#111827", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{m.title}</div>
+                            <div style={{ fontSize: 9, color: "#9CA3AF" }}>{m.channel} | n={m.count}</div>
+                          </div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#DC2626", fontFamily: "'JetBrains Mono', monospace" }}>{m.mean}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* S10. HEATMAP EXPERTI × MATERIALE */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>Heatmap Experti x Materiale</div>
+                    <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Scor mediu RIFC per expert per material (anonimizat)</div>
+                    {(() => {
+                      const materialIds = Array.from(new Set(expertEvals.map(e => e.stimulus_id)));
+                      // Sort by display_order from stimuli
+                      materialIds.sort((a, b) => (stimLookup.get(a)?.display_order || 0) - (stimLookup.get(b)?.display_order || 0));
+                      const hmW = Math.max(600, materialIds.length * 22 + 80);
+                      const cellW = Math.max(16, (hmW - 80) / materialIds.length);
+                      const cellH = 18;
+                      const hmH = uniqueExperts.length * cellH + 50;
+                      const heatColor = (v: number) => v >= 8 ? "#059669" : v >= 6 ? "#10b981" : v >= 4 ? "#EAB308" : v >= 2 ? "#D97706" : "#DC2626";
+                      return (
+                        <div style={{ overflowX: "auto" }}>
+                          <svg viewBox={`0 0 ${hmW} ${hmH}`} style={{ width: hmW, height: hmH, minWidth: "100%" }}>
+                            {/* Column headers */}
+                            {materialIds.map((sid, ci) => (
+                              <text key={ci} x={80 + ci * cellW + cellW / 2} y={12} textAnchor="middle" fontSize={8} fill="#9CA3AF" transform={`rotate(-35, ${80 + ci * cellW + cellW / 2}, 12)`}>M{(stimLookup.get(sid)?.display_order || ci + 1)}</text>
+                            ))}
+                            {/* Rows */}
+                            {uniqueExperts.map((eid, ri) => {
+                              const expEvals = expertEvals.filter(e => e.expert_id === eid);
+                              return (
+                                <g key={ri}>
+                                  <text x={75} y={30 + ri * cellH + cellH / 2} textAnchor="end" fontSize={9} fill="#6B7280" dominantBaseline="middle">Expert {ri + 1}</text>
+                                  {materialIds.map((sid, ci) => {
+                                    const ev = expEvals.find(e => e.stimulus_id === sid);
+                                    if (!ev) return <rect key={ci} x={80 + ci * cellW} y={30 + ri * cellH} width={cellW - 1} height={cellH - 1} fill="#f3f4f6" rx={2} />;
+                                    const avg = (ev.r_score + ev.i_score + ev.f_score + (ev.c_score || 0)) / (ev.c_score != null ? 4 : 3);
+                                    return (
+                                      <g key={ci}>
+                                        <rect x={80 + ci * cellW} y={30 + ri * cellH} width={cellW - 1} height={cellH - 1} fill={heatColor(avg)} rx={2} opacity={0.8}>
+                                          <title>Expert {ri + 1}, M{stimLookup.get(sid)?.display_order || ci + 1}: {avg.toFixed(1)}</title>
+                                        </rect>
+                                        {cellW >= 20 && <text x={80 + ci * cellW + cellW / 2} y={30 + ri * cellH + cellH / 2} textAnchor="middle" dominantBaseline="middle" fontSize={8} fill="#fff" fontWeight={600}>{avg.toFixed(0)}</text>}
+                                      </g>
+                                    );
+                                  })}
+                                </g>
+                              );
+                            })}
+                          </svg>
+                          <div style={{ display: "flex", gap: 12, marginTop: 8, justifyContent: "center" }}>
+                            {[{ label: "1-2", color: "#DC2626" }, { label: "3-4", color: "#D97706" }, { label: "5-6", color: "#EAB308" }, { label: "7-8", color: "#10b981" }, { label: "9-10", color: "#059669" }].map((l, i) => (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <div style={{ width: 12, height: 12, borderRadius: 2, background: l.color }} />
+                                <span style={{ fontSize: 9, color: "#6B7280" }}>{l.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* S11. SINTEZA — 4 CONCLUZII ACADEMICE */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Sinteza — Concluzii Academice</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                      {[
+                        {
+                          title: "Consistenta evaluarilor",
+                          metric: `Cronbach Alpha = ${cronbachAlpha.toFixed(3)}`,
+                          verdict: alphaLabel,
+                          color: alphaColor,
+                          text: cronbachAlpha >= 0.70 ? "Evaluarile expertilor sunt suficient de consistente pentru a fi considerate fiabile." : "Consistenta scazuta — evaluarile prezinta variabilitate excesiva.",
+                        },
+                        {
+                          title: "Validarea formulei RIFC",
+                          metric: `Pearson r = ${formulaR.toFixed(3)}, ${_fmtP(formulaP)}`,
+                          verdict: corrLabel(formulaR),
+                          color: corrColor(formulaR),
+                          text: Math.abs(formulaR) >= 0.50 ? "Formula R + (I×F) = C prezice semnificativ Claritatea perceputa de experti." : "Corelatia slaba — formula nu prezice suficient perceptia expertilor.",
+                        },
+                        {
+                          title: "Efectul brandului",
+                          metric: `Cohen's d = ${brandCohensD.toFixed(3)}`,
+                          verdict: dLabel,
+                          color: dColor,
+                          text: Math.abs(brandCohensD) >= 0.50 ? "Recunoasterea brandului influenteaza semnificativ scorurile acordate." : "Efectul brandului este limitat — scorurile nu sunt semnificativ influentate de familiaritate.",
+                        },
+                        {
+                          title: "Adecvarea panelului",
+                          metric: `N = ${completedExperts} experti`,
+                          verdict: panelLabel,
+                          color: panelColor,
+                          text: completedExperts >= 30 ? "Panelul indeplineste cerintele minime pentru validitate statistica (N >= 30)." : `Panelul este sub pragul recomandat (30). Inca ${30 - completedExperts} experti necesari.`,
+                        },
+                      ].map((c, i) => (
+                        <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "14px 16px" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4 }}>{c.title}</div>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: c.color, fontFamily: "'JetBrains Mono', monospace", marginBottom: 4 }}>{c.metric}</div>
+                          <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 10, fontSize: 9, fontWeight: 700, background: `${c.color}15`, color: c.color, marginBottom: 6 }}>{c.verdict}</span>
+                          <p style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5, margin: 0 }}>{c.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* S12. SUMAR TABEL ACADEMIC */}
+                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "16px 20px", marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 10 }}>Sumar — Indicatori de Validare</div>
+                    <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                          {["Metric", "Valoare", "Prag", "Verdict"].map(h => (
+                            <th key={h} style={{ padding: "8px 10px", textAlign: "left" as const, fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          { metric: "Cronbach Alpha", val: cronbachAlpha.toFixed(3), threshold: "≥ 0.70", verdict: alphaLabel, color: alphaColor },
+                          { metric: "Pearson r (Formula)", val: formulaR.toFixed(3), threshold: "≥ 0.50", verdict: corrLabel(formulaR), color: corrColor(formulaR) },
+                          { metric: "Pearson r (CTA-C)", val: ctaCr.toFixed(3), threshold: "≥ 0.40", verdict: corrLabel(ctaCr), color: corrColor(ctaCr) },
+                          { metric: "Cohen's d (Brand)", val: brandCohensD.toFixed(3), threshold: "≥ 0.50", verdict: dLabel, color: dColor },
+                          { metric: "Panel N", val: completedExperts.toString(), threshold: "≥ 30", verdict: panelLabel, color: panelColor },
+                        ].map((row, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ padding: "8px 10px", fontWeight: 600, color: "#374151" }}>{row.metric}</td>
+                            <td style={{ padding: "8px 10px", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color: "#111827" }}>{row.val}</td>
+                            <td style={{ padding: "8px 10px", color: "#6B7280" }}>{row.threshold}</td>
+                            <td style={{ padding: "8px 10px" }}>
+                              <span style={{ padding: "2px 8px", borderRadius: 10, fontSize: 10, fontWeight: 700, background: `${row.color}15`, color: row.color }}>{row.verdict}</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <div style={{ marginTop: 10, fontSize: 10, color: "#9CA3AF", fontStyle: "italic" }}>
+                      Referinte: Cronbach (1951), Cohen (1988), Hair et al. (2019). Praguri conform standardelor acceptate in cercetarea de marketing.
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -6306,6 +7000,60 @@ export default function StudiuAdminPage() {
                   { heading: "Scala Landis & Koch (1977)", text: "κ < 0.00: Acord mai mic decat sansa. 0.00-0.20: Slab. 0.21-0.40: Acceptabil. 0.41-0.60: Moderat. 0.61-0.80: Substantial. 0.81-1.00: Aproape perfect." },
                   { heading: "Rezultatul panelului", text: `Fleiss κ = ${_fkVal.toFixed(3)} → acord ${_kLabel.toLowerCase()}. ${_fkVal > 0.61 ? "Expertii au un grad ridicat de concordanta — evaluarile sunt fiabile si consistente." : _fkVal > 0.40 ? "Acordul este moderat — exista variabilitate in opiniile expertilor." : "Acordul este scazut — expertii au opinii divergente, ceea ce reduce fiabilitatea CVI."}` },
                   { heading: "Implicatii", text: `${_fkVal > 0.61 ? "Cu acord substantial, S-CVI si I-CVI pot fi considerate fiabile. Panelul de experti a demonstrat consens in evaluarea relevantei itemilor." : "Se recomanda clarificarea criteriilor de evaluare, instruirea suplimentara a evaluatorilor sau extinderea panelului."}` },
+                ]};
+              }
+              // ── Expert Panel drawer cases ──
+              case "expert-panel": {
+                const _en = _ctx.n as number || 0;
+                const _evals = _ctx.evals as number || 0;
+                return { sections: [
+                  { heading: "Ce este Panelul de Experti", text: `Panelul de experti (Stratul 1) este prima metoda de validare a formulei RIFC. ${_en} experti in marketing cu experienta practica evalueaza 30 de materiale publicitare pe 5 dimensiuni: Relevanta (R), Interes (I), Forma (F), Claritate (C) si Intentie de Actiune (CTA), pe o scala de la 1 la 10.` },
+                  { heading: "De ce este important", text: `Expertii aduc perspectiva profesionala — ei pot evalua materialele din unghiul creatorului si al strategului, nu doar al consumatorului. Aceasta completeaza sondajul respondentilor (Stratul 2) si benchmark-ul AI (Stratul 3), formand o triangulare metodologica.` },
+                  { heading: "Dimensiunea panelului", text: `Cu N = ${_en} experti si ${_evals} evaluari totale, ${_en >= 30 ? "panelul depaseste pragul minim recomandat de 30 pentru validitate statistica." : _en >= 10 ? "panelul este limitat dar utilizabil — se recomanda extinderea la minim 30 pentru putere statistica adecvata." : "panelul este insuficient — rezultatele au valoare orientativa, nu concluziva. Sunt necesari minim 30 de experti."}` },
+                  { heading: "Cum se interpreteaza", text: "Panelul adecvat (≥30): rezultate robuste statistic. Panel limitat (10-29): rezultate indicative. Insuficient (<10): date preliminare, nu pot sustine concluzii." },
+                ]};
+              }
+              case "expert-reliability": {
+                const _alpha = _ctx.alpha as number || 0;
+                const _nExp = _ctx.n as number || 0;
+                return { sections: [
+                  { heading: "Ce masoara Cronbach Alpha", text: `Cronbach Alpha (α) masoara consistenta interna a evaluarilor — cat de similare sunt scorurile acordate de ${_nExp} experti pe aceleasi dimensiuni. Un α ridicat indica ca expertii evalueaza in mod coerent, nu aleatoriu.` },
+                  { heading: "Praguri de interpretare", text: "α ≥ 0.90: Excelent — consistenta foarte ridicata. α 0.80-0.89: Bun — consistenta solida. α 0.70-0.79: Acceptabil — minim acceptat in cercetare. α < 0.70: Slab — evaluarile nu sunt suficient de coerente." },
+                  { heading: "Rezultatul panelului", text: `α = ${_alpha.toFixed(3)} → consistenta ${_alpha >= 0.90 ? "excelenta" : _alpha >= 0.80 ? "buna" : _alpha >= 0.70 ? "acceptabila" : "slaba"}. ${_alpha >= 0.70 ? "Evaluarile expertilor sunt suficient de consistente pentru a fi considerate fiabile — scorurile reflecta proprietati reale ale materialelor, nu erori aleatorii." : "Evaluarile prezinta variabilitate excesiva — se recomanda instruirea suplimentara a evaluatorilor sau clarificarea criteriilor de evaluare."}` },
+                  { heading: "Referinta", text: "Cronbach, L. J. (1951). Coefficient alpha and the internal structure of tests. Psychometrika, 16(3), 297-334." },
+                ]};
+              }
+              case "expert-formula": {
+                const _r = _ctx.r as number || 0;
+                const _p = _ctx.p as number || 1;
+                const _n = _ctx.n as number || 0;
+                return { sections: [
+                  { heading: "Ce testeaza aceasta analiza", text: `Se compara C_computed (calculat prin formula R + I×F, normalizat) cu C_perceived (scorul de Claritate acordat direct de expert). Daca formula RIFC este valida, cele doua valori trebuie sa coreleze puternic.` },
+                  { heading: "Rezultat", text: `Pearson r = ${_r.toFixed(3)}, ${_fmtP(_p)}, N = ${_n} evaluari. ${Math.abs(_r) >= 0.70 ? "Corelatie puternica — formula prezice excelent perceptia de claritate a expertilor." : Math.abs(_r) >= 0.40 ? "Corelatie moderata — formula are capacitate predictiva, dar exista factori suplimentari." : "Corelatie slaba — formula nu reuseste sa prezica perceptia expertilor in acest context."}` },
+                  { heading: "Interpretare", text: `r ≥ 0.70: Corelatie puternica — formula validata. r 0.40-0.69: Corelatie moderata — formula partial validata. r < 0.40: Corelatie slaba — formula necesita revizuire. ${_p < 0.05 ? "Rezultatul este semnificativ statistic (p < 0.05)." : "Rezultatul NU este semnificativ statistic — posibil din cauza esantionului mic."}` },
+                  { heading: "Referinta", text: "Hair, J. F., Black, W. C., Babin, B. J., & Anderson, R. E. (2019). Multivariate Data Analysis (8th ed.). Cengage." },
+                ]};
+              }
+              case "expert-brand": {
+                const _d = _ctx.d as number || 0;
+                const _famN = _ctx.famN as number || 0;
+                const _unkN = _ctx.unkN as number || 0;
+                return { sections: [
+                  { heading: "Ce testeaza aceasta analiza", text: `Se compara scorurile medii RIFC acordate de experti pentru materialele cu brand familiar (n=${_famN}) vs brand necunoscut (n=${_unkN}). Cohen's d masoara magnitudinea diferentei intre cele doua grupuri.` },
+                  { heading: "Rezultat", text: `Cohen's d = ${_d.toFixed(3)}. ${Math.abs(_d) >= 0.80 ? "Efect mare — recunoasterea brandului influenteaza semnificativ evaluarile expertilor." : Math.abs(_d) >= 0.50 ? "Efect mediu — exista o influenta notabila a brandului." : Math.abs(_d) >= 0.20 ? "Efect mic — influenta brandului este detectabila dar limitata." : "Efect neglijabil — brandingul nu influenteaza semnificativ evaluarile."}` },
+                  { heading: "Praguri Cohen (1988)", text: "d ≥ 0.80: Efect mare. d 0.50-0.79: Efect mediu. d 0.20-0.49: Efect mic. d < 0.20: Neglijabil." },
+                  { heading: "Implicatii", text: `${Math.abs(_d) >= 0.50 ? "Expertii acorda scoruri mai mari materialelor cu branduri pe care le recunosc — aceasta sugereaza un bias de familiaritate care trebuie luat in considerare la interpretarea formulei RIFC." : "Brandingul nu influenteaza semnificativ evaluarile — expertii evalueaza predominant pe baza calitatii intrinsece a materialului."}` },
+                ]};
+              }
+              case "expert-cta-correlation": {
+                const _r = _ctx.r as number || 0;
+                const _p = _ctx.p as number || 1;
+                const _n = _ctx.n as number || 0;
+                return { sections: [
+                  { heading: "Ce testeaza aceasta analiza", text: `Se masoara corelatia intre Claritatea perceputa (C) si Intentia de Actiune (CTA). Daca modelul RIFC este valid, C mare ar trebui sa prezica CTA mare — respondentul care intelege clar mesajul este mai probabil sa actioneze.` },
+                  { heading: "Rezultat", text: `Pearson r = ${_r.toFixed(3)}, ${_fmtP(_p)}, N = ${_n} evaluari. ${Math.abs(_r) >= 0.40 ? "Corelatie semnificativa — Claritatea prezice Intentia de Actiune, confirmand lantul cauzal C → CTA." : "Corelatie slaba — Claritatea nu prezice suficient Intentia de Actiune in contextul expertilor."}` },
+                  { heading: "De ce conteaza", text: "CTA (Call-to-Action) este obiectivul final al oricarui material de marketing. Daca Claritatea (C = R + I×F) coreleaza cu CTA, atunci formula RIFC descrie calea completa: Relevanta + Interes × Forma → Claritate → Actiune." },
+                  { heading: "Referinta", text: "Hair et al. (2019). Praguri: r ≥ 0.40 = corelatie semnificativa in context de marketing." },
                 ]};
               }
               default: return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare a formulei RIFC." }] };
