@@ -128,27 +128,28 @@ export async function POST(req: NextRequest) {
 
     const clamp = (v: number) => Math.min(10, Math.max(1, Math.round(v)));
 
+    // Core fields only — optional fields added conditionally to avoid missing-column errors
     const insertData: Record<string, unknown> = {
       stimulus_id,
       expert_name: resolvedExpertName || "Expert",
-      expert_role: expert_role || null,
       r_score: clamp(r_score),
       i_score: clamp(i_score),
       f_score: clamp(f_score),
-      r_justification: r_justification || null,
-      i_justification: i_justification || null,
-      f_justification: f_justification || null,
-      notes: notes || null,
     };
 
-    // New fields (may not exist yet, added with migration 020)
+    // Optional fields — only include when they have actual values
     if (resolvedExpertId) insertData.expert_id = resolvedExpertId;
+    if (expert_role) insertData.expert_role = expert_role;
+    if (r_justification) insertData.r_justification = r_justification;
+    if (i_justification) insertData.i_justification = i_justification;
+    if (f_justification) insertData.f_justification = f_justification;
+    if (notes) insertData.notes = notes;
     if (c_score != null) insertData.c_score = clamp(c_score);
     if (cta_score != null) insertData.cta_score = clamp(cta_score);
-    if (c_justification !== undefined) insertData.c_justification = c_justification || null;
-    if (cta_justification !== undefined) insertData.cta_justification = cta_justification || null;
-    if (brand_familiar !== undefined) insertData.brand_familiar = brand_familiar;
-    if (brand_justification !== undefined) insertData.brand_justification = brand_justification || null;
+    if (c_justification) insertData.c_justification = c_justification;
+    if (cta_justification) insertData.cta_justification = cta_justification;
+    if (brand_familiar !== undefined && brand_familiar !== null) insertData.brand_familiar = brand_familiar;
+    if (brand_justification) insertData.brand_justification = brand_justification;
 
     // Upsert: if expert already evaluated this stimulus, update
     if (resolvedExpertId) {
@@ -170,18 +171,20 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (error) {
-          // Fallback: if new columns don't exist, retry without them
-          const fallback = { ...insertData };
-          delete fallback.expert_id;
-          delete fallback.c_score;
-          delete fallback.cta_score;
-          delete fallback.c_justification;
-          delete fallback.cta_justification;
-          delete fallback.brand_familiar;
-          delete fallback.brand_justification;
-          const retry = await supabase.from("survey_expert_evaluations").update(fallback).eq("id", existing.id).select().single();
-          if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
-          return NextResponse.json({ success: true, evaluation: retry.data, updated: true });
+          // Fallback 1: remove all optional columns
+          const fallback1: Record<string, unknown> = {
+            stimulus_id, expert_name: resolvedExpertName || "Expert",
+            r_score: clamp(r_score), i_score: clamp(i_score), f_score: clamp(f_score),
+          };
+          const retry1 = await supabase.from("survey_expert_evaluations").update(fallback1).eq("id", existing.id).select().single();
+          if (!retry1.error) return NextResponse.json({ success: true, evaluation: retry1.data, updated: true });
+          // Fallback 2: only scores
+          const fallback2: Record<string, unknown> = {
+            r_score: clamp(r_score), i_score: clamp(i_score), f_score: clamp(f_score),
+          };
+          const retry2 = await supabase.from("survey_expert_evaluations").update(fallback2).eq("id", existing.id).select().single();
+          if (retry2.error) return NextResponse.json({ error: retry2.error.message }, { status: 500 });
+          return NextResponse.json({ success: true, evaluation: retry2.data, updated: true });
         }
         return NextResponse.json({ success: true, evaluation: data, updated: true });
       }
@@ -195,18 +198,28 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      // Fallback: if new columns don't exist, retry without them
-      const fallback = { ...insertData };
-      delete fallback.expert_id;
-      delete fallback.c_score;
-      delete fallback.cta_score;
-      delete fallback.c_justification;
-      delete fallback.cta_justification;
-      delete fallback.brand_familiar;
-      delete fallback.brand_justification;
-      const retry = await supabase.from("survey_expert_evaluations").insert(fallback).select().single();
-      if (retry.error) return NextResponse.json({ error: retry.error.message }, { status: 500 });
-      return NextResponse.json({ success: true, evaluation: retry.data });
+      // Fallback 1: only core fields (no optional columns)
+      const fallback1: Record<string, unknown> = {
+        stimulus_id,
+        expert_name: resolvedExpertName || "Expert",
+        r_score: clamp(r_score),
+        i_score: clamp(i_score),
+        f_score: clamp(f_score),
+      };
+      if (resolvedExpertId) fallback1.expert_id = resolvedExpertId;
+      const retry1 = await supabase.from("survey_expert_evaluations").insert(fallback1).select().single();
+      if (!retry1.error) return NextResponse.json({ success: true, evaluation: retry1.data });
+      // Fallback 2: absolute minimum (no expert_id either)
+      const fallback2: Record<string, unknown> = {
+        stimulus_id,
+        expert_name: resolvedExpertName || "Expert",
+        r_score: clamp(r_score),
+        i_score: clamp(i_score),
+        f_score: clamp(f_score),
+      };
+      const retry2 = await supabase.from("survey_expert_evaluations").insert(fallback2).select().single();
+      if (retry2.error) return NextResponse.json({ error: retry2.error.message }, { status: 500 });
+      return NextResponse.json({ success: true, evaluation: retry2.data });
     }
 
     return NextResponse.json({ success: true, evaluation: data });
@@ -278,6 +291,16 @@ export async function PUT(req: NextRequest) {
       .single();
 
     if (error) {
+      // Fallback: retry with only core score fields
+      const coreUpdates: Record<string, unknown> = {};
+      const coreAllowed = ["expert_name", "r_score", "i_score", "f_score"];
+      for (const key of coreAllowed) {
+        if (updates[key] !== undefined) coreUpdates[key] = updates[key];
+      }
+      if (Object.keys(coreUpdates).length > 0) {
+        const retry = await supabase.from("survey_expert_evaluations").update(coreUpdates).eq("id", id).select().single();
+        if (!retry.error) return NextResponse.json({ success: true, evaluation: retry.data });
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
