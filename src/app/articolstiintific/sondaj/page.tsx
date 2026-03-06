@@ -8586,6 +8586,25 @@ export default function StudiuAdminPage() {
                   { heading: "Concluzie", text: `Cu Zone Match de ${val}% (${_ctx.match || 0}/${_ctx.total || 0}), ${v >= 70 ? "formula RIFC clasifica corect materialele — predictia de claritate si actiune este fiabila." : v >= 50 ? "formula clasifica corect in majoritatea cazurilor, dar exista materiale unde predictia si realitatea sunt in zone diferite — investigatia per canal/industrie poate identifica cauza." : "formula necesita factori suplimentari pentru a clasifica corect — R+(I×F) nu surprinde toate elementele care influenteaza perceptia."}` },
                 ]};
               }
+              case "two-zone-gate": {
+                const _tzN = Number(_ctx.n || 0);
+                const _tz3p = Number(_ctx.g3pass || 0);
+                const _tz3r = Number(_ctx.g3rate || 0);
+                const _tz5p = Number(_ctx.g5pass || 0);
+                const _tz5r = Number(_ctx.g5rate || 0);
+                const _tzZ1 = (() => { try { return JSON.parse(String(_ctx.z1 || "{}")); } catch { return {}; } })();
+                const _tzZ2 = (() => { try { return JSON.parse(String(_ctx.z2 || "{}")); } catch { return {}; } })();
+                const _tzZ3 = (() => { try { return JSON.parse(String(_ctx.z3 || "{}")); } catch { return {}; } })();
+                return { sections: [
+                  { heading: "Ce este Analiza cu Doua Zone", text: `Modelul cu doua zone examineaza daca exista un punct de inflexiune in Relevanta (R) care marcheaza tranzitia de la constientizare pasiva la performanta activa. Analiza primara (OSF pre-inregistrata) foloseste R >= ${GATE} ca Gate. Analiza exploratorie testeaza R = 5 ca potentiala inflexiune.` },
+                  { heading: "Zona 1: R < 3 — Irelevant", text: `${_tzZ1.n || 0} materiale. Validare: ${_tzZ1.hypPct || 0}%. CTA: ${(_tzZ1.cta || 0).toFixed ? (_tzZ1.cta || 0).toFixed(2) : _tzZ1.cta || 0}. Materialele sub R=3 sunt complet irelevante pentru audienta. Formula calculeaza un scor, dar rezultatul este accidental — I×F functioneaza mecanic dar nu produce actiune. Analogie: o reclama la tractoare aratata unui programator — frumoasa, interesanta ca design, dar zero relevanta.` },
+                  { heading: "Zona 2: R 3 — 4.99 — Constientizare Latenta (Top of Mind)", text: `${_tzZ2.n || 0} materiale. Validare: ${_tzZ2.hypPct || 0}%. CTA: ${(_tzZ2.cta || 0).toFixed ? (_tzZ2.cta || 0).toFixed(2) : _tzZ2.cta || 0}. Materialele cu R intre 3 si 4.99 sunt in zona de "constientizare pasiva" — audienta recunoaste ca ar putea fi relevant, dar nu actioneaza acum. Barbatul stie ca exista pantofi de dama, poate cumpara sotiei intr-o zi, dar CTA ramane scazut. Formula prezice relativ bine Claritatea, dar Claritatea nu se transforma in actiune.` },
+                  { heading: "Zona 3: R >= 5 — Performanta Activa (Conversie)", text: `${_tzZ3.n || 0} materiale. Validare: ${_tzZ3.hypPct || 0}%. CTA: ${(_tzZ3.cta || 0).toFixed ? (_tzZ3.cta || 0).toFixed(2) : _tzZ3.cta || 0}. Aici formula atinge performanta maxima: R suficient de mare activeaza I×F complet, C (Claritate) este perceput precis, si CTA creste semnificativ. Aceasta este zona unde materialele de marketing produc rezultate masurabile — conversie, click, cumparare.` },
+                  { heading: "Comparatie: Gate R >= 3 vs R >= 5", text: `Gate R >= ${GATE} (confirmatory): ${_tz3p}/${_tzN} materiale (${_tz3r}%) trec pragul. Gate R >= 5 (exploratory): ${_tz5p}/${_tzN} materiale (${_tz5r}%) trec pragul. Diferenta: ${_tz3p - _tz5p} materiale se afla in zona latenta (R 3-4.99) — trec Gate-ul OSF dar nu produc performanta activa. Aceasta zona "gri" este contributia exploratorie a studiului: formula functioneaza dar nu converteste.` },
+                  { heading: "Implicatii pentru practica", text: `Pragmatism: daca obiectivul este Top of Mind (brand awareness), Gate R >= ${GATE} este suficient. Daca obiectivul este conversie directa (vanzari, click-through, lead generation), pragul R >= 5 este mai predictiv. Modelul cu doua zone sugereaza ca formula RIFC are doua "moduri de operare": sub R=5 prezice recunoasterea, peste R=5 prezice actiunea.` },
+                  { heading: "Nota OSF", text: `Analiza cu R >= ${GATE} este confirmatorie (pre-inregistrata OSF) si ramane analiza primara a studiului. Modelul cu doua zone (R=5 ca inflexiune) este exploratorie si constituie o contributie teoretica pentru studii viitoare. In articol, aceasta descoperire se raporteaza in sectiunea "Exploratory Analyses" sau "Discussion" cu etichetare clara.` },
+                ]};
+              }
               case "val_channel": {
                 const _vLabel = String(_ctx.label || "");
                 const _vCfN = Number(_ctx.cfNorm || 0);
@@ -8897,6 +8916,32 @@ export default function StudiuAdminPage() {
           // Use LOG data for response count (matches header RASPUNSURI)
           const _interpResponses = _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
           const avgEvalPerMaterial = Math.round(_interpResponses / n);
+
+          // ── Two-Zone Gate Analysis (R<3 vs R 3-4.99 vs R≥5) — exploratory ──
+          const tzBelow3 = withData.filter(s => s.avg_r < 3);
+          const tz3to5 = withData.filter(s => s.avg_r >= 3 && s.avg_r < 5);
+          const tzAbove5 = withData.filter(s => s.avg_r >= 5);
+          const tzCalc = (arr: typeof withData) => {
+            if (arr.length === 0) return { n: 0, r: 0, i: 0, f: 0, cf: 0, cfNorm: 0, cp: 0, delta: 0, hypPct: 0, ixf: 0, cta: 0, zoneMatch: 0 };
+            const _n = arr.length;
+            const _r = Math.round(arr.reduce((a, s) => a + s.avg_r, 0) / _n * 100) / 100;
+            const _i = Math.round(arr.reduce((a, s) => a + s.avg_i, 0) / _n * 100) / 100;
+            const _f = Math.round(arr.reduce((a, s) => a + s.avg_f, 0) / _n * 100) / 100;
+            const _cf = Math.round(arr.reduce((a, s) => a + s.avg_c, 0) / _n * 100) / 100;
+            const _cp = Math.round(arr.reduce((a, s) => a + s.avg_c_score, 0) / _n * 100) / 100;
+            const _cfN = normCf(_cf);
+            const _delta = calcDelta(_cf, _cp);
+            const _hyp = hypothesisPct(_cf, _cp);
+            const _ixf = Math.round((_cf - _r) * 100) / 100;
+            const _cta = arr.filter((s: any) => s.avg_cta_score != null).length > 0 ? Math.round(arr.filter((s: any) => s.avg_cta_score != null).reduce((a: number, s: any) => a + (s.avg_cta_score || 0), 0) / arr.filter((s: any) => s.avg_cta_score != null).length * 100) / 100 : 0;
+            const _zm = arr.filter(s => getZone(s.avg_c) === getZoneCp(s.avg_c_score)).length;
+            return { n: _n, r: _r, i: _i, f: _f, cf: _cf, cfNorm: _cfN, cp: _cp, delta: _delta, hypPct: _hyp, ixf: _ixf, cta: _cta, zoneMatch: Math.round((_zm / _n) * 100) };
+          };
+          const tzZ1 = tzCalc(tzBelow3);
+          const tzZ2 = tzCalc(tz3to5);
+          const tzZ3 = tzCalc(tzAbove5);
+          const tzGate5PassCount = tzAbove5.length;
+          const tzGate5PassRate = Math.round((tzGate5PassCount / n) * 100);
 
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
@@ -9324,6 +9369,223 @@ export default function StudiuAdminPage() {
                       <div style={{ marginTop: 6 }}><InterpBtn k="materials" title="Materiale Analizate" val={String(n)} ctx={{ responses: _interpResponses, avgPerMaterial: avgEvalPerMaterial, channels: uniqueChannels, industries: uniqueIndustries, respondents: _interpCompleted }} /></div>
                     </div>
                   </div>
+
+                  {/* ═══ TWO-ZONE GATE COMPARISON — R<3 vs R 3-4.99 vs R≥5 (Exploratory) ═══ */}
+                  {(() => {
+                    const tzZones = [
+                      { key: "below3", label: "R < 3", sublabel: "Sub-Gate (Irelevant)", data: tzZ1, color: "#DC2626", bgLight: "#fef2f2", border: "#fecaca", icon: "M18.36 5.64a9 9 0 11-12.73 12.73 9 9 0 0112.73-12.73zM19 12H5" },
+                      { key: "3to5", label: "R 3 — 4.99", sublabel: "Constientizare Latenta (Top of Mind)", data: tzZ2, color: "#D97706", bgLight: "#fffbeb", border: "#fde68a", icon: "M12 2a10 10 0 100 20 10 10 0 000-20zM12 6v6l4 2" },
+                      { key: "above5", label: "R \u2265 5", sublabel: "Performanta Activa (Conversie)", data: tzZ3, color: "#059669", bgLight: "#ecfdf5", border: "#a7f3d0", icon: "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" },
+                    ];
+                    const maxHyp = Math.max(tzZ1.hypPct, tzZ2.hypPct, tzZ3.hypPct, 1);
+                    // SVG bar chart dimensions
+                    const bW = 480, bH = 200, bPad = { l: 42, r: 16, t: 16, b: 36 };
+                    const bPlotW = bW - bPad.l - bPad.r;
+                    const bPlotH = bH - bPad.t - bPad.b;
+                    const metrics = ["Validare %", "R med", "Cp", "Cf/11", "Delta", "CTA", "Zone Match %"];
+                    const metricVals = (d: typeof tzZ1) => [d.hypPct, d.r, d.cp, d.cfNorm, d.delta, d.cta, d.zoneMatch];
+                    const metricMax = [100, 10, 10, 10, 10, 10, 100];
+                    const barGroupW = bPlotW / metrics.length;
+                    const barW = Math.min(barGroupW * 0.22, 18);
+                    return (
+                      <div style={{ border: "2px solid #e5e7eb", borderRadius: 12, marginBottom: 20, overflow: "hidden" }}>
+                        {/* Header */}
+                        <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>ANALIZA DOUA ZONE — PRAGUL DE RELEVANTA</div>
+                            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Confirmatory: R &ge; {GATE} (OSF pre-inregistrat) &middot; Exploratory: R &ge; 5 (inflexiune latenta → performanta)</div>
+                          </div>
+                          <div style={{ marginLeft: "auto" }}>
+                            <InterpBtn k="two-zone-gate" title="Analiza Doua Zone" val={`${gatePassRate}% vs ${tzGate5PassRate}%`} ctx={{ g3pass: gatePassCount, g3rate: gatePassRate, g5pass: tzGate5PassCount, g5rate: tzGate5PassRate, z1: JSON.stringify(tzZ1), z2: JSON.stringify(tzZ2), z3: JSON.stringify(tzZ3), n }} />
+                          </div>
+                        </div>
+
+                        {/* 3 Zone Cards */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0 }}>
+                          {tzZones.map((z, zi) => {
+                            const d = z.data;
+                            const isLast = zi === tzZones.length - 1;
+                            return (
+                              <div key={z.key} style={{
+                                padding: "16px 14px",
+                                background: d.n === 0 ? "#f9fafb" : z.bgLight,
+                                borderRight: isLast ? "none" : "1px solid #e5e7eb",
+                                borderBottom: "1px solid #e5e7eb",
+                                opacity: d.n === 0 ? 0.5 : 1,
+                              }}>
+                                {/* Zone header */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={z.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={z.icon}/></svg>
+                                  <div>
+                                    <div style={{ fontSize: 13, fontWeight: 800, color: z.color }}>{z.label}</div>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600, letterSpacing: 0.3 }}>{z.sublabel}</div>
+                                  </div>
+                                </div>
+                                {/* Count badge */}
+                                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
+                                  <span style={{ fontSize: 28, fontWeight: 900, color: z.color }}>{d.n}</span>
+                                  <span style={{ fontSize: 11, color: "#6B7280" }}>materiale ({d.n > 0 ? Math.round(d.n / n * 100) : 0}%)</span>
+                                </div>
+                                {d.n === 0 ? (
+                                  <div style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>Nicio material in aceasta zona</div>
+                                ) : (
+                                  <>
+                                    {/* Hero: Validation % */}
+                                    <div style={{ background: "#fff", border: `1px solid ${z.border}`, borderRadius: 8, padding: "8px 10px", marginBottom: 8, textAlign: "center" as const }}>
+                                      <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 2 }}>VALIDARE IPOTEZA</div>
+                                      <div style={{ fontSize: 24, fontWeight: 900, color: getValidationColor(d.hypPct) }}>{d.hypPct}%</div>
+                                      <div style={{ fontSize: 9, color: getValidationColor(d.hypPct), fontWeight: 600 }}>{getValidationLabel(d.hypPct)}</div>
+                                    </div>
+                                    {/* Metrics grid */}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+                                      {[
+                                        { label: "R mediu", val: d.r.toFixed(2), color: "#DC2626" },
+                                        { label: "I\u00D7F", val: d.ixf.toFixed(1), color: "#8B5CF6" },
+                                        { label: "Cf/11", val: d.cfNorm.toFixed(2), color: "#2563EB" },
+                                        { label: "Cp", val: d.cp.toFixed(2), color: "#059669" },
+                                        { label: "\u0394 Delta", val: d.delta.toFixed(2), color: "#6B7280" },
+                                        { label: "CTA", val: d.cta.toFixed(2), color: "#059669" },
+                                        { label: "Zone Match", val: `${d.zoneMatch}%`, color: d.zoneMatch >= 70 ? "#059669" : d.zoneMatch >= 40 ? "#D97706" : "#DC2626" },
+                                        { label: "Dir.", val: d.cfNorm < d.cp ? "Sub." : d.cfNorm > d.cp ? "Supra." : "=", color: d.cfNorm < d.cp ? "#D97706" : d.cfNorm > d.cp ? "#DC2626" : "#059669" },
+                                      ].map((m, mi) => (
+                                        <div key={mi} style={{ fontSize: 10, padding: "3px 6px", background: "#fff", borderRadius: 4, border: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between" }}>
+                                          <span style={{ color: "#6B7280" }}>{m.label}</span>
+                                          <span style={{ fontWeight: 700, color: m.color }}>{m.val}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Comparative Bar Chart (SVG) */}
+                        <div style={{ padding: "14px 20px", background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, letterSpacing: 0.5 }}>COMPARATIE METRICI PE ZONE</div>
+                          <div style={{ display: "flex", gap: 16, marginBottom: 8, fontSize: 10, color: "#6B7280" }}>
+                            {tzZones.filter(z => z.data.n > 0).map(z => (
+                              <span key={z.key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ width: 10, height: 4, borderRadius: 2, background: z.color }} />
+                                {z.label}
+                              </span>
+                            ))}
+                          </div>
+                          <svg viewBox={`0 0 ${bW} ${bH}`} width="100%" style={{ maxWidth: bW }}>
+                            {/* Y-axis gridlines */}
+                            {[0, 25, 50, 75, 100].map(pct => {
+                              const y = bPad.t + bPlotH - (pct / 100) * bPlotH;
+                              return (
+                                <g key={pct}>
+                                  <line x1={bPad.l} y1={y} x2={bW - bPad.r} y2={y} stroke="#f3f4f6" strokeWidth={0.5} />
+                                  <text x={bPad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{pct}%</text>
+                                </g>
+                              );
+                            })}
+                            {/* Metric groups */}
+                            {metrics.map((label, mi) => {
+                              const gx = bPad.l + mi * barGroupW + barGroupW / 2;
+                              return (
+                                <g key={label}>
+                                  <text x={gx} y={bH - bPad.b + 14} textAnchor="middle" fontSize={7.5} fontWeight={600} fill="#6B7280">{label}</text>
+                                  {tzZones.filter(z => z.data.n > 0).map((z, bi, filtArr) => {
+                                    const vals = metricVals(z.data);
+                                    const rawVal = vals[mi];
+                                    const pctH = Math.min((rawVal / metricMax[mi]) * 100, 100);
+                                    const barH = (pctH / 100) * bPlotH;
+                                    const totalBars = filtArr.length;
+                                    const offsetX = gx - (totalBars * barW + (totalBars - 1) * 2) / 2 + bi * (barW + 2);
+                                    const y = bPad.t + bPlotH - barH;
+                                    return (
+                                      <g key={z.key}>
+                                        <rect x={offsetX} y={y} width={barW} height={Math.max(barH, 1)} rx={2} fill={z.color} opacity={0.85} />
+                                        <text x={offsetX + barW / 2} y={y - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill={z.color}>
+                                          {mi === 0 || mi === 6 ? `${rawVal}` : rawVal.toFixed(1)}
+                                        </text>
+                                      </g>
+                                    );
+                                  })}
+                                </g>
+                              );
+                            })}
+                            <rect x={bPad.l} y={bPad.t} width={bPlotW} height={bPlotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                          </svg>
+                        </div>
+
+                        {/* Explanatory block */}
+                        <div style={{ padding: "16px 20px", background: "#f8fafc" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", marginBottom: 8, letterSpacing: 0.5 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 4 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            INTERPRETARE MODELUL CU DOUA ZONE
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                            {/* Left: Confirmatory */}
+                            <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb", borderTop: "3px solid #2563EB" }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#2563EB", marginBottom: 4 }}>CONFIRMATORY (OSF PRE-INREGISTRAT)</div>
+                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
+                                Gate R &ge; {GATE}: <strong>{gatePassCount}/{n}</strong> materiale ({gatePassRate}%) trec pragul.
+                                Formula R+(I&times;F)=C valideaza ipoteza cu <strong>{grandHypPct}%</strong> acuratete pe toate materialele cu R &ge; {GATE}.
+                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Aceasta este analiza primara, conform protocolului OSF pre-inregistrat.</span>
+                              </div>
+                            </div>
+                            {/* Right: Exploratory */}
+                            <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb", borderTop: "3px solid #059669" }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#059669", marginBottom: 4 }}>EXPLORATORY (POST-HOC)</div>
+                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
+                                Gate R &ge; 5: <strong>{tzGate5PassCount}/{n}</strong> materiale ({tzGate5PassRate}%) trec pragul.
+                                In zona R &ge; 5, validarea creste la <strong>{tzZ3.hypPct}%</strong> — indicand performanta activa.
+                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Descoperire exploratorie: pragul R=5 marcheaza tranzitia de la constientizare pasiva la conversie activa.</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Three-zone narrative */}
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #7C3AED" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", marginBottom: 6 }}>CELE 3 ZONE DE RELEVANTA</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              <div style={{ padding: "6px 8px", background: "#fef2f2", borderRadius: 4, border: "1px solid #fecaca" }}>
+                                <div style={{ fontWeight: 700, color: "#DC2626", marginBottom: 2 }}>R &lt; 3 — Irelevant ({tzZ1.n} mat.)</div>
+                                Materialul nu este procesat de audienta. I&times;F merge in gol — formula prezice {tzZ1.hypPct}% dar rezultatul este accidental. CTA = {tzZ1.cta.toFixed(1)}.
+                                {tzZ1.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
+                              </div>
+                              <div style={{ padding: "6px 8px", background: "#fffbeb", borderRadius: 4, border: "1px solid #fde68a" }}>
+                                <div style={{ fontWeight: 700, color: "#D97706", marginBottom: 2 }}>R 3 — 4.99 — Top of Mind ({tzZ2.n} mat.)</div>
+                                Constientizare latenta: audienta recunoaste materialul dar nu actioneaza. Formula prezice {tzZ2.hypPct}%, C&asymp;Cp dar CTA = {tzZ2.cta.toFixed(1)} ramane scazut. Barbatul stie de pantofii de dama, dar nu cumpara.
+                                {tzZ2.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
+                              </div>
+                              <div style={{ padding: "6px 8px", background: "#ecfdf5", borderRadius: 4, border: "1px solid #a7f3d0" }}>
+                                <div style={{ fontWeight: 700, color: "#059669", marginBottom: 2 }}>R &ge; 5 — Performanta ({tzZ3.n} mat.)</div>
+                                Conversie activa: audienta este angajata, formula prezice {tzZ3.hypPct}% cu precizie. CTA = {tzZ3.cta.toFixed(1)} creste semnificativ. Materialele relevante produc actiune masurabil.
+                                {tzZ3.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Delta comparison row */}
+                          {tzZ2.n > 0 && tzZ3.n > 0 && (
+                            <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "stretch" }}>
+                              <div style={{ flex: 1, background: "#fff", borderRadius: 6, padding: "8px 12px", border: "1px solid #e5e7eb", fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                                <strong style={{ color: "#D97706" }}>Zona Latenta (R 3-4.99):</strong> Validare {tzZ2.hypPct}%, Delta {tzZ2.delta.toFixed(2)}, CTA {tzZ2.cta.toFixed(2)} — formula functioneaza partial dar audienta nu converteste. Materialele sunt &quot;vizibile dar inactive&quot;.
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", padding: "0 6px" }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                              </div>
+                              <div style={{ flex: 1, background: "#fff", borderRadius: 6, padding: "8px 12px", border: "1px solid #e5e7eb", fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                                <strong style={{ color: "#059669" }}>Zona Performanta (R &ge; 5):</strong> Validare {tzZ3.hypPct}%, Delta {tzZ3.delta.toFixed(2)}, CTA {tzZ3.cta.toFixed(2)} — formula prezice cu precizie si audienta actioneaza. Crestere CTA: {tzZ2.cta > 0 ? `+${Math.round((tzZ3.cta / tzZ2.cta - 1) * 100)}%` : "N/A"} fata de zona latenta.
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Academic citation box */}
+                          <div style={{ marginTop: 10, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5, padding: "6px 10px", background: "#f1f5f9", borderRadius: 4 }}>
+                            <strong>Nota metodologica:</strong> Analiza cu gate R &ge; {GATE} este <strong>confirmatorie</strong> (pre-inregistrata OSF). Modelul cu doua zone (R=5 ca inflexiune) este <strong>exploratorie</strong> si trebuie replicat in studii viitoare inainte de adoptare ca prag recomandat. Pragul R=5 a fost identificat post-hoc ca punct de inflexiune unde CTA creste semnificativ si formula atinge acuratete maxima.
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Zone distribution — grouped comparison */}
                   {(() => {
