@@ -5608,152 +5608,7 @@ export default function StudiuAdminPage() {
                   );
                 })()}
 
-                {/* Summary by channel (all experts combined) — shows ALL channels */}
-                {(() => {
-                  // Build stim lookup: stimulus_id → stimulus record
-                  const stimMap = new Map(stimuli.filter(s => s.is_active).map(s => [s.id, s]));
-                  // Group evaluations by channel type
-                  const evalsByChannel: Record<string, { evals: ExpertEvaluation[]; stimNames: Set<string> }> = {};
-                  for (const ev of expertEvals) {
-                    const stim = stimMap.get(ev.stimulus_id);
-                    if (!stim) continue;
-                    if (!evalsByChannel[stim.type]) evalsByChannel[stim.type] = { evals: [], stimNames: new Set() };
-                    evalsByChannel[stim.type].evals.push(ev);
-                    evalsByChannel[stim.type].stimNames.add(stim.name);
-                  }
-
-                  // Show ALL channels sorted by display_order (not just those with evals)
-                  const channelEntries = [...categories]
-                    .sort((a, b) => a.display_order - b.display_order);
-
-                  if (channelEntries.length === 0) return null;
-
-                  return (
-                    <div style={{ ...S.configCard, marginTop: 20 }}>
-                      <div style={S.configHeader}>
-                        <Settings size={16} style={{ color: "#6B7280" }} />
-                        <span style={S.configTitle}>VIZIUNEA EXPERTILOR PER CANAL</span>
-                      </div>
-                      <p style={{ fontSize: 11, color: "#9CA3AF", margin: "-4px 0 12px", lineHeight: 1.4 }}>
-                        Datele din acest bloc sumarizeaza evaluarile tuturor expertilor, grupate pe canal. Canalele fara evaluari apar cu valori zero.
-                      </p>
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
-                        {channelEntries.map(cat => {
-                          const chData = evalsByChannel[cat.type];
-                          const chEvals = chData ? chData.evals : [];
-                          const stimNames = chData ? chData.stimNames : new Set<string>();
-                          const n = chEvals.length;
-                          const hasData = n > 0;
-                          const avgR = hasData ? (chEvals.reduce((s, e) => s + e.r_score, 0) / n).toFixed(1) : "0";
-                          const avgI = hasData ? (chEvals.reduce((s, e) => s + e.i_score, 0) / n).toFixed(1) : "0";
-                          const avgF = hasData ? (chEvals.reduce((s, e) => s + e.f_score, 0) / n).toFixed(1) : "0";
-                          const cVals = chEvals.filter(e => e.c_score != null);
-                          const avgC = hasData ? (cVals.length > 0 ? (cVals.reduce((s, e) => s + (e.c_score || 0), 0) / cVals.length).toFixed(1) : "\u2014") : "0";
-                          const ctaVals = chEvals.filter(e => e.cta_score != null);
-                          const avgCta = hasData ? (ctaVals.length > 0 ? (ctaVals.reduce((s, e) => s + (e.cta_score || 0), 0) / ctaVals.length).toFixed(1) : "\u2014") : "0";
-                          const avgCalc = hasData ? (chEvals.reduce((s, e) => s + e.r_score + (e.i_score * e.f_score), 0) / n).toFixed(0) : "0";
-                          const isExpCh = expandedExpertChannelType === cat.type;
-                          const matCount = stimuli.filter(s => s.is_active && s.type === cat.type).length;
-
-                          return (
-                            <div key={cat.type}>
-                              <div
-                                onClick={() => hasData ? setExpandedExpertChannelType(isExpCh ? null : cat.type) : null}
-                                style={{
-                                  ...S.configItem,
-                                  cursor: hasData ? "pointer" : "default",
-                                  borderColor: isExpCh ? cat.color : "#e5e7eb",
-                                  borderWidth: isExpCh ? 2 : 1,
-                                  background: isExpCh ? `${cat.color}08` : hasData ? "#f9fafb" : "#fafafa",
-                                  transition: "all 0.15s",
-                                }}
-                              >
-                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                                  <span style={{ width: 10, height: 10, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
-                                  <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{cat.label}</span>
-                                  <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${cat.color}18`, color: cat.color, marginLeft: "auto" }}>{cat.short_code}</span>
-                                </div>
-                                <span style={{ fontSize: 10, color: "#9CA3AF", display: "block", marginBottom: 8 }}>
-                                  {hasData ? `${n} evaluari · ${stimNames.size} materiale evaluate · ${new Set(chEvals.map(e => e.expert_id)).size} experti` : `${matCount} materiale · neevaluat`}
-                                </span>
-                                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "baseline", opacity: hasData ? 1 : 0.35 }}>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#DC2626" }}>R:{avgR}</span>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#D97706" }}>I:{avgI}</span>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#7C3AED" }}>F:{avgF}</span>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#2563EB" }}>C:{avgC}</span>
-                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#059669" }}>CTA:{avgCta}</span>
-                                  <span style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>={avgCalc}</span>
-                                </div>
-                                <div style={{ marginTop: 6, textAlign: "center" as const }}>
-                                  {hasData ? (isExpCh ? <ChevronUp size={14} style={{ color: cat.color }} /> : <ChevronDown size={14} style={{ color: "#9CA3AF" }} />) : null}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Expanded channel detail — OUTSIDE the grid for full width */}
-                      {expandedExpertChannelType && (() => {
-                        const expCat = channelEntries.find(c => c.type === expandedExpertChannelType);
-                        if (!expCat) return null;
-                        const expChData = evalsByChannel[expCat.type];
-                        const expColor = expCat.color;
-                        const expMatCount = stimuli.filter(s => s.is_active && s.type === expCat.type).length;
-                        return (
-                          <div style={{ marginTop: 12, border: `2px solid ${expColor}40`, borderRadius: 10, overflow: "auto", background: "#fff" }}>
-                            <div style={{ padding: "10px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: "50%", background: expColor }} />
-                              <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{expCat.label}</span>
-                              <span style={{ fontSize: 11, color: "#6B7280" }}>— {expChData ? expChData.stimNames.size : expMatCount} materiale</span>
-                            </div>
-                            <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
-                              <thead>
-                                <tr style={{ background: "#f9fafb" }}>
-                                  <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 140 }}>MATERIAL</th>
-                                  <th style={thStyle}>N</th>
-                                  <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
-                                  <th style={{ ...thStyle, color: "#D97706" }}>I</th>
-                                  <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
-                                  <th style={{ ...thStyle, color: "#2563EB" }}>C</th>
-                                  <th style={{ ...thStyle, color: "#059669" }}>CTA</th>
-                                  <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>=</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {stimuli.filter(s => s.is_active && s.type === expCat.type).map(stim => {
-                                  const sEvals = expertEvals.filter(e => e.stimulus_id === stim.id);
-                                  if (sEvals.length === 0) return null;
-                                  const sN = sEvals.length;
-                                  const sR = (sEvals.reduce((a, e) => a + e.r_score, 0) / sN).toFixed(1);
-                                  const sI = (sEvals.reduce((a, e) => a + e.i_score, 0) / sN).toFixed(1);
-                                  const sF = (sEvals.reduce((a, e) => a + e.f_score, 0) / sN).toFixed(1);
-                                  const sCVals = sEvals.filter(e => e.c_score != null);
-                                  const sC = sCVals.length > 0 ? (sCVals.reduce((a, e) => a + (e.c_score || 0), 0) / sCVals.length).toFixed(1) : "\u2014";
-                                  const sCtaVals = sEvals.filter(e => e.cta_score != null);
-                                  const sCta = sCtaVals.length > 0 ? (sCtaVals.reduce((a, e) => a + (e.cta_score || 0), 0) / sCtaVals.length).toFixed(1) : "\u2014";
-                                  const sCalc = (sEvals.reduce((a, e) => a + e.r_score + (e.i_score * e.f_score), 0) / sN).toFixed(0);
-                                  return (
-                                    <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                                      <td style={{ ...tdStyle, textAlign: "left" as const, fontWeight: 600, fontSize: 12, color: "#111827" }}>{stim.name}</td>
-                                      <td style={{ ...tdStyle, fontWeight: 600 }}>{sN}</td>
-                                      <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{sR}</td>
-                                      <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{sI}</td>
-                                      <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{sF}</td>
-                                      <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 600 }}>{sC}</td>
-                                      <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{sCta}</td>
-                                      <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{sCalc}</td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  );
-                })()}
+                {/* VIZIUNEA EXPERTILOR PER CANAL — moved to Interpretare → Per Canal sub-tab */}
               </>
             )}
             </>)}
@@ -6630,7 +6485,21 @@ export default function StudiuAdminPage() {
                         </div>
                       </div>
                     );
+
+                    // ── VIZIUNEA EXPERTILOR PER CANAL — detailed scores per channel ──
+                    const stimMap2 = new Map(stimuli.filter(s => s.is_active).map(s => [s.id, s]));
+                    const evalsByChannel: Record<string, { evals: ExpertEvaluation[]; stimNames: Set<string> }> = {};
+                    for (const ev of expertEvals) {
+                      const stim2 = stimMap2.get(ev.stimulus_id);
+                      if (!stim2) continue;
+                      if (!evalsByChannel[stim2.type]) evalsByChannel[stim2.type] = { evals: [], stimNames: new Set() };
+                      evalsByChannel[stim2.type].evals.push(ev);
+                      evalsByChannel[stim2.type].stimNames.add(stim2.name);
+                    }
+                    const channelEntries = [...categories].sort((a, b) => a.display_order - b.display_order);
+
                     return (
+                      <>
                       <div style={{ marginBottom: 24 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
@@ -6641,6 +6510,134 @@ export default function StudiuAdminPage() {
                         </div>
                         {exChAggs.length === 0 && <div style={{ padding: 20, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Nu sunt suficiente date per canal</div>}
                       </div>
+
+                      {/* ── VIZIUNEA EXPERTILOR PER CANAL — scoruri medii R/I/F/C/CTA per canal ── */}
+                      {channelEntries.length > 0 && (
+                        <div style={{ ...S.configCard, marginBottom: 24 }}>
+                          <div style={S.configHeader}>
+                            <Settings size={16} style={{ color: "#6B7280" }} />
+                            <span style={S.configTitle}>VIZIUNEA EXPERTILOR PER CANAL</span>
+                          </div>
+                          <p style={{ fontSize: 11, color: "#9CA3AF", margin: "-4px 0 12px", lineHeight: 1.4 }}>
+                            Datele din acest bloc sumarizeaza evaluarile tuturor expertilor, grupate pe canal. Canalele fara evaluari apar cu valori zero.
+                          </p>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
+                            {channelEntries.map(cat => {
+                              const chData = evalsByChannel[cat.type];
+                              const chEvals = chData ? chData.evals : [];
+                              const stimNames = chData ? chData.stimNames : new Set<string>();
+                              const n = chEvals.length;
+                              const hasData = n > 0;
+                              const avgR = hasData ? (chEvals.reduce((s, e) => s + e.r_score, 0) / n).toFixed(1) : "0";
+                              const avgI = hasData ? (chEvals.reduce((s, e) => s + e.i_score, 0) / n).toFixed(1) : "0";
+                              const avgF = hasData ? (chEvals.reduce((s, e) => s + e.f_score, 0) / n).toFixed(1) : "0";
+                              const cVals = chEvals.filter(e => e.c_score != null);
+                              const avgC = hasData ? (cVals.length > 0 ? (cVals.reduce((s, e) => s + (e.c_score || 0), 0) / cVals.length).toFixed(1) : "\u2014") : "0";
+                              const ctaVals = chEvals.filter(e => e.cta_score != null);
+                              const avgCta = hasData ? (ctaVals.length > 0 ? (ctaVals.reduce((s, e) => s + (e.cta_score || 0), 0) / ctaVals.length).toFixed(1) : "\u2014") : "0";
+                              const avgCalc = hasData ? (chEvals.reduce((s, e) => s + e.r_score + (e.i_score * e.f_score), 0) / n).toFixed(0) : "0";
+                              const isExpCh = expandedExpertChannelType === cat.type;
+                              const matCount = stimuli.filter(s => s.is_active && s.type === cat.type).length;
+
+                              return (
+                                <div key={cat.type}>
+                                  <div
+                                    onClick={() => hasData ? setExpandedExpertChannelType(isExpCh ? null : cat.type) : null}
+                                    style={{
+                                      ...S.configItem,
+                                      cursor: hasData ? "pointer" : "default",
+                                      borderColor: isExpCh ? cat.color : "#e5e7eb",
+                                      borderWidth: isExpCh ? 2 : 1,
+                                      background: isExpCh ? `${cat.color}08` : hasData ? "#f9fafb" : "#fafafa",
+                                      transition: "all 0.15s",
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                      <span style={{ width: 10, height: 10, borderRadius: "50%", background: cat.color, flexShrink: 0 }} />
+                                      <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{cat.label}</span>
+                                      <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${cat.color}18`, color: cat.color, marginLeft: "auto" }}>{cat.short_code}</span>
+                                    </div>
+                                    <span style={{ fontSize: 10, color: "#9CA3AF", display: "block", marginBottom: 8 }}>
+                                      {hasData ? `${n} evaluari · ${stimNames.size} materiale evaluate · ${new Set(chEvals.map(e => e.expert_id)).size} experti` : `${matCount} materiale · neevaluat`}
+                                    </span>
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "baseline", opacity: hasData ? 1 : 0.35 }}>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: "#DC2626" }}>R:{avgR}</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: "#D97706" }}>I:{avgI}</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: "#7C3AED" }}>F:{avgF}</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: "#2563EB" }}>C:{avgC}</span>
+                                      <span style={{ fontSize: 12, fontWeight: 700, color: "#059669" }}>CTA:{avgCta}</span>
+                                      <span style={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>={avgCalc}</span>
+                                    </div>
+                                    <div style={{ marginTop: 6, textAlign: "center" as const }}>
+                                      {hasData ? (isExpCh ? <ChevronUp size={14} style={{ color: cat.color }} /> : <ChevronDown size={14} style={{ color: "#9CA3AF" }} />) : null}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Expanded channel detail — OUTSIDE the grid for full width */}
+                          {expandedExpertChannelType && (() => {
+                            const expCat = channelEntries.find(c => c.type === expandedExpertChannelType);
+                            if (!expCat) return null;
+                            const expChData = evalsByChannel[expCat.type];
+                            const expColor = expCat.color;
+                            const expMatCount = stimuli.filter(s => s.is_active && s.type === expCat.type).length;
+                            return (
+                              <div style={{ marginTop: 12, border: `2px solid ${expColor}40`, borderRadius: 10, overflow: "auto", background: "#fff" }}>
+                                <div style={{ padding: "10px 16px", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", gap: 8 }}>
+                                  <span style={{ width: 8, height: 8, borderRadius: "50%", background: expColor }} />
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{expCat.label}</span>
+                                  <span style={{ fontSize: 11, color: "#6B7280" }}>— {expChData ? expChData.stimNames.size : expMatCount} materiale</span>
+                                </div>
+                                <table style={{ width: "100%", borderCollapse: "collapse" as const }}>
+                                  <thead>
+                                    <tr style={{ background: "#f9fafb" }}>
+                                      <th style={{ ...thStyle, textAlign: "left" as const, minWidth: 140 }}>MATERIAL</th>
+                                      <th style={thStyle}>N</th>
+                                      <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                                      <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                                      <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                                      <th style={{ ...thStyle, color: "#2563EB" }}>C</th>
+                                      <th style={{ ...thStyle, color: "#059669" }}>CTA</th>
+                                      <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>=</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {stimuli.filter(s => s.is_active && s.type === expCat.type).map(stim => {
+                                      const sEvals = expertEvals.filter(e => e.stimulus_id === stim.id);
+                                      if (sEvals.length === 0) return null;
+                                      const sN = sEvals.length;
+                                      const sR = (sEvals.reduce((a, e) => a + e.r_score, 0) / sN).toFixed(1);
+                                      const sI = (sEvals.reduce((a, e) => a + e.i_score, 0) / sN).toFixed(1);
+                                      const sF = (sEvals.reduce((a, e) => a + e.f_score, 0) / sN).toFixed(1);
+                                      const sCVals = sEvals.filter(e => e.c_score != null);
+                                      const sC = sCVals.length > 0 ? (sCVals.reduce((a, e) => a + (e.c_score || 0), 0) / sCVals.length).toFixed(1) : "\u2014";
+                                      const sCtaVals = sEvals.filter(e => e.cta_score != null);
+                                      const sCta = sCtaVals.length > 0 ? (sCtaVals.reduce((a, e) => a + (e.cta_score || 0), 0) / sCtaVals.length).toFixed(1) : "\u2014";
+                                      const sCalc = (sEvals.reduce((a, e) => a + e.r_score + (e.i_score * e.f_score), 0) / sN).toFixed(0);
+                                      return (
+                                        <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                          <td style={{ ...tdStyle, textAlign: "left" as const, fontWeight: 600, fontSize: 12, color: "#111827" }}>{stim.name}</td>
+                                          <td style={{ ...tdStyle, fontWeight: 600 }}>{sN}</td>
+                                          <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{sR}</td>
+                                          <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{sI}</td>
+                                          <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{sF}</td>
+                                          <td style={{ ...tdStyle, color: "#2563EB", fontWeight: 600 }}>{sC}</td>
+                                          <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{sCta}</td>
+                                          <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{sCalc}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                      </>
                     );
                   })()}
 

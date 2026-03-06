@@ -220,11 +220,11 @@ function ExpertPageContent() {
         // Priority: server data (saved) > localStorage draft (unsaved) > defaults
         if (existing) {
           initForms[stim.id] = {
-            r_score: existing.r_score || 5,
-            i_score: existing.i_score || 5,
-            f_score: existing.f_score || 5,
-            c_score: existing.c_score || 5,
-            cta_score: existing.cta_score || 5,
+            r_score: existing.r_score ?? 0,
+            i_score: existing.i_score ?? 0,
+            f_score: existing.f_score ?? 0,
+            c_score: existing.c_score ?? 0,
+            cta_score: existing.cta_score ?? 0,
             r_justification: existing.r_justification || "",
             i_justification: existing.i_justification || "",
             f_justification: existing.f_justification || "",
@@ -236,9 +236,23 @@ function ExpertPageContent() {
           };
           initStatus[stim.id] = "saved";
         } else if (draftForm) {
-          // Recover unsaved draft from localStorage
-          initForms[stim.id] = draftForm;
-          initStatus[stim.id] = "draft";
+          // Recover unsaved draft from localStorage — BUT only if user actually interacted (at least 1 score > 0)
+          const hasUserInput = draftForm.r_score > 0 || draftForm.i_score > 0 || draftForm.f_score > 0 || draftForm.c_score > 0 || draftForm.cta_score > 0
+            || (draftForm.r_justification && draftForm.r_justification.length > 0)
+            || (draftForm.i_justification && draftForm.i_justification.length > 0)
+            || (draftForm.f_justification && draftForm.f_justification.length > 0);
+          if (hasUserInput) {
+            initForms[stim.id] = draftForm;
+            initStatus[stim.id] = "draft";
+          } else {
+            // Discard empty draft — treat as fresh
+            initForms[stim.id] = {
+              r_score: 0, i_score: 0, f_score: 0, c_score: 0, cta_score: 0,
+              r_justification: "", i_justification: "", f_justification: "",
+              c_justification: "", cta_justification: "",
+              brand_familiar: null, brand_justification: "", notes: "",
+            };
+          }
         } else {
           initForms[stim.id] = {
             r_score: 0, i_score: 0, f_score: 0, c_score: 0, cta_score: 0,
@@ -250,6 +264,16 @@ function ExpertPageContent() {
       }
       setForms(initForms);
       setAutoSaveStatus(initStatus);
+      // Clean up localStorage: only keep forms with actual user input
+      if (DRAFT_KEY) {
+        const cleanDrafts: typeof forms = {};
+        for (const [id, f] of Object.entries(initForms)) {
+          if (initStatus[id] === "draft" && (f.r_score > 0 || f.i_score > 0 || f.f_score > 0 || f.c_score > 0 || f.cta_score > 0)) {
+            cleanDrafts[id] = f;
+          }
+        }
+        saveDraft(cleanDrafts);
+      }
       if (data.stimuli.length > 0) setActiveStimulus(data.stimuli[0].id);
     } catch {
       setError("Eroare de conexiune");
@@ -284,6 +308,12 @@ function ExpertPageContent() {
     for (const stimId of draftIds) {
       const form = formsRef.current[stimId];
       if (!form) continue;
+      // CRITICAL: Skip forms where user hasn't actually interacted (all scores 0 = untouched)
+      if (!form.r_score && !form.i_score && !form.f_score && !form.c_score && !form.cta_score) {
+        // Clear this false "draft" status — it's just an empty initialized form
+        setAutoSaveStatus((prev) => { const n = { ...prev }; delete n[stimId]; return n; });
+        continue;
+      }
       setAutoSaveStatus((prev) => ({ ...prev, [stimId]: "saving" }));
       try {
         const res = await fetch("/api/survey/expert-evaluations", {
@@ -426,8 +456,17 @@ function ExpertPageContent() {
   const updateForm = (stimId: string, field: string, value: unknown) => {
     setForms((prev) => {
       const updated = { ...prev, [stimId]: { ...prev[stimId], [field]: value } };
-      // Persist to localStorage immediately (survives refresh)
-      saveDraft(updated);
+      // Persist ONLY forms with actual user input to localStorage (survives refresh)
+      // Filter out untouched forms (all scores 0, no text) to prevent phantom drafts
+      const draftsToSave: typeof forms = {};
+      for (const [id, f] of Object.entries(updated)) {
+        if (f.r_score > 0 || f.i_score > 0 || f.f_score > 0 || f.c_score > 0 || f.cta_score > 0
+          || f.r_justification || f.i_justification || f.f_justification || f.c_justification || f.cta_justification
+          || f.brand_justification || f.notes) {
+          draftsToSave[id] = f;
+        }
+      }
+      saveDraft(draftsToSave);
       return updated;
     });
     // Mark as draft (unsaved to server)
