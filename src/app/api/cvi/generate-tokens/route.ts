@@ -69,6 +69,7 @@ export async function GET() {
         completed: experts?.filter(e => e.status === "completed").length || 0,
         pending: experts?.filter(e => e.status === "pending").length || 0,
         revoked: experts?.filter(e => e.status === "revoked").length || 0,
+        hidden: experts?.filter(e => e.hidden === true).length || 0,
       },
     });
   } catch {
@@ -95,6 +96,7 @@ export async function PATCH(req: NextRequest) {
     if (updates.experience !== undefined) updateData.experience = updates.experience?.trim() || null;
     if (updates.email !== undefined) updateData.email = updates.email?.trim() || null;
     if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.hidden !== undefined) updateData.hidden = !!updates.hidden;
 
     const { data, error } = await supabase
       .from("cvi_experts")

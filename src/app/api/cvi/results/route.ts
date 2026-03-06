@@ -24,13 +24,21 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch responses" }, { status: 500 });
     }
 
-    // Fetch expert stats
+    // Fetch expert stats (including hidden flag)
     const { data: experts } = await supabase
       .from("cvi_experts")
-      .select("id, status, name, role, experience, completed_at")
+      .select("id, status, name, role, experience, completed_at, hidden")
       .order("created_at", { ascending: true });
 
-    const responseData = (responses || []) as Record<string, unknown>[];
+    // Build set of hidden expert IDs to exclude from calculations
+    const hiddenIds = new Set(
+      (experts || []).filter(e => e.hidden === true).map(e => e.id)
+    );
+
+    // Filter out responses from hidden experts
+    const responseData = ((responses || []) as Record<string, unknown>[]).filter(
+      r => !hiddenIds.has(r.expert_id as string)
+    );
 
     // Build per-item ratings arrays
     const ratingsPerExpert: Record<string, number>[] = responseData.map(r => {
@@ -116,8 +124,9 @@ export async function GET() {
       fleissKappa,
       stats: {
         totalExperts: experts?.length || 0,
-        completed: experts?.filter(e => e.status === "completed").length || 0,
+        completed: experts?.filter(e => e.status === "completed" && !e.hidden).length || 0,
         pending: experts?.filter(e => e.status === "pending").length || 0,
+        hidden: experts?.filter(e => e.hidden === true).length || 0,
         totalResponses: responseData.length,
       },
       itemsBelowThreshold,
@@ -130,6 +139,7 @@ export async function GET() {
         experience: e.experience,
         status: e.status,
         completed_at: e.completed_at,
+        hidden: e.hidden || false,
       })),
     });
   } catch {

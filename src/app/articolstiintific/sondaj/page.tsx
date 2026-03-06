@@ -1354,6 +1354,17 @@ export default function StudiuAdminPage() {
     } catch { /* ignore */ }
   }, [fetchCviData]);
 
+  const toggleCviExpertHidden = useCallback(async (id: string, currentlyHidden: boolean) => {
+    try {
+      await fetch("/api/cvi/generate-tokens", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, hidden: !currentlyHidden }),
+      });
+      fetchCviData();
+    } catch { /* ignore */ }
+  }, [fetchCviData]);
+
   const toggleCviExpertAccess = useCallback(async (token: string, isActive: boolean) => {
     if (isActive) {
       await fetch(`/api/cvi/generate-tokens?token=${token}`, { method: "DELETE" });
@@ -9677,9 +9688,11 @@ export default function StudiuAdminPage() {
                 {/* ── Hero KPI Panel (dark, target 50) ── */}
                 {(() => {
                   const CVI_TARGET = 50;
-                  const _cviCompleted = cviExperts.filter((e: any) => e.status === "completed").length;
-                  const _cviPending = cviExperts.filter((e: any) => e.status === "pending").length;
-                  const _cviRate = cviExperts.length > 0 ? Math.round((_cviCompleted / cviExperts.length) * 100) : 0;
+                  const _cviVisible = cviExperts.filter((e: any) => !e.hidden);
+                  const _cviCompleted = _cviVisible.filter((e: any) => e.status === "completed").length;
+                  const _cviPending = _cviVisible.filter((e: any) => e.status === "pending").length;
+                  const _cviHidden = cviExperts.filter((e: any) => e.hidden === true).length;
+                  const _cviRate = _cviVisible.length > 0 ? Math.round((_cviCompleted / _cviVisible.length) * 100) : 0;
                   const _cviRemaining = Math.max(CVI_TARGET - _cviCompleted, 0);
                   const _cviPct = Math.min(Math.round((_cviCompleted / CVI_TARGET) * 100), 100);
                   const _sCviAve = cviResults?.summary?.length > 0 ? (cviResults.summary.reduce((a: number, s: any) => a + (s.cvi_score || 0), 0) / cviResults.summary.length) : 0;
@@ -9701,6 +9714,7 @@ export default function StudiuAdminPage() {
                             { label: "Invitati", value: cviExperts.length, color: "#94a3b8" },
                             { label: "Completat", value: _cviCompleted, color: "#10b981" },
                             { label: "Pending", value: _cviPending, color: "#f59e0b" },
+                            ...(_cviHidden > 0 ? [{ label: "Hidden", value: _cviHidden, color: "#6B7280" }] : []),
                             { label: "Rata", value: `${_cviRate}%`, color: _cviRate >= 80 ? "#10b981" : _cviRate >= 50 ? "#f59e0b" : "#ef4444", isText: true },
                             { label: "Fleiss κ", value: cviResults && !isNaN(cviResults.fleissKappa) && (cviExperts?.filter((e: any) => e.status === "completed").length || 0) >= 2 ? cviResults.fleissKappa.toFixed(3) : "N/A", color: "#a78bfa", isText: true },
                             { label: "S-CVI/Ave", value: _sCviAve > 0 ? _sCviAve.toFixed(2) : "—", color: "#6366f1", isText: true },
@@ -9837,6 +9851,7 @@ export default function StudiuAdminPage() {
                       const isCompleted = exp.status === "completed";
                       const isRevoked = exp.status === "revoked";
                       const isPending = exp.status === "pending";
+                      const isHidden = exp.hidden === true;
                       const initial = exp.name?.charAt(0)?.toUpperCase() || "?";
                       const cviLink = `https://rifcmarketing.com/articolstiintific/cvi?token=${exp.token}`;
 
@@ -9845,24 +9860,30 @@ export default function StudiuAdminPage() {
                           key={exp.id}
                           style={{
                             ...S.configCard,
-                            borderColor: isCompleted ? "#22C55E" : isRevoked ? "#fca5a5" : "#e5e7eb",
-                            borderWidth: 1,
-                            background: isCompleted ? "#f0fdf4" : isRevoked ? "#fef2f2" : "#fff",
+                            borderColor: isHidden ? "#d1d5db" : isCompleted ? "#22C55E" : isRevoked ? "#fca5a5" : "#e5e7eb",
+                            borderWidth: isHidden ? 2 : 1,
+                            borderStyle: isHidden ? "dashed" : "solid",
+                            background: isHidden ? "#f9fafb" : isCompleted ? "#f0fdf4" : isRevoked ? "#fef2f2" : "#fff",
                             padding: "16px 20px",
                             position: "relative" as const,
+                            opacity: isHidden ? 0.55 : 1,
+                            transition: "opacity 0.3s, border-color 0.3s",
                           }}
                         >
                           {/* Status indicator */}
                           <div style={{ position: "absolute" as const, top: 12, right: 12, display: "flex", gap: 6, alignItems: "center" }}>
+                            {isHidden && (
+                              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#6B7280", background: "#f3f4f6", border: "1px solid #d1d5db", padding: "2px 8px", borderRadius: 10 }}>ASCUNS</span>
+                            )}
                             {isRevoked && (
                               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#DC2626", background: "#fef2f2", border: "1px solid #fca5a5", padding: "2px 8px", borderRadius: 10 }}>REVOCAT</span>
                             )}
-                            {isCompleted && (
+                            {isCompleted && !isHidden && (
                               <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#16A34A", background: "#DCFCE7", border: "1px solid #86EFAC", padding: "2px 8px", borderRadius: 10 }}>COMPLETAT</span>
                             )}
                             <span style={{
                               width: 8, height: 8, borderRadius: "50%",
-                              background: isCompleted ? "#22C55E" : isRevoked ? "#DC2626" : "#F59E0B",
+                              background: isHidden ? "#9CA3AF" : isCompleted ? "#22C55E" : isRevoked ? "#DC2626" : "#F59E0B",
                             }} />
                           </div>
 
@@ -9960,6 +9981,18 @@ export default function StudiuAdminPage() {
                                 <ShieldCheck size={12} /> Restabileste
                               </button>
                             )}
+                            <button
+                              style={{
+                                ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px",
+                                color: isHidden ? "#059669" : "#6B7280",
+                                background: isHidden ? "#DCFCE7" : "#f3f4f6",
+                                border: isHidden ? "1px solid #86EFAC" : undefined,
+                              }}
+                              onClick={() => toggleCviExpertHidden(exp.id, isHidden)}
+                              title={isHidden ? "Readuce in calcul" : "Exclude din calcul"}
+                            >
+                              {isHidden ? <><Eye size={12} /> Unhide</> : <><EyeOff size={12} /> Hide</>}
+                            </button>
                             <button
                               style={{ ...S.galleryEditBtn, fontSize: 11, padding: "5px 10px", color: "#DC2626" }}
                               onClick={() => deleteCviExpert(exp.id)}
