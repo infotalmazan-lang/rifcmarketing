@@ -52,6 +52,33 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // ── Auto-repair: link orphaned evaluations (no expert_id) to experts by name match ──
+    if (!token && !expertId && data && data.length > 0) {
+      const orphaned = data.filter((e: Record<string, unknown>) => !e.expert_id && e.expert_name);
+      if (orphaned.length > 0) {
+        try {
+          const { data: allExperts } = await supabase.from("survey_experts").select("id, first_name, last_name");
+          if (allExperts && allExperts.length > 0) {
+            const expertNameMap = new Map<string, string>();
+            for (const exp of allExperts) {
+              const fullName = `${exp.first_name} ${exp.last_name}`.toLowerCase().trim();
+              expertNameMap.set(fullName, exp.id);
+            }
+            for (const ev of orphaned) {
+              const evName = String(ev.expert_name).toLowerCase().trim();
+              const matchId = expertNameMap.get(evName);
+              if (matchId) {
+                // Update in DB — fire and forget
+                supabase.from("survey_expert_evaluations").update({ expert_id: matchId }).eq("id", ev.id).then(() => {});
+                // Fix in response data
+                (ev as Record<string, unknown>).expert_id = matchId;
+              }
+            }
+          }
+        } catch { /* repair is best-effort */ }
+      }
+    }
+
     return NextResponse.json({ success: true, evaluations: data || [] });
   } catch {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
