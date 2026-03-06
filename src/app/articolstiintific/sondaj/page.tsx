@@ -6785,6 +6785,43 @@ export default function StudiuAdminPage() {
                               <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>Rezultatul formulei: cat de clar este mesajul. C {"\u2260"} CTA — claritatea prezice actiunea, dar sunt pasi separati.</div>
                             </div>
                           </div>
+
+                          {/* S3: Ce testam */}
+                          <div style={{ marginBottom: 14 }}>
+                            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.5, color: "#1e40af", marginBottom: 6 }}>CE TESTAM</div>
+                            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 8, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
+                              <em>Formula R + (I {"\u00D7"} F) = C prezice cu adevarat claritatea perceputa de consumator? Si daca da, aceasta claritate duce la actiune (CTA)?</em>
+                            </div>
+                            <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 8 }}>
+                              <strong>Lantul cauzal testat:</strong> R activeaza {"\u2192"} I{"\u00D7"}F produce C (Claritate) {"\u2192"} C coreleaza cu CTA (H2) {"\u2192"} Brand modereaza C{"\u2192"}CTA (H3)
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", fontSize: 10, color: "#374151" }}>
+                              <div><strong style={{ color: "#059669" }}>H1:</strong> Poarta Relevantei — R &lt; {EX_GATE} = audienta se dezangajeaza</div>
+                              <div><strong style={{ color: "#059669" }}>H2:</strong> C {"\u2192"} CTA — claritatea prezice actiunea</div>
+                              <div><strong style={{ color: "#D97706" }}>H3:</strong> Brand modereaza legatura C {"\u2192"} CTA</div>
+                              <div><strong style={{ color: "#7C3AED" }}>H4:</strong> Scale-Independent — sinergia I{"\u00D7"}F e reala</div>
+                              <div><strong style={{ color: "#6B7280" }}>H5:</strong> Claritate si recognoscibilitate (calitativa)</div>
+                            </div>
+                          </div>
+
+                          {/* S4: Cum analizam */}
+                          <div style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, color: "#1e40af", marginBottom: 4 }}>CUM ANALIZAM</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 10, color: "#374151" }}>
+                              <div>
+                                <div style={{ fontWeight: 700, marginBottom: 2 }}>Esantion</div>
+                                <div style={{ color: "#6B7280", lineHeight: 1.4 }}>{exTotalEvalResponses} evaluari, {exN} materiale, {completedExperts} experti</div>
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, marginBottom: 2 }}>Metode statistice</div>
+                                <div style={{ color: "#6B7280", lineHeight: 1.4 }}>Pearson r, Fisher Z-test, Spearman rank, Partial correlation, Cohen&apos;s d</div>
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 700, marginBottom: 2 }}>Praguri</div>
+                                <div style={{ color: "#6B7280", lineHeight: 1.4 }}>p &lt; 0.05 = semnificativ, r &gt; 0.7 = puternic, d &gt; 0.8 = efect mare</div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
                         {/* H1: R-Gate scatter */}
