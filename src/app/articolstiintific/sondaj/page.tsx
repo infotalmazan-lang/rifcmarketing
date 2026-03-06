@@ -10170,8 +10170,141 @@ export default function StudiuAdminPage() {
 
                   const vBadge = getValidationBadge(sCviAve);
 
+                  // ── Local CVI interpretation function ──
+                  const getCviInterp = (key: string, val: string, ctx?: Record<string, unknown>): { sections: { heading: string; text: string }[] } => {
+                    const _ctx = ctx || {};
+                    switch (key) {
+                      case "cvi-global": {
+                        const _sAve = _ctx.sCviAve as number || 0;
+                        const _sUa = _ctx.sCviUa as number || 0;
+                        const _fk = _ctx.fleissK as number || 0;
+                        const _nE = _ctx.nExperts as number || 0;
+                        const _iPass = _ctx.itemsPass as number || 0;
+                        const _iRev = _ctx.itemsRevise as number || 0;
+                        const _iRej = _ctx.itemsReject as number || 0;
+                        return { sections: [
+                          { heading: "Ce masoara S-CVI", text: `S-CVI (Scale-level Content Validity Index) masoara validitatea de continut a intregului instrument cu 35 itemi. S-CVI/Ave este media aritmetica a tuturor I-CVI individuali, iar S-CVI/UA este proportia itemilor cu acord unanim (I-CVI = 1.00).` },
+                          { heading: "Praguri academice", text: `S-CVI/Ave ≥ 0.90 = excelent (Polit & Beck, 2006). S-CVI/UA ≥ 0.80 = acceptabil. Fleiss κ > 0.61 = acord substantial (Landis & Koch, 1977). I-CVI ≥ 0.78 per item (Lynn, 1986).` },
+                          { heading: "Rezultatele panelului", text: `${_nE} experti au evaluat cei 35 itemi. S-CVI/Ave = ${_sAve.toFixed(3)}, S-CVI/UA = ${_sUa.toFixed(3)}, Fleiss κ = ${_fk > 0 ? _fk.toFixed(3) : "N/A"}. Itemi: ${_iPass} PASS, ${_iRev} REVISE, ${_iRej} REJECT.` },
+                          { heading: "Concluzie", text: `${_sAve >= 0.90 && _fk > 0.61 ? "Instrumentul RIFC cu 35 itemi este valid din punct de vedere al continutului — praguri depaseste conform standardelor academice." : _sAve >= 0.80 ? "Instrumentul este partial valid — S-CVI/Ave acceptabil dar sub pragul de excelenta (0.90)." : "Sunt necesare ajustari — S-CVI/Ave sub pragul minim acceptabil."}` },
+                        ]};
+                      }
+                      case "cvi-R": case "cvi-I": case "cvi-F": case "cvi-C": {
+                        const _dim = _ctx.dim as string || "";
+                        const _dCvi = _ctx.dCvi as number || 0;
+                        const _dP = _ctx.dPass as number || 0;
+                        const _dRv = _ctx.dRevise as number || 0;
+                        const _dRj = _ctx.dReject as number || 0;
+                        const _nI = _ctx.nItems as number || 0;
+                        const dimNames: Record<string,string> = { R: "Relevanta", I: "Interes", F: "Forma", C: "Claritate" };
+                        const dimDescs: Record<string,string> = { R: "masoara cat de adecvat este continutul itemilor in raport cu constructul vizat", I: "masoara capacitatea itemilor de a capta si mentine atentia respondentului", F: "masoara calitatea formala a itemilor (redactare, structura, prezentare)", C: "masoara gradul in care itemii sunt clari si usor de inteles" };
+                        return { sections: [
+                          { heading: `Ce masoara dimensiunea ${dimNames[_dim] || _dim}`, text: `Dimensiunea ${dimNames[_dim] || _dim} (${_dim}) ${dimDescs[_dim] || "masoara un aspect specific al instrumentului"}. Contine ${_nI} itemi evaluati independent de fiecare expert pe scala 1-4.` },
+                          { heading: "Rezultate CVI", text: `CVI mediu dimensiune = ${_dCvi.toFixed(3)}. Din ${_nI} itemi: ${_dP} PASS (I-CVI ≥ 0.80), ${_dRv} REVISE (0.70-0.79), ${_dRj} REJECT (< 0.70).` },
+                          { heading: "Interpretare", text: `${_dCvi >= 0.90 ? "Dimensiunea are validitate excelenta — toti itemii sunt considerati relevanti de panelul de experti." : _dCvi >= 0.80 ? "Dimensiunea are validitate acceptabila, dar anumiti itemi necesita atentie." : "Dimensiunea are validitate insuficienta — sunt necesare revizuiri substantiale."}` },
+                          { heading: "Referinta", text: "Lynn, M. R. (1986). Polit, D. F. & Beck, C. T. (2006). Praguri: I-CVI ≥ 0.78, S-CVI/Ave ≥ 0.90." },
+                        ]};
+                      }
+                      case "cvi-fleiss": {
+                        const _fkVal = _ctx.fleissK as number || 0;
+                        const _nExp = _ctx.nExperts as number || 0;
+                        return { sections: [
+                          { heading: "Ce masoara Fleiss Kappa", text: `Fleiss κ masoara concordanta intre ${_nExp} evaluatori pe 35 itemi cu 4 categorii de raspuns. Spre deosebire de Cohen's κ (2 evaluatori), Fleiss κ generalizeaza la evaluatori multipli.` },
+                          { heading: "Scala Landis & Koch (1977)", text: "κ < 0.00: Acord mai mic decat sansa. 0.00-0.20: Slab. 0.21-0.40: Acceptabil. 0.41-0.60: Moderat. 0.61-0.80: Substantial. 0.81-1.00: Aproape perfect." },
+                          { heading: "Rezultatul panelului", text: `Fleiss κ = ${_fkVal.toFixed(3)} (${_fkVal > 0.80 ? "Aproape perfect" : _fkVal > 0.60 ? "Substantial" : _fkVal > 0.40 ? "Moderat" : _fkVal > 0.20 ? "Acceptabil" : "Slab"}).` },
+                          { heading: "Implicatii", text: `${_fkVal > 0.61 ? "Cu acord substantial, rezultatele CVI sunt fiabile — evaluatorii judeca similar relevanta itemilor." : "Se recomanda clarificarea criteriilor de evaluare sau recalificarea evaluatorilor pentru a creste concordanta."}` },
+                        ]};
+                      }
+                      case "cvi-item-chart": {
+                        const _passRate = _ctx.passRate as number || 0;
+                        const _belowThreshold = _ctx.belowThreshold as number || 0;
+                        return { sections: [
+                          { heading: "Ce arata graficul I-CVI", text: "Graficul cu bare prezinta scorul I-CVI individual pentru fiecare din cei 35 de itemi, grupati pe dimensiuni (R, I, F, C). I-CVI = proportia expertilor care au evaluat itemul ca relevant (scor ≥ 3 din 4)." },
+                          { heading: "Praguri vizualizate", text: "Linia rosie punctata (0.78) = pragul minim acceptabil conform Lynn (1986). Linia verde punctata (0.90) = pragul de excelenta. Barele rosii indica itemi sub pragul 0.78." },
+                          { heading: "Rezultate", text: `Rata de trecere: ${_passRate}% din itemi depasesc pragul 0.78. ${_belowThreshold} itemi sunt sub prag si necesita revizuire sau eliminare.` },
+                          { heading: "Cum se interpreteaza", text: "Un instrument valid ar trebui sa aiba ≥ 80% din itemi peste prag. Itemii sub 0.78 sunt candidati pentru reformulare. Itemii cu I-CVI = 1.00 au unanimitate totala intre evaluatori." },
+                        ]};
+                      }
+                      case "cvi-heatmap": {
+                        const _nE = _ctx.nExperts as number || 0;
+                        const _nI = _ctx.nItems as number || 0;
+                        return { sections: [
+                          { heading: "Ce arata heatmap-ul", text: `Heatmap-ul vizualizeaza matricea completa ${_nE} experti × ${_nI} itemi. Fiecare celula arata scorul individual (1-4) acordat de un expert unui item specific.` },
+                          { heading: "Codificarea culorilor", text: "Rosu (1) = Irelevant. Portocaliu (2) = Partial relevant. Galben (3) = Relevant. Verde (4) = Extrem de relevant. Gri = date lipsa." },
+                          { heading: "Cum se interpreteaza", text: "Coloane predominant verzi/galbene indica itemi cu consens pozitiv. Coloane cu mozaic (multe culori) indica dezacord intre evaluatori — necesita investigare. Randuri predominant verzi/galbene indica evaluatori mai generosi, randuri rosii/portocalii indica evaluatori mai exigenti." },
+                          { heading: "Separatorii", text: "Liniile verticale separa dimensiunile: R (7 itemi), I (10 itemi), F (11 itemi), C (7 itemi). Aceasta permite identificarea rapida a dimensiunilor problematice." },
+                        ]};
+                      }
+                      case "cvi-table": {
+                        const _nE = _ctx.nExperts as number || 0;
+                        return { sections: [
+                          { heading: "Ce contine tabelul", text: `Tabelul detaliat prezinta pentru fiecare din cei 35 de itemi: codul itemului, sub-factorul evaluat, dimensiunea (R/I/F/C), numarul de evaluatori (N), numarul de acorduri (scor ≥ 3), scorul I-CVI, Kappa modificat (κ*) si statusul final.` },
+                          { heading: "Kappa modificat (κ*)", text: "κ* = (I-CVI - pc) / (1 - pc), unde pc este probabilitatea acordului aleator. κ* corecteaza I-CVI pentru sansa, fiind mai conservator. Praguri: κ* ≥ 0.74 = excelent, 0.60-0.73 = bun, < 0.60 = necesita investigare." },
+                          { heading: "Clasificare status", text: "PASS: I-CVI ≥ 0.80 — itemul este validat. REVISE: I-CVI 0.70-0.79 — reformulare recomandata. REJECT: I-CVI < 0.70 — eliminare sau reformulare substantiala." },
+                          { heading: "S-CVI/Ave si S-CVI/UA", text: `S-CVI/Ave (media globala) si S-CVI/UA (unanimitate) sunt afisate in footer. Praguri: Ave ≥ 0.90 = excelent, UA ≥ 0.80 = acceptabil. Panel: N = ${_nE} experti.` },
+                        ]};
+                      }
+                      case "cvi-verdict": {
+                        const _iPass = _ctx.itemsPass as number || 0;
+                        const _iRev = _ctx.itemsRevise as number || 0;
+                        const _iRej = _ctx.itemsReject as number || 0;
+                        return { sections: [
+                          { heading: "Ce reprezinta verdictul", text: "Verdictul clasifica fiecare item in trei categorii pe baza scorului I-CVI: PASS (≥ 0.80), REVISE (0.70-0.79), REJECT (< 0.70). Aceasta clasificare ghideaza deciziile de revizuire a instrumentului." },
+                          { heading: "Rezultate", text: `Din 35 itemi: ${_iPass} PASS (${Math.round((_iPass / 35) * 100)}%), ${_iRev} REVISE (${Math.round((_iRev / 35) * 100)}%), ${_iRej} REJECT (${Math.round((_iRej / 35) * 100)}%).` },
+                          { heading: "Actiuni recomandate", text: `${_iRev > 0 ? "Itemii REVISE necesita reformulare si re-evaluare de catre panel. " : ""}${_iRej > 0 ? "Itemii REJECT necesita eliminare din instrument sau reformulare substantiala urmata de re-evaluare. " : ""}${_iRev + _iRej === 0 ? "Toti itemii au trecut pragul — nicio revizuire necesara." : ""}` },
+                          { heading: "Referinta", text: "Pragurile de clasificare sunt conforme cu Lynn (1986) si Polit & Beck (2006). Se recomanda minim 2 runde de evaluare CVI pentru itemii revizuiti." },
+                        ]};
+                      }
+                      default: return { sections: [{ heading: "Informatie", text: "Aceasta metrica face parte din analiza de validare CVI a instrumentului RIFC." }] };
+                    }
+                  };
+
+                  // Local InterpBtn for CVI section
+                  const InterpBtnCvi = ({ k, title, val, ctx }: { k: string; title: string; val: string; ctx?: Record<string, unknown> }) => (
+                    <button
+                      onClick={(ev) => { ev.stopPropagation(); setInterpDrawer({ key: k, title, value: val, context: ctx }); }}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 10, fontWeight: 600,
+                        borderRadius: 4, border: "1px solid #d1d5db", background: "#f9fafb", color: "#6B7280",
+                        cursor: "pointer", transition: "all 0.15s", whiteSpace: "nowrap" as const,
+                      }}
+                      onMouseEnter={ev => { const el = ev.currentTarget; el.style.background = "#111827"; el.style.color = "#fff"; el.style.borderColor = "#111827"; }}
+                      onMouseLeave={ev => { const el = ev.currentTarget; el.style.background = "#f9fafb"; el.style.color = "#6B7280"; el.style.borderColor = "#d1d5db"; }}
+                    >
+                      <FileText size={10} /> Interpretare
+                    </button>
+                  );
+
                   return (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 24, position: "relative" }}>
+
+                    {/* ── CVI Drawer overlay ── */}
+                    {interpDrawer && (() => {
+                      const info = getCviInterp(interpDrawer.key, interpDrawer.value, interpDrawer.context);
+                      return (
+                        <>
+                          <div onClick={() => setInterpDrawer(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 9998, transition: "opacity 0.2s" }} />
+                          <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(480px, 90vw)", background: "#fff", zIndex: 9999, boxShadow: "-4px 0 24px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column", animation: "slideInRight 0.25s ease-out" }}>
+                            <div style={{ padding: "16px 20px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", gap: 10 }}>
+                              <Brain size={18} style={{ color: "#7C3AED" }} />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{interpDrawer.title}</div>
+                                <div style={{ fontSize: 11, color: "#6B7280" }}>Valoare: {interpDrawer.value}</div>
+                              </div>
+                              <button onClick={() => setInterpDrawer(null)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #e5e7eb", background: "#f9fafb", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><X size={14} /></button>
+                            </div>
+                            <div style={{ flex: 1, overflow: "auto", padding: 20 }}>
+                              {info.sections.map((sec, i) => (
+                                <div key={i} style={{ marginBottom: 20 }}>
+                                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.5, color: "#111827", marginBottom: 6, paddingBottom: 4, borderBottom: "1px solid #f3f4f6" }}>{sec.heading}</div>
+                                  <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, margin: 0 }}>{sec.text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {/* ═══ S1. CHENAR EXPLICATIV CVI ═══ */}
                     <div style={{ background: "#f8fafc", borderLeft: "4px solid #7C3AED", borderRadius: 8, padding: "20px 24px" }}>
@@ -10232,12 +10365,7 @@ export default function StudiuAdminPage() {
                           </div>
                         ))}
                       </div>
-                      <button
-                        onClick={() => setInterpDrawer({ key: "cvi-global", title: "Validare CVI Globala", value: String(sCviAve), context: { sCviAve, sCviUa, fleissK, itemsPass, itemsRevise, itemsReject, nExperts } })}
-                        style={{ marginTop: 14, display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 12px", fontSize: 10, fontWeight: 600, borderRadius: 4, border: "1px solid #d1d5db", background: "#f9fafb", color: "#6B7280", cursor: "pointer" }}
-                      >
-                        <FileText size={10} /> Interpretare
-                      </button>
+                      <InterpBtnCvi k="cvi-global" title="Validare CVI Globala" val={String(sCviAve)} ctx={{ sCviAve, sCviUa, fleissK, itemsPass, itemsRevise, itemsReject, nExperts }} />
                     </div>
 
                     {/* ═══ S3. DIMENSION CVI — 4 Cards ═══ */}
@@ -10265,12 +10393,7 @@ export default function StudiuAdminPage() {
                               <div style={{ width: "100%", height: 4, background: `${dim.color}20`, borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
                                 <div style={{ width: `${Math.round(dCvi * 100)}%`, height: "100%", background: dim.color, borderRadius: 2 }} />
                               </div>
-                              <button
-                                onClick={() => setInterpDrawer({ key: `cvi-${dim.key}`, title: `CVI Dimensiune ${dim.label}`, value: String(dCvi), context: { dim: dim.key, dCvi, dPass, dRevise, dReject, nItems: dim.items.length } })}
-                                style={{ marginTop: 8, display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 9, fontWeight: 600, borderRadius: 4, border: "1px solid #d1d5db", background: "#fff", color: "#6B7280", cursor: "pointer" }}
-                              >
-                                <FileText size={9} /> Interpretare
-                              </button>
+                              <InterpBtnCvi k={`cvi-${dim.key}`} title={`CVI Dimensiune ${dim.label}`} val={String(dCvi)} ctx={{ dim: dim.key, dCvi, dPass, dRevise, dReject, nItems: dim.items.length }} />
                             </div>
                           );
                         })}
@@ -10342,6 +10465,9 @@ export default function StudiuAdminPage() {
                               <line x1={padL + 640} y1={chartH - 13} x2={padL + 660} y2={chartH - 13} stroke="#059669" strokeWidth={1.5} strokeDasharray="4 2" />
                               <text x={padL + 664} y={chartH - 10} fontSize={9} fill="#059669">Excelent 0.90</text>
                             </svg>
+                            <div style={{ marginTop: 10 }}>
+                              <InterpBtnCvi k="cvi-item-chart" title="I-CVI per Item — Interpretare" val={`${summary.filter((s: any) => s.cvi_score >= 0.78).length}/${summary.length} PASS`} ctx={{ passRate: Math.round((summary.filter((s: any) => s.cvi_score >= 0.78).length / summary.length) * 100), belowThreshold: summary.filter((s: any) => s.cvi_score < 0.78).length }} />
+                            </div>
                           </div>
                         </div>
                       );
@@ -10387,6 +10513,9 @@ export default function StudiuAdminPage() {
                                 </g>
                               ))}
                             </svg>
+                            <div style={{ marginTop: 10 }}>
+                              <InterpBtnCvi k="cvi-heatmap" title="Heatmap Experti x Itemi" val={`${exportData.length} experti × ${itemIds.length} itemi`} ctx={{ nExperts: exportData.length, nItems: itemIds.length }} />
+                            </div>
                           </div>
                         </div>
                       );
@@ -10456,6 +10585,9 @@ export default function StudiuAdminPage() {
                             </tr>
                           </tbody>
                         </table>
+                        <div style={{ padding: "10px 14px", display: "flex", justifyContent: "flex-end" }}>
+                          <InterpBtnCvi k="cvi-table" title="Tabel I-CVI Detaliat" val={`${summary.length} itemi`} ctx={{ nExperts }} />
+                        </div>
                       </div>
                     </div>
 
@@ -10502,12 +10634,7 @@ export default function StudiuAdminPage() {
                         Valoarea de <strong>{fleissK.toFixed(3)}</strong> indica un acord <strong>{kappaLabel(fleissK).toLowerCase()}</strong> (Landis &amp; Koch, 1977).
                         {fleissK > 0.61 ? " Expertii au un grad ridicat de concordanta — rezultatele CVI sunt fiabile." : fleissK > 0.40 ? " Acordul este moderat — rezultatele trebuie interpretate cu precautie." : " Acordul este scazut — panelul nu are consens semnificativ."}
                       </div>
-                      <button
-                        onClick={() => setInterpDrawer({ key: "cvi-fleiss", title: "Fleiss Kappa — Interpretare", value: String(fleissK), context: { fleissK, nExperts, kappaLabel: kappaLabel(fleissK) } })}
-                        style={{ marginTop: 10, display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 10, fontWeight: 600, borderRadius: 4, border: "1px solid #d1d5db", background: "#f9fafb", color: "#6B7280", cursor: "pointer" }}
-                      >
-                        <FileText size={10} /> Interpretare
-                      </button>
+                      <InterpBtnCvi k="cvi-fleiss" title="Fleiss Kappa — Interpretare" val={String(fleissK)} ctx={{ fleissK, nExperts, kappaLabel: kappaLabel(fleissK) }} />
                     </div>
 
                     {/* ═══ S8. VERDICT DECIZIE PER ITEM ═══ */}
@@ -10557,6 +10684,9 @@ export default function StudiuAdminPage() {
                       {itemsRevise === 0 && itemsReject === 0 && (
                         <div style={{ fontSize: 12, color: "#059669", fontWeight: 600 }}>Toti itemii au trecut pragul CVI &ge; 0.80 — nicio revizuire necesara.</div>
                       )}
+                      <div style={{ marginTop: 12 }}>
+                        <InterpBtnCvi k="cvi-verdict" title="Verdict Clasificare Itemi" val={`${itemsPass} PASS, ${itemsRevise} REVISE, ${itemsReject} REJECT`} ctx={{ itemsPass, itemsRevise, itemsReject }} />
+                      </div>
                     </div>
 
                     {/* ═══ S9. SINTEZA — 4 CONCLUZII ACADEMICE ═══ */}
