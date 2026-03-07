@@ -12554,8 +12554,11 @@ export default function StudiuAdminPage() {
               // ── Data preparation ──
               const totalEvals = expertEvals.length;
               const uniqueExperts = Array.from(new Set(expertEvals.map(e => e.expert_id)));
-              const completedExperts = uniqueExperts.length;
               const totalStimuli = stimuli.filter(s => s.is_active).length;
+              // Only count experts who evaluated ALL active stimuli
+              const completedExperts = totalStimuli > 0
+                ? uniqueExperts.filter(eid => expertEvals.filter(e => e.expert_id === eid).length >= totalStimuli).length
+                : uniqueExperts.length;
 
               // Build stimulus lookup for channel_type / name
               const stimLookup = new Map(stimuli.map(s => [s.id, s]));
