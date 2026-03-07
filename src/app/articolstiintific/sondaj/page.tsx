@@ -9814,507 +9814,6 @@ export default function StudiuAdminPage() {
                     </div>
                   </div>
 
-                  {/* ═══ TWO-ZONE GATE COMPARISON — R<3 vs R 3-4.99 vs R≥5 (OSF H2 Sensitivity Analysis) ═══ */}
-                  {(() => {
-                    const tzZones = [
-                      { key: "below3", label: "R < 3", sublabel: "Sub-Gate (Irelevant)", data: tzZ1, color: "#DC2626", bgLight: "#fef2f2", border: "#fecaca", icon: "M18.36 5.64a9 9 0 11-12.73 12.73 9 9 0 0112.73-12.73zM19 12H5" },
-                      { key: "3to5", label: "R 3 — 4.99", sublabel: "Constientizare Latenta (Top of Mind)", data: tzZ2, color: "#D97706", bgLight: "#fffbeb", border: "#fde68a", icon: "M12 2a10 10 0 100 20 10 10 0 000-20zM12 6v6l4 2" },
-                      { key: "above5", label: "R \u2265 5", sublabel: "Performanta Activa (Conversie)", data: tzZ3, color: "#059669", bgLight: "#ecfdf5", border: "#a7f3d0", icon: "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" },
-                    ];
-                    const maxHyp = Math.max(tzZ1.hypPct, tzZ2.hypPct, tzZ3.hypPct, 1);
-                    // SVG bar chart dimensions
-                    const bW = 480, bH = 200, bPad = { l: 42, r: 16, t: 16, b: 36 };
-                    const bPlotW = bW - bPad.l - bPad.r;
-                    const bPlotH = bH - bPad.t - bPad.b;
-                    const metrics = ["Validare %", "R med", "Cp", "Cf/11", "Delta", "CTA", "Zone Match %"];
-                    const metricVals = (d: typeof tzZ1) => [d.hypPct, d.r, d.cp, d.cfNorm, d.delta, d.cta, d.zoneMatch];
-                    const metricMax = [100, 10, 10, 10, 10, 10, 100];
-                    const barGroupW = bPlotW / metrics.length;
-                    const barW = Math.min(barGroupW * 0.22, 18);
-                    return (
-                      <div style={{ border: "2px solid #e5e7eb", borderRadius: 12, marginBottom: 20, overflow: "hidden" }}>
-                        {/* Header */}
-                        <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>ANALIZA PRAGURI DE RELEVANTA — OSF H2</div>
-                            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Confirmatory: R &ge; {GATE} (OSF H2 primar) &middot; Sensitivity: R=2,3,4,5 (OSF H2 Inference Criteria) &middot; Convergenta H7</div>
-                          </div>
-                          <div style={{ marginLeft: "auto" }}>
-                            <InterpBtn k="two-zone-gate" title="Analiza Doua Zone" val={`${gatePassRate}% vs ${tzGate5PassRate}%`} ctx={{ g3pass: gatePassCount, g3rate: gatePassRate, g5pass: tzGate5PassCount, g5rate: tzGate5PassRate, z1: JSON.stringify(tzZ1), z2: JSON.stringify(tzZ2), z3: JSON.stringify(tzZ3), n }} />
-                          </div>
-                        </div>
-
-                        {/* 3 Zone Cards */}
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0 }}>
-                          {tzZones.map((z, zi) => {
-                            const d = z.data;
-                            const isLast = zi === tzZones.length - 1;
-                            return (
-                              <div key={z.key} style={{
-                                padding: "16px 14px",
-                                background: d.n === 0 ? "#f9fafb" : z.bgLight,
-                                borderRight: isLast ? "none" : "1px solid #e5e7eb",
-                                borderBottom: "1px solid #e5e7eb",
-                                opacity: d.n === 0 ? 0.5 : 1,
-                              }}>
-                                {/* Zone header */}
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={z.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={z.icon}/></svg>
-                                  <div>
-                                    <div style={{ fontSize: 13, fontWeight: 800, color: z.color }}>{z.label}</div>
-                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600, letterSpacing: 0.3 }}>{z.sublabel}</div>
-                                  </div>
-                                </div>
-                                {/* Count badge */}
-                                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
-                                  <span style={{ fontSize: 28, fontWeight: 900, color: z.color }}>{d.n}</span>
-                                  <span style={{ fontSize: 11, color: "#6B7280" }}>materiale ({d.n > 0 ? Math.round(d.n / n * 100) : 0}%)</span>
-                                </div>
-                                {d.n === 0 ? (
-                                  <div style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>Nicio material in aceasta zona</div>
-                                ) : (
-                                  <>
-                                    {/* Hero: Validation % */}
-                                    <div style={{ background: "#fff", border: `1px solid ${z.border}`, borderRadius: 8, padding: "8px 10px", marginBottom: 8, textAlign: "center" as const }}>
-                                      <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 2 }}>CONVERGENTA H7</div>
-                                      <div style={{ fontSize: 24, fontWeight: 900, color: getValidationColor(d.hypPct) }}>{d.hypPct}%</div>
-                                      <div style={{ fontSize: 9, color: getValidationColor(d.hypPct), fontWeight: 600 }}>{getValidationLabel(d.hypPct)}</div>
-                                    </div>
-                                    {/* Metrics grid */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-                                      {[
-                                        { label: "R mediu", val: d.r.toFixed(2), color: "#DC2626" },
-                                        { label: "I\u00D7F", val: d.ixf.toFixed(1), color: "#8B5CF6" },
-                                        { label: "Cf/11", val: d.cfNorm.toFixed(2), color: "#2563EB" },
-                                        { label: "Cp", val: d.cp.toFixed(2), color: "#059669" },
-                                        { label: "\u0394 Delta", val: d.delta.toFixed(2), color: "#6B7280" },
-                                        { label: "CTA", val: d.cta.toFixed(2), color: "#059669" },
-                                        { label: "Zone Match", val: `${d.zoneMatch}%`, color: d.zoneMatch >= 70 ? "#059669" : d.zoneMatch >= 40 ? "#D97706" : "#DC2626" },
-                                        { label: "Dir.", val: d.cfNorm < d.cp ? "Sub." : d.cfNorm > d.cp ? "Supra." : "=", color: d.cfNorm < d.cp ? "#D97706" : d.cfNorm > d.cp ? "#DC2626" : "#059669" },
-                                      ].map((m, mi) => (
-                                        <div key={mi} style={{ fontSize: 10, padding: "3px 6px", background: "#fff", borderRadius: 4, border: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between" }}>
-                                          <span style={{ color: "#6B7280" }}>{m.label}</span>
-                                          <span style={{ fontWeight: 700, color: m.color }}>{m.val}</span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Comparative Bar Chart (SVG) */}
-                        <div style={{ padding: "14px 20px", background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, letterSpacing: 0.5 }}>COMPARATIE METRICI PE ZONE</div>
-                          <div style={{ display: "flex", gap: 16, marginBottom: 8, fontSize: 10, color: "#6B7280" }}>
-                            {tzZones.filter(z => z.data.n > 0).map(z => (
-                              <span key={z.key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                <span style={{ width: 10, height: 4, borderRadius: 2, background: z.color }} />
-                                {z.label}
-                              </span>
-                            ))}
-                          </div>
-                          <svg viewBox={`0 0 ${bW} ${bH}`} width="100%" style={{ maxWidth: bW }}>
-                            {/* Y-axis gridlines */}
-                            {[0, 25, 50, 75, 100].map(pct => {
-                              const y = bPad.t + bPlotH - (pct / 100) * bPlotH;
-                              return (
-                                <g key={pct}>
-                                  <line x1={bPad.l} y1={y} x2={bW - bPad.r} y2={y} stroke="#f3f4f6" strokeWidth={0.5} />
-                                  <text x={bPad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{pct}%</text>
-                                </g>
-                              );
-                            })}
-                            {/* Metric groups */}
-                            {metrics.map((label, mi) => {
-                              const gx = bPad.l + mi * barGroupW + barGroupW / 2;
-                              return (
-                                <g key={label}>
-                                  <text x={gx} y={bH - bPad.b + 14} textAnchor="middle" fontSize={7.5} fontWeight={600} fill="#6B7280">{label}</text>
-                                  {tzZones.filter(z => z.data.n > 0).map((z, bi, filtArr) => {
-                                    const vals = metricVals(z.data);
-                                    const rawVal = vals[mi];
-                                    const pctH = Math.min((rawVal / metricMax[mi]) * 100, 100);
-                                    const barH = (pctH / 100) * bPlotH;
-                                    const totalBars = filtArr.length;
-                                    const offsetX = gx - (totalBars * barW + (totalBars - 1) * 2) / 2 + bi * (barW + 2);
-                                    const y = bPad.t + bPlotH - barH;
-                                    return (
-                                      <g key={z.key}>
-                                        <rect x={offsetX} y={y} width={barW} height={Math.max(barH, 1)} rx={2} fill={z.color} opacity={0.85} />
-                                        <text x={offsetX + barW / 2} y={y - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill={z.color}>
-                                          {mi === 0 || mi === 6 ? `${rawVal}` : rawVal.toFixed(1)}
-                                        </text>
-                                      </g>
-                                    );
-                                  })}
-                                </g>
-                              );
-                            })}
-                            <rect x={bPad.l} y={bPad.t} width={bPlotW} height={bPlotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
-                          </svg>
-                        </div>
-
-                        {/* Explanatory block */}
-                        <div style={{ padding: "16px 20px", background: "#f8fafc" }}>
-                          <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", marginBottom: 8, letterSpacing: 0.5 }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 4 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                            INTERPRETARE MODELUL CU DOUA ZONE
-                          </div>
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                            {/* Left: Confirmatory */}
-                            <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb", borderTop: "3px solid #2563EB" }}>
-                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#2563EB", marginBottom: 4 }}>CONFIRMATORY (OSF PRE-INREGISTRAT)</div>
-                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
-                                Gate R &ge; {GATE}: <strong>{gatePassCount}/{n}</strong> materiale ({gatePassRate}%) trec pragul.
-                                Formula R+(I&times;F)=C valideaza ipoteza cu <strong>{grandHypPct}%</strong> acuratete pe toate materialele cu R &ge; {GATE}.
-                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Aceasta este analiza primara, conform protocolului OSF pre-inregistrat.</span>
-                              </div>
-                            </div>
-                            {/* Right: Pre-registered Sensitivity */}
-                            <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb", borderTop: "3px solid #059669" }}>
-                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#059669", marginBottom: 4 }}>SENSITIVITY ANALYSIS (OSF H2)</div>
-                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
-                                Gate R &ge; 5: <strong>{tzGate5PassCount}/{n}</strong> materiale ({tzGate5PassRate}%) trec pragul.
-                                In zona R &ge; 5, validarea creste la <strong>{tzZ3.hypPct}%</strong> — indicand performanta activa.
-                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Pre-inregistrat OSF: &quot;Sensitivity analysis: All three methods repeated at R = 2, 3, 4, and 5&quot; (H2 Inference Criteria).</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Three-zone narrative */}
-                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #7C3AED" }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", marginBottom: 6 }}>CELE 3 ZONE DE RELEVANTA</div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
-                              <div style={{ padding: "6px 8px", background: "#fef2f2", borderRadius: 4, border: "1px solid #fecaca" }}>
-                                <div style={{ fontWeight: 700, color: "#DC2626", marginBottom: 2 }}>R &lt; 3 — Irelevant ({tzZ1.n} mat.)</div>
-                                Materialul nu este procesat de audienta. I&times;F merge in gol — formula prezice {tzZ1.hypPct}% dar rezultatul este accidental. CTA = {tzZ1.cta.toFixed(1)}.
-                                {tzZ1.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
-                              </div>
-                              <div style={{ padding: "6px 8px", background: "#fffbeb", borderRadius: 4, border: "1px solid #fde68a" }}>
-                                <div style={{ fontWeight: 700, color: "#D97706", marginBottom: 2 }}>R 3 — 4.99 — Top of Mind ({tzZ2.n} mat.)</div>
-                                Constientizare latenta: audienta recunoaste materialul dar nu actioneaza. Formula prezice {tzZ2.hypPct}%, C&asymp;Cp dar CTA = {tzZ2.cta.toFixed(1)} ramane scazut. Barbatul stie de pantofii de dama, dar nu cumpara.
-                                {tzZ2.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
-                              </div>
-                              <div style={{ padding: "6px 8px", background: "#ecfdf5", borderRadius: 4, border: "1px solid #a7f3d0" }}>
-                                <div style={{ fontWeight: 700, color: "#059669", marginBottom: 2 }}>R &ge; 5 — Performanta ({tzZ3.n} mat.)</div>
-                                Conversie activa: audienta este angajata, formula prezice {tzZ3.hypPct}% cu precizie. CTA = {tzZ3.cta.toFixed(1)} creste semnificativ. Materialele relevante produc actiune masurabil.
-                                {tzZ3.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Delta comparison row */}
-                          {tzZ2.n > 0 && tzZ3.n > 0 && (
-                            <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "stretch" }}>
-                              <div style={{ flex: 1, background: "#fff", borderRadius: 6, padding: "8px 12px", border: "1px solid #e5e7eb", fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
-                                <strong style={{ color: "#D97706" }}>Zona Latenta (R 3-4.99):</strong> Validare {tzZ2.hypPct}%, Delta {tzZ2.delta.toFixed(2)}, CTA {tzZ2.cta.toFixed(2)} — formula functioneaza partial dar audienta nu converteste. Materialele sunt &quot;vizibile dar inactive&quot;.
-                              </div>
-                              <div style={{ display: "flex", alignItems: "center", padding: "0 6px" }}>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-                              </div>
-                              <div style={{ flex: 1, background: "#fff", borderRadius: 6, padding: "8px 12px", border: "1px solid #e5e7eb", fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
-                                <strong style={{ color: "#059669" }}>Zona Performanta (R &ge; 5):</strong> Validare {tzZ3.hypPct}%, Delta {tzZ3.delta.toFixed(2)}, CTA {tzZ3.cta.toFixed(2)} — formula prezice cu precizie si audienta actioneaza. Crestere CTA: {tzZ2.cta > 0 ? `+${Math.round((tzZ3.cta / tzZ2.cta - 1) * 100)}%` : "N/A"} fata de zona latenta.
-                              </div>
-                            </div>
-                          )}
-
-                          {/* ── OSF H2 Sensitivity: All 4 Thresholds (R=2,3,4,5) ── */}
-                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#2563EB", flex: 1 }}>
-                                OSF H2 SENSITIVITY — PRAGURI R=2,3,4,5
-                              </div>
-                              {(() => {
-                                const sensConfirmed = tzSensitivity.filter(t => t.below.n > 0 && t.above.cta > 0 && t.below.cta < t.above.cta).length;
-                                const sensTotal = tzSensitivity.filter(t => t.below.n > 0).length;
-                                const verdict = sensTotal === 0 ? "N/A" : sensConfirmed === sensTotal ? "Confirmat" : sensConfirmed > 0 ? "Partial" : "Neconfirmat";
-                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Neconfirmat" ? "#DC2626" : "#9CA3AF";
-                                return (
-                                  <>
-                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
-                                    <InterpBtn k="h2-sensitivity" title="H2 Sensitivity" val={`${sensConfirmed}/${sensTotal}`} ctx={{ sens: JSON.stringify(tzSensitivity), n }} />
-                                  </>
-                                );
-                              })()}
-                            </div>
-                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
-                              <thead>
-                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Sub prag</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Peste prag</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Pass %</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H7 sub</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H7 peste</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA sub</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA peste</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>&Delta; CTA</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {tzSensitivity.map((ts, si) => {
-                                  const isConfirmatory = ts.threshold === GATE;
-                                  return (
-                                    <tr key={ts.threshold} style={{
-                                      borderBottom: "1px solid #f3f4f6",
-                                      background: isConfirmatory ? "#eff6ff" : si % 2 === 0 ? "#fafafa" : "#fff",
-                                    }}>
-                                      <td style={{ padding: "5px 6px", fontWeight: isConfirmatory ? 800 : 600 }}>
-                                        R={ts.threshold}
-                                        {isConfirmatory && <span style={{ fontSize: 8, color: "#2563EB", marginLeft: 4 }}>PRIMAR</span>}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626" }}>{ts.below.n}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontWeight: 600 }}>{ts.above.n}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 700 }}>{ts.passRate}%</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.below.n > 0 ? "#DC2626" : "#d4d4d4" }}>{ts.below.n > 0 ? `${ts.below.hypPct}%` : "—"}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontWeight: 600 }}>{ts.above.n > 0 ? `${ts.above.hypPct}%` : "—"}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.below.n > 0 ? "#DC2626" : "#d4d4d4" }}>{ts.below.n > 0 ? ts.below.cta.toFixed(2) : "—"}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.above.n > 0 ? ts.above.cta.toFixed(2) : "—"}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 700, color: ts.ctaDrop != null && ts.ctaDrop > 0 ? "#DC2626" : "#059669" }}>
-                                        {ts.ctaDrop != null ? `${ts.ctaDrop > 0 ? "-" : "+"}${Math.abs(ts.ctaDrop)}%` : "—"}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
-                              H7 = Convergenta Formula (|Cf/11 - Cp|). &Delta; CTA = scadere CTA sub prag vs peste prag. Prag PRIMAR = R={GATE} (confirmatory OSF H2).
-                            </div>
-                          </div>
-
-                          {/* ── OSF H2 Individual-Level Test (respondent × stimulus) ── */}
-                          {scatter.length > 0 && (
-                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #DC2626" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#DC2626", flex: 1 }}>
-                                OSF H2 — NIVEL INDIVIDUAL ({scatter.length.toLocaleString()} observatii)
-                              </div>
-                              {(() => {
-                                const h2Confirmed = h2IndSensitivity.filter(t => t.h2Supported).length;
-                                const h2Testable = h2IndSensitivity.filter(t => t.nBelow > 0).length;
-                                const verdict = h2Testable === 0 ? "N/A" : h2Confirmed === h2Testable ? "Confirmat" : h2Confirmed > 0 ? "Partial" : "Neconfirmat";
-                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Neconfirmat" ? "#DC2626" : "#9CA3AF";
-                                return (
-                                  <>
-                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
-                                    <InterpBtn k="h2-individual" title="H2 Individual" val={`${h2Confirmed}/${h2Testable}`} ctx={{ sens: JSON.stringify(h2IndSensitivity), total: scatter.length }} />
-                                  </>
-                                );
-                              })()}
-                            </div>
-                            <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
-                              H2: &quot;Cand R &lt; prag, C si CTA vor fi uniform scazute (sub percentila 25), indiferent de I si F.&quot;
-                            </div>
-                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
-                              <thead>
-                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>N sub</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>N peste</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Cp sub</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Cp peste</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA sub</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA peste</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>P25 Cp</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>P25 CTA</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H2</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {h2IndSensitivity.map((ts, si) => {
-                                  const isConfirmatory = ts.threshold === GATE;
-                                  return (
-                                    <tr key={ts.threshold} style={{
-                                      borderBottom: "1px solid #f3f4f6",
-                                      background: isConfirmatory ? "#fef2f2" : si % 2 === 0 ? "#fafafa" : "#fff",
-                                    }}>
-                                      <td style={{ padding: "5px 6px", fontWeight: isConfirmatory ? 800 : 600 }}>
-                                        R={ts.threshold}
-                                        {isConfirmatory && <span style={{ fontSize: 8, color: "#DC2626", marginLeft: 4 }}>PRIMAR</span>}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626", fontWeight: 600 }}>{ts.nBelow.toLocaleString()}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.nAbove.toLocaleString()}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.cpBelowP25 ? "#DC2626" : "#374151", fontWeight: ts.cpBelowP25 ? 700 : 400 }}>
-                                        {ts.nBelow > 0 ? ts.avgCpBelow.toFixed(2) : "—"}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.avgCpAbove.toFixed(2)}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.ctaBelowP25 ? "#DC2626" : "#374151", fontWeight: ts.ctaBelowP25 ? 700 : 400 }}>
-                                        {ts.nBelow > 0 ? ts.avgCtaBelow.toFixed(2) : "—"}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.avgCtaAbove.toFixed(2)}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#9CA3AF", fontSize: 9 }}>{ts.p25Cp.toFixed(1)}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#9CA3AF", fontSize: 9 }}>{ts.p25Cta.toFixed(1)}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px" }}>
-                                        {ts.nBelow === 0 ? (
-                                          <span style={{ fontSize: 9, color: "#9CA3AF" }}>N/A</span>
-                                        ) : ts.h2Supported ? (
-                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#059669" }}>DA</span>
-                                        ) : (
-                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#DC2626" }}>NU</span>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
-                              Nivel individual: fiecare rand = un respondent × un stimulus. P25 = percentila 25 din toata distributia. H2 = DA daca Cp si CTA sub prag sunt &le; P25.
-                              {h2IndSensitivity.find(t => t.threshold === GATE)?.nBelow === 0 && (
-                                <span style={{ color: "#D97706" }}> Nota: La nivel agregat (medie per material), zona R &lt; {GATE} e goala. La nivel individual, exista {h2IndSensitivity.find(t => t.threshold === GATE)?.nBelow || 0} observatii cu R &lt; {GATE}.</span>
-                              )}
-                            </div>
-                          </div>
-                          )}
-
-                          {/* ── OSF H2 Chow Test + Piecewise Regression ── */}
-                          {scValid.length >= 10 && (
-                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #7C3AED" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", flex: 1 }}>
-                                OSF H2 — CHOW TEST &amp; PIECEWISE REGRESSION
-                              </div>
-                              {(() => {
-                                const chowSig = h2ChowTests.filter(t => t.chowSig).length;
-                                const chowTotal = h2ChowTests.length;
-                                const verdict = chowSig === chowTotal ? "Confirmat" : chowSig >= 2 ? "Partial" : chowSig === 1 ? "Slab" : "Neconfirmat";
-                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Slab" ? "#D97706" : "#DC2626";
-                                return (
-                                  <>
-                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
-                                    <InterpBtn k="h2-chow" title="Chow Test" val={`${chowSig}/${chowTotal} sig.`} ctx={{ tests: JSON.stringify(h2ChowTests) }} />
-                                  </>
-                                );
-                              })()}
-                            </div>
-                            <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
-                              Testam daca relatia I&times;F &rarr; Cp are un structural break la fiecare prag. Chow F sig. (p&lt;0.05) = coefficientii difera semnificativ sub vs peste prag.
-                            </div>
-                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
-                              <thead>
-                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Chow F</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>p</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Sig.</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>Slope sub</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>Slope peste</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>R&sup2; sub</th>
-                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>R&sup2; peste</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {h2ChowTests.map((ct, ci) => {
-                                  const isConf = ct.threshold === GATE;
-                                  return (
-                                    <tr key={ct.threshold} style={{
-                                      borderBottom: "1px solid #f3f4f6",
-                                      background: isConf ? "#f5f3ff" : ci % 2 === 0 ? "#fafafa" : "#fff",
-                                    }}>
-                                      <td style={{ padding: "5px 6px", fontWeight: isConf ? 800 : 600 }}>
-                                        R={ct.threshold}
-                                        {isConf && <span style={{ fontSize: 8, color: "#7C3AED", marginLeft: 4 }}>PRIMAR</span>}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 600 }}>{ct.chowF.toFixed(2)}</td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ct.chowP < 0.05 ? "#059669" : "#9CA3AF" }}>
-                                        {ct.chowP < 0.001 ? "<.001" : ct.chowP.toFixed(3)}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px" }}>
-                                        {ct.chowSig ? (
-                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#059669" }}>DA</span>
-                                        ) : (
-                                          <span style={{ fontSize: 9, color: "#9CA3AF" }}>NU</span>
-                                        )}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626" }}>
-                                        {ct.slopeBelow != null ? ct.slopeBelow.toFixed(3) : "—"}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>
-                                        {ct.slopeAbove != null ? ct.slopeAbove.toFixed(3) : "—"}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626", fontSize: 9 }}>
-                                        {ct.r2Below != null ? (ct.r2Below * 100).toFixed(1) + "%" : "—"}
-                                      </td>
-                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontSize: 9 }}>
-                                        {ct.r2Above != null ? (ct.r2Above * 100).toFixed(1) + "%" : "—"}
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
-                              Chow test: H0 = coeficientii sunt identici sub si peste prag. Sig. (p&lt;0.05) = structural break confirmat.
-                              Slope = panta I&times;F &rarr; Cp. Daca slope_sub &asymp; 0 si slope_peste &gt; 0, Relevance Gate este confirmat: sub prag, I&times;F nu influenteaza Cp.
-                              {(() => {
-                                const best = h2ChowTests.reduce((a, b) => a.chowF > b.chowF ? a : b);
-                                return best.chowSig ? ` Cel mai puternic breakpoint: R=${best.threshold} (F=${best.chowF.toFixed(2)}, p=${best.chowP < 0.001 ? "<.001" : best.chowP.toFixed(3)}).` : "";
-                              })()}
-                            </div>
-                          </div>
-                          )}
-
-                          {/* ── OSF Archetype Distribution ── */}
-                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #6366f1" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#6366f1", flex: 1 }}>
-                                CLASIFICARE ARHETIPURI OSF — {n} MATERIALE
-                              </div>
-                              {(() => {
-                                const hasVariety = Object.keys(osfArchCount).filter(k => (osfArchCount[k] || 0) > 0).length;
-                                const verdict = hasVariety >= 3 ? "Complet" : hasVariety >= 2 ? "Partial" : "Limitat";
-                                const vColor = verdict === "Complet" ? "#059669" : verdict === "Partial" ? "#D97706" : "#DC2626";
-                                return (
-                                  <>
-                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{hasVariety}/5 tipuri</span>
-                                    <InterpBtn k="h2-archetypes" title="Arhetipuri OSF" val={`${hasVariety}/5`} ctx={{ counts: JSON.stringify(osfArchCount), n }} />
-                                  </>
-                                );
-                              })()}
-                            </div>
-                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                              {[
-                                { key: "Phantom", label: "Fantoma", color: "#DC2626", desc: "R < 3" },
-                                { key: "Aesthetic Noise", label: "Zgomot Estetic", color: "#D97706", desc: "F > I + 3" },
-                                { key: "Diamond", label: "Diamant", color: "#059669", desc: "C \u2265 80" },
-                                { key: "Background Noise", label: "Zgomot de Fond", color: "#6B7280", desc: "C < 40" },
-                                { key: "Medium Clarity", label: "Claritate Medie", color: "#2563EB", desc: "40 \u2264 C < 80" },
-                              ].map(arch => {
-                                const cnt = osfArchCount[arch.key] || 0;
-                                const pct = n > 0 ? Math.round((cnt / n) * 100) : 0;
-                                return (
-                                  <div key={arch.key} style={{
-                                    flex: "1 1 0", minWidth: 100,
-                                    padding: "8px 10px", borderRadius: 6,
-                                    border: `1px solid ${cnt > 0 ? arch.color + "40" : "#e5e7eb"}`,
-                                    background: cnt > 0 ? arch.color + "08" : "#f9fafb",
-                                    opacity: cnt === 0 ? 0.5 : 1,
-                                  }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-                                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: arch.color, display: "inline-block" }} />
-                                      <span style={{ fontSize: 10, fontWeight: 700, color: arch.color }}>{arch.label}</span>
-                                    </div>
-                                    <div style={{ fontSize: 18, fontWeight: 900, color: cnt > 0 ? arch.color : "#d4d4d4" }}>{cnt}</div>
-                                    <div style={{ fontSize: 9, color: "#6B7280" }}>{pct}% &middot; {arch.desc}</div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          {/* Academic citation box */}
-                          <div style={{ marginTop: 10, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5, padding: "6px 10px", background: "#f1f5f9", borderRadius: 4 }}>
-                            <strong>Nota metodologica:</strong> Analiza cu gate R &ge; {GATE} este <strong>confirmatorie</strong> (OSF H2 — analiza primara). Testarea la R=2,3,4,5 este <strong>pre-inregistrata</strong> ca sensitivity analysis (OSF H2 Inference Criteria: &quot;All three methods repeated at R = 2, 3, 4, and 5&quot;). Clasificarea arhetipurilor urmeaza definitiile OSF: Phantom (R&lt;3), Aesthetic Noise (F&gt;I+3), Diamond (C&ge;80), Background Noise (C&lt;40), Medium Clarity (rest). Metrica &quot;Convergenta H7&quot; valideaza ipoteza H7 (C_calc ~ C_perc, r &ge; 0.60).
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
 
                   {/* Zone distribution — grouped comparison */}
                   {(() => {
@@ -11140,6 +10639,509 @@ export default function StudiuAdminPage() {
                     {/* ── OSF H2 — Poarta Relevanței ── */}
                     <OsfH id="h2" num="OSF H2" title={`Ipoteza 2 \u2014 Poarta Relevantei (R < ${GATE} = dezangajare)`} color="#059669" verdict={(h1AboveAvgCta - h1BelowAvgCta) > 2 ? "CONFIRMATA" : (h1AboveAvgCta - h1BelowAvgCta) >= 1 ? "PARTIAL" : "NECONFIRMATA"}>
                     <div style={{ ...S.configItem, marginBottom: 0 }}>
+
+                  {/* ═══ TWO-ZONE GATE COMPARISON — R<3 vs R 3-4.99 vs R≥5 (OSF H2 Sensitivity Analysis) ═══ */}
+                  {(() => {
+                    const tzZones = [
+                      { key: "below3", label: "R < 3", sublabel: "Sub-Gate (Irelevant)", data: tzZ1, color: "#DC2626", bgLight: "#fef2f2", border: "#fecaca", icon: "M18.36 5.64a9 9 0 11-12.73 12.73 9 9 0 0112.73-12.73zM19 12H5" },
+                      { key: "3to5", label: "R 3 — 4.99", sublabel: "Constientizare Latenta (Top of Mind)", data: tzZ2, color: "#D97706", bgLight: "#fffbeb", border: "#fde68a", icon: "M12 2a10 10 0 100 20 10 10 0 000-20zM12 6v6l4 2" },
+                      { key: "above5", label: "R \u2265 5", sublabel: "Performanta Activa (Conversie)", data: tzZ3, color: "#059669", bgLight: "#ecfdf5", border: "#a7f3d0", icon: "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3" },
+                    ];
+                    const maxHyp = Math.max(tzZ1.hypPct, tzZ2.hypPct, tzZ3.hypPct, 1);
+                    // SVG bar chart dimensions
+                    const bW = 480, bH = 200, bPad = { l: 42, r: 16, t: 16, b: 36 };
+                    const bPlotW = bW - bPad.l - bPad.r;
+                    const bPlotH = bH - bPad.t - bPad.b;
+                    const metrics = ["Validare %", "R med", "Cp", "Cf/11", "Delta", "CTA", "Zone Match %"];
+                    const metricVals = (d: typeof tzZ1) => [d.hypPct, d.r, d.cp, d.cfNorm, d.delta, d.cta, d.zoneMatch];
+                    const metricMax = [100, 10, 10, 10, 10, 10, 100];
+                    const barGroupW = bPlotW / metrics.length;
+                    const barW = Math.min(barGroupW * 0.22, 18);
+                    return (
+                      <div style={{ border: "2px solid #e5e7eb", borderRadius: 12, marginBottom: 20, overflow: "hidden" }}>
+                        {/* Header */}
+                        <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>ANALIZA PRAGURI DE RELEVANTA — OSF H2</div>
+                            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Confirmatory: R &ge; {GATE} (OSF H2 primar) &middot; Sensitivity: R=2,3,4,5 (OSF H2 Inference Criteria) &middot; Convergenta H7</div>
+                          </div>
+                          <div style={{ marginLeft: "auto" }}>
+                            <InterpBtn k="two-zone-gate" title="Analiza Doua Zone" val={`${gatePassRate}% vs ${tzGate5PassRate}%`} ctx={{ g3pass: gatePassCount, g3rate: gatePassRate, g5pass: tzGate5PassCount, g5rate: tzGate5PassRate, z1: JSON.stringify(tzZ1), z2: JSON.stringify(tzZ2), z3: JSON.stringify(tzZ3), n }} />
+                          </div>
+                        </div>
+
+                        {/* 3 Zone Cards */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 0 }}>
+                          {tzZones.map((z, zi) => {
+                            const d = z.data;
+                            const isLast = zi === tzZones.length - 1;
+                            return (
+                              <div key={z.key} style={{
+                                padding: "16px 14px",
+                                background: d.n === 0 ? "#f9fafb" : z.bgLight,
+                                borderRight: isLast ? "none" : "1px solid #e5e7eb",
+                                borderBottom: "1px solid #e5e7eb",
+                                opacity: d.n === 0 ? 0.5 : 1,
+                              }}>
+                                {/* Zone header */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={z.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={z.icon}/></svg>
+                                  <div>
+                                    <div style={{ fontSize: 13, fontWeight: 800, color: z.color }}>{z.label}</div>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600, letterSpacing: 0.3 }}>{z.sublabel}</div>
+                                  </div>
+                                </div>
+                                {/* Count badge */}
+                                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 10 }}>
+                                  <span style={{ fontSize: 28, fontWeight: 900, color: z.color }}>{d.n}</span>
+                                  <span style={{ fontSize: 11, color: "#6B7280" }}>materiale ({d.n > 0 ? Math.round(d.n / n * 100) : 0}%)</span>
+                                </div>
+                                {d.n === 0 ? (
+                                  <div style={{ fontSize: 11, color: "#9CA3AF", fontStyle: "italic" }}>Nicio material in aceasta zona</div>
+                                ) : (
+                                  <>
+                                    {/* Hero: Validation % */}
+                                    <div style={{ background: "#fff", border: `1px solid ${z.border}`, borderRadius: 8, padding: "8px 10px", marginBottom: 8, textAlign: "center" as const }}>
+                                      <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 2 }}>CONVERGENTA H7</div>
+                                      <div style={{ fontSize: 24, fontWeight: 900, color: getValidationColor(d.hypPct) }}>{d.hypPct}%</div>
+                                      <div style={{ fontSize: 9, color: getValidationColor(d.hypPct), fontWeight: 600 }}>{getValidationLabel(d.hypPct)}</div>
+                                    </div>
+                                    {/* Metrics grid */}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
+                                      {[
+                                        { label: "R mediu", val: d.r.toFixed(2), color: "#DC2626" },
+                                        { label: "I\u00D7F", val: d.ixf.toFixed(1), color: "#8B5CF6" },
+                                        { label: "Cf/11", val: d.cfNorm.toFixed(2), color: "#2563EB" },
+                                        { label: "Cp", val: d.cp.toFixed(2), color: "#059669" },
+                                        { label: "\u0394 Delta", val: d.delta.toFixed(2), color: "#6B7280" },
+                                        { label: "CTA", val: d.cta.toFixed(2), color: "#059669" },
+                                        { label: "Zone Match", val: `${d.zoneMatch}%`, color: d.zoneMatch >= 70 ? "#059669" : d.zoneMatch >= 40 ? "#D97706" : "#DC2626" },
+                                        { label: "Dir.", val: d.cfNorm < d.cp ? "Sub." : d.cfNorm > d.cp ? "Supra." : "=", color: d.cfNorm < d.cp ? "#D97706" : d.cfNorm > d.cp ? "#DC2626" : "#059669" },
+                                      ].map((m, mi) => (
+                                        <div key={mi} style={{ fontSize: 10, padding: "3px 6px", background: "#fff", borderRadius: 4, border: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between" }}>
+                                          <span style={{ color: "#6B7280" }}>{m.label}</span>
+                                          <span style={{ fontWeight: 700, color: m.color }}>{m.val}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Comparative Bar Chart (SVG) */}
+                        <div style={{ padding: "14px 20px", background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, letterSpacing: 0.5 }}>COMPARATIE METRICI PE ZONE</div>
+                          <div style={{ display: "flex", gap: 16, marginBottom: 8, fontSize: 10, color: "#6B7280" }}>
+                            {tzZones.filter(z => z.data.n > 0).map(z => (
+                              <span key={z.key} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                <span style={{ width: 10, height: 4, borderRadius: 2, background: z.color }} />
+                                {z.label}
+                              </span>
+                            ))}
+                          </div>
+                          <svg viewBox={`0 0 ${bW} ${bH}`} width="100%" style={{ maxWidth: bW }}>
+                            {/* Y-axis gridlines */}
+                            {[0, 25, 50, 75, 100].map(pct => {
+                              const y = bPad.t + bPlotH - (pct / 100) * bPlotH;
+                              return (
+                                <g key={pct}>
+                                  <line x1={bPad.l} y1={y} x2={bW - bPad.r} y2={y} stroke="#f3f4f6" strokeWidth={0.5} />
+                                  <text x={bPad.l - 4} y={y + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{pct}%</text>
+                                </g>
+                              );
+                            })}
+                            {/* Metric groups */}
+                            {metrics.map((label, mi) => {
+                              const gx = bPad.l + mi * barGroupW + barGroupW / 2;
+                              return (
+                                <g key={label}>
+                                  <text x={gx} y={bH - bPad.b + 14} textAnchor="middle" fontSize={7.5} fontWeight={600} fill="#6B7280">{label}</text>
+                                  {tzZones.filter(z => z.data.n > 0).map((z, bi, filtArr) => {
+                                    const vals = metricVals(z.data);
+                                    const rawVal = vals[mi];
+                                    const pctH = Math.min((rawVal / metricMax[mi]) * 100, 100);
+                                    const barH = (pctH / 100) * bPlotH;
+                                    const totalBars = filtArr.length;
+                                    const offsetX = gx - (totalBars * barW + (totalBars - 1) * 2) / 2 + bi * (barW + 2);
+                                    const y = bPad.t + bPlotH - barH;
+                                    return (
+                                      <g key={z.key}>
+                                        <rect x={offsetX} y={y} width={barW} height={Math.max(barH, 1)} rx={2} fill={z.color} opacity={0.85} />
+                                        <text x={offsetX + barW / 2} y={y - 3} textAnchor="middle" fontSize={7} fontWeight={700} fill={z.color}>
+                                          {mi === 0 || mi === 6 ? `${rawVal}` : rawVal.toFixed(1)}
+                                        </text>
+                                      </g>
+                                    );
+                                  })}
+                                </g>
+                              );
+                            })}
+                            <rect x={bPad.l} y={bPad.t} width={bPlotW} height={bPlotH} fill="none" stroke="#e5e7eb" strokeWidth={0.5} />
+                          </svg>
+                        </div>
+
+                        {/* Explanatory block */}
+                        <div style={{ padding: "16px 20px", background: "#f8fafc" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", marginBottom: 8, letterSpacing: 0.5 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 4 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                            INTERPRETARE MODELUL CU DOUA ZONE
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                            {/* Left: Confirmatory */}
+                            <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb", borderTop: "3px solid #2563EB" }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#2563EB", marginBottom: 4 }}>CONFIRMATORY (OSF PRE-INREGISTRAT)</div>
+                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
+                                Gate R &ge; {GATE}: <strong>{gatePassCount}/{n}</strong> materiale ({gatePassRate}%) trec pragul.
+                                Formula R+(I&times;F)=C valideaza ipoteza cu <strong>{grandHypPct}%</strong> acuratete pe toate materialele cu R &ge; {GATE}.
+                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Aceasta este analiza primara, conform protocolului OSF pre-inregistrat.</span>
+                              </div>
+                            </div>
+                            {/* Right: Pre-registered Sensitivity */}
+                            <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb", borderTop: "3px solid #059669" }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#059669", marginBottom: 4 }}>SENSITIVITY ANALYSIS (OSF H2)</div>
+                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
+                                Gate R &ge; 5: <strong>{tzGate5PassCount}/{n}</strong> materiale ({tzGate5PassRate}%) trec pragul.
+                                In zona R &ge; 5, validarea creste la <strong>{tzZ3.hypPct}%</strong> — indicand performanta activa.
+                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Pre-inregistrat OSF: &quot;Sensitivity analysis: All three methods repeated at R = 2, 3, 4, and 5&quot; (H2 Inference Criteria).</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Three-zone narrative */}
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #7C3AED" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", marginBottom: 6 }}>CELE 3 ZONE DE RELEVANTA</div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                              <div style={{ padding: "6px 8px", background: "#fef2f2", borderRadius: 4, border: "1px solid #fecaca" }}>
+                                <div style={{ fontWeight: 700, color: "#DC2626", marginBottom: 2 }}>R &lt; 3 — Irelevant ({tzZ1.n} mat.)</div>
+                                Materialul nu este procesat de audienta. I&times;F merge in gol — formula prezice {tzZ1.hypPct}% dar rezultatul este accidental. CTA = {tzZ1.cta.toFixed(1)}.
+                                {tzZ1.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
+                              </div>
+                              <div style={{ padding: "6px 8px", background: "#fffbeb", borderRadius: 4, border: "1px solid #fde68a" }}>
+                                <div style={{ fontWeight: 700, color: "#D97706", marginBottom: 2 }}>R 3 — 4.99 — Top of Mind ({tzZ2.n} mat.)</div>
+                                Constientizare latenta: audienta recunoaste materialul dar nu actioneaza. Formula prezice {tzZ2.hypPct}%, C&asymp;Cp dar CTA = {tzZ2.cta.toFixed(1)} ramane scazut. Barbatul stie de pantofii de dama, dar nu cumpara.
+                                {tzZ2.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
+                              </div>
+                              <div style={{ padding: "6px 8px", background: "#ecfdf5", borderRadius: 4, border: "1px solid #a7f3d0" }}>
+                                <div style={{ fontWeight: 700, color: "#059669", marginBottom: 2 }}>R &ge; 5 — Performanta ({tzZ3.n} mat.)</div>
+                                Conversie activa: audienta este angajata, formula prezice {tzZ3.hypPct}% cu precizie. CTA = {tzZ3.cta.toFixed(1)} creste semnificativ. Materialele relevante produc actiune masurabil.
+                                {tzZ3.n === 0 && <em style={{ color: "#9CA3AF" }}> Nicio material in aceasta zona.</em>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Delta comparison row */}
+                          {tzZ2.n > 0 && tzZ3.n > 0 && (
+                            <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "stretch" }}>
+                              <div style={{ flex: 1, background: "#fff", borderRadius: 6, padding: "8px 12px", border: "1px solid #e5e7eb", fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                                <strong style={{ color: "#D97706" }}>Zona Latenta (R 3-4.99):</strong> Validare {tzZ2.hypPct}%, Delta {tzZ2.delta.toFixed(2)}, CTA {tzZ2.cta.toFixed(2)} — formula functioneaza partial dar audienta nu converteste. Materialele sunt &quot;vizibile dar inactive&quot;.
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", padding: "0 6px" }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+                              </div>
+                              <div style={{ flex: 1, background: "#fff", borderRadius: 6, padding: "8px 12px", border: "1px solid #e5e7eb", fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                                <strong style={{ color: "#059669" }}>Zona Performanta (R &ge; 5):</strong> Validare {tzZ3.hypPct}%, Delta {tzZ3.delta.toFixed(2)}, CTA {tzZ3.cta.toFixed(2)} — formula prezice cu precizie si audienta actioneaza. Crestere CTA: {tzZ2.cta > 0 ? `+${Math.round((tzZ3.cta / tzZ2.cta - 1) * 100)}%` : "N/A"} fata de zona latenta.
+                              </div>
+                            </div>
+                          )}
+
+                          {/* ── OSF H2 Sensitivity: All 4 Thresholds (R=2,3,4,5) ── */}
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#2563EB", flex: 1 }}>
+                                OSF H2 SENSITIVITY — PRAGURI R=2,3,4,5
+                              </div>
+                              {(() => {
+                                const sensConfirmed = tzSensitivity.filter(t => t.below.n > 0 && t.above.cta > 0 && t.below.cta < t.above.cta).length;
+                                const sensTotal = tzSensitivity.filter(t => t.below.n > 0).length;
+                                const verdict = sensTotal === 0 ? "N/A" : sensConfirmed === sensTotal ? "Confirmat" : sensConfirmed > 0 ? "Partial" : "Neconfirmat";
+                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Neconfirmat" ? "#DC2626" : "#9CA3AF";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
+                                    <InterpBtn k="h2-sensitivity" title="H2 Sensitivity" val={`${sensConfirmed}/${sensTotal}`} ctx={{ sens: JSON.stringify(tzSensitivity), n }} />
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Sub prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Peste prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Pass %</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H7 sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H7 peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>&Delta; CTA</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {tzSensitivity.map((ts, si) => {
+                                  const isConfirmatory = ts.threshold === GATE;
+                                  return (
+                                    <tr key={ts.threshold} style={{
+                                      borderBottom: "1px solid #f3f4f6",
+                                      background: isConfirmatory ? "#eff6ff" : si % 2 === 0 ? "#fafafa" : "#fff",
+                                    }}>
+                                      <td style={{ padding: "5px 6px", fontWeight: isConfirmatory ? 800 : 600 }}>
+                                        R={ts.threshold}
+                                        {isConfirmatory && <span style={{ fontSize: 8, color: "#2563EB", marginLeft: 4 }}>PRIMAR</span>}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626" }}>{ts.below.n}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontWeight: 600 }}>{ts.above.n}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 700 }}>{ts.passRate}%</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.below.n > 0 ? "#DC2626" : "#d4d4d4" }}>{ts.below.n > 0 ? `${ts.below.hypPct}%` : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontWeight: 600 }}>{ts.above.n > 0 ? `${ts.above.hypPct}%` : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.below.n > 0 ? "#DC2626" : "#d4d4d4" }}>{ts.below.n > 0 ? ts.below.cta.toFixed(2) : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.above.n > 0 ? ts.above.cta.toFixed(2) : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 700, color: ts.ctaDrop != null && ts.ctaDrop > 0 ? "#DC2626" : "#059669" }}>
+                                        {ts.ctaDrop != null ? `${ts.ctaDrop > 0 ? "-" : "+"}${Math.abs(ts.ctaDrop)}%` : "—"}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
+                              H7 = Convergenta Formula (|Cf/11 - Cp|). &Delta; CTA = scadere CTA sub prag vs peste prag. Prag PRIMAR = R={GATE} (confirmatory OSF H2).
+                            </div>
+                          </div>
+
+                          {/* ── OSF H2 Individual-Level Test (respondent × stimulus) ── */}
+                          {scatter.length > 0 && (
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #DC2626" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#DC2626", flex: 1 }}>
+                                OSF H2 — NIVEL INDIVIDUAL ({scatter.length.toLocaleString()} observatii)
+                              </div>
+                              {(() => {
+                                const h2Confirmed = h2IndSensitivity.filter(t => t.h2Supported).length;
+                                const h2Testable = h2IndSensitivity.filter(t => t.nBelow > 0).length;
+                                const verdict = h2Testable === 0 ? "N/A" : h2Confirmed === h2Testable ? "Confirmat" : h2Confirmed > 0 ? "Partial" : "Neconfirmat";
+                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Neconfirmat" ? "#DC2626" : "#9CA3AF";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
+                                    <InterpBtn k="h2-individual" title="H2 Individual" val={`${h2Confirmed}/${h2Testable}`} ctx={{ sens: JSON.stringify(h2IndSensitivity), total: scatter.length }} />
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
+                              H2: &quot;Cand R &lt; prag, C si CTA vor fi uniform scazute (sub percentila 25), indiferent de I si F.&quot;
+                            </div>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>N sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>N peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Cp sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Cp peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>P25 Cp</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>P25 CTA</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H2</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {h2IndSensitivity.map((ts, si) => {
+                                  const isConfirmatory = ts.threshold === GATE;
+                                  return (
+                                    <tr key={ts.threshold} style={{
+                                      borderBottom: "1px solid #f3f4f6",
+                                      background: isConfirmatory ? "#fef2f2" : si % 2 === 0 ? "#fafafa" : "#fff",
+                                    }}>
+                                      <td style={{ padding: "5px 6px", fontWeight: isConfirmatory ? 800 : 600 }}>
+                                        R={ts.threshold}
+                                        {isConfirmatory && <span style={{ fontSize: 8, color: "#DC2626", marginLeft: 4 }}>PRIMAR</span>}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626", fontWeight: 600 }}>{ts.nBelow.toLocaleString()}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.nAbove.toLocaleString()}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.cpBelowP25 ? "#DC2626" : "#374151", fontWeight: ts.cpBelowP25 ? 700 : 400 }}>
+                                        {ts.nBelow > 0 ? ts.avgCpBelow.toFixed(2) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.avgCpAbove.toFixed(2)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.ctaBelowP25 ? "#DC2626" : "#374151", fontWeight: ts.ctaBelowP25 ? 700 : 400 }}>
+                                        {ts.nBelow > 0 ? ts.avgCtaBelow.toFixed(2) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.avgCtaAbove.toFixed(2)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#9CA3AF", fontSize: 9 }}>{ts.p25Cp.toFixed(1)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#9CA3AF", fontSize: 9 }}>{ts.p25Cta.toFixed(1)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px" }}>
+                                        {ts.nBelow === 0 ? (
+                                          <span style={{ fontSize: 9, color: "#9CA3AF" }}>N/A</span>
+                                        ) : ts.h2Supported ? (
+                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#059669" }}>DA</span>
+                                        ) : (
+                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#DC2626" }}>NU</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
+                              Nivel individual: fiecare rand = un respondent × un stimulus. P25 = percentila 25 din toata distributia. H2 = DA daca Cp si CTA sub prag sunt &le; P25.
+                              {h2IndSensitivity.find(t => t.threshold === GATE)?.nBelow === 0 && (
+                                <span style={{ color: "#D97706" }}> Nota: La nivel agregat (medie per material), zona R &lt; {GATE} e goala. La nivel individual, exista {h2IndSensitivity.find(t => t.threshold === GATE)?.nBelow || 0} observatii cu R &lt; {GATE}.</span>
+                              )}
+                            </div>
+                          </div>
+                          )}
+
+                          {/* ── OSF H2 Chow Test + Piecewise Regression ── */}
+                          {scValid.length >= 10 && (
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #7C3AED" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", flex: 1 }}>
+                                OSF H2 — CHOW TEST &amp; PIECEWISE REGRESSION
+                              </div>
+                              {(() => {
+                                const chowSig = h2ChowTests.filter(t => t.chowSig).length;
+                                const chowTotal = h2ChowTests.length;
+                                const verdict = chowSig === chowTotal ? "Confirmat" : chowSig >= 2 ? "Partial" : chowSig === 1 ? "Slab" : "Neconfirmat";
+                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Slab" ? "#D97706" : "#DC2626";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
+                                    <InterpBtn k="h2-chow" title="Chow Test" val={`${chowSig}/${chowTotal} sig.`} ctx={{ tests: JSON.stringify(h2ChowTests) }} />
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
+                              Testam daca relatia I&times;F &rarr; Cp are un structural break la fiecare prag. Chow F sig. (p&lt;0.05) = coefficientii difera semnificativ sub vs peste prag.
+                            </div>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Chow F</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>p</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Sig.</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>Slope sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>Slope peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>R&sup2; sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>R&sup2; peste</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {h2ChowTests.map((ct, ci) => {
+                                  const isConf = ct.threshold === GATE;
+                                  return (
+                                    <tr key={ct.threshold} style={{
+                                      borderBottom: "1px solid #f3f4f6",
+                                      background: isConf ? "#f5f3ff" : ci % 2 === 0 ? "#fafafa" : "#fff",
+                                    }}>
+                                      <td style={{ padding: "5px 6px", fontWeight: isConf ? 800 : 600 }}>
+                                        R={ct.threshold}
+                                        {isConf && <span style={{ fontSize: 8, color: "#7C3AED", marginLeft: 4 }}>PRIMAR</span>}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 600 }}>{ct.chowF.toFixed(2)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ct.chowP < 0.05 ? "#059669" : "#9CA3AF" }}>
+                                        {ct.chowP < 0.001 ? "<.001" : ct.chowP.toFixed(3)}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px" }}>
+                                        {ct.chowSig ? (
+                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#059669" }}>DA</span>
+                                        ) : (
+                                          <span style={{ fontSize: 9, color: "#9CA3AF" }}>NU</span>
+                                        )}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626" }}>
+                                        {ct.slopeBelow != null ? ct.slopeBelow.toFixed(3) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>
+                                        {ct.slopeAbove != null ? ct.slopeAbove.toFixed(3) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626", fontSize: 9 }}>
+                                        {ct.r2Below != null ? (ct.r2Below * 100).toFixed(1) + "%" : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontSize: 9 }}>
+                                        {ct.r2Above != null ? (ct.r2Above * 100).toFixed(1) + "%" : "—"}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
+                              Chow test: H0 = coeficientii sunt identici sub si peste prag. Sig. (p&lt;0.05) = structural break confirmat.
+                              Slope = panta I&times;F &rarr; Cp. Daca slope_sub &asymp; 0 si slope_peste &gt; 0, Relevance Gate este confirmat: sub prag, I&times;F nu influenteaza Cp.
+                              {(() => {
+                                const best = h2ChowTests.reduce((a, b) => a.chowF > b.chowF ? a : b);
+                                return best.chowSig ? ` Cel mai puternic breakpoint: R=${best.threshold} (F=${best.chowF.toFixed(2)}, p=${best.chowP < 0.001 ? "<.001" : best.chowP.toFixed(3)}).` : "";
+                              })()}
+                            </div>
+                          </div>
+                          )}
+
+                          {/* ── OSF Archetype Distribution ── */}
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #6366f1" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#6366f1", flex: 1 }}>
+                                CLASIFICARE ARHETIPURI OSF — {n} MATERIALE
+                              </div>
+                              {(() => {
+                                const hasVariety = Object.keys(osfArchCount).filter(k => (osfArchCount[k] || 0) > 0).length;
+                                const verdict = hasVariety >= 3 ? "Complet" : hasVariety >= 2 ? "Partial" : "Limitat";
+                                const vColor = verdict === "Complet" ? "#059669" : verdict === "Partial" ? "#D97706" : "#DC2626";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{hasVariety}/5 tipuri</span>
+                                    <InterpBtn k="h2-archetypes" title="Arhetipuri OSF" val={`${hasVariety}/5`} ctx={{ counts: JSON.stringify(osfArchCount), n }} />
+                                  </>
+                                );
+                              })()}
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              {[
+                                { key: "Phantom", label: "Fantoma", color: "#DC2626", desc: "R < 3" },
+                                { key: "Aesthetic Noise", label: "Zgomot Estetic", color: "#D97706", desc: "F > I + 3" },
+                                { key: "Diamond", label: "Diamant", color: "#059669", desc: "C \u2265 80" },
+                                { key: "Background Noise", label: "Zgomot de Fond", color: "#6B7280", desc: "C < 40" },
+                                { key: "Medium Clarity", label: "Claritate Medie", color: "#2563EB", desc: "40 \u2264 C < 80" },
+                              ].map(arch => {
+                                const cnt = osfArchCount[arch.key] || 0;
+                                const pct = n > 0 ? Math.round((cnt / n) * 100) : 0;
+                                return (
+                                  <div key={arch.key} style={{
+                                    flex: "1 1 0", minWidth: 100,
+                                    padding: "8px 10px", borderRadius: 6,
+                                    border: `1px solid ${cnt > 0 ? arch.color + "40" : "#e5e7eb"}`,
+                                    background: cnt > 0 ? arch.color + "08" : "#f9fafb",
+                                    opacity: cnt === 0 ? 0.5 : 1,
+                                  }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: arch.color, display: "inline-block" }} />
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: arch.color }}>{arch.label}</span>
+                                    </div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: cnt > 0 ? arch.color : "#d4d4d4" }}>{cnt}</div>
+                                    <div style={{ fontSize: 9, color: "#6B7280" }}>{pct}% &middot; {arch.desc}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Academic citation box */}
+                          <div style={{ marginTop: 10, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5, padding: "6px 10px", background: "#f1f5f9", borderRadius: 4 }}>
+                            <strong>Nota metodologica:</strong> Analiza cu gate R &ge; {GATE} este <strong>confirmatorie</strong> (OSF H2 — analiza primara). Testarea la R=2,3,4,5 este <strong>pre-inregistrata</strong> ca sensitivity analysis (OSF H2 Inference Criteria: &quot;All three methods repeated at R = 2, 3, 4, and 5&quot;). Clasificarea arhetipurilor urmeaza definitiile OSF: Phantom (R&lt;3), Aesthetic Noise (F&gt;I+3), Diamond (C&ge;80), Background Noise (C&lt;40), Medium Clarity (rest). Metrica &quot;Convergenta H7&quot; valideaza ipoteza H7 (C_calc ~ C_perc, r &ge; 0.60).
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 4 }}>
                         <InterpBtn k="h1" title="H2 — Poarta Relevantei" val={`ΔCTA=${(h1AboveAvgCta - h1BelowAvgCta).toFixed(2)}`} ctx={{ diffCp: h1AboveAvgC - h1BelowAvgC, diffCta: h1AboveAvgCta - h1BelowAvgCta, diffStrong: h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 ? _mean(h1StrongAbove.map(d => d.cta!)) - _mean(h1StrongBelow.map(d => d.cta!)) : 0, cohenDCp: h1CohenDCp, cohenDCta: h1CohenDCta, nBelow: h1CtaBelow.length, nAbove: h1CtaAbove.length, cpBelow: h1BelowAvgC, cpAbove: h1AboveAvgC, ctaBelow: h1BelowAvgCta, ctaAbove: h1AboveAvgCta, brandCtaBelow: h1BrandCtaBelowYes, brandCtaNoBrand: h1BrandCtaBelowNo, nBrandBelow: h1BrandBelowYes.length, nNoBrandBelow: h1BrandBelowNo.length }} />
                       </div>
