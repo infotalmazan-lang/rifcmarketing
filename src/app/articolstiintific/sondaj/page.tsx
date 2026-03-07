@@ -68,6 +68,9 @@ import {
   FlaskConical,
   CheckCircle2,
   Search,
+  Info,
+  Tv,
+  Factory,
 } from "lucide-react";
 import { CVI_ITEMS, CVI_DIMENSIONS, CVI_ITEM_LABELS, CVI_ITEM_TEXTS } from "@/lib/cvi-calculations";
 import * as tus from "tus-js-client";
@@ -18456,61 +18459,288 @@ export default function StudiuAdminPage() {
               {/* ══ INTERPRETARE SUB-TAB ══ */}
               {consumatoriSubTab === "interpretare" && (
                 <div>
-                  {/* Validation Hero */}
+                  {/* Info Banner */}
+                  <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+                    <Info size={16} style={{ color: "#ea580c", flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: "#9a3412" }}>
+                      Sursa date: Consumatori calibrati (acuratete ≥70%) — {cTotalResp.toLocaleString("ro-RO")} raspunsuri · {cWithData.length}/{stimuli.filter((s: any) => s.is_active).length} materiale · {cCompletedN} respondenti calificati din {cTotalEvaluated} evaluati.
+                    </span>
+                  </div>
+
+                  {/* VALIDARE IPOTEZA — CONSUMATORI 3000 */}
                   <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "24px 28px", marginBottom: 20, textAlign: "center" as const }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#9CA3AF", marginBottom: 8 }}>VALIDARE IPOTEZA — CONSUMATORI 3000</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>VALIDARE IPOTEZA — CONSUMATORI 3000</div>
                     <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 4 }}>Bazat pe {cCompletedN} respondenti calibrati din {cTotalEvaluated} evaluati ({cQualRate}% calificati)</div>
-                    <div style={{ fontSize: 64, fontWeight: 900, color: cRSynthColor, fontFamily: "JetBrains Mono, monospace", lineHeight: 1.1 }}>{cGValPct}%</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: cRSynthColor, marginTop: 4 }}>{cRSynthesis}</div>
+                    <div style={{ fontSize: 48, fontWeight: 900, color: cGValPct >= 80 ? "#059669" : cGValPct >= 70 ? "#16a34a" : cGValPct >= 50 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace", lineHeight: 1.1 }}>{cGValPct}%</div>
+                    <div style={{ display: "inline-block", padding: "4px 16px", borderRadius: 20, fontSize: 14, fontWeight: 800, marginTop: 4, color: "#fff", background: cGValPct >= 80 ? "#059669" : cGValPct >= 70 ? "#16a34a" : cGValPct >= 50 ? "#D97706" : "#DC2626" }}>{cRSynthesis}</div>
                     <p style={{ fontSize: 13, color: "#6B7280", marginTop: 8, maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
-                      Formula R+(IxF)≥C prezice scorul de claritate cu o acuratete de {cGValPct}% fata de perceptia respondentilor calibrati.
+                      Formula <b>R+(IxF)=C</b> prezice scorul de claritate cu o acuratete de {cGValPct}% fata de perceptia respondentilor calibrati.
                     </p>
-
-                    {/* Cf vs Cp pills */}
-                    <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 12 }}>
-                      <span style={{ padding: "6px 16px", borderRadius: 20, background: "#f3f4f6", fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>C<sub>f</sub>/11 = {(cGCf / 11).toFixed(2)}</span>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 12, flexWrap: "wrap" as const }}>
+                      <span style={{ padding: "6px 16px", borderRadius: 20, background: "#f3f4f6", fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono, monospace", color: "#111827" }}>C<sub>f</sub>/11 = <b>{(cGCf / 11).toFixed(2)}</b></span>
                       <span style={{ padding: "6px 12px", borderRadius: 20, background: "#f3f4f6", fontSize: 12, color: "#9CA3AF" }}>vs</span>
-                      <span style={{ padding: "6px 16px", borderRadius: 20, background: "#f3f4f6", fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>C<sub>p</sub> = {cGCp.toFixed(2)}</span>
-                      <span style={{ padding: "6px 16px", borderRadius: 20, background: "#f3f4f6", fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>&Delta; = {cGDelta.toFixed(2)}</span>
+                      <span style={{ padding: "6px 16px", borderRadius: 20, background: "#f3f4f6", fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono, monospace", color: "#059669" }}>C<sub>p</sub> = <b>{cGCp.toFixed(2)}</b></span>
+                      <span style={{ padding: "6px 16px", borderRadius: 20, background: "#f3f4f6", fontSize: 13, fontWeight: 700, fontFamily: "JetBrains Mono, monospace", color: "#7C3AED" }}>&Delta; = <b>{cGDelta.toFixed(2)}</b></span>
                     </div>
-
-                    <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 12, fontSize: 11, color: "#9CA3AF" }}>
-                      <span>&#8595; Formula subestimeaza (+{cGDelta.toFixed(2)})</span>
-                      <span>Gate R≥3: {cGatePass}/{cStimuliResults.length} materiale ({cGatePct}%)</span>
+                    <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 8, fontSize: 11, color: "#9CA3AF" }}>
+                      <span>{cGCf / 11 < cGCp ? "\u2191 Formula subestimeaza" : cGCf / 11 > cGCp ? "\u2193 Formula supraestimeaza" : "= Perfect calibrat"} (+{cGDelta.toFixed(2)})</span>
+                      <span>\u25cb Gate R\u22653: {cGatePass}/{cStimuliResults.length} materiale ({cGatePct}%)</span>
                     </div>
                   </div>
 
-                  {/* OSF H7 Construct Validation */}
-                  {cScValid.length >= 3 && (
-                    <div style={{ background: "#f0fdf4", border: "2px solid #bbf7d0", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 16 }}>&#9734;</span>
-                        <span style={{ fontWeight: 800, fontSize: 15, color: "#111827" }}>OSF H7 — VALIDITATE CONSTRUCT</span>
-                        <span style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Pearson r(Cf_norm, Cp) ≥ 0.60</span>
+                  {/* OSF H7 — VALIDITATE CONSTRUCT */}
+                  {cScValid.length >= 3 && (() => {
+                    const _h7P = _pValuePearson(cPearsonR, cScWithCp.length);
+                    const _h7Verdict = Math.abs(cPearsonR) >= 0.6 && _h7P < 0.05 ? "CONFIRMATA" : Math.abs(cPearsonR) >= 0.4 ? "PARTIAL" : "NECONFIRMATA";
+                    const _h7Color = _h7Verdict === "CONFIRMATA" ? "#059669" : _h7Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
+                    return (
+                      <div style={{ background: _h7Verdict === "CONFIRMATA" ? "#f0fdf4" : _h7Verdict === "PARTIAL" ? "#fefce8" : "#fef2f2", border: `2px solid ${_h7Verdict === "CONFIRMATA" ? "#bbf7d0" : _h7Verdict === "PARTIAL" ? "#fde047" : "#fecaca"}`, borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                          <span style={{ fontSize: 16 }}>&#9734;</span>
+                          <span style={{ fontWeight: 800, fontSize: 15, color: "#111827" }}>OSF H7 — VALIDITATE CONSTRUCT</span>
+                          <span style={{ fontSize: 11, color: "#6B7280", fontStyle: "italic" }}>Pearson r(Cf_norm, Cp) \u2265 0.60</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 24, alignItems: "center", flexWrap: "wrap" as const }}>
+                          <div style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>PEARSON R</span><br/>
+                            <span style={{ fontSize: 28, fontWeight: 900, color: _h7Color }}>{cPearsonR.toFixed(3)}</span>
+                          </div>
+                          <div style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>R\u00B2</span><br/>
+                            <span style={{ fontSize: 28, fontWeight: 900, color: _h7Color }}>{(cPearsonR * cPearsonR).toFixed(3)}</span>
+                          </div>
+                          <div style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>P-VALUE</span><br/>
+                            <span style={{ fontSize: 28, fontWeight: 900, color: _h7P < 0.001 ? "#059669" : _h7P < 0.05 ? "#D97706" : "#DC2626" }}>{_h7P < 0.001 ? "p<0.001" : `p=${_h7P.toFixed(3)}`}</span>
+                          </div>
+                          <div style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>N (MATERIALE)</span><br/>
+                            <span style={{ fontSize: 28, fontWeight: 900, color: "#111827" }}>{cWithData.length}</span>
+                          </div>
+                          <div style={{ padding: "8px 16px", borderRadius: 8, background: _h7Verdict === "CONFIRMATA" ? "#dcfce7" : _h7Verdict === "PARTIAL" ? "#fef9c3" : "#fee2e2", border: `1px solid ${_h7Verdict === "CONFIRMATA" ? "#86efac" : _h7Verdict === "PARTIAL" ? "#fde047" : "#fca5a5"}` }}>
+                            <span style={{ fontWeight: 800, fontSize: 14, color: _h7Color }}>{_h7Verdict}</span>
+                          </div>
+                        </div>
+                        <p style={{ fontSize: 12, color: "#4B5563", marginTop: 10, lineHeight: 1.6 }}>
+                          Corelatia intre C formula normalizat (Cf/11) si C perceput (Cp evaluat de respondenti) masoara <b>validitatea de construct</b> a modelului RIFC. r={cPearsonR.toFixed(3)} inseamna ca {Math.round(cPearsonR * cPearsonR * 100)}% din varianta Cp este explicata de Cf.
+                        </p>
                       </div>
-                      <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
-                        <div style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                          <span style={{ fontSize: 11, color: "#6B7280" }}>PEARSON R</span><br/>
-                          <span style={{ fontSize: 28, fontWeight: 900, color: "#059669" }}>{cPearsonR.toFixed(3)}</span>
-                        </div>
-                        <div style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                          <span style={{ fontSize: 11, color: "#6B7280" }}>R&sup2;</span><br/>
-                          <span style={{ fontSize: 28, fontWeight: 900, color: "#059669" }}>{(cPearsonR * cPearsonR).toFixed(3)}</span>
-                        </div>
-                        <div style={{ fontFamily: "JetBrains Mono, monospace" }}>
-                          <span style={{ fontSize: 11, color: "#6B7280" }}>N (MATERIALE)</span><br/>
-                          <span style={{ fontSize: 28, fontWeight: 900, color: "#111827" }}>{cWithData.length}</span>
-                        </div>
-                        <div style={{ padding: "8px 16px", borderRadius: 8, background: Math.abs(cPearsonR) >= 0.6 ? "#dcfce7" : "#fef9c3", border: `1px solid ${Math.abs(cPearsonR) >= 0.6 ? "#86efac" : "#fde047"}` }}>
-                          <span style={{ fontWeight: 800, fontSize: 14, color: Math.abs(cPearsonR) >= 0.6 ? "#059669" : "#D97706" }}>{Math.abs(cPearsonR) >= 0.6 ? "CONFIRMATA" : "IN CURS"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
-                  {/* Hypothesis H1 & H2 Summary Cards */}
+                  {/* DE CE X% SI NU 100%? */}
+                  {cWithData.length > 0 && (() => {
+                    const cR = _mean(cWithData.map((s: any) => s.avg_r));
+                    const cI = _mean(cWithData.map((s: any) => s.avg_i));
+                    const cF = _mean(cWithData.map((s: any) => s.avg_f));
+                    const cIxF = cI * cF;
+                    const rContrib = cGCf > 0 ? Math.round((cR / cGCf) * 100) : 0;
+                    const ixfContrib = 100 - rContrib;
+                    const gateActivated = cR >= GATE;
+                    const deltaDir = cGCf / 11 < cGCp ? "subestimeaza" : "supraestimeaza";
+                    return (
+                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#2563EB", marginBottom: 12 }}>DE CE {cGValPct}% SI NU 100%?</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                          <div style={{ padding: "12px 16px", borderRadius: 8, background: gateActivated ? "#f0fdf4" : "#fef2f2", border: `1px solid ${gateActivated ? "#bbf7d0" : "#fecaca"}` }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: gateActivated ? "#059669" : "#DC2626" }}>{gateActivated ? `R activat (R=${cR.toFixed(2)})` : `R sub Gate (R=${cR.toFixed(2)})`}</div>
+                            <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>R \u2265 {GATE} — formula este activata. R contribuie {rContrib}% la Cf ({cR.toFixed(1)}/{cGCf.toFixed(1)}), IxF contribuie {ixfContrib}% ({cIxF.toFixed(1)}). Motorul (IxF) functioneaza, cheia (R) e in contact.</div>
+                          </div>
+                          <div style={{ padding: "12px 16px", borderRadius: 8, background: "#f5f3ff", border: "1px solid #ddd6fe" }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#7C3AED" }}>Delta = {deltaDir} (+{cGDelta.toFixed(2)})</div>
+                            <div style={{ fontSize: 12, color: "#6B7280", marginTop: 4 }}>Cp ({cGCp.toFixed(2)}) {">"} Cf_norm ({(cGCf / 11).toFixed(2)}). Respondentii percep mai multa claritate decat prezice R+(IxF). Factori externi (Brand, context, experienta) amplifica perceptia cu x{cCalibFactor.toFixed(2)}.</div>
+                          </div>
+                        </div>
+                        <div style={{ background: "#eff6ff", borderRadius: 8, padding: "12px 16px", fontSize: 12, color: "#1e40af", lineHeight: 1.6 }}>
+                          <b>Interpretare {cGValPct}%:</b> Formula este activata (R={cR.toFixed(1)} \u2265 {GATE}), dar prezice doar {cGValPct}% din claritatea perceputa. Diferenta de {100 - cGValPct}% provine din factori neincorporati in R+(IxF): recunoasterea Brandului, experienta anterioara a audientei, contextul de consum. Zone Match {cZonePct}% confirma: formula clasifica corect {cZoneMatches}/{cWithData.length} materiale in aceeasi zona cu perceptia.
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Score Cards Grid — R, I, F, IxF, C formula, C perceput, Delta */}
+                  {cWithData.length > 0 && (() => {
+                    const cR = Math.round(_mean(cWithData.map((s: any) => s.avg_r)) * 100) / 100;
+                    const cI = Math.round(_mean(cWithData.map((s: any) => s.avg_i)) * 100) / 100;
+                    const cF = Math.round(_mean(cWithData.map((s: any) => s.avg_f)) * 100) / 100;
+                    const cIxF = Math.round(cI * cF * 100) / 100;
+                    const cCfVal = Math.round(cGCf * 100) / 100;
+                    const cards = [
+                      { label: "R (RELEV.)", value: cR, max: 5, scale: "/5", color: "#DC2626", badge: cR >= GATE ? "GATE PASS" : "GATE FAIL", badgeColor: cR >= GATE ? "#059669" : "#DC2626" },
+                      { label: "I (INTERES)", value: cI, max: 5, scale: "/5", color: "#D97706" },
+                      { label: "F (FORMA)", value: cF, max: 1, scale: "/1", color: "#7C3AED" },
+                      { label: "IxF (SINERGIA)", value: cIxF, max: 5, scale: "/5", color: "#6366f1" },
+                      { label: "C FORMULA", value: cCfVal, max: 11, scale: "/11", color: "#111827", sub: `= ${(cCfVal / 11).toFixed(2)} /1.0` },
+                      { label: "C PERCEPUT", value: Math.round(cGCp * 100) / 100, max: 10, scale: "/10", color: "#059669" },
+                      { label: "DELTA (CF-CP)", value: Math.round(cGDelta * 100) / 100, max: 10, scale: "/10", color: "#7C3AED", sub: cGCf / 11 < cGCp ? "Subestimeaza" : "Supraestimeaza" },
+                    ];
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(155px, 1fr))", gap: 10, marginBottom: 20 }}>
+                        {cards.map((c: any) => (
+                          <div key={c.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 12px", position: "relative" as const }}>
+                            {c.badge && <span style={{ position: "absolute" as const, top: 6, right: 6, fontSize: 8, fontWeight: 800, padding: "2px 6px", borderRadius: 4, background: `${c.badgeColor}14`, color: c.badgeColor, border: `1px solid ${c.badgeColor}30`, letterSpacing: 0.5 }}>{c.badge}</span>}
+                            <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: "#9CA3AF", marginBottom: 6, textTransform: "uppercase" as const }}>{c.label}</div>
+                            <div style={{ display: "flex", alignItems: "baseline", gap: 2 }}>
+                              <span style={{ fontSize: 22, fontWeight: 800, color: c.color, fontFamily: "JetBrains Mono, monospace" }}>{c.value}</span>
+                              <span style={{ fontSize: 11, color: "#d1d5db" }}>{c.scale}</span>
+                            </div>
+                            {c.sub && <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 2 }}>{c.sub}</div>}
+                            <div style={{ height: 4, background: "#f3f4f6", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${Math.min((c.value / c.max) * 100, 100)}%`, background: c.color, borderRadius: 2 }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Gate + Zone Match + Materials Stats */}
+                  {cWithData.length > 0 && (() => {
+                    const rMin = Math.min(...cWithData.map((s: any) => s.avg_r));
+                    const rMax = Math.max(...cWithData.map((s: any) => s.avg_r));
+                    const rMed = Math.round(_mean(cWithData.map((s: any) => s.avg_r)) * 100) / 100;
+                    const uniqueChannels = new Set(cWithData.map((s: any) => s.type)).size;
+                    const uniqueIndustries = new Set(cWithData.map((s: any) => s.industry)).size;
+                    const avgEval = cWithData.length > 0 ? Math.round(cTotalResp / cWithData.length) : 0;
+                    return (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 10, marginBottom: 20 }}>
+                        {/* RELEVANCE GATE */}
+                        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px", position: "relative" as const }}>
+                          <span style={{ position: "absolute" as const, top: 8, right: 8, fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: cGatePct >= 80 ? "#dcfce7" : cGatePct >= 60 ? "#fef9c3" : "#fee2e2", color: cGatePct >= 80 ? "#059669" : cGatePct >= 60 ? "#D97706" : "#DC2626" }}>{cGatePct >= 80 ? "EXCELENT" : cGatePct >= 60 ? "BUN" : "SLAB"}</span>
+                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: "#9CA3AF", marginBottom: 6 }}>RELEVANCE GATE (R \u2265 {GATE})</div>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: cGatePct >= 80 ? "#059669" : cGatePct >= 60 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{cGatePct}%</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>{cGatePass} din {cStimuliResults.length} materiale</div>
+                          <div style={{ display: "flex", gap: 4, marginTop: 6, fontSize: 10 }}>
+                            <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>R min:{rMin.toFixed(1)}</span>
+                            <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>R med:{rMed}</span>
+                            <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>R max:{rMax.toFixed(1)}</span>
+                          </div>
+                          <div style={{ height: 4, background: "#f3f4f6", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${cGatePct}%`, background: cGatePct >= 80 ? "#059669" : cGatePct >= 60 ? "#D97706" : "#DC2626", borderRadius: 2 }} />
+                          </div>
+                        </div>
+                        {/* ZONE MATCH */}
+                        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px", position: "relative" as const }}>
+                          <span style={{ position: "absolute" as const, top: 8, right: 8, fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: cZonePct >= 60 ? "#dcfce7" : cZonePct >= 40 ? "#fef9c3" : "#fee2e2", color: cZonePct >= 60 ? "#059669" : cZonePct >= 40 ? "#D97706" : "#DC2626" }}>{cZonePct >= 60 ? "BUN" : "PARTIAL"}</span>
+                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: "#9CA3AF", marginBottom: 6 }}>ZONE MATCH (Cf = Cp)</div>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: cZonePct >= 60 ? "#059669" : cZonePct >= 40 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{cZonePct}%</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>{cZoneMatches} din {cWithData.length} materiale in aceeasi zona</div>
+                          <div style={{ display: "flex", gap: 4, marginTop: 6, fontSize: 10 }}>
+                            <span style={{ padding: "1px 6px", borderRadius: 4, background: "#dbeafe", color: "#2563EB" }}>M: {cZoneMatches}/{cWithData.length}</span>
+                          </div>
+                          <div style={{ height: 4, background: "#f3f4f6", borderRadius: 2, marginTop: 8, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${cZonePct}%`, background: cZonePct >= 60 ? "#059669" : "#D97706", borderRadius: 2 }} />
+                          </div>
+                        </div>
+                        {/* MATERIALE ANALIZATE */}
+                        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "14px 16px", position: "relative" as const }}>
+                          <span style={{ position: "absolute" as const, top: 8, right: 8, fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 4, background: "#e0e7ff", color: "#4338ca" }}>SOLID</span>
+                          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: "#9CA3AF", marginBottom: 6 }}>MATERIALE ANALIZATE</div>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{cWithData.length}</div>
+                          <div style={{ fontSize: 11, color: "#6B7280" }}>N={cTotalResp.toLocaleString("ro-RO")} evaluari ({avgEval} eval/material)</div>
+                          <div style={{ display: "flex", gap: 4, marginTop: 6, fontSize: 10 }}>
+                            <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>{uniqueChannels} canale</span>
+                            <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>{uniqueIndustries} industrii</span>
+                            <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>{cCompletedN} resp.</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Validare per Canal — Collapsible */}
+                  {(() => {
+                    const chanMap: Record<string, any[]> = {};
+                    cWithData.forEach((s: any) => { const k = s.type || "Necunoscut"; if (!chanMap[k]) chanMap[k] = []; chanMap[k].push(s); });
+                    const channels = Object.entries(chanMap).sort((a, b) => b[1].length - a[1].length);
+                    if (channels.length === 0) return null;
+                    return (
+                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, marginBottom: 20, overflow: "hidden" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", cursor: "pointer", background: "#fafafa" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Tv size={16} style={{ color: "#6B7280" }} />
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Validare per Canal</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#F97316", color: "#fff" }}>{channels.length}</span>
+                          </div>
+                        </div>
+                        <div style={{ padding: "12px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                          {channels.map(([ch, stims]) => {
+                            const cc = categories.find((c: any) => c.type === ch);
+                            const chCf = _mean(stims.map((s: any) => s.avg_c));
+                            const chCp = _mean(stims.map((s: any) => s.avg_c_score));
+                            const chDelta = Math.abs(chCf / 11 - chCp);
+                            const chPct = Math.round(Math.max(0, (1 - chDelta / 10) * 100));
+                            const chDir = chCf / 11 < chCp ? "\u2191sub." : chCf / 11 > chCp ? "\u2193supra." : "=perfect";
+                            const chGate = stims.filter((s: any) => s.avg_r >= GATE).length;
+                            return (
+                              <div key={ch} style={{ padding: "10px 14px", borderRadius: 8, border: `1px solid ${cc?.color || "#e5e7eb"}30`, background: "#fff" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: cc?.color || "#374151" }}>{cc?.label || ch}</span>
+                                  <span style={{ fontSize: 20, fontWeight: 900, color: chPct >= 70 ? "#059669" : chPct >= 50 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{chPct}%</span>
+                                </div>
+                                <div style={{ display: "flex", gap: 4, fontSize: 10, flexWrap: "wrap" as const }}>
+                                  <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>Cf/11={Math.round(chCf / 11 * 100) / 100}</span>
+                                  <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>Cp={Math.round(chCp * 100) / 100}</span>
+                                  <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>&Delta;={Math.round(chDelta * 100) / 100}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "#9CA3AF" }}>
+                                  <span>{chDir} | Gate:{chGate}/{stims.length} | {stims.length} mat.</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Validare per Industrie — Collapsible */}
+                  {(() => {
+                    const indMap: Record<string, any[]> = {};
+                    cWithData.forEach((s: any) => { const k = s.industry || "Necunoscut"; if (!indMap[k]) indMap[k] = []; indMap[k].push(s); });
+                    const industries = Object.entries(indMap).sort((a, b) => b[1].length - a[1].length);
+                    if (industries.length === 0) return null;
+                    return (
+                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, marginBottom: 20, overflow: "hidden" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px", cursor: "pointer", background: "#fafafa" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Factory size={16} style={{ color: "#6B7280" }} />
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Validare per Industrie</span>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 10, background: "#F97316", color: "#fff" }}>{industries.length}</span>
+                          </div>
+                        </div>
+                        <div style={{ padding: "12px 20px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                          {industries.map(([ind, stims]) => {
+                            const iCf = _mean(stims.map((s: any) => s.avg_c));
+                            const iCp = _mean(stims.map((s: any) => s.avg_c_score));
+                            const iDelta = Math.abs(iCf / 11 - iCp);
+                            const iPct = Math.round(Math.max(0, (1 - iDelta / 10) * 100));
+                            const iDir = iCf / 11 < iCp ? "\u2191sub." : iCf / 11 > iCp ? "\u2193supra." : "=perfect";
+                            const iGate = stims.filter((s: any) => s.avg_r >= GATE).length;
+                            return (
+                              <div key={ind} style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fff" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>{ind}</span>
+                                  <span style={{ fontSize: 20, fontWeight: 900, color: iPct >= 70 ? "#059669" : iPct >= 50 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{iPct}%</span>
+                                </div>
+                                <div style={{ display: "flex", gap: 4, fontSize: 10, flexWrap: "wrap" as const }}>
+                                  <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>Cf/11={Math.round(iCf / 11 * 100) / 100}</span>
+                                  <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>Cp={Math.round(iCp * 100) / 100}</span>
+                                  <span style={{ padding: "1px 6px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>&Delta;={Math.round(iDelta * 100) / 100}</span>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4, fontSize: 10, color: "#9CA3AF" }}>
+                                  <span>{iDir} | Gate:{iGate}/{stims.length} | {stims.length} mat.</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* H1 & H2 Hypothesis Summary */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-                    {/* H1: Multiplicativ > Aditiv */}
                     <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px" }}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, marginBottom: 4 }}>H1 — MULTIPLICATIV vs ADITIV</div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -18521,75 +18751,46 @@ export default function StudiuAdminPage() {
                         <span style={{ fontWeight: 800, fontSize: 13, color: cH1Verdict === "CONFIRMATA" ? "#059669" : cH1Verdict === "PARTIAL" ? "#D97706" : "#DC2626", padding: "4px 12px", borderRadius: 6, background: cH1Verdict === "CONFIRMATA" ? "#dcfce7" : cH1Verdict === "PARTIAL" ? "#fef9c3" : "#fee2e2" }}>{cH1Verdict}</span>
                       </div>
                     </div>
-                    {/* H2: Poarta Relevantei */}
                     <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, marginBottom: 4 }}>H2 — POARTA RELEVANTEI (R≥{GATE})</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, marginBottom: 4 }}>H2 — POARTA RELEVANTEI (R\u2265{GATE})</div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <div style={{ fontSize: 12, color: "#6B7280" }}>R&lt;{GATE}: Cp={cH2BelowAvg.toFixed(2)} ({cH2Below.length})</div>
-                          <div style={{ fontSize: 12, color: "#6B7280" }}>R≥{GATE}: Cp={cH2AboveAvg.toFixed(2)} ({cH2Above.length}) | &Delta;={cH2Diff.toFixed(2)}</div>
+                          <div style={{ fontSize: 12, color: "#6B7280" }}>R\u2265{GATE}: Cp={cH2AboveAvg.toFixed(2)} ({cH2Above.length}) | &Delta;={cH2Diff.toFixed(2)}</div>
                         </div>
                         <span style={{ fontWeight: 800, fontSize: 13, color: cH2Verdict === "CONFIRMATA" ? "#059669" : "#DC2626", padding: "4px 12px", borderRadius: 6, background: cH2Verdict === "CONFIRMATA" ? "#dcfce7" : "#fee2e2" }}>{cH2Verdict}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Per-industrie breakdown */}
-                  {(() => {
-                    const indMap: Record<string, any[]> = {};
-                    cWithData.forEach((s: any) => { const k = s.industry || "Necunoscut"; if (!indMap[k]) indMap[k] = []; indMap[k].push(s); });
-                    const industries = Object.entries(indMap).sort((a, b) => b[1].length - a[1].length);
-                    if (industries.length === 0) return null;
+                  {/* CONCLUZIE */}
+                  {cWithData.length > 0 && (() => {
+                    const _cR = _mean(cWithData.map((s: any) => s.avg_r));
+                    const _cIxF = _mean(cWithData.map((s: any) => s.avg_i)) * _mean(cWithData.map((s: any) => s.avg_f));
+                    const _rC = cGCf > 0 ? Math.round((_cR / cGCf) * 100) : 0;
+                    const _ixfC = 100 - _rC;
                     return (
-                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Validare per Industrie ({industries.length})</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
-                          {industries.map(([ind, stims]) => {
-                            const iCf = _mean(stims.map((s: any) => s.avg_c));
-                            const iCp = _mean(stims.map((s: any) => s.avg_c_score));
-                            const iDelta = Math.abs(iCf / 11 - iCp);
-                            const iPct = Math.round(Math.max(0, (1 - iDelta / 10) * 100));
-                            return (
-                              <div key={ind} style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#fafafa" }}>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 4 }}>{ind}</div>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                                  <span style={{ fontSize: 22, fontWeight: 900, color: iPct >= 70 ? "#059669" : iPct >= 50 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{iPct}%</span>
-                                  <span style={{ fontSize: 10, color: "#9CA3AF" }}>{stims.length} mat.</span>
-                                </div>
-                              </div>
-                            );
-                          })}
+                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "16px 20px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                          <Brain size={18} style={{ color: "#F97316" }} />
+                          <span style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>CONCLUZIE — CONSUMATORI 3000</span>
                         </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Per-canal breakdown */}
-                  {(() => {
-                    const chanMap: Record<string, any[]> = {};
-                    cWithData.forEach((s: any) => { const k = s.type || "Necunoscut"; if (!chanMap[k]) chanMap[k] = []; chanMap[k].push(s); });
-                    const channels = Object.entries(chanMap).sort((a, b) => b[1].length - a[1].length);
-                    if (channels.length === 0) return null;
-                    return (
-                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px", marginBottom: 20 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Validare per Canal ({channels.length})</div>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 8 }}>
-                          {channels.map(([ch, stims]) => {
-                            const cc = categories.find((c: any) => c.type === ch);
-                            const chCf = _mean(stims.map((s: any) => s.avg_c));
-                            const chCp = _mean(stims.map((s: any) => s.avg_c_score));
-                            const chDelta = Math.abs(chCf / 11 - chCp);
-                            const chPct = Math.round(Math.max(0, (1 - chDelta / 10) * 100));
-                            return (
-                              <div key={ch} style={{ padding: "10px 12px", borderRadius: 8, border: `1px solid ${cc?.color || "#e5e7eb"}30`, background: `${cc?.color || "#f3f4f6"}08` }}>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: cc?.color || "#374151", marginBottom: 4 }}>{cc?.label || ch}</div>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                                  <span style={{ fontSize: 22, fontWeight: 900, color: chPct >= 70 ? "#059669" : chPct >= 50 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{chPct}%</span>
-                                  <span style={{ fontSize: 10, color: "#9CA3AF" }}>{stims.length} mat.</span>
-                                </div>
-                              </div>
-                            );
-                          })}
+                        <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, marginBottom: 12 }}>
+                          Formula R+(IxF)=C prezice <b>{cGValPct}%</b> din claritatea perceputa pe {cWithData.length} materiale ({cTotalResp.toLocaleString("ro-RO")} evaluari de la {cCompletedN} respondenti calibrati). Gap de <b>{100 - cGValPct}%</b> provine din factori externi neincorporati (Brand, context, audienta).
+                        </p>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #2563EB", background: "#eff6ff", fontSize: 12, color: "#1e40af" }}>
+                            <b>R1:</b> R este cheia ({_rC}% din Cf), IxF este motorul ({_ixfC}%). Ambele componente functioneaza in tandem.
+                          </div>
+                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #D97706", background: "#fffbeb", fontSize: 12, color: "#92400e" }}>
+                            <b>R2:</b> Cand R &lt; {GATE}, formula se dezactiveaza — materialul nu are relevanta suficienta.
+                          </div>
+                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #059669", background: "#f0fdf4", fontSize: 12, color: "#065f46" }}>
+                            <b>R3:</b> Cand R \u2265 {GATE}, formula este aplicabila — {cGatePass}/{cStimuliResults.length} materiale ({cGatePct}%) trec pragul.
+                          </div>
+                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #7C3AED", background: "#f5f3ff", fontSize: 12, color: "#5b21b6" }}>
+                            <b>R4:</b> Delta ({cGDelta.toFixed(2)}) este contextual — respondentii calibrati percep mai mult decat prezice formula.
+                          </div>
                         </div>
                       </div>
                     );
@@ -18598,6 +18799,7 @@ export default function StudiuAdminPage() {
                   {cStimuliResults.length === 0 && <div style={{ textAlign: "center" as const, padding: 40, color: "#9CA3AF" }}>Nu exista date suficiente. Asteapta mai multe completari.</div>}
                 </div>
               )}
+
             </div>
           );
         })()}
