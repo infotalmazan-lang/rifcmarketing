@@ -9035,7 +9035,8 @@ export default function StudiuAdminPage() {
             const _delta = calcDelta(_cf, _cp);
             const _hyp = hypothesisPct(_cf, _cp);
             const _ixf = Math.round((_cf - _r) * 100) / 100;
-            const _cta = arr.filter((s: any) => s.avg_cta_score != null).length > 0 ? Math.round(arr.filter((s: any) => s.avg_cta_score != null).reduce((a: number, s: any) => a + (s.avg_cta_score || 0), 0) / arr.filter((s: any) => s.avg_cta_score != null).length * 100) / 100 : 0;
+            const _ctaArr = arr.filter(s => s.avg_cta != null && s.avg_cta > 0);
+            const _cta = _ctaArr.length > 0 ? Math.round(_ctaArr.reduce((a, s) => a + s.avg_cta, 0) / _ctaArr.length * 100) / 100 : 0;
             const _zm = arr.filter(s => getZone(s.avg_c) === getZoneCp(s.avg_c_score)).length;
             return { n: _n, r: _r, i: _i, f: _f, cf: _cf, cfNorm: _cfN, cp: _cp, delta: _delta, hypPct: _hyp, ixf: _ixf, cta: _cta, zoneMatch: Math.round((_zm / _n) * 100) };
           };
