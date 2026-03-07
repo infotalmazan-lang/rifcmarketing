@@ -121,11 +121,11 @@ export async function GET(request: Request) {
       .order("display_order");
     const expectedResponseCount = (stimuli || []).length;
 
-    // A respondent is "completed" if completed_at is set OR if they evaluated all active stimuli.
-    // This handles legacy respondents from older wizard versions that didn't set completed_at.
+    // A respondent is "completed" ONLY if they have responses for ALL active stimuli (30/30).
+    // completed_at flag alone is insufficient — some legacy respondents have it set without full data.
+    // This ensures uniform N across all materials (no dropout bias).
     const isEffectivelyCompleted = (r: any) =>
-      r.completed_at != null ||
-      (expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount);
+      expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount;
 
     // Auto-repair: set completed_at for respondents who have all responses but missing completed_at
     // (one-time data fix for legacy wizard entries)
