@@ -7572,7 +7572,7 @@ export default function StudiuAdminPage() {
                                   {exH4PaSig ? <span style={{ color: "#059669" }}>Da — I{"\u00D7"}F aduce informatie suplimentara pe care aditivul nu o capteaza.</span> : <span style={{ color: "#DC2626" }}>Nu — I{"\u00D7"}F nu adauga informatie dincolo de R+I+F.</span>}
                                 </div>
                                 <div style={exCardStyle}>
-                                  <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. H4 elimina artefactul complet prin Spearman ranks + Partial Correlation.
+                                  <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. Analiza H1 elimina artefactul complet prin Spearman ranks + Partial Correlation.
                                 </div>
                               </div>
 
@@ -8577,7 +8577,7 @@ export default function StudiuAdminPage() {
               ]};
               case "score_ixf": return { sections: [
                 { heading: "Ce reprezinta I×F (Motorul)", text: `Scorul I×F = ${val} este motorul formulei RIFC — produce ~90% din magnitudinea C. Cu I = ${_ctx.i || "?"} si F = ${_ctx.f || "?"}, motorul I×F = ${val} (scala 0-100). R (cheia de contact, ~10%) activeaza motorul: fara R >= ${GATE}, I×F produce claritate dar audienta se dezangajeaza (CTA scade ~58%). Cu R activat, I×F devine determinantul principal al claritatii actionabile.` },
-                { heading: "De ce e multiplicativ, nu aditiv", text: `Formula foloseste I×F (nu I+F) pentru ca Interesul si Forma se amplifica reciproc: un continut interesant (I=8) cu design slab (F=2) = 16, dar cu design excelent (F=8) = 64. Amplificarea este de 4× — nu se intampla cu adunarea (10 vs 16, doar 1.6×). Aceasta sinergie multiplicativa este testata statistic in H4 (Scale-Independent).` },
+                { heading: "De ce e multiplicativ, nu aditiv", text: `Formula foloseste I×F (nu I+F) pentru ca Interesul si Forma se amplifica reciproc: un continut interesant (I=8) cu design slab (F=2) = 16, dar cu design excelent (F=8) = 64. Amplificarea este de 4× — nu se intampla cu adunarea (10 vs 16, doar 1.6×). Aceasta sinergie multiplicativa este testata statistic in OSF H1 (Superioritate Model Multiplicativ).` },
                 { heading: "De ce arata acest rezultat", text: `I×F = ${val} ${v > 60 ? "indica o sinergie puternica — atat continutul cat si executia sunt de calitate, amplificandu-se reciproc." : v > 35 ? "indica o sinergie moderata — cel putin unul dintre factori (I sau F) limiteaza amplificarea." : "indica o sinergie slaba — ambii factori necesita imbunatatire pentru a genera impact."}` },
                 { heading: "Contributia la Claritate si CTA", text: `I×F este motorul formulei: R (${_ctx.r || "?"}) + I×F (${val}) = Cf (${_ctx.cf || "?"}). I×F reprezinta ${_ctx.cf && _ctx.r ? ((v / Number(_ctx.cf)) * 100).toFixed(0) : "?"}% din scorul C formula. Sinergia determina cat de mult amplifica formula baza de relevanta. Cu cat I×F este mai mare, cu atat mesajul este mai clar (C) si probabilitatea de actiune (CTA) creste.` },
                 { heading: "Concluzie", text: `Sinergia I×F = ${val} (din maxim 100) ${v > 60 ? "contribuie semnificativ la claritatea mesajului. Ambii factori sunt puternici si se amplifica reciproc." : v > 35 ? "contribuie moderat — optimizarea factorului mai slab (I sau F) poate creste substantial scorul C." : "necesita imbunatatire pe ambii fronti. Factorul bottleneck trebuie identificat si tratat prioritar."}` },
@@ -8747,12 +8747,14 @@ export default function StudiuAdminPage() {
                 ]};
               }
               case "h4": return { sections: [
-                { heading: "Ce testeaza H4", text: "H4 testeaza daca sinergia I×F (motorul formulei, ~90% din C) este reala prin metode scale-independent. Comparatia directa a erorilor absolute (normalizare /110 vs /30) introduce un artefact de scala care biaseaza rezultatul. H4 elimina complet acest artefact prin Spearman ranks si Partial Correlation." },
+                { heading: "Ce testeaza OSF H1", text: "OSF H1 testeaza ipoteza centrala: modelul multiplicativ R+(I×F) este superior celui aditiv R+I+F. Sinergia I×F (motorul formulei) este reala? Se testeaza prin 3 metode: (1) Spearman Rank Correlation — ordinea predictiilor, (2) Partial Correlation — informatia suplimentara a I×F, (3) Comparatie formala R²/AIC/BIC — puterea explicativa a modelelor." },
                 { heading: "Analiza 1 — Spearman Rank Correlation", text: "Converteste predictiile si C perceput in RANGURI (pozitii relative 1, 2, 3...). Rangurile ignora magnitudinea — conteaza doar daca ordinea predictiilor e corecta. Se calculeaza Spearman rho pentru modelul multiplicativ (R+I×F) si cel aditiv (R+I+F). Modelul cu rho mai mare prezice mai corect ORDINEA perceptiei." },
                 { heading: "Analiza 2 — Partial Correlation", text: "Se face regresie liniara C ~ (R+I+F) si se obtin reziduurile — ce NU poate explica modelul aditiv. Apoi se coreleaza reziduurile cu I×F. Daca corelatia e semnificativa, inseamna ca I×F aduce informatie SUPLIMENTARA pe care aditivul nu o capteaza. Aceasta e dovada directa a sinergiei." },
+                { heading: "Analiza 3 — R²/AIC/BIC", text: "R² masoara cat % din varianta Cp explica fiecare model. AIC si BIC penalizeaza complexitatea — modelul cu valori mai mici e preferat. Daca R²_mult > R²_adit SI AIC_mult < AIC_adit → multiplicativul e superior. Daca rezultatele sunt mixte sau similare → modelele nu se diferentiaza semnificativ." },
                 { heading: "De ce scale-independent", text: "Comparatia directa normalizata (mult/110 vs adit/30) produce un artefact: max(R+I×F) = 110 comprima in 0.1-0.5, in timp ce Cp/10 e 0.5-0.9. Aditivul (/30) produce 0.3-0.8, natural mai aproape. Spearman ranks si Partial Correlation elimina complet aceasta dependenta de scala — testeaza sinergia I×F in mod echitabil." },
-                { heading: "Cum se interpreteaza", text: "Spearman: rho_mult > rho_adit + Fisher Z p<0.05 = multiplicativul prezice ordinea mai bine. Partial: |r(I×F|R+I+F)| > 0.1 + p<0.05 = sinergia aduce informatie extra. Ambele → CONFIRMATA. Una → PARTIAL. Niciuna → NECONFIRMATA." },
-                { heading: "Concluzie", text: "H4 ofera raspunsul definitiv la intrebarea 'Este sinergia I×F reala sau un artefact al normalizarii?' Rezultatul este independent de orice alegere de scala, normalizare sau range de valori." },
+                { heading: "Cum se interpreteaza", text: "Spearman: rho_mult > rho_adit + Fisher Z p<0.05 = multiplicativul prezice ordinea mai bine. Partial: |r(I×F|R+I+F)| > 0.1 + p<0.05 = sinergia aduce informatie extra. R²/AIC/BIC: multiplicativ castiga ambele = confirmare formala. Toate 3 → CONFIRMATA. Una sau doua → PARTIAL. Niciuna → NECONFIRMATA." },
+                { heading: "De ce PARTIAL (daca e cazul)", text: "PARTIAL inseamna ca una din cele 3 analize favorizeaza multiplicativul dar celelalte nu ating pragul de semnificatie statistica. Cauze posibile: (1) efectul sinergiei I×F exista dar e mic — cu N=6000+ ar trebui sa fie detectabil; (2) Cp (C perceput) e influentat de factori externi (brand, experienta, canal) care adauga zgomot si slabesc corelatia cu formula pura; (3) formulele multiplicativa si aditiva produc rankuri foarte similare (Δρ mic). PARTIAL nu inseamna ca formula e gresita — inseamna ca dovada nu e inca suficient de puternica." },
+                { heading: "Concluzie", text: "OSF H1 ofera raspunsul la intrebarea 'Este sinergia I×F reala sau modelul aditiv R+I+F explica la fel de bine perceptia?' Rezultatul combinat din cele 3 analize determina verdictul final." },
               ]};
               case "v1": return { sections: [
                 { heading: "Ce masoara Cronbach Alpha", text: "Cronbach Alpha (α) masoara consistenta interna a instrumentului de masurare. In cazul RIFC, verifica daca cele 4 dimensiuni (R, I, F, C normalizat) masoara un construct coerent — adica daca respondentii care dau scoruri mari pe o dimensiune tind sa dea scoruri mari si pe celelalte." },
@@ -10323,11 +10325,10 @@ export default function StudiuAdminPage() {
                           <strong>Lantul cauzal testat:</strong> R activeaza {"\u2192"} I{"\u00D7"}F produce C (Claritate) {"\u2192"} C coreleaza cu CTA (H2) {"\u2192"} Brand modereaza C{"\u2192"}CTA (H3)
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", fontSize: 10, color: "#374151" }}>
-                          <div><strong style={{ color: "#059669" }}>H1:</strong> Poarta Relevantei — R &lt; {GATE} = audienta se dezangajeaza</div>
-                          <div><strong style={{ color: "#059669" }}>H2:</strong> C {"\u2192"} CTA — claritatea prezice actiunea</div>
-                          <div><strong style={{ color: "#D97706" }}>H3:</strong> Brand modereaza legatura C {"\u2192"} CTA</div>
-                          <div><strong style={{ color: "#7C3AED" }}>H4:</strong> Scale-Independent — sinergia I{"\u00D7"}F e reala</div>
-                          <div><strong style={{ color: "#6B7280" }}>H5:</strong> Claritate si recognoscibilitate (calitativa)</div>
+                          <div><strong style={{ color: "#7C3AED" }}>OSF H1:</strong> Multiplicativ vs Aditiv — sinergia I{"\u00D7"}F e reala</div>
+                          <div><strong style={{ color: "#059669" }}>OSF H2:</strong> Poarta Relevantei — R &lt; {GATE} = audienta se dezangajeaza</div>
+                          <div><strong style={{ color: "#D97706" }}>OSF H3:</strong> Brand modereaza legatura C {"\u2192"} CTA</div>
+                          <div><strong style={{ color: "#059669" }}>OSF H4:</strong> C {"\u2192"} CTA — claritatea prezice actiunea</div>
                         </div>
                       </div>
 
@@ -10351,7 +10352,7 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
-                    {/* ═══ GRAFIC H4 — Test Scale-Independent al Interactiei I×F ═══ */}
+                    {/* ═══ OSF H1 — Superioritate Model Multiplicativ R+(I×F) ═══ */}
                     {(() => {
                       const sc = results.hypothesisScatterData || [];
                       const valid = sc.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_score != null && d.c_score > 0);
@@ -10421,10 +10422,10 @@ export default function StudiuAdminPage() {
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 28, marginBottom: 8 }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
                             <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H1: Superioritate Model Multiplicativ R+(I{"\u00D7"}F)</span>
-                            <InterpBtn k="h4" title="H4 — Scale-Independent" val={verdict} />
+                            <InterpBtn k="h4" title="H1 — Superioritate Multiplicativ" val={verdict} />
                           </div>
                           <div style={{ ...cardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
-                            <strong>Ce testeaza H4?</strong> Sinergia I×F (motorul formulei, ~90% din C) este reala? Comparatia directa normalizata (/110 vs /30) are un artefact de scala. H4 testeaza acelasi lucru prin metode scale-independent: Spearman Rank Correlation (ordinea predictiilor) si Partial Correlation (informatia suplimentara a I×F fata de modelul aditiv).
+                            <strong>Ce testeaza OSF H1?</strong> Modelul multiplicativ R+(I×F) este superior celui aditiv R+I+F? Sinergia I×F (motorul formulei) este reala? Se testeaza prin metode scale-independent: Spearman Rank Correlation (ordinea predictiilor), Partial Correlation (informatia suplimentara a I×F fata de modelul aditiv) si comparatie formala R²/AIC/BIC.
                           </div>
 
                           {/* Stats banner */}
@@ -10498,13 +10499,13 @@ export default function StudiuAdminPage() {
                               {partialSig ? <span style={{ color: "#059669" }}>Da — I×F aduce informatie suplimentara pe care aditivul nu o capteaza.</span> : <span style={{ color: "#DC2626" }}>Nu — I×F nu adauga informatie dincolo de R+I+F.</span>}
                             </div>
                             <div style={cardStyle}>
-                              <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. H4 elimina artefactul complet prin Spearman ranks + Partial Correlation.
+                              <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. Analiza H1 elimina artefactul complet prin Spearman ranks + Partial Correlation.
                             </div>
                           </div>
 
                           {/* Verdict card */}
                           <div style={{ ...cardStyle, borderLeft: `4px solid ${verdictColor}`, background: verdict === "CONFIRMATA" ? "#f0fdf4" : verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2" }}>
-                            <strong>H4 — Verdict: <span style={{ color: verdictColor }}>{verdict}</span></strong>
+                            <strong>OSF H1 — Verdict: <span style={{ color: verdictColor }}>{verdict}</span></strong>
                             <div style={{ marginTop: 4 }}>
                               {verdict === "CONFIRMATA"
                                 ? `Ambele analize confirma: sinergia I×F este reala si nu e un artefact de scala. Multiplicativul prezice mai bine ordinea (\u0394\u03C1=${deltaRho.toFixed(3)}, p=${_fmtP(fisherZ.p)}) si I×F aduce informatie suplimentara (partial r=${partialR.toFixed(3)}, p=${_fmtP(partialP)}).`
