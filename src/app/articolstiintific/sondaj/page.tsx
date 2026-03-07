@@ -6231,6 +6231,7 @@ export default function StudiuAdminPage() {
                   { key: "cvi" as const, label: "2 Pas CVI Evaluare", color: "#DC2626" },
                   { key: "pilot" as const, label: "3 Pas Pilot Testing", color: "#7C3AED" },
                   { key: "efa" as const, label: "4 Pas EFA 2A", color: "#2563EB" },
+                  { key: "cfa" as const, label: "5 Pas CFA", color: "#EC4899" },
                   { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                 ] as const).map(t => (
                   <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
