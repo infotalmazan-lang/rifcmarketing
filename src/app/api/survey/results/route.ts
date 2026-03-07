@@ -663,20 +663,30 @@ export async function GET(request: Request) {
       };
     })();
 
-    // ── Raw scatter data for H1-H4 hypothesis charts ──────────
-    // Lightweight per-response data points (only the fields needed for scatter plots)
+    // ── Raw scatter data for H1-H6 hypothesis charts ──────────
+    // Per-response data points with demographic fields for H6 ANOVA
     const hypothesisScatterData = allFilteredResponses
       .filter((r: any) => r.r_score != null && r.i_score != null && r.f_score != null)
-      .map((r: any) => ({
-        r: r.r_score,
-        i: r.i_score,
-        f: r.f_score,
-        c_computed: r.c_computed,
-        c_score: r.c_score ?? null,
-        cta: r.cta_score ?? null,
-        brand: r.brand_familiar ?? null,
-        stimulus_id: r.stimulus_id,
-      }));
+      .map((r: any) => {
+        const resp = respondentMap.get(r.respondent_id);
+        const demo = resp?.demographics as Record<string, string> | null;
+        return {
+          r: r.r_score,
+          i: r.i_score,
+          f: r.f_score,
+          c_computed: r.c_computed,
+          c_score: r.c_score ?? null,
+          cta: r.cta_score ?? null,
+          brand: r.brand_familiar ?? null,
+          stimulus_id: r.stimulus_id,
+          respondent_id: r.respondent_id ?? null,
+          gender: demo?.gender ?? null,
+          ageRange: demo?.ageRange ?? null,
+          education: demo?.education ?? null,
+          locationType: demo?.locationType ?? null,
+          incomeRange: demo?.incomeRange ?? null,
+        };
+      });
 
     const response = NextResponse.json({
       totalRespondents,

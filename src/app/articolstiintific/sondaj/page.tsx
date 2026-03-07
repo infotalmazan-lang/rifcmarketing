@@ -210,6 +210,43 @@ const _linReg = (xs: number[], ys: number[]): { slope: number; intercept: number
   return { slope, intercept, r2 };
 };
 
+// One-way ANOVA — returns F-statistic, approximate p-value, η² (eta-squared)
+// Uses Wilson-Hilferty approximation of F → normal for p-value (good for df > 5)
+const _anovaOneWay = (groups: number[][]): { f: number; p: number; etaSq: number; dfBetween: number; dfWithin: number; ssBetween: number; ssWithin: number } => {
+  const validGroups = groups.filter(g => g.length >= 2);
+  if (validGroups.length < 2) return { f: 0, p: 1, etaSq: 0, dfBetween: 0, dfWithin: 0, ssBetween: 0, ssWithin: 0 };
+  const allVals = validGroups.flat();
+  const grandMean = _mean(allVals);
+  const k = validGroups.length;
+  const N = allVals.length;
+  const ssBetween = validGroups.reduce((acc, g) => acc + g.length * Math.pow(_mean(g) - grandMean, 2), 0);
+  const ssWithin = validGroups.reduce((acc, g) => { const gm = _mean(g); return acc + g.reduce((a, v) => a + Math.pow(v - gm, 2), 0); }, 0);
+  const ssTotal = ssBetween + ssWithin;
+  const dfBetween = k - 1;
+  const dfWithin = N - k;
+  if (dfWithin <= 0 || ssWithin === 0) return { f: 0, p: 1, etaSq: ssTotal > 0 ? ssBetween / ssTotal : 0, dfBetween, dfWithin, ssBetween, ssWithin };
+  const msBetween = ssBetween / dfBetween;
+  const msWithin = ssWithin / dfWithin;
+  const f = msWithin > 0 ? msBetween / msWithin : 0;
+  const etaSq = ssTotal > 0 ? ssBetween / ssTotal : 0;
+  // Approximate F p-value using Wilson-Hilferty transformation to normal
+  let p = 1;
+  if (f > 0 && dfBetween > 0 && dfWithin > 0) {
+    const d1 = dfBetween, d2 = dfWithin;
+    const x = f;
+    // Use the cube-root approximation: Z ≈ ((x*d1/d2)^(1/3) - (1 - 2/(9*d2))) / sqrt(2/(9*d2) + (2*x*d1)/(9*d2*d2))
+    // Simplified: convert F to approximate z-score
+    const a = (1 - 2 / (9 * d2)) * Math.pow(x * d1 / d2, 1 / 3);
+    const b = 1 - 2 / (9 * d1);
+    const c = Math.sqrt(2 / (9 * d1) + 2 * Math.pow(x * d1 / d2, 2 / 3) / (9 * d2));
+    if (c > 0) {
+      const z = (a - b) / c;
+      p = 1 - _normalCDF(z);
+    }
+  }
+  return { f, p: Math.max(0, Math.min(1, p)), etaSq, dfBetween, dfWithin, ssBetween, ssWithin };
+};
+
 // ── Shared constants & zone helpers (used by both Rezultate + Interpretare) ──
 const GATE = 3;
 const getZone = (score: number): string => { if (score <= 20) return "Critical"; if (score <= 50) return "Noise"; if (score <= 80) return "Medium"; return "Supreme"; };
@@ -831,7 +868,7 @@ export default function StudiuAdminPage() {
     perStimulusBreakdowns?: Record<string, BreakdownData>;
     fatigueAnalysis?: FatigueAnalysis;
     completionFunnel?: CompletionFunnel;
-    hypothesisScatterData?: { r: number; i: number; f: number; c_computed: number; c_score: number | null; cta: number | null; brand: boolean | null; stimulus_id: string }[];
+    hypothesisScatterData?: { r: number; i: number; f: number; c_computed: number; c_score: number | null; cta: number | null; brand: boolean | null; stimulus_id: string; respondent_id?: string | null; gender?: string | null; ageRange?: string | null; education?: string | null; locationType?: string | null; incomeRange?: string | null }[];
 
     distributionSummary?: { id: string; name: string; total: number; completed: number }[];
     _debug?: { respondentIdsRaw: number; respondentIdsFiltered: number; respondentsFetched: number; responsesFetched: number; responseBatchErrors: number; responseBatchesFetched: number; scatterDataCount: number; responsesWithNullScores: number };
@@ -11280,57 +11317,158 @@ export default function StudiuAdminPage() {
                       );
                     })()}
 
-                    {/* ═══ OSF H6 — SENSIBILITATE SEGMENTE (ANOVA Demographics) ═══ */}
+                    {/* ═══ OSF H6 — SENSIBILITATE SEGMENTE (ANOVA Demographics × R scores) ═══ */}
                     {(() => {
-                      const _h6Demographics = results.demographics;
-                      const _h6HasData = _h6Demographics && Object.keys(_h6Demographics).length > 0;
-                      return (
-                        <OsfH id="h6" num="OSF H6" title={`Ipoteza 6 \u2014 Sensibilitate Segmente (\u03B7\u00B2 < 0.05)`} color="#6366f1" verdict={_h6HasData ? "DATE AGREGATE" : "DATE INSUFICIENTE"}>
-                          {!_h6HasData ? (
+                      const _h6Sc = results.hypothesisScatterData || [];
+                      // Check if individual demographic fields are available
+                      const _h6HasIndividual = _h6Sc.some(d => d.gender || d.ageRange || d.education || d.locationType || d.incomeRange);
+
+                      if (!_h6HasIndividual) {
+                        return (
+                          <OsfH id="h6" num="OSF H6" title={`Ipoteza 6 \u2014 Sensibilitate Segmente (\u03B7\u00B2 < 0.05)`} color="#6366f1" verdict="LIPSESC DATE">
                             <div>
                               <div style={{ padding: "12px 16px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Date demografice insuficiente</div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Date demografice individuale indisponibile</div>
                                 <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.5 }}>
-                                  Testul H6 necesita date demografice individuale (varsta, gen, educatie) per respondent pentru a calcula ANOVA one-way si &eta;&sup2;.{" "}
-                                  Datele breakdown agregate sunt disponibile dar nu permit calcul ANOVA la nivel individual.{" "}
-                                  <strong>Recomandat:</strong> Adauga intrebari de profil (demografice) in sondaj si exporta datele la nivel de respondent.
+                                  Testul H6 necesita date demografice (varsta, gen, educatie) per respondent atasate la scorurile R individuale.{" "}
+                                  <strong>Recomandat:</strong> Verifica ca sondajul colecteaza date demografice si ca API-ul le transmite in hypothesisScatterData.
                                 </div>
-                              </div>
-                              <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280" }}>
-                                <strong>Ce ar trebui sa arate:</strong> &eta;&sup2; &lt; 0.05 per factor demografic = &lt; 5% varianta in R explicata de demographics. Daca &eta;&sup2; e mic, formula RIFC functioneaza uniform pe segmente.
                               </div>
                             </div>
-                          ) : (() => {
-                            const demoKeys = Object.keys(_h6Demographics!).slice(0, 5);
-                            return (
-                              <div>
-                                <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #6366f1" }}>
-                                  <strong>Ce testeaza:</strong> Factorii demografici (varsta, gen, educatie) explica &lt; 5% din varianta scorurilor R (&eta;&sup2; &lt; 0.05).{" "}
-                                  <strong>Status:</strong> Distributia demografica este disponibila. ANOVA formal necesita date la nivel de respondent individual.
-                                </div>
-                                {demoKeys.map(dk => {
-                                  const groups = _h6Demographics![dk];
-                                  const entries = Object.entries(groups).sort((a, b) => b[1] - a[1]);
-                                  const total = entries.reduce((a, [, v]) => a + v, 0);
-                                  return (
-                                    <div key={dk} style={{ marginBottom: 10 }}>
-                                      <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4 }}>{dk}</div>
-                                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const }}>
-                                        {entries.map(([label, count]) => (
-                                          <span key={label} style={{ fontSize: 9, padding: "3px 8px", background: "#f3f4f6", borderRadius: 4, color: "#374151" }}>
-                                            {label}: <strong>{count}</strong> ({total > 0 ? Math.round(count / total * 100) : 0}%)
+                          </OsfH>
+                        );
+                      }
+
+                      // Define the demographic factors to test
+                      const _h6Factors: { key: string; label: string; accessor: (d: typeof _h6Sc[0]) => string | null | undefined }[] = [
+                        { key: "gender", label: "Gen", accessor: d => d.gender },
+                        { key: "ageRange", label: "Grupa de varsta", accessor: d => d.ageRange },
+                        { key: "education", label: "Educatie", accessor: d => d.education },
+                        { key: "locationType", label: "Urban / Rural", accessor: d => d.locationType },
+                        { key: "incomeRange", label: "Venit", accessor: d => d.incomeRange },
+                      ];
+
+                      // Compute ANOVA per factor
+                      const _h6Results = _h6Factors.map(fac => {
+                        // Group R scores by demographic value
+                        const groupMap: Record<string, number[]> = {};
+                        _h6Sc.forEach(d => {
+                          const val = fac.accessor(d);
+                          if (val && val.trim() && d.r != null) {
+                            if (!groupMap[val]) groupMap[val] = [];
+                            groupMap[val].push(d.r);
+                          }
+                        });
+                        const groupEntries = Object.entries(groupMap).filter(([, arr]) => arr.length >= 2);
+                        const groups = groupEntries.map(([, arr]) => arr);
+                        const totalN = groups.reduce((a, g) => a + g.length, 0);
+                        const nGroups = groupEntries.length;
+                        if (nGroups < 2) return { ...fac, available: false as const, totalN: 0, nGroups: 0, groupEntries: [] as [string, number[]][], f: 0, p: 1, etaSq: 0 };
+                        const anova = _anovaOneWay(groups);
+                        return { ...fac, available: true as const, totalN, nGroups, groupEntries, f: anova.f, p: anova.p, etaSq: anova.etaSq };
+                      });
+
+                      const _h6Available = _h6Results.filter(r => r.available);
+                      const _h6AllPass = _h6Available.length > 0 && _h6Available.every(r => r.etaSq < 0.05);
+                      const _h6SomePass = _h6Available.some(r => r.etaSq < 0.05);
+                      const _h6MaxEta = _h6Available.length > 0 ? Math.max(..._h6Available.map(r => r.etaSq)) : 0;
+                      const _h6Verdict = _h6Available.length === 0 ? "LIPSESC DATE"
+                        : _h6AllPass ? "CONFIRMATA"
+                        : _h6SomePass ? "PARTIAL CONFIRMATA"
+                        : "NECONFIRMATA";
+
+                      return (
+                        <OsfH id="h6" num="OSF H6" title={`Ipoteza 6 \u2014 Sensibilitate Segmente (\u03B7\u00B2 < 0.05)`} color="#6366f1" verdict={_h6Verdict}>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #6366f1" }}>
+                              <strong>Ce testeaza:</strong> Factorii demografici (gen, varsta, educatie, locatie, venit) explica &lt; 5% din varianta scorurilor R (&eta;&sup2; &lt; 0.05).{" "}
+                              Daca &eta;&sup2; e mic, formula RIFC functioneaza uniform — nu depinde de profilul demografic al respondentului.{" "}
+                              <strong>Metoda:</strong> ANOVA one-way per factor demografic, cu R ca variabila dependenta.
+                            </div>
+
+                            {/* ANOVA Results Table */}
+                            <div style={{ overflowX: "auto" as const, marginBottom: 12 }}>
+                              <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" as const }}>
+                                <thead>
+                                  <tr style={{ background: "#f3f4f6" }}>
+                                    <th style={{ padding: "6px 8px", textAlign: "left" as const, fontWeight: 700, color: "#374151", borderBottom: "2px solid #e5e7eb" }}>Factor demografic</th>
+                                    <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151", borderBottom: "2px solid #e5e7eb" }}>Grupuri</th>
+                                    <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151", borderBottom: "2px solid #e5e7eb" }}>N</th>
+                                    <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151", borderBottom: "2px solid #e5e7eb" }}>F</th>
+                                    <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151", borderBottom: "2px solid #e5e7eb" }}>p</th>
+                                    <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151", borderBottom: "2px solid #e5e7eb" }}>&eta;&sup2;</th>
+                                    <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151", borderBottom: "2px solid #e5e7eb" }}>Verdict</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {_h6Results.map((row, ri) => {
+                                    if (!row.available) {
+                                      return (
+                                        <tr key={ri} style={{ background: ri % 2 ? "#fafafa" : "#fff" }}>
+                                          <td style={{ padding: "5px 8px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #f3f4f6" }}>{row.label}</td>
+                                          <td colSpan={6} style={{ padding: "5px 8px", textAlign: "center" as const, color: "#9CA3AF", fontStyle: "italic" as const, borderBottom: "1px solid #f3f4f6" }}>Date insuficiente (un singur grup sau fara date)</td>
+                                        </tr>
+                                      );
+                                    }
+                                    const pass = row.etaSq < 0.05;
+                                    return (
+                                      <tr key={ri} style={{ background: ri % 2 ? "#fafafa" : "#fff" }}>
+                                        <td style={{ padding: "5px 8px", fontWeight: 600, color: "#374151", borderBottom: "1px solid #f3f4f6" }}>{row.label}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#6B7280", borderBottom: "1px solid #f3f4f6" }}>{row.nGroups}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#6B7280", borderBottom: "1px solid #f3f4f6" }}>{row.totalN}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, fontWeight: 600, color: "#374151", borderBottom: "1px solid #f3f4f6" }}>{row.f.toFixed(2)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: row.p < 0.05 ? "#DC2626" : "#059669", fontWeight: 600, borderBottom: "1px solid #f3f4f6" }}>{_fmtP(row.p)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, fontWeight: 700, color: pass ? "#059669" : "#DC2626", borderBottom: "1px solid #f3f4f6" }}>{row.etaSq.toFixed(4)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, borderBottom: "1px solid #f3f4f6" }}>
+                                          <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: pass ? "#dcfce7" : "#fee2e2", color: pass ? "#166534" : "#991b1b" }}>
+                                            {pass ? "\u2713 < 5%" : `\u2717 ${(row.etaSq * 100).toFixed(1)}%`}
                                           </span>
-                                        ))}
-                                      </div>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Per-factor group detail (collapsed by default, show means) */}
+                            {_h6Available.length > 0 && (
+                              <div style={{ marginBottom: 10 }}>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: "#6366f1", marginBottom: 6 }}>Detalii pe grupuri demografice (Media R per segment)</div>
+                                {_h6Available.map((row, ri) => (
+                                  <div key={ri} style={{ marginBottom: 8 }}>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginBottom: 3 }}>{row.label} <span style={{ fontWeight: 400, color: "#9CA3AF" }}>(&eta;&sup2; = {row.etaSq.toFixed(4)})</span></div>
+                                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const }}>
+                                      {row.groupEntries.sort((a, b) => b[1].length - a[1].length).map(([label, arr]) => (
+                                        <span key={label} style={{ fontSize: 9, padding: "3px 8px", background: "#f0f0ff", borderRadius: 4, color: "#374151", border: "1px solid #e0e0ff" }}>
+                                          {label}: <strong>M={_mean(arr).toFixed(2)}</strong> <span style={{ color: "#9CA3AF" }}>(n={arr.length})</span>
+                                        </span>
+                                      ))}
                                     </div>
-                                  );
-                                })}
-                                <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
-                                  Nota: Distributia demografica este descriptiva. ANOVA one-way si &eta;&sup2; necesita scoruri R individuale per respondent × grup demografic.
-                                </div>
+                                  </div>
+                                ))}
                               </div>
-                            );
-                          })()}
+                            )}
+
+                            {/* Overall verdict */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 6, background: _h6AllPass ? "#f0fdf4" : _h6SomePass ? "#fffbeb" : "#fef2f2", border: `1px solid ${_h6AllPass ? "#bbf7d0" : _h6SomePass ? "#fde68a" : "#fecaca"}` }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: _h6AllPass ? "#166534" : _h6SomePass ? "#92400e" : "#991b1b" }}>
+                                {_h6AllPass ? "CONFIRMATA" : _h6SomePass ? "PARTIAL CONFIRMATA" : "NECONFIRMATA"}
+                              </span>
+                              <span style={{ fontSize: 10, color: "#374151" }}>
+                                {_h6AllPass
+                                  ? `Toti factorii demografici au \u03B7\u00B2 < 0.05 — formula RIFC functioneaza uniform pe toate segmentele.`
+                                  : _h6SomePass
+                                  ? `Unii factori au \u03B7\u00B2 \u2265 0.05 (max ${(_h6MaxEta * 100).toFixed(1)}%) — sensibilitate moderata la anumite segmente.`
+                                  : `Toti factorii au \u03B7\u00B2 \u2265 0.05 — formula RIFC variaza semnificativ pe segmente demografice.`}
+                              </span>
+                            </div>
+
+                            <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
+                              <strong>Prag OSF:</strong> &eta;&sup2; &lt; 0.05 = factorul demografic explica &lt; 5% din varianta scorurilor R. ANOVA one-way per factor, variabila dependenta = scorul R per raspuns individual.{" "}
+                              Un &eta;&sup2; mic confirma ca Relevanta perceputa nu depinde de profilul respondentului.
+                            </div>
+                          </div>
                         </OsfH>
                       );
                     })()}
@@ -11714,7 +11852,34 @@ export default function StudiuAdminPage() {
                         { code: "OSF H3", name: "Brand modereaza C\u2192CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
                         { code: "OSF H4", name: "C prezice CTA (r\u22650.50)", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
                         { code: "OSF H5", name: "Invarianta Cross-Channel", metric: "Cronbach \u03B1 per canal", n: `${_scV.length}`, pVal: "\u2014", verdict: "DESCRIPTIV", color: "#7C3AED" },
-                        { code: "OSF H6", name: "Segmente nu afecteaza R (\u03B7\u00B2<0.05)", metric: "Necesita date demografice individuale", n: "\u2014", pVal: "\u2014", verdict: "LIPSESC DATE", color: "#9CA3AF" },
+                        (() => {
+                          // Compute H6 ANOVA for summary row
+                          const _h6ScSum = _sc;
+                          const _h6HasIndSum = _h6ScSum.some(d => d.gender || d.ageRange || d.education || d.locationType || d.incomeRange);
+                          if (!_h6HasIndSum) return { code: "OSF H6", name: "Segmente nu afecteaza R (\u03B7\u00B2<0.05)", metric: "Lipsesc date demografice", n: "\u2014", pVal: "\u2014", verdict: "LIPSESC DATE", color: "#9CA3AF" };
+                          const _h6Facs = [
+                            { key: "gender", acc: (d: any) => d.gender },
+                            { key: "ageRange", acc: (d: any) => d.ageRange },
+                            { key: "education", acc: (d: any) => d.education },
+                            { key: "locationType", acc: (d: any) => d.locationType },
+                            { key: "incomeRange", acc: (d: any) => d.incomeRange },
+                          ];
+                          const _h6Etas: number[] = [];
+                          let _h6TotalN = 0;
+                          _h6Facs.forEach(fac => {
+                            const gm: Record<string, number[]> = {};
+                            _h6ScSum.forEach(d => { const v = fac.acc(d); if (v && v.trim() && d.r != null) { if (!gm[v]) gm[v] = []; gm[v].push(d.r); } });
+                            const gs = Object.values(gm).filter(g => g.length >= 2);
+                            if (gs.length >= 2) { const a = _anovaOneWay(gs); _h6Etas.push(a.etaSq); _h6TotalN = Math.max(_h6TotalN, gs.reduce((s, g) => s + g.length, 0)); }
+                          });
+                          if (_h6Etas.length === 0) return { code: "OSF H6", name: "Segmente nu afecteaza R (\u03B7\u00B2<0.05)", metric: "Date insuficiente", n: "\u2014", pVal: "\u2014", verdict: "LIPSESC DATE", color: "#9CA3AF" };
+                          const _h6MaxEtaSum = Math.max(..._h6Etas);
+                          const _h6AllPassSum = _h6Etas.every(e => e < 0.05);
+                          const _h6SomePassSum = _h6Etas.some(e => e < 0.05);
+                          const _h6VerdSum = _h6AllPassSum ? "CONFIRMATA" : _h6SomePassSum ? "PARTIAL" : "NECONFIRMATA";
+                          const _h6ColorSum = _h6AllPassSum ? "#059669" : _h6SomePassSum ? "#D97706" : "#DC2626";
+                          return { code: "OSF H6", name: "Segmente nu afecteaza R (\u03B7\u00B2<0.05)", metric: `max \u03B7\u00B2=${_h6MaxEtaSum.toFixed(4)} (${_h6Etas.length} factori)`, n: `${_h6TotalN}`, pVal: _h6AllPassSum ? "toti < 0.05" : `${_h6Etas.filter(e => e >= 0.05).length}/${_h6Etas.length} \u2265 0.05`, verdict: _h6VerdSum, color: _h6ColorSum };
+                        })(),
                         { code: "OSF H7", name: "Validitate Construct (r\u22650.60)", metric: `Valid=${grandHypPct.toFixed(1)}%, \u0394=${grandDelta.toFixed(2)}`, n: `${n}`, pVal: "\u2014", verdict: grandHypPct >= 80 ? "CONFIRMATA" : grandHypPct >= 50 ? "PARTIAL" : "NECONFIRMATA", color: grandHypPct >= 80 ? "#059669" : grandHypPct >= 50 ? "#D97706" : "#DC2626" },
                       ];
                       return (
@@ -11751,7 +11916,7 @@ export default function StudiuAdminPage() {
                             </table>
                           </div>
                           <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
-                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). OSF H1: Spearman rho + partial correlation. OSF H2: Cohen&apos;s d pentru efect standardizat. OSF H3: Fisher Z-test. OSF H4: Pearson r. OSF H5: Cronbach &alpha; per canal. OSF H6: necesita date individuale. OSF H7: Validare % = 100 - (&Delta;/10 &times; 100).
+                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). OSF H1: Spearman rho + partial correlation. OSF H2: Cohen&apos;s d pentru efect standardizat. OSF H3: Fisher Z-test. OSF H4: Pearson r. OSF H5: Cronbach &alpha; per canal. OSF H6: ANOVA one-way, &eta;&sup2; per factor demografic (&lt; 0.05 = confirmat). OSF H7: Validare % = 100 - (&Delta;/10 &times; 100).
                           </div>
                         </div>
                       );
