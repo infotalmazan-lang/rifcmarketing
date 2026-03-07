@@ -8732,6 +8732,57 @@ export default function StudiuAdminPage() {
                   { heading: "Nota OSF", text: `Analiza cu R >= ${GATE} este confirmatorie (OSF H2 — analiza primara). Testarea la R=5 este pre-inregistrata ca sensitivity analysis (OSF H2 Inference Criteria: "All three methods repeated at R = 2, 3, 4, and 5"). Modelul cu doua zone (interpretarea inflexiunii R=5 ca tranzitie latenta→performanta) se raporteaza in sectiunea "Other Planned Analysis #1: Nonlinear Threshold Exploration" — de asemenea pre-anuntat in OSF. Toate analizele sunt conforme cu protocolul pre-inregistrat.` },
                 ]};
               }
+              case "h2-sensitivity": {
+                const _hsSens = (() => { try { return JSON.parse(String(_ctx.sens || "[]")); } catch { return []; } })() as { threshold: number; below: { n: number; hypPct: number; cta: number }; above: { n: number; hypPct: number; cta: number }; passRate: number; ctaDrop: number | null }[];
+                const _hsN = Number(_ctx.n || 0);
+                const confRow = _hsSens.find((s: any) => s.threshold === GATE);
+                const bestCta = _hsSens.reduce((best: any, s: any) => (s.ctaDrop != null && (best === null || Math.abs(s.ctaDrop) > Math.abs(best.ctaDrop))) ? s : best, null as any);
+                return { sections: [
+                  { heading: "Ce masoara aceasta tabela", text: `Tabela testeaza Sensitivity Analysis pentru OSF H2 — la ce prag de Relevanta (R) se produce ruptura cea mai clara intre materialele care functioneaza si cele care nu. Testam 4 praguri pre-inregistrate in OSF: R=2, R=3, R=4 si R=5.` },
+                  { heading: "Cum se citeste", text: `Pentru fiecare prag: "Sub prag" = cate materiale au R mediu sub acel prag; "Peste prag" = cate trec. "Pass %" = procentul materialelor care trec. "H7 sub/peste" = cat de bine prezice formula (Convergenta) in fiecare grup. "CTA sub/peste" = intentie de actiune medie. "Δ CTA" = diferenta procentuala de CTA intre sub si peste prag — cu cat mai negativa, cu atat pragul e mai discriminant.` },
+                  { heading: "Ce arata datele", text: `La pragul PRIMAR R=${GATE}: ${confRow ? `${confRow.below.n} materiale sub prag, ${confRow.above.n} peste. Pass rate: ${confRow.passRate}%. H7 peste prag: ${confRow.above.hypPct}%.` : "Date insuficiente."} ${bestCta ? `Cel mai discriminant prag pe CTA: R=${bestCta.threshold} (Δ CTA = ${bestCta.ctaDrop}%).` : ""}` },
+                  { heading: "Ce inseamna pentru studiu", text: `OSF pre-inregistreaza R=3 ca prag confirmatoriu. Daca un alt prag (ex: R=4 sau R=5) produce o ruptura mai clara in CTA, aceasta e raportata ca sensitivity finding — nu invalideaza pragul primar, ci il nuanteaza. La nivel agregat (medie per material), zonele sub R=3 pot fi goale statistic — cu 200+ respondenti, media converge spre centru. Analiza individuala (urmatorul bloc) rezolva acest lucru.` },
+                  { heading: "Implicatii practice", text: `Daca obiectivul e brand awareness: Gate R >= ${GATE} e suficient. Daca obiectivul e conversie directa: pragul cu cea mai mare scadere CTA indica pragul efectiv de actiune. Zona de tranzitie (intre pragul primar si pragul de performanta) reprezinta materiale "vizibile dar inactive" — audienta stie de mesaj dar nu actioneaza.` },
+                ]};
+              }
+              case "h2-individual": {
+                const _hiSens = (() => { try { return JSON.parse(String(_ctx.sens || "[]")); } catch { return []; } })() as { threshold: number; nBelow: number; nAbove: number; avgCpBelow: number; avgCpAbove: number; avgCtaBelow: number; avgCtaAbove: number; p25Cta: number; p25Cp: number; h2Supported: boolean }[];
+                const _hiTotal = Number(_ctx.total || 0);
+                const confInd = _hiSens.find((s: any) => s.threshold === GATE);
+                const anySupported = _hiSens.some((s: any) => s.h2Supported);
+                return { sections: [
+                  { heading: "Ce masoara aceasta tabela", text: `Testeaza ipoteza H2 (Relevance Gate) la nivel INDIVIDUAL: fiecare rand in tabel = un respondent × un stimulus (${_hiTotal.toLocaleString()} observatii totale). Spre deosebire de tabela de sensitivity (nivel agregat per material), aici avem observatii individuale cu R=1 sau R=2 — zone care la nivel de medie per material sunt goale.` },
+                  { heading: "De ce nivel individual?", text: `La nivel agregat (medie din 200+ respondenti per material), R mediu nu scade sub 3 — e un efect statistic natural (Central Limit Theorem). La nivel individual insa, un respondent poate da R=1 sau R=2, oferind date concrete pentru testarea H2. OSF H2 spune: "Cand R < prag, C si CTA vor fi uniform scazute (sub percentila 25), indiferent de I si F."` },
+                  { heading: "Cum se citeste", text: `"N sub" = observatii individuale cu R sub prag. "Cp sub/peste" = Claritate perceputa medie. "CTA sub/peste" = intentie de actiune medie. "P25 Cp/CTA" = percentila 25 din TOATA distributia. "H2" = DA daca AMBELE conditii sunt indeplinite: Cp sub prag <= P25 SI CTA sub prag <= P25. Aceasta e testarea directa a ipotezei OSF.` },
+                  { heading: "Ce arata datele", text: `La pragul PRIMAR R=${GATE}: ${confInd ? `${confInd.nBelow.toLocaleString()} observatii sub prag. Cp sub = ${confInd.avgCpBelow} vs P25 Cp = ${confInd.p25Cp}. CTA sub = ${confInd.avgCtaBelow} vs P25 CTA = ${confInd.p25Cta}. H2 ${confInd.h2Supported ? "CONFIRMATA" : "NECONFIRMATA"} la R=${GATE}.` : "Date insuficiente."} ${anySupported ? "Cel putin un prag confirma H2." : "Niciun prag nu confirma H2 strict — Cp si CTA sub prag nu scad sub P25."}` },
+                  { heading: "Ce inseamna H2=NU", text: `H2=NU nu inseamna ca Relevance Gate nu exista. Inseamna ca la nivel individual, chiar si cand un respondent da R=1 sau R=2, Claritatea si CTA nu scad sub percentila 25 a distributiei. Posibile explicatii: (1) I×F compenseaza partial — mesajul e interesant si bine facut chiar daca nu e relevant personal; (2) respondentii care dau R mic au alt standard de referinta; (3) scara 1-10 nu e suficient de granulara pentru a detecta colapsul sub R=3. Chow test-ul (urmatorul bloc) ofera o perspectiva complementara — testeaza daca RELATIA I×F→Cp difera structural sub vs peste prag.` },
+                  { heading: "Verdict OSF", text: `${anySupported ? `Ipoteza H2 este sustinuta la cel putin un prag. Conform OSF: "H2 is supported if at least 2 of 3 methods converge on a significant threshold in the R=2-4 range."` : `Ipoteza H2 nu este sustinuta strict la nivel percentil. Dar scaderile de CTA sub prag (chiar daca nu sub P25) pot fi semnificative economic — o scadere CTA de 50%+ intre sub si peste prag ramane relevant practic.`}` },
+                ]};
+              }
+              case "h2-chow": {
+                const _hcTests = (() => { try { return JSON.parse(String(_ctx.tests || "[]")); } catch { return []; } })() as { threshold: number; chowF: number; chowP: number; chowSig: boolean; slopeBelow: number | null; slopeAbove: number | null; r2Below: number | null; r2Above: number | null }[];
+                const anySig = _hcTests.some((t: any) => t.chowSig);
+                const best = _hcTests.reduce((a: any, b: any) => (a && a.chowF > b.chowF) ? a : b, null as any);
+                const confChow = _hcTests.find((t: any) => t.threshold === GATE);
+                return { sections: [
+                  { heading: "Ce masoara Chow Test", text: `Chow test verifica daca relatia statistica intre I×F (motorul formulei) si Cp (Claritate perceputa) este DIFERITA structural sub vs peste un prag de Relevanta. H0 (ipoteza nula): coeficientii de regresie sunt identici sub si peste prag. H1 (ipoteza alternativa): exista un breakpoint — relatia I×F→Cp se schimba fundamental la acel prag.` },
+                  { heading: "Cum se citeste", text: `"Chow F" = statistica F din testul Chow (cu cat mai mare, cu atat mai puternic breakpoint-ul). "p" = valoarea p (sub 0.05 = semnificativ). "Sig." = DA daca p < 0.05. "Slope sub/peste" = panta regresiei I×F→Cp in fiecare subgrup. Daca slope_sub ≈ 0 si slope_peste > 0, Relevance Gate este confirmat: sub prag, I×F nu influenteaza Cp. "R² sub/peste" = varianta explicata de I×F in fiecare subgrup.` },
+                  { heading: "Ce arata datele", text: `${anySig ? `Breakpoint semnificativ detectat! Cel mai puternic: R=${best?.threshold} (F=${best?.chowF?.toFixed(2)}, p=${best?.chowP < 0.001 ? "<.001" : best?.chowP?.toFixed(3)}).` : "Niciun breakpoint semnificativ la p<0.05."} La pragul PRIMAR R=${GATE}: ${confChow ? `F=${confChow.chowF.toFixed(2)}, p=${confChow.chowP < 0.001 ? "<.001" : confChow.chowP.toFixed(3)}, ${confChow.chowSig ? "SEMNIFICATIV" : "nesemnificativ"}. Slope sub=${confChow.slopeBelow?.toFixed(3) ?? "N/A"}, Slope peste=${confChow.slopeAbove?.toFixed(3) ?? "N/A"}.` : "Date insuficiente."}` },
+                  { heading: "Piecewise regression", text: `Piecewise regression estimeaza DOUA regresii separate: una sub prag si una peste. Comparand slope-urile: daca slope_sub < slope_peste, inseamna ca I×F are un efect mai slab sub prag — audienta proceseaza mai putin mesajul cand R e scazut. Daca slope_sub ≈ 0, I×F e complet ineficient sub prag = Relevance Gate complet. R² sub vs peste compara cat de bine explica I×F varianta in Cp — un R² mai mic sub prag inseamna ca formula are mai putina putere predictiva sub Gate.` },
+                  { heading: "Cum se raporteaza la OSF", text: `OSF H2 cere 3 metode: (1) Chow test (testat aici), (2) Piecewise regression cu termen de interactie β₃(I×F × D_below) — echivalent cu comparatia slope-urilor, (3) Davies test pentru breakpoint optim. H2 este sustinuta daca "cel putin 2 din 3 metode converge pe un prag semnificativ in intervalul R=2-4". ${anySig ? "Chow test-ul confirma existenta unui breakpoint." : "Chow test-ul NU confirma un breakpoint semnificativ — dar scaderile observate in CTA si slope raman relevante practic."}` },
+                  { heading: "Verdict", text: `${anySig ? `CONFIRMAT: Exista un structural break in relatia I×F→Cp. Cel mai puternic prag: R=${best?.threshold}. Aceasta sustine ipoteza ca sub un anumit nivel de Relevanta, formula RIFC pierde din puterea predictiva — Relevance Gate functioneaza.` : `NECONFIRMAT statistic (p>0.05): Nu exista un breakpoint semnificativ la niciun prag testat. Aceasta poate insemna: (1) breakpoint-ul e gradual, nu abrupt — Relevanta influenteaza continuu, nu binar; (2) esantionul e insuficient in zonele de R scazut; (3) Gate-ul opereaza pe alta dimensiune decat I×F→Cp (ex: R→CTA direct). Rezultatul e raportat transparent conform protocolului OSF.`}` },
+                ]};
+              }
+              case "h2-archetypes": {
+                const _haCount = _ctx as Record<string, unknown>;
+                return { sections: [
+                  { heading: "Ce sunt arhetipurile OSF", text: `Arhetipurile sunt clasificari predefinite ale materialelor de marketing bazate pe scoruri R, I, F si C. Fiecare material primeste exact un arhetip, conform definitiilor pre-inregistrate in OSF. Clasificarea e determinista (nu statistica) — se aplica regulile secvential.` },
+                  { heading: "Definitii OSF", text: `1. FANTOMA (Phantom): R < ${GATE} — materialul nu e relevant pentru audienta. I×F poate fi excelent, dar fara relevanta totul merge in gol. 2. ZGOMOT ESTETIC (Aesthetic Noise): R >= ${GATE} si F > I + 3 — forma domina fara substanta. Mesajul e frumos dar gol. 3. DIAMANT (Diamond): C >= 80 — excelenta pe toata linia. 4. ZGOMOT DE FOND (Background Noise): R >= ${GATE} si C < 40 — material irelevant. 5. CLARITATE MEDIE (Medium Clarity): restul — functioneaza dar nu exceleaza.` },
+                  { heading: "Cum se citesc datele", text: `Numarul si procentul arata cat din portofoliul de materiale testate se incadreaza in fiecare categorie. Distributia indica "sanatatea" generala a comunicarii de marketing: un portofoliu sanatos are 0 Fantome, 0 Zgomot Estetic, cat mai multi Diamanti, si rest Claritate Medie.` },
+                  { heading: "Ce inseamna pentru studiu", text: `Daca majoritatea materialelor sunt Medium Clarity (40-80) si niciun material nu e Phantom (R<3), inseamna ca materialele testate sunt relativ bine targetate. Asta confirma ca esantionul de stimuli e rezonabil dar poate limita testarea H2 (Relevance Gate) — pentru H2 avem nevoie de materiale cu R foarte scazut. Analiza individuala (nivel respondent) compenseaza aceasta limitare.` },
+                  { heading: "Implicatii practice", text: `Background Noise (C<40): necesita reevaluare fundamentala. Medium Clarity: optimizare graduala pe R, I sau F. Diamond: best practices — studiaza-le ca modele. Aesthetic Noise (F>I+3): rescrie continutul, pastreaza designul. Phantom: schimba audienta sau mesajul.` },
+                ]};
+              }
               case "val_channel": {
                 const _vLabel = String(_ctx.label || "");
                 const _vCfN = Number(_ctx.cfNorm || 0);
@@ -9973,8 +10024,22 @@ export default function StudiuAdminPage() {
 
                           {/* ── OSF H2 Sensitivity: All 4 Thresholds (R=2,3,4,5) ── */}
                           <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#2563EB", marginBottom: 8 }}>
-                              OSF H2 SENSITIVITY — PRAGURI R=2,3,4,5
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#2563EB", flex: 1 }}>
+                                OSF H2 SENSITIVITY — PRAGURI R=2,3,4,5
+                              </div>
+                              {(() => {
+                                const sensConfirmed = tzSensitivity.filter(t => t.below.n > 0 && t.above.cta > 0 && t.below.cta < t.above.cta).length;
+                                const sensTotal = tzSensitivity.filter(t => t.below.n > 0).length;
+                                const verdict = sensTotal === 0 ? "N/A" : sensConfirmed === sensTotal ? "Confirmat" : sensConfirmed > 0 ? "Partial" : "Neconfirmat";
+                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Neconfirmat" ? "#DC2626" : "#9CA3AF";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
+                                    <InterpBtn k="h2-sensitivity" title="H2 Sensitivity" val={`${sensConfirmed}/${sensTotal}`} ctx={{ sens: JSON.stringify(tzSensitivity), n }} />
+                                  </>
+                                );
+                              })()}
                             </div>
                             <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
                               <thead>
@@ -10025,8 +10090,22 @@ export default function StudiuAdminPage() {
                           {/* ── OSF H2 Individual-Level Test (respondent × stimulus) ── */}
                           {scatter.length > 0 && (
                           <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #DC2626" }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#DC2626", marginBottom: 4 }}>
-                              OSF H2 — NIVEL INDIVIDUAL ({scatter.length.toLocaleString()} observatii)
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#DC2626", flex: 1 }}>
+                                OSF H2 — NIVEL INDIVIDUAL ({scatter.length.toLocaleString()} observatii)
+                              </div>
+                              {(() => {
+                                const h2Confirmed = h2IndSensitivity.filter(t => t.h2Supported).length;
+                                const h2Testable = h2IndSensitivity.filter(t => t.nBelow > 0).length;
+                                const verdict = h2Testable === 0 ? "N/A" : h2Confirmed === h2Testable ? "Confirmat" : h2Confirmed > 0 ? "Partial" : "Neconfirmat";
+                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Neconfirmat" ? "#DC2626" : "#9CA3AF";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
+                                    <InterpBtn k="h2-individual" title="H2 Individual" val={`${h2Confirmed}/${h2Testable}`} ctx={{ sens: JSON.stringify(h2IndSensitivity), total: scatter.length }} />
+                                  </>
+                                );
+                              })()}
                             </div>
                             <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
                               H2: &quot;Cand R &lt; prag, C si CTA vor fi uniform scazute (sub percentila 25), indiferent de I si F.&quot;
@@ -10096,8 +10175,22 @@ export default function StudiuAdminPage() {
                           {/* ── OSF H2 Chow Test + Piecewise Regression ── */}
                           {scValid.length >= 10 && (
                           <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #7C3AED" }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", marginBottom: 4 }}>
-                              OSF H2 — CHOW TEST &amp; PIECEWISE REGRESSION
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", flex: 1 }}>
+                                OSF H2 — CHOW TEST &amp; PIECEWISE REGRESSION
+                              </div>
+                              {(() => {
+                                const chowSig = h2ChowTests.filter(t => t.chowSig).length;
+                                const chowTotal = h2ChowTests.length;
+                                const verdict = chowSig === chowTotal ? "Confirmat" : chowSig >= 2 ? "Partial" : chowSig === 1 ? "Slab" : "Neconfirmat";
+                                const vColor = verdict === "Confirmat" ? "#059669" : verdict === "Partial" ? "#D97706" : verdict === "Slab" ? "#D97706" : "#DC2626";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{verdict}</span>
+                                    <InterpBtn k="h2-chow" title="Chow Test" val={`${chowSig}/${chowTotal} sig.`} ctx={{ tests: JSON.stringify(h2ChowTests) }} />
+                                  </>
+                                );
+                              })()}
                             </div>
                             <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
                               Testam daca relatia I&times;F &rarr; Cp are un structural break la fiecare prag. Chow F sig. (p&lt;0.05) = coefficientii difera semnificativ sub vs peste prag.
@@ -10168,8 +10261,21 @@ export default function StudiuAdminPage() {
 
                           {/* ── OSF Archetype Distribution ── */}
                           <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #6366f1" }}>
-                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#6366f1", marginBottom: 8 }}>
-                              CLASIFICARE ARHETIPURI OSF — {n} MATERIALE
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#6366f1", flex: 1 }}>
+                                CLASIFICARE ARHETIPURI OSF — {n} MATERIALE
+                              </div>
+                              {(() => {
+                                const hasVariety = Object.keys(osfArchCount).filter(k => (osfArchCount[k] || 0) > 0).length;
+                                const verdict = hasVariety >= 3 ? "Complet" : hasVariety >= 2 ? "Partial" : "Limitat";
+                                const vColor = verdict === "Complet" ? "#059669" : verdict === "Partial" ? "#D97706" : "#DC2626";
+                                return (
+                                  <>
+                                    <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: vColor + "18", color: vColor, border: `1px solid ${vColor}40` }}>{hasVariety}/5 tipuri</span>
+                                    <InterpBtn k="h2-archetypes" title="Arhetipuri OSF" val={`${hasVariety}/5`} ctx={{ counts: JSON.stringify(osfArchCount), n }} />
+                                  </>
+                                );
+                              })()}
                             </div>
                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                               {[
