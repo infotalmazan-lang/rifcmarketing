@@ -9093,8 +9093,8 @@ export default function StudiuAdminPage() {
             : logData.filter((l: any) => l.distribution_id === interpSource);
           const _interpCompleted = logData.length > 0 ? _interpFilteredLog.filter(_interpDone).length : results.completedRespondents;
           const _interpTotal = logData.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
-          // Use LOG data for response count (matches header RASPUNSURI)
-          const _interpResponses = _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+          // Use LOG data for response count — only completed respondents
+          const _interpResponses = _interpFilteredLog.filter(_interpDone).reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
           const avgEvalPerMaterial = Math.round(_interpResponses / n);
 
           // ── Relevance Threshold Analysis — OSF H2 pre-registered sensitivity (R=2,3,4,5) ──
