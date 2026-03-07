@@ -915,8 +915,7 @@ export default function StudiuAdminPage() {
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
-  const [interpViewMode, setInterpViewMode] = useState<"osf" | "additional">("osf");
-  const [addSubTab, setAddSubTab] = useState<"stats" | "itemi" | "cvi" | "pilot" | "efa">("stats");
+  const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "additional">("osf");
   const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true });
 
   // ── OSF Collapsible Section Header ──
@@ -5135,7 +5134,7 @@ export default function StudiuAdminPage() {
         )}
 
         {/* ═══ PANEL EXPERTI (Layer 1) — Redesigned ═══ */}
-        {activeTab === "interpretare" && interpViewMode === "additional" && addSubTab === "efa" && (
+        {activeTab === "interpretare" && interpViewMode === "efa" && (
           <div>
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
@@ -8561,25 +8560,28 @@ export default function StudiuAdminPage() {
           if (isLoading || hasNoData || hasNoResponses) {
             return (
               <div>
-                {/* ═══ TOP-LEVEL VIEW MODE: OSF Statistic | Additional Statistic ═══ */}
-                <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10 }}>
+                {/* ═══ TOP-LEVEL VIEW MODE TABS ═══ */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10, overflowX: "auto" as const }}>
                   {([
-                    { key: "osf" as const, label: "OSF Statistic", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-                    { key: "additional" as const, label: "Additional Statistic", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+                    { key: "osf" as const, label: "OSF Statistic", color: "#059669" },
+                    { key: "itemi" as const, label: "1 Pas Itemi", color: "#6366f1" },
+                    { key: "cvi" as const, label: "2 Pas CVI Evaluare", color: "#DC2626" },
+                    { key: "pilot" as const, label: "3 Pas Pilot Testing", color: "#7C3AED" },
+                    { key: "efa" as const, label: "4 Pas EFA 2A", color: "#2563EB" },
+                    { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                   ] as const).map(t => (
-                    <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") { setInterpSubTab("total"); setAddSubTab("stats"); } }} style={{
-                      padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: interpViewMode === t.key ? 800 : 600,
-                      background: interpViewMode === t.key ? (t.key === "osf" ? "#059669" : "#7C3AED") : "#f9fafb",
+                    <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
+                      padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
+                      background: interpViewMode === t.key ? t.color : "#f9fafb",
                       color: interpViewMode === t.key ? "#fff" : "#374151",
                       border: interpViewMode === t.key ? "none" : "1px solid #e5e7eb",
-                      cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 150ms",
+                      cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 150ms",
+                      whiteSpace: "nowrap" as const,
                     }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={t.icon} /></svg>
                       {t.label}
                     </button>
                   ))}
                 </div>
-                {/* Sub-tab pills — always visible */}
                 {interpViewMode === "osf" && <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                   {([
                     { key: "total" as const, label: "Total" },
@@ -9367,26 +9369,29 @@ export default function StudiuAdminPage() {
                 );
               })()}
 
-              {/* ═══ TOP-LEVEL VIEW MODE: OSF Statistic | Additional Statistic ═══ */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10 }}>
+              {/* ═══ TOP-LEVEL VIEW MODE TABS ═══ */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10, overflowX: "auto" as const }}>
                 {([
-                  { key: "osf" as const, label: "OSF Statistic", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
-                  { key: "additional" as const, label: "Additional Statistic", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+                  { key: "osf" as const, label: "OSF Statistic", color: "#059669" },
+                  { key: "itemi" as const, label: "1 Pas Itemi", color: "#6366f1" },
+                  { key: "cvi" as const, label: "2 Pas CVI Evaluare", color: "#DC2626" },
+                  { key: "pilot" as const, label: "3 Pas Pilot Testing", color: "#7C3AED" },
+                  { key: "efa" as const, label: "4 Pas EFA 2A", color: "#2563EB" },
+                  { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                 ] as const).map(t => (
-                  <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") { setInterpSubTab("total"); setAddSubTab("stats"); } }} style={{
-                    padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: interpViewMode === t.key ? 800 : 600,
-                    background: interpViewMode === t.key ? (t.key === "osf" ? "#059669" : "#7C3AED") : "#f9fafb",
+                  <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
+                    padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
+                    background: interpViewMode === t.key ? t.color : "#f9fafb",
                     color: interpViewMode === t.key ? "#fff" : "#374151",
                     border: interpViewMode === t.key ? "none" : "1px solid #e5e7eb",
-                    cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 150ms",
+                    cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 150ms",
+                    whiteSpace: "nowrap" as const,
                   }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={t.icon} /></svg>
                     {t.label}
                   </button>
                 ))}
               </div>
 
-              {/* Sub-tab pills — only in OSF mode */}
               {interpViewMode === "osf" && <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 {([
                   { key: "total" as const, label: "Total" },
@@ -9397,33 +9402,9 @@ export default function StudiuAdminPage() {
                 ))}
               </div>}
 
-              {/* Sub-tab pills — only in Additional mode */}
-              {interpViewMode === "additional" && <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto" as const }}>
-                {([
-                  { key: "stats" as const, label: "Statistica", icon: BarChart3 },
-                  { key: "itemi" as const, label: "1 Pas Itemi", icon: ListOrdered },
-                  { key: "cvi" as const, label: "2 Pas CVI Evaluare", icon: Target },
-                  { key: "pilot" as const, label: "3 Pas Pilot Testing", icon: FlaskConical },
-                  { key: "efa" as const, label: "4 Pas EFA 2A", icon: UserCheck },
-                ] as const).map(t => {
-                  const active = addSubTab === t.key;
-                  return (
-                    <button key={t.key} onClick={() => setAddSubTab(t.key)} style={{
-                      padding: "7px 14px", borderRadius: 20, fontSize: 11, fontWeight: active ? 700 : 500,
-                      background: active ? "#7C3AED" : "#fff", color: active ? "#fff" : "#6B7280",
-                      border: active ? "2px solid #7C3AED" : "1px solid #e5e7eb",
-                      cursor: "pointer", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" as const,
-                      transition: "all 150ms",
-                    }}>
-                      <t.icon size={13} />
-                      {t.label}
-                    </button>
-                  );
-                })}
-              </div>}
 
               {/* ═══ 1 Pas Itemi — RIFC Items table ═══ */}
-              {interpViewMode === "additional" && addSubTab === "itemi" && (
+              {interpViewMode === "itemi" && (
                 <div>
                   <div style={{ marginBottom: 16 }}>
                     <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: "0 0 6px" }}>Pasul 1 — Itemi RIFC</h3>
@@ -9499,7 +9480,7 @@ export default function StudiuAdminPage() {
               })()}
 
               {/* ═══ ADDITIONAL VIEW — Per Canale / Per Industrie / Per Brand (when not in OSF mode) ═══ */}
-              {interpViewMode === "additional" && addSubTab === "stats" && (() => {
+              {interpViewMode === "additional" && (() => {
                 // Recompute channel aggregates for additional view
                 const _addChByType: Record<string, typeof withData> = {};
                 withData.forEach(s => { if (!_addChByType[s.type]) _addChByType[s.type] = []; _addChByType[s.type].push(s); });
@@ -11953,7 +11934,7 @@ export default function StudiuAdminPage() {
 
                     </>)}
 
-                    {interpViewMode === "additional" && addSubTab === "stats" && (<>
+                    {interpViewMode === "additional" && (<>
                     <div style={{ padding: "14px 18px", background: "#f5f3ff", borderRadius: 8, border: "1px solid #ddd6fe", borderLeft: "4px solid #7C3AED", marginBottom: 24 }}>
                       <div style={{ fontSize: 13, fontWeight: 800, color: "#7C3AED", marginBottom: 4 }}>STATISTICA SUPLIMENTARA</div>
                       <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>Analize descriptive si explorative care completeaza testarea formala OSF. Nu sunt pre-inregistrate in protocolul OSF dar ofera perspectiva suplimentara asupra datelor.</div>
@@ -12610,7 +12591,7 @@ export default function StudiuAdminPage() {
         })()}
 
         {/* ═══ CVI (EVALUARE ITEMI) TAB ═══ */}
-        {activeTab === "interpretare" && interpViewMode === "additional" && addSubTab === "cvi" && (
+        {activeTab === "interpretare" && interpViewMode === "cvi" && (
           <div style={{ width: "100%" }}>
             {cviLoading && !cviResults ? (
               <div style={{ textAlign: "center", padding: 40, color: "#6B7280" }}>
@@ -15154,7 +15135,7 @@ export default function StudiuAdminPage() {
         })()}
 
         {/* ═══ PILOT TESTING TAB ═══ */}
-        {activeTab === "interpretare" && interpViewMode === "additional" && addSubTab === "pilot" && (() => {
+        {activeTab === "interpretare" && interpViewMode === "pilot" && (() => {
           const _activeStimN = stimuli.filter(s => s.is_active).length;
           const _isDone = (l: any) => !!l.completed_at || (_activeStimN > 0 && (l.responseCount || 0) >= _activeStimN);
           const pilotCompleted = logDataPilot.filter(_isDone).length;
