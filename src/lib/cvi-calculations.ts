@@ -38,6 +38,45 @@ export const CVI_ITEM_LABELS: Record<string, string> = {
   C6: "Coerență Mesaj-Așteptare", C7: "Impact General Perceput",
 };
 
+// Full item text (questionnaire wording)
+export const CVI_ITEM_TEXTS: Record<string, string> = {
+  R1: "Mesajul se adresează unui segment specific de audiență cu o nevoie identificabilă pe care produsul sau serviciul o rezolvă.",
+  R2: "Mesajul este difuzat la momentul potrivit din perspectiva ciclului de cumpărare al audienței.",
+  R3: "Conținutul mesajului corespunde etapei corecte din buyer journey a destinatarului (conștientizare, evaluare sau decizie).",
+  R4: "Mesajul ia în considerare contextul fizic sau digital în care este consumat de audiență.",
+  R5: "Mesajul este adaptat cultural și lingvistic specificului geografic al audienței țintă.",
+  R6: "Formatul și conținutul mesajului sunt optimizate nativ pentru canalul specific de distribuție.",
+  R7: "Mesajul utilizează date comportamentale pentru a personaliza comunicarea pentru segmente specifice.",
+  I1: "Mesajul articulează o promisiune centrală clară și atractivă, specifică pentru audiența vizată.",
+  I2: "Beneficiul principal al ofertei este comunicat în primele 5 secunde de expunere la mesaj.",
+  I3: "Mesajul activează o emoție specifică și autentică, aliniată cu dorința sau durerea principală a audienței.",
+  I4: "Mesajul creează un gol informațional care motivează audiența să continue să consume conținutul.",
+  I5: "Mesajul conține un element de urgență sau raritate legitimă care motivează acțiunea imediată.",
+  I6: "Mesajul conține cel puțin un element neașteptat sau surprinzător față de norma din industrie.",
+  I7: "Destinatarul simte că mesajul a fost creat specific pentru situația sau nevoile sale personale.",
+  I8: "Mesajul include dovezi specifice și verificabile de credibilitate (statistici cu sursă, testimoniale cu identitate reală, studii de caz cu cifre).",
+  I9: "Valoarea ofertei este construită strategic înainte de prezentarea prețului, făcând costul să pară mic față de beneficii.",
+  I10: "Primele cuvinte sau secunde ale mesajului capturează imediat atenția prin originalitate, specificitate sau shock pozitiv.",
+  F1: "Elementele vizuale ale mesajului clarifică și amplifică conținutul, fără a crea confuzie sau distracție.",
+  F2: "Titlul sau headline-ul este clar, specific și comunică un beneficiu diferențiat în mai puțin de 5 secunde.",
+  F3: "Există un singur CTA principal, orientat pe beneficiu, vizibil și cu fricțiune minimă pentru utilizator.",
+  F4: "Mesajul urmează o structură logică deliberată care ghidează natural audiența de la problemă la soluție și la acțiune.",
+  F5: "Lungimea mesajului este perfect calibrată pentru canalul de distribuție și obiectivul de comunicare.",
+  F6: "Tonul mesajului este consistent, autentic și perfect calibrat pentru audiența și contextul specific.",
+  F7: "Mesajul este consistent cu identitatea vizuală și valorile brandului, recognoscibil fără a vedea logo-ul.",
+  F8: "Textul mesajului este ușor de citit la prima vedere, cu font adecvat, contrast și propoziții directe.",
+  F9: "Elementele vizuale sunt organizate ierarhic, ghidând ochiul natural de la cel mai important spre CTA.",
+  F10: "Specificațiile tehnice ale mesajului (dimensiuni, format, durate) sunt perfect adaptate platformei de distribuție.",
+  F11: "Mesajul este liber de erori gramaticale, ortografice și de punctuație, cu diacritice complete.",
+  C1: "Mesajul este înțeles corect și complet la prima expunere de cel puțin 90% din audiența țintă.",
+  C2: "Mesajul lasă o amprentă mentală specifică pe care audiența o poate reproduce după 72 de ore fără re-expunere.",
+  C3: "Mesajul generează o intenție puternică și imediată de a efectua acțiunea propusă.",
+  C4: "Audiența poate articula clar de ce această ofertă este diferită și superioară alternativelor disponibile.",
+  C5: "Mesajul anticipează și neutralizează proactiv principalele obiecții ale audienței țintă.",
+  C6: "Experiența post-click sau post-conversie corespunde perfect cu promisiunea comunicată în mesaj.",
+  C7: "Mesajul lasă o impresie generală puternic pozitivă, generând dorința de a împărtăși sau de a acționa imediat.",
+};
+
 // Calculate CVI for a single item across multiple experts
 // CVI = proportion of scores ≥ 3 (relevant or highly relevant)
 export function calcItemCvi(scores: number[]): number {

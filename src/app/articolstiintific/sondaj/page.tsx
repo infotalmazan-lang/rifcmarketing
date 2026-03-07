@@ -65,9 +65,11 @@ import {
   ChevronRight,
   ImageIcon,
   PartyPopper,
+  FlaskConical,
   CheckCircle2,
   Search,
 } from "lucide-react";
+import { CVI_ITEMS, CVI_DIMENSIONS, CVI_ITEM_LABELS, CVI_ITEM_TEXTS } from "@/lib/cvi-calculations";
 import * as tus from "tus-js-client";
 
 /* ═══════════════════════════════════════════════════════════
@@ -377,7 +379,7 @@ interface Distribution {
   created_at: string;
 }
 
-type TabKey = "cartonase" | "rezultate" | "distributie" | "interpretare" | "experti" | "ai" | "preview" | "log" | "cvi";
+type TabKey = "cartonase" | "rezultate" | "distributie" | "interpretare" | "ai" | "preview" | "log";
 
 const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "cartonase", label: "Cartonase", icon: LayoutGrid },
@@ -387,8 +389,6 @@ const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = 
 ];
 const TABS_RIGHT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "preview", label: "Preview", icon: PlayCircle },
-  { key: "cvi", label: "Evaluare Itemi", icon: Target },
-  { key: "experti", label: "EFA (2A)", icon: UserCheck },
   { key: "ai", label: "AI Benchmark", icon: Bot },
   { key: "log", label: "Log", icon: ClipboardList },
 ];
@@ -916,6 +916,7 @@ export default function StudiuAdminPage() {
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
   const [interpViewMode, setInterpViewMode] = useState<"osf" | "additional">("osf");
+  const [addSubTab, setAddSubTab] = useState<"stats" | "itemi" | "cvi" | "pilot" | "efa">("stats");
   const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true });
 
   // ── OSF Collapsible Section Header ──
@@ -1314,7 +1315,7 @@ export default function StudiuAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "distributie" || activeTab === "rezultate" || activeTab === "log") fetchDistributions();
+    if (activeTab === "distributie" || activeTab === "rezultate" || activeTab === "log" || activeTab === "interpretare") fetchDistributions();
   }, [activeTab, fetchDistributions]);
 
   // ── Results data ───────────────────────────────────────
@@ -1389,10 +1390,6 @@ export default function StudiuAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "experti") { fetchExperts(); fetchExpertEvals(); }
-  }, [activeTab, fetchExperts, fetchExpertEvals]);
-
-  useEffect(() => {
     if (activeTab === "log") fetchLog();
   }, [activeTab, fetchLog]);
 
@@ -1414,9 +1411,12 @@ export default function StudiuAdminPage() {
     setCviLoading(false);
   }, []);
 
+  // Fetch CVI + Expert data when Interpretare tab is active (sub-tabs need it)
   useEffect(() => {
-    if (activeTab === "cvi") fetchCviData();
-  }, [activeTab, fetchCviData]);
+    if (activeTab === "interpretare") {
+      fetchExperts(); fetchExpertEvals(); fetchCviData();
+    }
+  }, [activeTab, fetchExperts, fetchExpertEvals, fetchCviData]);
 
   const saveCviExpert = useCallback(async () => {
     if (!cviExpertForm.name.trim()) return;
@@ -1868,6 +1868,10 @@ export default function StudiuAdminPage() {
     return <AccessGate onGranted={() => setHasAccess(true)} />;
   }
   if (!inIframe) return null;
+
+  // ── Pilot filtering — exclude pilot respondents from all main calculations ──
+  const logDataMain = logData.filter((l: any) => l.distribution_tag !== "pilot-testing");
+  const logDataPilot = logData.filter((l: any) => l.distribution_tag === "pilot-testing");
 
   // ── Render ──────────────────────────────────────────────
   return (
@@ -2617,7 +2621,7 @@ export default function StudiuAdminPage() {
             <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7eb", marginBottom: 16, overflowX: "auto" as const }}>
               <button style={{ ...S.tab, fontSize: 12, padding: "10px 16px", fontWeight: resultsSegment === "all" ? 800 : 600, ...(resultsSegment === "all" ? S.tabActive : {}) }} onClick={() => setResultsSegment("all")}>Toate</button>
               <button style={{ ...S.tab, fontSize: 12, padding: "10px 16px", ...(resultsSegment === "general" ? S.tabActive : {}) }} onClick={() => setResultsSegment("general")}>General</button>
-              {distributions.map((d) => (
+              {distributions.filter(d => d.tag !== "pilot-testing").map((d) => (
                 <button key={d.id} style={{ ...S.tab, fontSize: 12, padding: "10px 16px", whiteSpace: "nowrap" as const, ...(resultsSegment === d.id ? S.tabActive : {}) }} onClick={() => setResultsSegment(d.id)}>{d.name}</button>
               ))}
             </div>
@@ -2653,14 +2657,14 @@ export default function StudiuAdminPage() {
                     const rate = logs.length > 0 ? Math.round((completed / logs.length) * 100) : 0;
                     return { total: logs.length, completed, rate, responses, today, month, avgTime };
                   };
-                  const gStats = logData.length > 0 ? _computeStats(logData) : (globalStats || { total: results.totalRespondents, completed: results.completedRespondents, rate: results.completionRate, responses: results.totalResponses, today: results.completedToday || 0, month: results.completedMonth || 0, avgTime: results.avgSessionTime || 0 });
+                  const gStats = logDataMain.length > 0 ? _computeStats(logDataMain) : (globalStats || { total: results.totalRespondents, completed: results.completedRespondents, rate: results.completionRate, responses: results.totalResponses, today: results.completedToday || 0, month: results.completedMonth || 0, avgTime: results.avgSessionTime || 0 });
                   const isFiltered = resultsSegment !== "all";
                   // Per-segment stats from logData
-                  const segLogs = isFiltered ? logData.filter((l: any) => {
+                  const segLogs = isFiltered ? logDataMain.filter((l: any) => {
                     if (resultsSegment === "general") return !l.distribution_id;
                     return l.distribution_id === resultsSegment;
-                  }) : logData;
-                  const segStats = (isFiltered && logData.length > 0) ? _computeStats(segLogs) : gStats;
+                  }) : logDataMain;
+                  const segStats = (isFiltered && logDataMain.length > 0) ? _computeStats(segLogs) : gStats;
                   const current = gStats.completed;
                   const pct = Math.min(Math.round((current / TARGET) * 100), 100);
                   const remaining = Math.max(TARGET - current, 0);
@@ -2758,7 +2762,7 @@ export default function StudiuAdminPage() {
                         {/* Per-distribution mini breakdown with plan progress (from logData) */}
                         {(() => {
                           const distMap: Record<string, { id: string; name: string; total: number; completed: number }> = {};
-                          logData.forEach((l: any) => {
+                          logDataMain.forEach((l: any) => {
                             const key = l.distribution_id || "__none__";
                             if (!distMap[key]) distMap[key] = { id: key, name: l.distribution_name || (key === "__none__" ? "General" : key), total: 0, completed: 0 };
                             distMap[key].total++;
@@ -2865,10 +2869,10 @@ export default function StudiuAdminPage() {
                   const _ibActiveStimN = stimuli.filter((s: any) => s.is_active).length;
                   const _ibIsDone = (l: any) => !!l.completed_at || (_ibActiveStimN > 0 && (l.responseCount || 0) >= _ibActiveStimN);
                   const _ibIsFiltered = resultsSegment !== "all";
-                  const _ibLogs = _ibIsFiltered ? logData.filter((l: any) => {
+                  const _ibLogs = _ibIsFiltered ? logDataMain.filter((l: any) => {
                     if (resultsSegment === "general") return !l.distribution_id;
                     return l.distribution_id === resultsSegment;
-                  }) : logData;
+                  }) : logDataMain;
                   const _ibTotal = _ibLogs.length;
                   const _ibCompleted = _ibLogs.filter(_ibIsDone).length;
                   const _ibSegLabel = _ibIsFiltered
@@ -3062,7 +3066,7 @@ export default function StudiuAdminPage() {
                                 {/* Debug: data pipeline diagnosis */}
                                 {results._debug && (() => {
                                   const d = results._debug;
-                                  const logResponses = logData.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+                                  const logResponses = logDataMain.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
                                   const mismatch = logResponses > 0 && d.responsesFetched < logResponses * 0.9;
                                   return mismatch ? (
                                     <div style={{ background: "#FEF3C7", border: "1px solid #F59E0B", borderRadius: 8, padding: "10px 16px", marginBottom: 10, fontSize: 10, color: "#92400E", lineHeight: 1.5 }}>
@@ -3083,7 +3087,7 @@ export default function StudiuAdminPage() {
                                   </div>
                                   <div style={{ textAlign: "right" as const }}>
                                     <span style={{ fontSize: 22, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>N={sc.length}</span>
-                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>din {withData.length} materiale ({(() => { const _an = stimuli.filter((s: any) => s.is_active).length; const _ad = (l: any) => !!l.completed_at || (_an > 0 && (l.responseCount || 0) >= _an); return `${logData.filter(_ad).length} completati / ${logData.length} inscrisi`; })()})</span>
+                                    <span style={{ fontSize: 10, color: "#6B7280", marginLeft: 6 }}>din {withData.length} materiale ({(() => { const _an = stimuli.filter((s: any) => s.is_active).length; const _ad = (l: any) => !!l.completed_at || (_an > 0 && (l.responseCount || 0) >= _an); return `${logDataMain.filter(_ad).length} completati / ${logDataMain.length} inscrisi`; })()})</span>
                                   </div>
                                 </div>
 
@@ -3803,7 +3807,7 @@ export default function StudiuAdminPage() {
                   // Completed respondents from LOG (single source of truth)
                   const _fatActiveN = stimuli.filter(s => s.is_active).length;
                   const _fatIsDone = (l: any) => !!l.completed_at || (_fatActiveN > 0 && (l.responseCount || 0) >= _fatActiveN);
-                  const _fatCompleted = logData.length > 0 ? logData.filter(_fatIsDone).length : fa.completedRespondentsAnalyzed;
+                  const _fatCompleted = logDataMain.length > 0 ? logDataMain.filter(_fatIsDone).length : fa.completedRespondentsAnalyzed;
 
                   return (
                     <div>
@@ -4092,7 +4096,7 @@ export default function StudiuAdminPage() {
                 {/* ── SUB-TAB: COMPLETION FUNNEL ── */}
                 {resultsSubTab === "funnel" && (() => {
                   const cfRaw = results.completionFunnel;
-                  if ((!cfRaw || cfRaw.funnelSteps.length === 0) && logData.length === 0) {
+                  if ((!cfRaw || cfRaw.funnelSteps.length === 0) && logDataMain.length === 0) {
                     return (
                       <div style={S.placeholderTab}>
                         <BarChart3 size={48} style={{ color: "#d1d5db" }} />
@@ -4105,10 +4109,10 @@ export default function StudiuAdminPage() {
                   const _fActiveStimN = stimuli.filter((s: any) => s.is_active).length;
                   const _fIsDone = (l: any) => !!l.completed_at || (_fActiveStimN > 0 && (l.responseCount || 0) >= _fActiveStimN);
                   const _fIsFiltered = resultsSegment !== "all";
-                  const _fLogs = _fIsFiltered ? logData.filter((l: any) => {
+                  const _fLogs = _fIsFiltered ? logDataMain.filter((l: any) => {
                     if (resultsSegment === "general") return !l.distribution_id;
                     return l.distribution_id === resultsSegment;
-                  }) : logData;
+                  }) : logDataMain;
                   const _fTotal = _fLogs.length;
                   const _fCompleted = _fLogs.filter(_fIsDone).length;
                   const _fRate = _fTotal > 0 ? Math.round((_fCompleted / _fTotal) * 100) : 0;
@@ -4657,14 +4661,14 @@ export default function StudiuAdminPage() {
               // Derive completion stats from logData
               const _activeN = stimuli.filter(s => s.is_active).length;
               const _done = (l: any) => !!l.completed_at || (_activeN > 0 && (l.responseCount || 0) >= _activeN);
-              const logCompleted = logData.filter(_done).length;
-              const logGeneralCompleted = logData.filter((l: any) => !l.distribution_id && _done(l)).length;
+              const logCompleted = logDataMain.filter(_done).length;
+              const logGeneralCompleted = logDataMain.filter((l: any) => !l.distribution_id && _done(l)).length;
               // Sum completions from all distribution links
               const distCompletions = distributions.reduce((sum, d) => sum + (d.completions || 0), 0);
               // Sum estimated KPI from all individual distribution links
               const distEstimated = distributions.reduce((sum, d) => sum + (d.estimated_completions || 0), 0);
               // Use logData as source of truth when available
-              const totalCompleted = logData.length > 0 ? logCompleted : (distCompletions + (globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0));
+              const totalCompleted = logDataMain.length > 0 ? logCompleted : (distCompletions + (globalStats?.perDist?.find((d: any) => d.id === "__none__")?.completed || 0));
               const kpiCompleted = totalCompleted;
               const kpiRemaining = Math.max(TARGET - kpiCompleted, 0);
               // Percentage with decimals: show 2 decimals when < 1%, whole number when >= 1%
@@ -4676,7 +4680,7 @@ export default function StudiuAdminPage() {
               // ── Link Public General: KPI = TARGET minus all individual source KPIs ──
               const generalKpi = Math.max(TARGET - distEstimated, 0);
               // Completions for general link — from logData when available
-              const generalCompletions = logData.length > 0 ? logGeneralCompleted : Math.max(kpiCompleted - distCompletions, 0);
+              const generalCompletions = logDataMain.length > 0 ? logGeneralCompleted : Math.max(kpiCompleted - distCompletions, 0);
               const generalRemaining = Math.max(generalKpi - generalCompletions, 0);
               const generalPctRaw = generalKpi > 0 ? Math.min((generalCompletions / generalKpi) * 100, 100) : 0;
               const generalPct = generalPctRaw >= 1 ? Math.round(generalPctRaw) : parseFloat(generalPctRaw.toFixed(2));
@@ -5131,7 +5135,7 @@ export default function StudiuAdminPage() {
         )}
 
         {/* ═══ PANEL EXPERTI (Layer 1) — Redesigned ═══ */}
-        {activeTab === "experti" && (
+        {activeTab === "interpretare" && interpViewMode === "additional" && addSubTab === "efa" && (
           <div>
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
@@ -8527,7 +8531,7 @@ export default function StudiuAdminPage() {
             >
               <option value="all">Toate sursele</option>
               <option value="general">General (fara tag)</option>
-              {distributions.map(d => (
+              {distributions.filter(d => d.tag !== "pilot-testing").map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
@@ -8563,7 +8567,7 @@ export default function StudiuAdminPage() {
                     { key: "osf" as const, label: "OSF Statistic", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                     { key: "additional" as const, label: "Additional Statistic", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
                   ] as const).map(t => (
-                    <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") setInterpSubTab("total"); }} style={{
+                    <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") { setInterpSubTab("total"); setAddSubTab("stats"); } }} style={{
                       padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: interpViewMode === t.key ? 800 : 600,
                       background: interpViewMode === t.key ? (t.key === "osf" ? "#059669" : "#7C3AED") : "#f9fafb",
                       color: interpViewMode === t.key ? "#fff" : "#374151",
@@ -9156,11 +9160,11 @@ export default function StudiuAdminPage() {
           // ── Interp header stats from LOG data (single source of truth) ──
           const _interpActiveN = stimuli.filter(s => s.is_active).length;
           const _interpDone = (l: any) => !!l.completed_at || (_interpActiveN > 0 && (l.responseCount || 0) >= _interpActiveN);
-          const _interpFilteredLog = interpSource === "all" ? logData
-            : interpSource === "general" ? logData.filter((l: any) => !l.distribution_id)
-            : logData.filter((l: any) => l.distribution_id === interpSource);
-          const _interpCompleted = logData.length > 0 ? _interpFilteredLog.filter(_interpDone).length : results.completedRespondents;
-          const _interpTotal = logData.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
+          const _interpFilteredLog = interpSource === "all" ? logDataMain
+            : interpSource === "general" ? logDataMain.filter((l: any) => !l.distribution_id)
+            : logDataMain.filter((l: any) => l.distribution_id === interpSource);
+          const _interpCompleted = logDataMain.length > 0 ? _interpFilteredLog.filter(_interpDone).length : results.completedRespondents;
+          const _interpTotal = logDataMain.length > 0 ? _interpFilteredLog.length : results.totalRespondents;
           // Use LOG data for response count — only completed respondents
           const _interpResponses = _interpFilteredLog.filter(_interpDone).reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
           const avgEvalPerMaterial = Math.round(_interpResponses / n);
@@ -9369,7 +9373,7 @@ export default function StudiuAdminPage() {
                   { key: "osf" as const, label: "OSF Statistic", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
                   { key: "additional" as const, label: "Additional Statistic", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
                 ] as const).map(t => (
-                  <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") setInterpSubTab("total"); }} style={{
+                  <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") { setInterpSubTab("total"); setAddSubTab("stats"); } }} style={{
                     padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: interpViewMode === t.key ? 800 : 600,
                     background: interpViewMode === t.key ? (t.key === "osf" ? "#059669" : "#7C3AED") : "#f9fafb",
                     color: interpViewMode === t.key ? "#fff" : "#374151",
@@ -9392,6 +9396,76 @@ export default function StudiuAdminPage() {
                   <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
                 ))}
               </div>}
+
+              {/* Sub-tab pills — only in Additional mode */}
+              {interpViewMode === "additional" && <div style={{ display: "flex", gap: 6, marginBottom: 14, overflowX: "auto" as const }}>
+                {([
+                  { key: "stats" as const, label: "Statistica", icon: BarChart3 },
+                  { key: "itemi" as const, label: "1 Pas Itemi", icon: ListOrdered },
+                  { key: "cvi" as const, label: "2 Pas CVI Evaluare", icon: Target },
+                  { key: "pilot" as const, label: "3 Pas Pilot Testing", icon: FlaskConical },
+                  { key: "efa" as const, label: "4 Pas EFA 2A", icon: UserCheck },
+                ] as const).map(t => {
+                  const active = addSubTab === t.key;
+                  return (
+                    <button key={t.key} onClick={() => setAddSubTab(t.key)} style={{
+                      padding: "7px 14px", borderRadius: 20, fontSize: 11, fontWeight: active ? 700 : 500,
+                      background: active ? "#7C3AED" : "#fff", color: active ? "#fff" : "#6B7280",
+                      border: active ? "2px solid #7C3AED" : "1px solid #e5e7eb",
+                      cursor: "pointer", display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" as const,
+                      transition: "all 150ms",
+                    }}>
+                      <t.icon size={13} />
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>}
+
+              {/* ═══ 1 Pas Itemi — RIFC Items table ═══ */}
+              {interpViewMode === "additional" && addSubTab === "itemi" && (
+                <div>
+                  <div style={{ marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, color: "#111827", margin: "0 0 6px" }}>Pasul 1 — Itemi RIFC</h3>
+                    <p style={{ fontSize: 12, color: "#6B7280", margin: 0, lineHeight: 1.5 }}>
+                      Cele 35 de itemi care masoara constructul RIFC. Fiecare item este evaluat de expertii CVI pe scala Likert 1-4.
+                    </p>
+                  </div>
+                  {(["R", "I", "F", "C"] as const).map(dim => {
+                    const meta = CVI_DIMENSIONS[dim];
+                    const items = meta.items;
+                    return (
+                      <div key={dim} style={{ marginBottom: 20 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "8px 14px", background: `${meta.color}11`, borderRadius: 8, borderLeft: `4px solid ${meta.color}` }}>
+                          <span style={{ fontSize: 22, fontWeight: 900, color: meta.color }}>{dim}</span>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: meta.color }}>{meta.label}</div>
+                            <div style={{ fontSize: 10, color: "#6B7280" }}>{items.length} itemi</div>
+                          </div>
+                        </div>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                          <thead>
+                            <tr style={{ background: "#f9fafb" }}>
+                              <th style={{ padding: "8px 10px", textAlign: "center", fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, borderBottom: "2px solid #e5e7eb", width: 50 }}>ID</th>
+                              <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, borderBottom: "2px solid #e5e7eb", width: 180 }}>SUB-FACTOR</th>
+                              <th style={{ padding: "8px 10px", textAlign: "left", fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 1, borderBottom: "2px solid #e5e7eb" }}>ITEM TEXT</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {items.map((itemId, idx) => (
+                              <tr key={itemId} style={{ borderBottom: "1px solid #f3f4f6", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                <td style={{ padding: "10px 10px", textAlign: "center", fontWeight: 800, color: meta.color, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{itemId}</td>
+                                <td style={{ padding: "10px 10px", fontSize: 11, fontWeight: 600, color: "#374151" }}>{CVI_ITEM_LABELS[itemId]}</td>
+                                <td style={{ padding: "10px 10px", fontSize: 11, color: "#374151", lineHeight: 1.5 }}>{CVI_ITEM_TEXTS[itemId]}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Month & Source dropdown filters */}
               <div style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -9425,7 +9499,7 @@ export default function StudiuAdminPage() {
               })()}
 
               {/* ═══ ADDITIONAL VIEW — Per Canale / Per Industrie / Per Brand (when not in OSF mode) ═══ */}
-              {interpViewMode === "additional" && (() => {
+              {interpViewMode === "additional" && addSubTab === "stats" && (() => {
                 // Recompute channel aggregates for additional view
                 const _addChByType: Record<string, typeof withData> = {};
                 withData.forEach(s => { if (!_addChByType[s.type]) _addChByType[s.type] = []; _addChByType[s.type].push(s); });
@@ -11879,7 +11953,7 @@ export default function StudiuAdminPage() {
 
                     </>)}
 
-                    {interpViewMode === "additional" && (<>
+                    {interpViewMode === "additional" && addSubTab === "stats" && (<>
                     <div style={{ padding: "14px 18px", background: "#f5f3ff", borderRadius: 8, border: "1px solid #ddd6fe", borderLeft: "4px solid #7C3AED", marginBottom: 24 }}>
                       <div style={{ fontSize: 13, fontWeight: 800, color: "#7C3AED", marginBottom: 4 }}>STATISTICA SUPLIMENTARA</div>
                       <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>Analize descriptive si explorative care completeaza testarea formala OSF. Nu sunt pre-inregistrate in protocolul OSF dar ofera perspectiva suplimentara asupra datelor.</div>
@@ -12536,7 +12610,7 @@ export default function StudiuAdminPage() {
         })()}
 
         {/* ═══ CVI (EVALUARE ITEMI) TAB ═══ */}
-        {activeTab === "cvi" && (
+        {activeTab === "interpretare" && interpViewMode === "additional" && addSubTab === "cvi" && (
           <div style={{ width: "100%" }}>
             {cviLoading && !cviResults ? (
               <div style={{ textAlign: "center", padding: 40, color: "#6B7280" }}>
@@ -14416,7 +14490,7 @@ export default function StudiuAdminPage() {
                   <button style={{ ...S.tab, fontSize: 11, padding: "8px 14px", ...(logSegment === "general" ? S.tabActive : {}) }} onClick={() => setLogSegment("general")}>
                     General ({logData.filter((l: any) => !l.distribution_id).length})
                   </button>
-                  {distributions.map((d) => {
+                  {distributions.filter(d => d.tag !== "pilot-testing").map((d) => {
                     const cnt = logData.filter((l: any) => l.distribution_id === d.id).length;
                     return (
                       <button key={d.id} style={{ ...S.tab, fontSize: 11, padding: "8px 14px", whiteSpace: "nowrap" as const, ...(logSegment === d.id ? S.tabActive : {}) }} onClick={() => setLogSegment(d.id)}>
@@ -15078,6 +15152,129 @@ export default function StudiuAdminPage() {
             </div>
           );
         })()}
+
+        {/* ═══ PILOT TESTING TAB ═══ */}
+        {activeTab === "interpretare" && interpViewMode === "additional" && addSubTab === "pilot" && (() => {
+          const _activeStimN = stimuli.filter(s => s.is_active).length;
+          const _isDone = (l: any) => !!l.completed_at || (_activeStimN > 0 && (l.responseCount || 0) >= _activeStimN);
+          const pilotCompleted = logDataPilot.filter(_isDone).length;
+          const pilotTotal = logDataPilot.length;
+          const pilotRate = pilotTotal > 0 ? Math.round((pilotCompleted / pilotTotal) * 100) : 0;
+          const pilotAbandoned = logDataPilot.filter((l: any) => !_isDone(l) && l.started_at).length;
+          const pilotAbandonRate = pilotTotal > 0 ? Math.round((pilotAbandoned / pilotTotal) * 100) : 0;
+          const pilotTimes = logDataPilot.filter(_isDone).map((l: any) => {
+            const totalSec = (l.responses || []).reduce((a: number, r: any) => a + (r.time_spent_seconds || 0), 0);
+            return totalSec;
+          }).filter((t: number) => t > 0).sort((a: number, b: number) => a - b);
+          const pilotMedian = pilotTimes.length > 0
+            ? (pilotTimes.length % 2 === 1
+              ? pilotTimes[Math.floor(pilotTimes.length / 2)]
+              : Math.round((pilotTimes[Math.floor(pilotTimes.length / 2) - 1] + pilotTimes[Math.floor(pilotTimes.length / 2)]) / 2))
+            : 0;
+          const fmtTime = (s: number) => { const m = Math.floor(s / 60); const sec = s % 60; return `${m}:${sec.toString().padStart(2, "0")}`; };
+
+          return (
+            <div style={{ width: "100%" }}>
+              {/* Header */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <FlaskConical size={22} style={{ color: "#7C3AED" }} />
+                  <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#111827" }}>Pasul 3 — Pilot Testing</h2>
+                </div>
+                <p style={{ fontSize: 13, color: "#6B7280", margin: 0, lineHeight: 1.6 }}>
+                  Validarea instrumentului de cercetare prin testare pilot. Target: 10–15 respondenți. Datele pilot NU intra in analiza principala (Rezultate, Interpretare, EFA).
+                </p>
+              </div>
+
+              {/* 5 stat cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 20 }}>
+                {[
+                  { label: "N completat", value: pilotCompleted, color: "#059669" },
+                  { label: "N total", value: pilotTotal, color: "#2563EB" },
+                  { label: "Rata completare", value: `${pilotRate}%`, color: "#7C3AED" },
+                  { label: "Timp median", value: fmtTime(pilotMedian), color: "#D97706" },
+                  { label: "Rata abandon", value: `${pilotAbandonRate}%`, color: "#DC2626" },
+                ].map((card, i) => (
+                  <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 14px", textAlign: "center" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>{card.label}</div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: card.color }}>{card.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Info box */}
+              <div style={{ background: "#F5F3FF", border: "1px solid #DDD6FE", borderRadius: 8, padding: "12px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <FlaskConical size={16} style={{ color: "#7C3AED", marginTop: 2, flexShrink: 0 }} />
+                <div style={{ fontSize: 12, color: "#5B21B6", lineHeight: 1.6 }}>
+                  <strong>Pilot testing a confirmat claritatea instrumentului.</strong> Datele pilot sunt excluse din EFA, Rezultate si Interpretare. Se mentioneaza in Methodology ca &quot;pilot testing confirmed instrument clarity.&quot;
+                </div>
+              </div>
+
+              {/* Respondent table */}
+              {logLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>
+                  <Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} />
+                  <p style={{ marginTop: 8 }}>Se incarca datele pilot...</p>
+                </div>
+              ) : logDataPilot.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF", background: "#f9fafb", borderRadius: 10, border: "1px solid #e5e7eb" }}>
+                  <FlaskConical size={32} style={{ color: "#d1d5db", marginBottom: 8 }} />
+                  <p style={{ fontSize: 13, color: "#6B7280" }}>Nu exista respondenti pilot. Creeaza o distributie cu tag-ul &quot;pilot-testing&quot; si atribuie respondentii din tab-ul Log.</p>
+                </div>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={{ ...thStyle, textAlign: "center", width: 40 }}>#</th>
+                        <th style={{ ...thStyle, textAlign: "left" }}>DATA</th>
+                        <th style={{ ...thStyle, textAlign: "center" }}>STATUS</th>
+                        <th style={{ ...thStyle, textAlign: "center" }}>N RASP.</th>
+                        <th style={{ ...thStyle, textAlign: "center" }}>DISPOZITIV</th>
+                        <th style={{ ...thStyle, textAlign: "left" }}>DEMOGRAFIE</th>
+                        <th style={{ ...thStyle, textAlign: "center" }}>TIMP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {logDataPilot.map((l: any, idx: number) => {
+                        const done = _isDone(l);
+                        const dateStr = l.completed_at || l.started_at || "—";
+                        const d = new Date(dateStr);
+                        const dateFormatted = !isNaN(d.getTime()) ? `${d.getDate().toString().padStart(2, "0")}.${(d.getMonth() + 1).toString().padStart(2, "0")}.${d.getFullYear()} ${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}` : "—";
+                        const totalSec = (l.responses || []).reduce((a: number, r: any) => a + (r.time_spent_seconds || 0), 0);
+                        const demo = l.demographics || {};
+                        const gender = demo.gender === "male" ? "M" : demo.gender === "female" ? "F" : "—";
+                        const age = demo.age_range || demo.age || "—";
+                        const edu = demo.education || "—";
+                        const device = l.device_type || "—";
+                        return (
+                          <tr key={l.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ ...tdStyle, textAlign: "center", color: "#9CA3AF", fontSize: 11 }}>{idx + 1}</td>
+                            <td style={{ ...tdStyle, textAlign: "left", fontSize: 11 }}>{dateFormatted}</td>
+                            <td style={{ ...tdStyle, textAlign: "center" }}>
+                              <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 10, fontWeight: 700, background: done ? "#ecfdf5" : "#fef3c7", color: done ? "#059669" : "#D97706" }}>
+                                {done ? "Completat" : "Partial"}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: "center", fontWeight: 700 }}>{l.responseCount || 0}</td>
+                            <td style={{ ...tdStyle, textAlign: "center", fontSize: 11 }}>{device}</td>
+                            <td style={{ ...tdStyle, textAlign: "left", fontSize: 11, color: "#6B7280" }}>
+                              {gender !== "—" && <span style={{ display: "inline-block", padding: "2px 6px", borderRadius: 4, background: gender === "F" ? "#fce7f3" : "#dbeafe", color: gender === "F" ? "#be185d" : "#1e40af", fontSize: 9, fontWeight: 700, marginRight: 4 }}>{gender}</span>}
+                              {age !== "—" && <span style={{ marginRight: 4 }}>{age}</span>}
+                              {edu !== "—" && <span style={{ color: "#9CA3AF" }}>{edu}</span>}
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: "center", fontFamily: "monospace", fontSize: 11 }}>{totalSec > 0 ? fmtTime(totalSec) : "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
       </div>
     </div>
   );

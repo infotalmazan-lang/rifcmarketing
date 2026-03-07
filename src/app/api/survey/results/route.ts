@@ -59,6 +59,20 @@ export async function GET(request: Request) {
       respondents = respondents.filter((r: any) => r.distribution_id === distributionId);
     }
 
+    // ── Exclude pilot respondents from global results ──
+    // When no distribution filter or "all" mode, still exclude pilot respondents
+    if (!distributionId) {
+      // Fetch pilot distribution ID
+      const { data: pilotDist } = await supabase
+        .from("survey_distributions")
+        .select("id")
+        .eq("tag", "pilot-testing")
+        .single();
+      if (pilotDist) {
+        respondents = respondents.filter((r: any) => r.distribution_id !== pilotDist.id);
+      }
+    }
+
     const allIds = respondents.map((r: any) => r.id as string);
     const respondentIds = allIds;
     const totalRespondents = respondents.length;
