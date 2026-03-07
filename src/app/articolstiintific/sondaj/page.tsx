@@ -14296,7 +14296,7 @@ export default function StudiuAdminPage() {
         {/* ═══ LOG TAB ═══ */}
         {activeTab === "log" && (() => {
           // Filter by date + segment
-          const segFiltered = logData.filter((l) => {
+          const segFiltered = logDataMain.filter((l) => {
             // Segment filter: "all" = everything, "general" = no distribution, else = specific dist
             if (logSegment === "general") {
               if (l.distribution_id) return false;
@@ -14332,7 +14332,7 @@ export default function StudiuAdminPage() {
 
           // Unique distributions in data for segment tabs
           const distIds = new Set<string>();
-          logData.forEach((l: any) => { if (l.distribution_id) distIds.add(l.distribution_id); });
+          logDataMain.forEach((l: any) => { if (l.distribution_id) distIds.add(l.distribution_id); });
 
           return (
             <div style={{ width: "100%" }}>
@@ -14470,13 +14470,13 @@ export default function StudiuAdminPage() {
                 {/* Segment tabs */}
                 <div style={{ display: "flex", gap: 0, borderBottom: "2px solid #e5e7eb" }}>
                   <button style={{ ...S.tab, fontSize: 11, padding: "8px 14px", fontWeight: logSegment === "all" ? 800 : 600, ...(logSegment === "all" ? S.tabActive : {}) }} onClick={() => setLogSegment("all")}>
-                    Toate ({logData.length})
+                    Toate ({logDataMain.length})
                   </button>
                   <button style={{ ...S.tab, fontSize: 11, padding: "8px 14px", ...(logSegment === "general" ? S.tabActive : {}) }} onClick={() => setLogSegment("general")}>
-                    General ({logData.filter((l: any) => !l.distribution_id).length})
+                    General ({logDataMain.filter((l: any) => !l.distribution_id).length})
                   </button>
                   {distributions.filter(d => d.tag !== "pilot-testing").map((d) => {
-                    const cnt = logData.filter((l: any) => l.distribution_id === d.id).length;
+                    const cnt = logDataMain.filter((l: any) => l.distribution_id === d.id).length;
                     return (
                       <button key={d.id} style={{ ...S.tab, fontSize: 11, padding: "8px 14px", whiteSpace: "nowrap" as const, ...(logSegment === d.id ? S.tabActive : {}) }} onClick={() => setLogSegment(d.id)}>
                         {d.name} ({cnt})
@@ -14513,9 +14513,9 @@ export default function StudiuAdminPage() {
 
               {/* ═══ FLAGGED IP VIEW ═══ */}
               {logSubTab === "flagged" && (() => {
-                const { dupIps, dupFps, suspectIds } = computeDuplicates(logData);
-                const flaggedItems = logData.filter((l: any) => l.is_flagged);
-                const suspectNotFlagged = logData.filter((l: any) => suspectIds.has(l.id) && !l.is_flagged && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
+                const { dupIps, dupFps, suspectIds } = computeDuplicates(logDataMain);
+                const flaggedItems = logDataMain.filter((l: any) => l.is_flagged);
+                const suspectNotFlagged = logDataMain.filter((l: any) => suspectIds.has(l.id) && !l.is_flagged && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
 
                 return (
                   <div>
@@ -14544,7 +14544,7 @@ export default function StudiuAdminPage() {
                         </div>
                         <div style={{ display: "grid", gap: 8 }}>
                           {dupIps.map(([ip, ids]) => {
-                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
+                            const entries = logDataMain.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
                             if (entries.length === 0) return null; // all dismissed
                             const hasFlagged = entries.some((l: any) => l.is_flagged);
                             const hasUnflagged = entries.some((l: any) => !l.is_flagged);
@@ -14635,7 +14635,7 @@ export default function StudiuAdminPage() {
                         </div>
                         <div style={{ display: "grid", gap: 8 }}>
                           {dupFps.map(([fp, ids]) => {
-                            const entries = logData.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
+                            const entries = logDataMain.filter((l: any) => ids.includes(l.id) && !dismissedDupIds.has(l.id) && l.flag_reason !== "dup_ok");
                             if (entries.length === 0) return null; // all dismissed
                             // Show unique IPs for this fingerprint group
                             const uniqueIps = Array.from(new Set(entries.map((l: any) => l.ip_address || l.ip_hash).filter(Boolean)));
