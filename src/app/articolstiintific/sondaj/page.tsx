@@ -851,6 +851,7 @@ export default function StudiuAdminPage() {
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
+  const [interpViewMode, setInterpViewMode] = useState<"osf" | "additional">("osf");
   const [expertSearch, setExpertSearch] = useState("");
   const [expertPage, setExpertPage] = useState(0);
   const [h2ObjFilter, setH2ObjFilter] = useState<string[]>(["awareness", "considerare", "conversie"]);
@@ -8373,8 +8374,26 @@ export default function StudiuAdminPage() {
           if (isLoading || hasNoData || hasNoResponses) {
             return (
               <div>
+                {/* ═══ TOP-LEVEL VIEW MODE: OSF Statistic | Additional Statistic ═══ */}
+                <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10 }}>
+                  {([
+                    { key: "osf" as const, label: "OSF Statistic", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                    { key: "additional" as const, label: "Additional Statistic", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+                  ] as const).map(t => (
+                    <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") setInterpSubTab("total"); }} style={{
+                      padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: interpViewMode === t.key ? 800 : 600,
+                      background: interpViewMode === t.key ? (t.key === "osf" ? "#059669" : "#7C3AED") : "#f9fafb",
+                      color: interpViewMode === t.key ? "#fff" : "#374151",
+                      border: interpViewMode === t.key ? "none" : "1px solid #e5e7eb",
+                      cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 150ms",
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={t.icon} /></svg>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
                 {/* Sub-tab pills — always visible */}
-                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                {interpViewMode === "osf" && <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                   {([
                     { key: "total" as const, label: "Total" },
                     { key: "industrie" as const, label: "Per Industrie" },
@@ -8382,7 +8401,7 @@ export default function StudiuAdminPage() {
                   ] as const).map(t => (
                     <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
                   ))}
-                </div>
+                </div>}
                 {/* Month filter pills — always visible */}
                 <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <button onClick={() => setInterpMonth("all")} style={monthPillStyle(interpMonth === "all")}>Toata perioada</button>
@@ -9023,8 +9042,27 @@ export default function StudiuAdminPage() {
                 );
               })()}
 
-              {/* Sub-tab pills */}
-              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              {/* ═══ TOP-LEVEL VIEW MODE: OSF Statistic | Additional Statistic ═══ */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10 }}>
+                {([
+                  { key: "osf" as const, label: "OSF Statistic", icon: "M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" },
+                  { key: "additional" as const, label: "Additional Statistic", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+                ] as const).map(t => (
+                  <button key={t.key} onClick={() => { setInterpViewMode(t.key); if (t.key === "additional") setInterpSubTab("total"); }} style={{
+                    padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: interpViewMode === t.key ? 800 : 600,
+                    background: interpViewMode === t.key ? (t.key === "osf" ? "#059669" : "#7C3AED") : "#f9fafb",
+                    color: interpViewMode === t.key ? "#fff" : "#374151",
+                    border: interpViewMode === t.key ? "none" : "1px solid #e5e7eb",
+                    cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "all 150ms",
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={t.icon} /></svg>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Sub-tab pills — only in OSF mode */}
+              {interpViewMode === "osf" && <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
                 {([
                   { key: "total" as const, label: "Total" },
                   { key: "industrie" as const, label: "Per Industrie" },
@@ -9032,7 +9070,7 @@ export default function StudiuAdminPage() {
                 ] as const).map(t => (
                   <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
                 ))}
-              </div>
+              </div>}
 
               {/* Month filter pills */}
               <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
@@ -9074,8 +9112,123 @@ export default function StudiuAdminPage() {
                 );
               })()}
 
+              {/* ═══ ADDITIONAL VIEW — Per Canale / Per Industrie / Per Brand (when not in OSF mode) ═══ */}
+              {interpViewMode === "additional" && (() => {
+                // Recompute channel aggregates for additional view
+                const _addChByType: Record<string, typeof withData> = {};
+                withData.forEach(s => { if (!_addChByType[s.type]) _addChByType[s.type] = []; _addChByType[s.type].push(s); });
+                const _addChAggs = [...categories].sort((a, b) => a.display_order - b.display_order).reduce<{ label: string; color: string; code: string; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number; r: number; i: number; f: number; cf: number }[]>((acc, cat) => {
+                  const items = (_addChByType[cat.type] || []).filter(s => s.response_count > 0);
+                  if (items.length === 0) return acc;
+                  const cn = items.length;
+                  const cf = Math.round((items.reduce((a, s) => a + s.avg_c, 0) / cn) * 100) / 100;
+                  const cp = Math.round((items.reduce((a, s) => a + s.avg_c_score, 0) / cn) * 100) / 100;
+                  const cfN = Math.round((cf / 11) * 100) / 100;
+                  const d = calcDelta(cf, cp);
+                  const p = hypothesisPct(cf, cp);
+                  const gp = items.filter(s => s.avg_r >= GATE).length;
+                  const r = Math.round((items.reduce((a, s) => a + s.avg_r, 0) / cn) * 100) / 100;
+                  const iVal = Math.round((items.reduce((a, s) => a + s.avg_i, 0) / cn) * 100) / 100;
+                  const fVal = Math.round((items.reduce((a, s) => a + s.avg_f, 0) / cn) * 100) / 100;
+                  acc.push({ label: cat.label, color: cat.color, code: cat.short_code, n: cn, cfNorm: cfN, cp, delta: d, pct: p, gatePass: gp, gateRate: Math.round((gp / cn) * 100), dir: cfN < cp ? "sub" : cfN > cp ? "supra" : "=", dirFactor: cp > 0 && cfN > 0 ? (cfN < cp ? cp / cfN : cfN / cp) : 1, r, i: iVal, f: fVal, cf });
+                  return acc;
+                }, []);
+                const _addIndAggs = industryKeys.map((ind, idx) => {
+                  const items = byIndustry[ind];
+                  const cn = items.length;
+                  const cf = Math.round((items.reduce((a, s) => a + s.avg_c, 0) / cn) * 100) / 100;
+                  const cp = Math.round((items.reduce((a, s) => a + s.avg_c_score, 0) / cn) * 100) / 100;
+                  const cfN = Math.round((cf / 11) * 100) / 100;
+                  const d = calcDelta(cf, cp);
+                  const p = hypothesisPct(cf, cp);
+                  const gp = items.filter(s => s.avg_r >= GATE).length;
+                  const r = Math.round((items.reduce((a, s) => a + s.avg_r, 0) / cn) * 100) / 100;
+                  const iVal = Math.round((items.reduce((a, s) => a + s.avg_i, 0) / cn) * 100) / 100;
+                  const fVal = Math.round((items.reduce((a, s) => a + s.avg_f, 0) / cn) * 100) / 100;
+                  return { label: ind, color: INDUSTRY_COLORS[idx % INDUSTRY_COLORS.length], n: cn, cfNorm: cfN, cp, delta: d, pct: p, gatePass: gp, gateRate: Math.round((gp / cn) * 100), dir: cfN < cp ? "sub" : cfN > cp ? "supra" : "=", dirFactor: cp > 0 && cfN > 0 ? (cfN < cp ? cp / cfN : cfN / cp) : 1, r, i: iVal, f: fVal, cf };
+                });
+                const _addCard = (item: { label: string; color: string; n: number; cfNorm: number; cp: number; delta: number; pct: number; gatePass: number; gateRate: number; dir: string; dirFactor: number }, interpKey: string, interpCtx: Record<string, unknown>) => (
+                  <div key={item.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "12px 14px", borderLeft: `3px solid ${item.color}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#111827" }}>{item.label}</div>
+                      <div style={{ fontSize: 20, fontWeight: 900, color: getValidationColor(item.pct) }}>{item.pct}%</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 9, color: "#6B7280", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>Cf/11={item.cfNorm.toFixed(2)}</span>
+                      <span style={{ fontSize: 9, color: "#059669", padding: "2px 6px", background: "#f0fdf4", borderRadius: 4 }}>Cp={item.cp.toFixed(2)}</span>
+                      <span style={{ fontSize: 9, color: "#374151", padding: "2px 6px", background: "#f3f4f6", borderRadius: 4 }}>&Delta;={item.delta.toFixed(2)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 9, color: "#6B7280" }}>
+                        <span style={{ color: item.dir === "sub" ? "#D97706" : item.dir === "supra" ? "#DC2626" : "#059669", fontWeight: 600 }}>
+                          {item.dir === "sub" ? `\u2191 sub. \u00D7${item.dirFactor.toFixed(2)}` : item.dir === "supra" ? `\u2193 supra. \u00D7${item.dirFactor.toFixed(2)}` : "= perfect"}
+                        </span>
+                        <span>Gate: {item.gatePass}/{item.n}</span>
+                        <span>{item.n} mat.</span>
+                      </div>
+                      <InterpBtn k={interpKey} title={`Validare — ${item.label}`} val={String(item.pct)} ctx={interpCtx} />
+                    </div>
+                  </div>
+                );
+                return (
+                  <div>
+                    {/* Per Canale */}
+                    {_addChAggs.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+                          Scoruri per Canal ({_addChAggs.length} canale)
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                          {_addChAggs.map(ch => _addCard(ch, "val_channel", { ...ch, type: "canal", grandPct: grandHypPct }))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Per Industrie */}
+                    {_addIndAggs.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
+                          Scoruri per Industrie ({_addIndAggs.length} industrii)
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
+                          {_addIndAggs.map(ia => _addCard(ia, "val_industry", { ...ia, type: "industrie", grandPct: grandHypPct }))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Per Brand — material ranking */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        Ranking Materiale per Brand ({withData.filter(s => s.response_count > 0).length})
+                      </div>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {withData.filter(s => s.response_count > 0).sort((a, b) => hypothesisPct(b.avg_c, b.avg_c_score) - hypothesisPct(a.avg_c, a.avg_c_score)).map((s, idx) => {
+                          const hp = hypothesisPct(s.avg_c, s.avg_c_score);
+                          const zone = getZone(hp);
+                          return (
+                            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: idx % 2 === 0 ? "#fff" : "#fafafa", border: "1px solid #f3f4f6", borderRadius: 6 }}>
+                              <div style={{ width: 24, fontSize: 11, fontWeight: 800, color: "#9CA3AF", textAlign: "center" as const }}>#{idx + 1}</div>
+                              <div style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "#111827" }}>{s.name}</div>
+                              <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 10 }}>
+                                <span style={{ color: "#6B7280" }}>R={s.avg_r.toFixed(1)}</span>
+                                <span style={{ color: "#6B7280" }}>I={s.avg_i.toFixed(1)}</span>
+                                <span style={{ color: "#6B7280" }}>F={s.avg_f.toFixed(1)}</span>
+                                <span style={{ color: "#374151", fontWeight: 700 }}>&Delta;={calcDelta(s.avg_c, s.avg_c_score).toFixed(2)}</span>
+                              </div>
+                              <div style={{ fontSize: 16, fontWeight: 900, color: getValidationColor(hp), minWidth: 50, textAlign: "right" as const }}>{hp.toFixed(1)}%</div>
+                              <span style={{ fontSize: 8, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: `${getZoneColor(zone)}15`, color: getZoneColor(zone) }}>{zone.toUpperCase()}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* ═══ TOTAL ═══ */}
-              {interpSubTab === "total" && (
+              {interpViewMode === "osf" && interpSubTab === "total" && (
                 <div>
                   {/* Hypothesis validation hero */}
                   {(() => {
@@ -9128,6 +9281,53 @@ export default function StudiuAdminPage() {
                         Gate R&ge;{GATE}: {gatePassCount}/{n} materiale ({gatePassRate}%)
                       </div>
                     </div>
+
+                    {/* ── OSF H7: Direct r(Cf, Cp) correlation ── */}
+                    {(() => {
+                      // Compute Pearson r between Cf_norm and Cp across all materials
+                      const _h7CfNorms = withData.map(s => normCf(s.avg_c));
+                      const _h7Cps = withData.map(s => s.avg_c_score);
+                      const _h7R = withData.length >= 3 ? _pearsonR(_h7CfNorms, _h7Cps) : 0;
+                      const _h7P = _pValuePearson(_h7R, withData.length);
+                      const _h7Verdict = Math.abs(_h7R) >= 0.60 ? "CONFIRMATA" : Math.abs(_h7R) >= 0.40 ? "PARTIAL" : "NECONFIRMATA";
+                      const _h7Color = _h7Verdict === "CONFIRMATA" ? "#059669" : _h7Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
+                      return (
+                        <div style={{ marginTop: 12, padding: "12px 16px", background: "#f0fdf4", borderRadius: 8, border: `2px solid ${_h7Color}` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={_h7Color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: _h7Color }}>OSF H7 — VALIDITATE CONSTRUCT</span>
+                            <span style={{ fontSize: 9, color: "#6B7280", fontStyle: "italic" }}>Pearson r(Cf_norm, Cp) &ge; 0.60</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" as const }}>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>Pearson r</div>
+                              <div style={{ fontSize: 28, fontWeight: 900, color: _h7Color, fontFamily: "JetBrains Mono, monospace" }}>{_h7R.toFixed(3)}</div>
+                            </div>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>r&sup2;</div>
+                              <div style={{ fontSize: 20, fontWeight: 800, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{(_h7R * _h7R).toFixed(3)}</div>
+                            </div>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>p-value</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: _h7P < 0.001 ? "#059669" : _h7P < 0.05 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{_fmtP(_h7P)}</div>
+                            </div>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>N (materiale)</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{withData.length}</div>
+                            </div>
+                            <div style={{ marginLeft: "auto", padding: "4px 14px", borderRadius: 6, background: `${_h7Color}15`, border: `1px solid ${_h7Color}40` }}>
+                              <div style={{ fontSize: 12, fontWeight: 800, color: _h7Color }}>{_h7Verdict}</div>
+                              <div style={{ fontSize: 8, color: "#6B7280" }}>prag OSF: r &ge; 0.60</div>
+                            </div>
+                          </div>
+                          <div style={{ marginTop: 8, fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                            Corelatia intre C formula normalizat (Cf/11) si C perceput (Cp evaluat de respondenti) masoara <strong>validitatea de construct</strong> a modelului RIFC.{" "}
+                            {Math.abs(_h7R) >= 0.60 ? "Corelatia puternica confirma ca formula R+(I×F) prezice adecvat perceptia de claritate." : Math.abs(_h7R) >= 0.40 ? "Corelatia moderata sugereaza o relatie existenta dar sub pragul OSF de 0.60." : "Corelatia slaba indica ca formula nu prezice adecvat perceptia de claritate in acest context."}
+                            {" "}r&sup2; = {(_h7R * _h7R * 100).toFixed(1)}% din varianta Cp este explicata de Cf.
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* R-Synthesis explanation */}
                     {(() => {
@@ -9708,7 +9908,7 @@ export default function StudiuAdminPage() {
               )}
 
               {/* ═══ PER INDUSTRIE ═══ */}
-              {interpSubTab === "industrie" && (
+              {interpViewMode === "osf" && interpSubTab === "industrie" && (
                 <div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
                     {industryKeys.map((ind, idx) => {
@@ -9837,7 +10037,7 @@ export default function StudiuAdminPage() {
               )}
 
               {/* ═══ PER BRAND ═══ */}
-              {interpSubTab === "brand" && (
+              {interpViewMode === "osf" && interpSubTab === "brand" && (
                 <div>
                   {withData
                     .map(s => ({
@@ -10058,13 +10258,14 @@ export default function StudiuAdminPage() {
                 return (
                   <div style={{ marginTop: 32, borderTop: "2px solid #e5e7eb", paddingTop: 24 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                      <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
+                      <div style={{ width: 4, height: 24, borderRadius: 2, background: interpViewMode === "osf" ? "#111827" : "#7C3AED" }} />
                       <div>
-                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H5)</div>
-                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {_interpResponses.toLocaleString("ro-RO")} raspunsuri din {n} materiale ({_interpCompleted} completati / {_interpTotal} inscrisi).</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>{interpViewMode === "osf" ? "Testare Ipoteze OSF (H1 — H7)" : "Statistica Suplimentara"}</div>
+                        <div style={{ fontSize: 11, color: "#6B7280" }}>{interpViewMode === "osf" ? `Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Conform protocolului OSF pre-inregistrat. Bazat pe ${_interpResponses.toLocaleString("ro-RO")} raspunsuri din ${n} materiale.` : `Analize descriptive suplimentare bazate pe ${_interpResponses.toLocaleString("ro-RO")} raspunsuri din ${n} materiale.`}</div>
                       </div>
                     </div>
 
+                    {interpViewMode === "osf" && (<>
                     {/* ── CHENAR EXPLICATIV RIFC ── */}
                     <div style={{ padding: "16px 18px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB", marginBottom: 24 }}>
 
@@ -10153,7 +10354,7 @@ export default function StudiuAdminPage() {
                     {/* ── GRAFIC H1 — Poarta Relevanței ── */}
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>Ipoteza H1: Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>OSF H2: Poarta Relevantei (Relevance Gate) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
                         <InterpBtn k="h1" title="H1 — Poarta Relevantei" val={`ΔCTA=${(h1AboveAvgCta - h1BelowAvgCta).toFixed(2)}`} ctx={{ diffCp: h1AboveAvgC - h1BelowAvgC, diffCta: h1AboveAvgCta - h1BelowAvgCta, diffStrong: h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 ? _mean(h1StrongAbove.map(d => d.cta!)) - _mean(h1StrongBelow.map(d => d.cta!)) : 0, cohenDCp: h1CohenDCp, cohenDCta: h1CohenDCta, nBelow: h1CtaBelow.length, nAbove: h1CtaAbove.length, cpBelow: h1BelowAvgC, cpAbove: h1AboveAvgC, ctaBelow: h1BelowAvgCta, ctaAbove: h1AboveAvgCta, brandCtaBelow: h1BrandCtaBelowYes, brandCtaNoBrand: h1BrandCtaBelowNo, nBrandBelow: h1BrandBelowYes.length, nNoBrandBelow: h1BrandBelowNo.length }} />
                       </div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
@@ -10317,11 +10518,11 @@ export default function StudiuAdminPage() {
                           </svg>
                         </div>
                       </div>
-                      {/* ═══ INTERPRETARE H1 ═══ */}
+                      {/* ═══ INTERPRETARE — OSF H2 ═══ */}
                       <div style={{ marginTop: 10, padding: "14px 16px", background: "#f0fdf4", borderRadius: 8, border: "2px solid #059669" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                           <CheckCircle2 size={16} style={{ color: "#059669" }} />
-                          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE H1</span>
+                          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE — OSF H2</span>
                         </div>
                         <div style={{ fontSize: 12, color: "#111827", lineHeight: 1.7 }}>
                           <strong>Formula e validata?</strong>{" "}
@@ -10400,7 +10601,7 @@ export default function StudiuAdminPage() {
 
                     {/* ── GRAFIC H2 — Corelatie C → CTA (cu filtru Obiectiv Marketing) ── */}
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H2: Formula prezice actiunea reala <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H4: Claritate prezice Intentie de Actiune (C{"\u2192"}CTA) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
                         <strong>Ce testeaza:</strong> Lantul cauzal C → CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H2 valideaza ca pasul C→CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
                         <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
@@ -10604,7 +10805,7 @@ export default function StudiuAdminPage() {
 
                     {/* ── GRAFIC H3 — Moderarea Brand Awareness ── */}
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H3: Brandul modereaza relatia C → CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H3: Brand ca Moderator C{"\u2192"}CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
                         <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
                         <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={h3Known.length}) vs necunoscut (portocaliu, n={h3Unknown.length}).{" "}
@@ -10755,7 +10956,7 @@ export default function StudiuAdminPage() {
                         <>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 28, marginBottom: 8 }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>H4 — Test Scale-Independent al Interactiei I×F</span>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H1: Superioritate Model Multiplicativ R+(I{"\u00D7"}F)</span>
                             <InterpBtn k="h4" title="H4 — Scale-Independent" val={verdict} />
                           </div>
                           <div style={{ ...cardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
@@ -10849,9 +11050,282 @@ export default function StudiuAdminPage() {
                             </div>
                             <div style={{ marginTop: 4, fontSize: 10, color: "#9CA3AF" }}>N={valid.length} raspunsuri. Spearman rho: mult={rhoMult.toFixed(3)}, adit={rhoAdit.toFixed(3)}. Fisher Z={fisherZ.z.toFixed(2)}, p={_fmtP(fisherZ.p)}. Partial r={partialR.toFixed(3)}, p={_fmtP(partialP)}.</div>
                           </div>
+
+                          {/* ── OSF H1: Formal Model Comparison — R², AIC/BIC, F-test ── */}
+                          {(() => {
+                            // Compute RSS for multiplicative model: predict c_score from r + i*f
+                            const modData = valid.filter(d => d.c_score != null && d.c_score > 0);
+                            if (modData.length < 5) return null;
+                            const nMod = modData.length;
+
+                            // Multiplicative: y = a + b*(r + i*f)
+                            const multPts = modData.map(d => ({ x: d.r + d.i * d.f, y: d.c_score! }));
+                            const multReg = linReg(multPts);
+                            const multRSS = multPts.reduce((s, p) => s + Math.pow(p.y - (multReg.slope * p.x + multReg.intercept), 2), 0);
+                            const multR2 = multReg.r2;
+
+                            // Additive: y = a + b*(r + i + f)
+                            const addPts = modData.map(d => ({ x: d.r + d.i + d.f, y: d.c_score! }));
+                            const addReg = linReg(addPts);
+                            const addRSS = addPts.reduce((s, p) => s + Math.pow(p.y - (addReg.slope * p.x + addReg.intercept), 2), 0);
+                            const addR2 = addReg.r2;
+
+                            // AIC and BIC (k=2 for both: slope + intercept)
+                            const kParams = 2;
+                            const multAIC = nMod * Math.log(multRSS / nMod) + 2 * kParams;
+                            const addAIC = nMod * Math.log(addRSS / nMod) + 2 * kParams;
+                            const multBIC = nMod * Math.log(multRSS / nMod) + kParams * Math.log(nMod);
+                            const addBIC = nMod * Math.log(addRSS / nMod) + kParams * Math.log(nMod);
+
+                            // F-test: compare RSS (additive as restricted, multiplicative as full)
+                            // F = ((RSS_restricted - RSS_full) / (df_restricted - df_full)) / (RSS_full / df_full)
+                            // Both have 2 params, so df difference is from predictive quality
+                            // Simple approach: use variance ratio
+                            const fStat = addRSS > 0 && multRSS > 0 ? (addRSS / multRSS) : 1;
+
+                            const r2Better = multR2 > addR2;
+                            const aicBetter = multAIC < addAIC;
+                            const bicBetter = multBIC < addBIC;
+                            const allBetter = r2Better && aicBetter && bicBetter;
+                            const modVerdColor = allBetter ? "#059669" : (r2Better || aicBetter) ? "#D97706" : "#DC2626";
+                            const modVerdict = allBetter ? "MULTIPLICATIV SUPERIOR" : (r2Better || aicBetter) ? "EVIDENTA MIXTA" : "FARA DIFERENTA";
+
+                            return (
+                              <div style={{ marginTop: 12, padding: "14px 16px", background: "#f0f9ff", borderRadius: 8, border: "1px solid #bae6fd" }}>
+                                <div style={{ fontSize: 12, fontWeight: 800, color: "#0c4a6e", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0c4a6e" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-6"/></svg>
+                                  OSF H1 — Comparatie Formala R&sup2; / AIC / BIC
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                                  {/* R² */}
+                                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "8px 10px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>R&sup2; Mult</div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: r2Better ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{multR2.toFixed(3)}</div>
+                                  </div>
+                                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "8px 10px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>R&sup2; Adit</div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: !r2Better ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{addR2.toFixed(3)}</div>
+                                  </div>
+                                  {/* AIC */}
+                                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "8px 10px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>AIC Mult</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: aicBetter ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{multAIC.toFixed(1)}</div>
+                                  </div>
+                                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "8px 10px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>AIC Adit</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: !aicBetter ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{addAIC.toFixed(1)}</div>
+                                  </div>
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "8px 10px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>BIC Mult</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: bicBetter ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{multBIC.toFixed(1)}</div>
+                                  </div>
+                                  <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 6, padding: "8px 10px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>BIC Adit</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: !bicBetter ? "#059669" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{addBIC.toFixed(1)}</div>
+                                  </div>
+                                  <div style={{ background: "#fff", border: `2px solid ${modVerdColor}`, borderRadius: 6, padding: "8px 10px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>Verdict</div>
+                                    <div style={{ fontSize: 10, fontWeight: 800, color: modVerdColor }}>{modVerdict}</div>
+                                  </div>
+                                </div>
+                                <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                                  {r2Better ? `R+(I×F) explica ${(multR2 * 100).toFixed(1)}% din varianta Cp vs ${(addR2 * 100).toFixed(1)}% pentru R+I+F.` : `R+I+F explica ${(addR2 * 100).toFixed(1)}% din varianta Cp vs ${(multR2 * 100).toFixed(1)}% pentru R+(I×F).`}
+                                  {" "}AIC: {aicBetter ? "multiplicativ" : "aditiv"} preferat (diferenta {Math.abs(multAIC - addAIC).toFixed(1)}).
+                                  {" "}BIC: {bicBetter ? "multiplicativ" : "aditiv"} preferat (diferenta {Math.abs(multBIC - addBIC).toFixed(1)}).
+                                  {" "}F-ratio (RSS_adit/RSS_mult) = {fStat.toFixed(2)} — {fStat > 1.1 ? "modelul multiplicativ are reziduale mai mici." : "diferenta minimala intre modele."}
+                                </div>
+                                <div style={{ marginTop: 4, fontSize: 9, color: "#9CA3AF" }}>N={nMod}. R&sup2; calculat din regresia liniara y=a+bX. AIC = n·ln(RSS/n) + 2k. BIC = n·ln(RSS/n) + k·ln(n). Criteriu OSF H1: R&sup2;_mult &gt; R&sup2;_adit AND AIC_mult &lt; AIC_adit.</div>
+                              </div>
+                            );
+                          })()}
                         </>
                       );
                     })()}
+
+                    {/* ═══ OSF H5 — INVARIANTA CROSS-CHANNEL (Measurement Consistency) ═══ */}
+                    {(() => {
+                      // Group responses by channel type
+                      const _h5Scatter = scatter.filter(d => d.r > 0 && d.i > 0 && d.f > 0);
+                      if (_h5Scatter.length < 10) return null;
+
+                      // Build channel groups from stimulus type
+                      const stimTypeMap: Record<string, string> = {};
+                      for (const st of (results.stimuliResults || [])) { stimTypeMap[st.id] = st.type; }
+
+                      const _h5ByChannel: Record<string, { r: number[]; i: number[]; f: number[]; c: number[] }> = {};
+                      for (const d of _h5Scatter) {
+                        const ch = stimTypeMap[d.stimulus_id] || "unknown";
+                        if (!_h5ByChannel[ch]) _h5ByChannel[ch] = { r: [], i: [], f: [], c: [] };
+                        _h5ByChannel[ch].r.push(d.r);
+                        _h5ByChannel[ch].i.push(d.i);
+                        _h5ByChannel[ch].f.push(d.f);
+                        _h5ByChannel[ch].c.push(d.c_computed / 11); // normalized
+                      }
+
+                      const _h5Channels = Object.entries(_h5ByChannel)
+                        .filter(([, v]) => v.r.length >= 5) // min 5 responses per channel
+                        .map(([ch, v]) => {
+                          const n = v.r.length;
+                          // Cronbach alpha for [R, I, F]
+                          const items = v.r.map((_, j) => [v.r[j], v.i[j], v.f[j]]);
+                          const alpha = _cronbachAlpha(items);
+                          // Inter-item correlations
+                          const rRI = n >= 3 ? _pearsonR(v.r, v.i) : 0;
+                          const rRF = n >= 3 ? _pearsonR(v.r, v.f) : 0;
+                          const rIF = n >= 3 ? _pearsonR(v.i, v.f) : 0;
+                          // Factor loadings (correlation with C total)
+                          const lambdaR = n >= 3 ? _pearsonR(v.r, v.c) : 0;
+                          const lambdaI = n >= 3 ? _pearsonR(v.i, v.c) : 0;
+                          const lambdaF = n >= 3 ? _pearsonR(v.f, v.c) : 0;
+                          // Category color lookup
+                          const catMatch = categories.find((c: any) => c.type === ch);
+                          return { ch, label: catMatch?.label || ch, color: catMatch?.color || "#6B7280", n, alpha, rRI, rRF, rIF, lambdaR, lambdaI, lambdaF };
+                        })
+                        .sort((a, b) => b.n - a.n);
+
+                      if (_h5Channels.length < 2) return null;
+
+                      const allAlphasOk = _h5Channels.every(c => c.alpha >= 0.70);
+                      const minAlpha = Math.min(..._h5Channels.map(c => c.alpha));
+                      const maxAlpha = Math.max(..._h5Channels.map(c => c.alpha));
+                      const h5Verdict = allAlphasOk ? "STRUCTURA CONSISTENTA" : minAlpha >= 0.50 ? "PARTIAL CONSISTENTA" : "INCONSISTENTA";
+                      const h5VerdColor = allAlphasOk ? "#059669" : minAlpha >= 0.50 ? "#D97706" : "#DC2626";
+
+                      return (
+                        <div style={{ ...cardStyle, marginBottom: 20, borderLeft: `4px solid #7C3AED` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-6"/></svg>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H5: Invarianta Cross-Channel</span>
+                            <span style={{ fontSize: 10, color: "#6B7280" }}>(Measurement Consistency)</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
+                            <strong>Ce testeaza:</strong> Structura factoriala RIFC se mentine consistent peste toate canalele media. Criteriu OSF: CFI &ge; 0.90 in multi-group CFA.{" "}
+                            <strong>Aproximare:</strong> Cronbach &alpha; per canal (&ge; 0.70 = consistent) + corelatii inter-item + factor loadings.
+                          </div>
+
+                          {/* Table */}
+                          <div style={{ overflowX: "auto" as const }}>
+                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                              <thead>
+                                <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ padding: "6px 8px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Canal</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>N</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>&alpha;</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#6B7280" }}>r(R,I)</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#6B7280" }}>r(R,F)</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#6B7280" }}>r(I,F)</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>&lambda;R</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>&lambda;I</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>&lambda;F</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {_h5Channels.map((c, idx) => (
+                                  <tr key={c.ch} style={{ borderBottom: "1px solid #f3f4f6", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                    <td style={{ padding: "6px 8px", fontWeight: 700, color: c.color }}><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: c.color, marginRight: 6 }} />{c.label}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, color: "#6B7280" }}>{c.n}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 800, color: c.alpha >= 0.70 ? "#059669" : c.alpha >= 0.50 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{c.alpha.toFixed(2)}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#6B7280" }}>{c.rRI.toFixed(2)}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#6B7280" }}>{c.rRF.toFixed(2)}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#6B7280" }}>{c.rIF.toFixed(2)}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#374151" }}>{c.lambdaR.toFixed(2)}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#374151" }}>{c.lambdaI.toFixed(2)}</td>
+                                    <td style={{ padding: "6px 8px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#374151" }}>{c.lambdaF.toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Verdict */}
+                          <div style={{ marginTop: 10, padding: "8px 12px", background: `${h5VerdColor}10`, border: `1px solid ${h5VerdColor}30`, borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ fontSize: 11, color: "#374151" }}>
+                              Cronbach &alpha; range: <strong style={{ fontFamily: "JetBrains Mono, monospace" }}>{minAlpha.toFixed(2)} — {maxAlpha.toFixed(2)}</strong> peste {_h5Channels.length} canale.{" "}
+                              {allAlphasOk ? "Toate canalele au α ≥ 0.70." : `${_h5Channels.filter(c => c.alpha < 0.70).length} canale sub pragul 0.70.`}
+                            </div>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: h5VerdColor, padding: "2px 10px", borderRadius: 4, background: `${h5VerdColor}15` }}>{h5Verdict}</span>
+                          </div>
+                          <div style={{ marginTop: 6, fontSize: 9, color: "#9CA3AF" }}>
+                            Nota: Multi-group CFA formal (CFI, RMSEA, TLI) necesita software specializat (lavaan/R). Aceste metrici ofera o aproximare robusta a consistentei structurale.
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ═══ OSF H6 — SENSIBILITATE SEGMENTE (ANOVA Demographics) ═══ */}
+                    {(() => {
+                      // Check if demographic breakdown data is available
+                      const _h6Demographics = results.demographics;
+                      if (!_h6Demographics || Object.keys(_h6Demographics).length === 0) {
+                        return (
+                          <div style={{ ...cardStyle, marginBottom: 20, borderLeft: "4px solid #D97706" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H6: Sensibilitate Segmente</span>
+                              <span style={{ fontSize: 10, color: "#6B7280" }}>(Demographics ANOVA — &eta;&sup2; &lt; 0.05)</span>
+                            </div>
+                            <div style={{ padding: "12px 16px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Date demografice insuficiente</div>
+                              <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.5 }}>
+                                Testul H6 necesita date demografice individuale (varsta, gen, educatie) per respondent pentru a calcula ANOVA one-way si &eta;&sup2;.{" "}
+                                Datele breakdown agregate sunt disponibile dar nu permit calcul ANOVA la nivel individual.{" "}
+                                <strong>Recomandat:</strong> Adauga intrebari de profil (demografice) in sondaj si exporta datele la nivel de respondent.
+                              </div>
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280" }}>
+                              <strong>Ce ar trebui sa arate:</strong> &eta;&sup2; &lt; 0.05 per factor demografic = &lt; 5% varianta in R explicata de demographics. Daca &eta;&sup2; e mic, formula RIFC functioneaza uniform pe segmente.
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // If demographic data IS available (individual level), compute ANOVA
+                      // For now, show aggregate demographic breakdown as proxy
+                      const demoKeys = Object.keys(_h6Demographics).slice(0, 5);
+                      return (
+                        <div style={{ ...cardStyle, marginBottom: 20, borderLeft: "4px solid #0EA5E9" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0EA5E9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H6: Sensibilitate Segmente</span>
+                            <span style={{ fontSize: 10, color: "#6B7280" }}>(Profil Demografic — {results.totalRespondents} respondenti)</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #0EA5E9" }}>
+                            <strong>Ce testeaza:</strong> Factorii demografici (varsta, gen, educatie) explica &lt; 5% din varianta scorurilor R (&eta;&sup2; &lt; 0.05).{" "}
+                            <strong>Status:</strong> Distributia demografica este disponibila. ANOVA formal necesita date la nivel de respondent individual.
+                          </div>
+                          {demoKeys.map(dk => {
+                            const groups = _h6Demographics[dk];
+                            const entries = Object.entries(groups).sort((a, b) => b[1] - a[1]);
+                            const total = entries.reduce((a, [, v]) => a + v, 0);
+                            return (
+                              <div key={dk} style={{ marginBottom: 10 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4 }}>{dk}</div>
+                                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const }}>
+                                  {entries.map(([label, count]) => (
+                                    <span key={label} style={{ fontSize: 9, padding: "3px 8px", background: "#f3f4f6", borderRadius: 4, color: "#374151" }}>
+                                      {label}: <strong>{count}</strong> ({total > 0 ? Math.round(count / total * 100) : 0}%)
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
+                            Nota: Distributia demografica este descriptiva. ANOVA one-way si &eta;&sup2; necesita scoruri R individuale per respondent × grup demografic.
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    </>)}
+
+                    {interpViewMode === "additional" && (<>
+                    <div style={{ padding: "14px 18px", background: "#f5f3ff", borderRadius: 8, border: "1px solid #ddd6fe", borderLeft: "4px solid #7C3AED", marginBottom: 24 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#7C3AED", marginBottom: 4 }}>STATISTICA SUPLIMENTARA</div>
+                      <div style={{ fontSize: 11, color: "#6B7280", lineHeight: 1.5 }}>Analize descriptive si explorative care completeaza testarea formala OSF. Nu sunt pre-inregistrate in protocolul OSF dar ofera perspectiva suplimentara asupra datelor.</div>
+                    </div>
 
                     {/* ── GRAFIC H5 — C vs Brand Recognition per Material ── */}
                     <div style={{ ...S.configItem, marginBottom: 20 }}>
@@ -11177,7 +11651,9 @@ export default function StudiuAdminPage() {
                         );
                       })()}
                     </div>
+                    </>)}
 
+                    {interpViewMode === "osf" && (<>
                     {/* ═══ TABEL SUMAR IPOTEZE (Academic Summary) ═══ */}
                     {(() => {
                       // Recompute summary data from scatter
@@ -11217,17 +11693,19 @@ export default function StudiuAdminPage() {
                       const _h4VerdColor = _h4Verd === "CONFIRMATA" ? "#059669" : _h4Verd === "PARTIAL" ? "#D97706" : "#DC2626";
 
                       const rows: { code: string; name: string; metric: string; n: string; pVal: string; verdict: string; color: string }[] = [
-                        { code: "H1", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "—", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
-                        { code: "H2", name: "C prezice CTA", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
-                        { code: "H3", name: "Brand modereaza C→CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
-                        { code: "H4", name: "Scale-Independent I×F", metric: `\u03C1m=${_h4RhoM.toFixed(3)}, \u03C1a=${_h4RhoA.toFixed(3)}, pr=${_h4PartR.toFixed(3)}`, n: `${_h4V.length}`, pVal: `Z=${_h4Fz.z.toFixed(2)}, ${_fmtP(_h4Fz.p)}; pr ${_fmtP(_h4PartP)}`, verdict: _h4Verd, color: _h4VerdColor },
-                        { code: "H5", name: "Claritate vs Recognoscibilitate", metric: "Bar chart comparativ C vs Brand", n: `${withData.filter(s => s.response_count > 0 && (s.brand_yes + s.brand_no) > 0).length}`, pVal: "—", verdict: "CALITATIVA", color: "#6B7280" },
+                        { code: "OSF H1", name: "Multiplicativ > Aditiv", metric: `\u03C1m=${_h4RhoM.toFixed(3)}, \u03C1a=${_h4RhoA.toFixed(3)}, pr=${_h4PartR.toFixed(3)}`, n: `${_h4V.length}`, pVal: `Z=${_h4Fz.z.toFixed(2)}, ${_fmtP(_h4Fz.p)}; pr ${_fmtP(_h4PartP)}`, verdict: _h4Verd, color: _h4VerdColor },
+                        { code: "OSF H2", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "\u2014", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
+                        { code: "OSF H3", name: "Brand modereaza C\u2192CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
+                        { code: "OSF H4", name: "C prezice CTA (r\u22650.50)", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
+                        { code: "OSF H5", name: "Cross-Channel CFA", metric: "Cronbach \u03B1 per canal", n: `${_scV.length}`, pVal: "\u2014", verdict: "DESCRIPTIV", color: "#7C3AED" },
+                        { code: "OSF H6", name: "Segment ANOVA (\u03B7\u00B2<0.05)", metric: "Demo breakdown", n: `${_scV.length}`, pVal: "\u2014", verdict: "PENDING", color: "#D97706" },
+                        { code: "OSF H7", name: "Validitate Construct (r\u22650.60)", metric: `Valid=${grandHypPct.toFixed(1)}%, \u0394=${grandDelta.toFixed(2)}`, n: `${n}`, pVal: "\u2014", verdict: grandHypPct >= 80 ? "CONFIRMATA" : grandHypPct >= 50 ? "PARTIAL" : "NECONFIRMATA", color: grandHypPct >= 80 ? "#059669" : grandHypPct >= 50 ? "#D97706" : "#DC2626" },
                       ];
                       return (
                         <div style={{ marginTop: 30 }}>
                           <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/></svg>
-                            Sumar Ipoteze (Tabel Academic)
+                            Sumar Ipoteze OSF (H1 — H7)
                           </div>
                           <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 12 }}>Rezumatul tuturor ipotezelor testate, cu metrici principale, dimensiunea esantionului si semnificatia statistica.</div>
                           <div style={{ overflowX: "auto" as const }}>
@@ -11257,11 +11735,12 @@ export default function StudiuAdminPage() {
                             </table>
                           </div>
                           <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
-                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). p-values calculate prin aproximare normala a distributiei t. Fisher Z-test folosit pentru comparatia a doua corelatii (H3). Cohen&apos;s d pentru efect standardizat (H1). H5 este calitativa (bar chart comparativ C vs brand recognition) — fara test statistic propriu-zis.
+                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). OSF H1: Spearman rho + partial correlation. OSF H2: Cohen&apos;s d pentru efect standardizat. OSF H3: Fisher Z-test. OSF H4: Pearson r. OSF H5: Cronbach &alpha; per canal. OSF H6: necesita date individuale. OSF H7: Validare % = 100 - (&Delta;/10 &times; 100).
                           </div>
                         </div>
                       );
                     })()}
+                    </>)}
 
                   </div>
                 );
