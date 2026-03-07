@@ -165,17 +165,14 @@ export async function GET(request: Request) {
     const completedRespondentsList = respondents.filter(isEffectivelyCompleted);
     const completedRespondents = completedRespondentsList.length;
 
-    // ── CRITICAL: Filter responses to ONLY respondents with ALL 30 distinct stimuli ──
-    // This ensures uniform N across all materials (no dropout bias).
-    // Uses distinct stimulus count (not just total responses) to handle edge cases.
-    const aggregationIdSet = new Set(
-      completedRespondentsList.filter(r => hasAllDistinctStimuli(r.id)).map(r => r.id)
-    );
+    // ── Filter responses to completed respondents (all responses included) ──
+    const completedIdSet = new Set(completedRespondentsList.map(r => r.id));
     const allResponsesBeforeFilter = allFilteredResponses.length;
-    const completedWithFullData = aggregationIdSet.size;
-    const completedWithoutFullData = completedRespondents - completedWithFullData;
-    console.log(`[Results API] Completed: ${completedRespondents} (header) | With all ${expectedResponseCount} stimuli: ${completedWithFullData} (aggregation) | Missing data: ${completedWithoutFullData}`);
-    allFilteredResponses = allFilteredResponses.filter(r => aggregationIdSet.has(r.respondent_id));
+    const fullDataCount = completedRespondentsList.filter(r => hasAllDistinctStimuli(r.id)).length;
+    if (fullDataCount < completedRespondents) {
+      console.log(`[Results API] ${completedRespondents} completed, ${fullDataCount} with all ${expectedResponseCount} stimuli, ${completedRespondents - fullDataCount} partial`);
+    }
+    allFilteredResponses = allFilteredResponses.filter(r => completedIdSet.has(r.respondent_id));
 
     // Today / this month / avg session time
     const now = new Date();
