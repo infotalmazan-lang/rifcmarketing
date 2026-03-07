@@ -8600,9 +8600,9 @@ export default function StudiuAdminPage() {
                   { heading: "Zona 1: R < 3 — Irelevant", text: `${_tzZ1.n || 0} materiale. Validare: ${_tzZ1.hypPct || 0}%. CTA: ${(_tzZ1.cta || 0).toFixed ? (_tzZ1.cta || 0).toFixed(2) : _tzZ1.cta || 0}. Materialele sub R=3 sunt complet irelevante pentru audienta. Formula calculeaza un scor, dar rezultatul este accidental — I×F functioneaza mecanic dar nu produce actiune. Analogie: o reclama la tractoare aratata unui programator — frumoasa, interesanta ca design, dar zero relevanta.` },
                   { heading: "Zona 2: R 3 — 4.99 — Constientizare Latenta (Top of Mind)", text: `${_tzZ2.n || 0} materiale. Validare: ${_tzZ2.hypPct || 0}%. CTA: ${(_tzZ2.cta || 0).toFixed ? (_tzZ2.cta || 0).toFixed(2) : _tzZ2.cta || 0}. Materialele cu R intre 3 si 4.99 sunt in zona de "constientizare pasiva" — audienta recunoaste ca ar putea fi relevant, dar nu actioneaza acum. Barbatul stie ca exista pantofi de dama, poate cumpara sotiei intr-o zi, dar CTA ramane scazut. Formula prezice relativ bine Claritatea, dar Claritatea nu se transforma in actiune.` },
                   { heading: "Zona 3: R >= 5 — Performanta Activa (Conversie)", text: `${_tzZ3.n || 0} materiale. Validare: ${_tzZ3.hypPct || 0}%. CTA: ${(_tzZ3.cta || 0).toFixed ? (_tzZ3.cta || 0).toFixed(2) : _tzZ3.cta || 0}. Aici formula atinge performanta maxima: R suficient de mare activeaza I×F complet, C (Claritate) este perceput precis, si CTA creste semnificativ. Aceasta este zona unde materialele de marketing produc rezultate masurabile — conversie, click, cumparare.` },
-                  { heading: "Comparatie: Gate R >= 3 vs R >= 5", text: `Gate R >= ${GATE} (confirmatory): ${_tz3p}/${_tzN} materiale (${_tz3r}%) trec pragul. Gate R >= 5 (exploratory): ${_tz5p}/${_tzN} materiale (${_tz5r}%) trec pragul. Diferenta: ${_tz3p - _tz5p} materiale se afla in zona latenta (R 3-4.99) — trec Gate-ul OSF dar nu produc performanta activa. Aceasta zona "gri" este contributia exploratorie a studiului: formula functioneaza dar nu converteste.` },
+                  { heading: "Comparatie: Gate R >= 3 vs R >= 5", text: `Gate R >= ${GATE} (confirmatory, OSF H2): ${_tz3p}/${_tzN} materiale (${_tz3r}%) trec pragul. Gate R >= 5 (pre-registered sensitivity, OSF H2): ${_tz5p}/${_tzN} materiale (${_tz5r}%) trec pragul. Diferenta: ${_tz3p - _tz5p} materiale se afla in zona latenta (R 3-4.99) — trec Gate-ul primar dar nu produc performanta activa. Testarea pragurilor la R=2,3,4,5 este pre-inregistrata in protocolul OSF (H2 Inference Criteria: "Sensitivity analysis: All three methods repeated at R = 2, 3, 4, and 5").` },
                   { heading: "Implicatii pentru practica", text: `Pragmatism: daca obiectivul este Top of Mind (brand awareness), Gate R >= ${GATE} este suficient. Daca obiectivul este conversie directa (vanzari, click-through, lead generation), pragul R >= 5 este mai predictiv. Modelul cu doua zone sugereaza ca formula RIFC are doua "moduri de operare": sub R=5 prezice recunoasterea, peste R=5 prezice actiunea.` },
-                  { heading: "Nota OSF", text: `Analiza cu R >= ${GATE} este confirmatorie (pre-inregistrata OSF) si ramane analiza primara a studiului. Modelul cu doua zone (R=5 ca inflexiune) este exploratorie si constituie o contributie teoretica pentru studii viitoare. In articol, aceasta descoperire se raporteaza in sectiunea "Exploratory Analyses" sau "Discussion" cu etichetare clara.` },
+                  { heading: "Nota OSF", text: `Analiza cu R >= ${GATE} este confirmatorie (OSF H2 — analiza primara). Testarea la R=5 este pre-inregistrata ca sensitivity analysis (OSF H2 Inference Criteria: "All three methods repeated at R = 2, 3, 4, and 5"). Modelul cu doua zone (interpretarea inflexiunii R=5 ca tranzitie latenta→performanta) se raporteaza in sectiunea "Other Planned Analysis #1: Nonlinear Threshold Exploration" — de asemenea pre-anuntat in OSF. Toate analizele sunt conforme cu protocolul pre-inregistrat.` },
                 ]};
               }
               case "val_channel": {
@@ -8917,7 +8917,7 @@ export default function StudiuAdminPage() {
           const _interpResponses = _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
           const avgEvalPerMaterial = Math.round(_interpResponses / n);
 
-          // ── Two-Zone Gate Analysis (R<3 vs R 3-4.99 vs R≥5) — exploratory ──
+          // ── Two-Zone Gate Analysis (R<3 vs R 3-4.99 vs R≥5) — pre-registered sensitivity (OSF H2) ──
           const tzBelow3 = withData.filter(s => s.avg_r < 3);
           const tz3to5 = withData.filter(s => s.avg_r >= 3 && s.avg_r < 5);
           const tzAbove5 = withData.filter(s => s.avg_r >= 5);
@@ -9370,7 +9370,7 @@ export default function StudiuAdminPage() {
                     </div>
                   </div>
 
-                  {/* ═══ TWO-ZONE GATE COMPARISON — R<3 vs R 3-4.99 vs R≥5 (Exploratory) ═══ */}
+                  {/* ═══ TWO-ZONE GATE COMPARISON — R<3 vs R 3-4.99 vs R≥5 (OSF H2 Sensitivity Analysis) ═══ */}
                   {(() => {
                     const tzZones = [
                       { key: "below3", label: "R < 3", sublabel: "Sub-Gate (Irelevant)", data: tzZ1, color: "#DC2626", bgLight: "#fef2f2", border: "#fecaca", icon: "M18.36 5.64a9 9 0 11-12.73 12.73 9 9 0 0112.73-12.73zM19 12H5" },
@@ -9394,7 +9394,7 @@ export default function StudiuAdminPage() {
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>ANALIZA DOUA ZONE — PRAGUL DE RELEVANTA</div>
-                            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Confirmatory: R &ge; {GATE} (OSF pre-inregistrat) &middot; Exploratory: R &ge; 5 (inflexiune latenta → performanta)</div>
+                            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Confirmatory: R &ge; {GATE} (OSF H2 primar) &middot; Sensitivity: R &ge; 5 (OSF H2 pre-inregistrat, threshold R=2,3,4,5)</div>
                           </div>
                           <div style={{ marginLeft: "auto" }}>
                             <InterpBtn k="two-zone-gate" title="Analiza Doua Zone" val={`${gatePassRate}% vs ${tzGate5PassRate}%`} ctx={{ g3pass: gatePassCount, g3rate: gatePassRate, g5pass: tzGate5PassCount, g5rate: tzGate5PassRate, z1: JSON.stringify(tzZ1), z2: JSON.stringify(tzZ2), z3: JSON.stringify(tzZ3), n }} />
@@ -9530,13 +9530,13 @@ export default function StudiuAdminPage() {
                                 <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Aceasta este analiza primara, conform protocolului OSF pre-inregistrat.</span>
                               </div>
                             </div>
-                            {/* Right: Exploratory */}
+                            {/* Right: Pre-registered Sensitivity */}
                             <div style={{ background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e5e7eb", borderTop: "3px solid #059669" }}>
-                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#059669", marginBottom: 4 }}>EXPLORATORY (POST-HOC)</div>
+                              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#059669", marginBottom: 4 }}>SENSITIVITY ANALYSIS (OSF H2)</div>
                               <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
                                 Gate R &ge; 5: <strong>{tzGate5PassCount}/{n}</strong> materiale ({tzGate5PassRate}%) trec pragul.
                                 In zona R &ge; 5, validarea creste la <strong>{tzZ3.hypPct}%</strong> — indicand performanta activa.
-                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Descoperire exploratorie: pragul R=5 marcheaza tranzitia de la constientizare pasiva la conversie activa.</span>
+                                <span style={{ display: "block", marginTop: 4, fontSize: 10, color: "#6B7280" }}>Pre-inregistrat OSF: &quot;Sensitivity analysis: All three methods repeated at R = 2, 3, 4, and 5&quot; (H2 Inference Criteria).</span>
                               </div>
                             </div>
                           </div>
@@ -9580,7 +9580,7 @@ export default function StudiuAdminPage() {
 
                           {/* Academic citation box */}
                           <div style={{ marginTop: 10, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5, padding: "6px 10px", background: "#f1f5f9", borderRadius: 4 }}>
-                            <strong>Nota metodologica:</strong> Analiza cu gate R &ge; {GATE} este <strong>confirmatorie</strong> (pre-inregistrata OSF). Modelul cu doua zone (R=5 ca inflexiune) este <strong>exploratorie</strong> si trebuie replicat in studii viitoare inainte de adoptare ca prag recomandat. Pragul R=5 a fost identificat post-hoc ca punct de inflexiune unde CTA creste semnificativ si formula atinge acuratete maxima.
+                            <strong>Nota metodologica:</strong> Analiza cu gate R &ge; {GATE} este <strong>confirmatorie</strong> (OSF H2 — analiza primara). Testarea la R=5 este <strong>pre-inregistrata</strong> ca sensitivity analysis (OSF H2 Inference Criteria: &quot;All three methods repeated at R = 2, 3, 4, and 5&quot;). Interpretarea modelului cu doua zone (inflexiunea R=5) se incadreaza in &quot;Other Planned Analysis #1: Nonlinear Threshold Exploration&quot; — de asemenea pre-anuntat in protocolul OSF.
                           </div>
                         </div>
                       </div>
