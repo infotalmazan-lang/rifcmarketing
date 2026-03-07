@@ -55,7 +55,7 @@ export async function GET() {
   // 6. Detail for each partial respondent
   const partialDetails = withPartialData.map(r => {
     const answered = stimuliByRespondent[r.id] || new Set();
-    const missingIds = [...stimuliMap.keys()].filter(sid => !answered.has(sid));
+    const missingIds = Array.from(stimuliMap.keys()).filter(sid => !answered.has(sid));
     const missingNames = missingIds.map(sid => stimuliMap.get(sid) || sid);
     return {
       id: r.id,
