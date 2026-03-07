@@ -210,6 +210,33 @@ const _linReg = (xs: number[], ys: number[]): { slope: number; intercept: number
   return { slope, intercept, r2 };
 };
 
+// Chow test — tests structural break between two subgroups
+// Returns F-statistic and approximate p-value
+const _chowTest = (xs1: number[], ys1: number[], xs2: number[], ys2: number[]): { f: number; p: number; rss1: number; rss2: number; rssPooled: number } => {
+  if (xs1.length < 3 || xs2.length < 3) return { f: 0, p: 1, rss1: 0, rss2: 0, rssPooled: 0 };
+  const k = 2; // number of parameters (slope + intercept)
+  // Regressions on subgroups
+  const reg1 = _linReg(xs1, ys1);
+  const reg2 = _linReg(xs2, ys2);
+  const rss1 = ys1.reduce((a, y, i) => a + (y - (reg1.slope * xs1[i] + reg1.intercept)) ** 2, 0);
+  const rss2 = ys2.reduce((a, y, i) => a + (y - (reg2.slope * xs2[i] + reg2.intercept)) ** 2, 0);
+  // Pooled regression
+  const xsAll = [...xs1, ...xs2];
+  const ysAll = [...ys1, ...ys2];
+  const regP = _linReg(xsAll, ysAll);
+  const rssPooled = ysAll.reduce((a, y, i) => a + (y - (regP.slope * xsAll[i] + regP.intercept)) ** 2, 0);
+  const n = xsAll.length;
+  const dfNum = k;
+  const dfDen = n - 2 * k;
+  if (dfDen <= 0 || (rss1 + rss2) === 0) return { f: 0, p: 1, rss1, rss2, rssPooled };
+  const fStat = ((rssPooled - (rss1 + rss2)) / dfNum) / ((rss1 + rss2) / dfDen);
+  // F → p approximation (Wilson-Hilferty)
+  const x = fStat * (dfNum / dfDen);
+  const z = Math.abs(((x ** (1/3)) * (1 - 2/(9*dfDen)) - (1 - 2/(9*dfNum))) / Math.sqrt(2/(9*dfNum) + (x ** (2/3)) * 2/(9*dfDen)));
+  const p = Math.max(0, Math.min(1, Math.exp(-0.5 * z * z) * 0.5));
+  return { f: Math.round(fStat * 1000) / 1000, p: Math.round(p * 10000) / 10000, rss1, rss2, rssPooled };
+};
+
 // One-way ANOVA — returns F-statistic, approximate p-value, η² (eta-squared)
 // Uses Wilson-Hilferty approximation of F → normal for p-value (good for df > 5)
 const _anovaOneWay = (groups: number[][]): { f: number; p: number; etaSq: number; dfBetween: number; dfWithin: number; ssBetween: number; ssWithin: number } => {
@@ -8696,7 +8723,7 @@ export default function StudiuAdminPage() {
                 const _tzZ2 = (() => { try { return JSON.parse(String(_ctx.z2 || "{}")); } catch { return {}; } })();
                 const _tzZ3 = (() => { try { return JSON.parse(String(_ctx.z3 || "{}")); } catch { return {}; } })();
                 return { sections: [
-                  { heading: "Ce este Analiza cu Doua Zone", text: `Modelul cu doua zone examineaza daca exista un punct de inflexiune in Relevanta (R) care marcheaza tranzitia de la constientizare pasiva la performanta activa. Analiza primara (OSF pre-inregistrata) foloseste R >= ${GATE} ca Gate. Analiza exploratorie testeaza R = 5 ca potentiala inflexiune.` },
+                  { heading: "Analiza Praguri de Relevanta (OSF H2)", text: `Aceasta sectiune testeaza ipoteza H2 (Relevance Gate): cand R < prag, Claritatea (C) si intentia comportamentala (CTA) scad semnificativ, indiferent de I si F. Analiza primara (confirmatorie, OSF pre-inregistrata) foloseste R >= ${GATE} ca Gate. Sensitivity analysis testeaza pragurile R=2,3,4,5. Metrica "Convergenta H7" valideaza cat de bine formula C_calc = R+(I×F) prezice C_perceput (ipoteza H7, r >= 0.60).` },
                   { heading: "Zona 1: R < 3 — Irelevant", text: `${_tzZ1.n || 0} materiale. Validare: ${_tzZ1.hypPct || 0}%. CTA: ${(_tzZ1.cta || 0).toFixed ? (_tzZ1.cta || 0).toFixed(2) : _tzZ1.cta || 0}. Materialele sub R=3 sunt complet irelevante pentru audienta. Formula calculeaza un scor, dar rezultatul este accidental — I×F functioneaza mecanic dar nu produce actiune. Analogie: o reclama la tractoare aratata unui programator — frumoasa, interesanta ca design, dar zero relevanta.` },
                   { heading: "Zona 2: R 3 — 4.99 — Constientizare Latenta (Top of Mind)", text: `${_tzZ2.n || 0} materiale. Validare: ${_tzZ2.hypPct || 0}%. CTA: ${(_tzZ2.cta || 0).toFixed ? (_tzZ2.cta || 0).toFixed(2) : _tzZ2.cta || 0}. Materialele cu R intre 3 si 4.99 sunt in zona de "constientizare pasiva" — audienta recunoaste ca ar putea fi relevant, dar nu actioneaza acum. Barbatul stie ca exista pantofi de dama, poate cumpara sotiei intr-o zi, dar CTA ramane scazut. Formula prezice relativ bine Claritatea, dar Claritatea nu se transforma in actiune.` },
                   { heading: "Zona 3: R >= 5 — Performanta Activa (Conversie)", text: `${_tzZ3.n || 0} materiale. Validare: ${_tzZ3.hypPct || 0}%. CTA: ${(_tzZ3.cta || 0).toFixed ? (_tzZ3.cta || 0).toFixed(2) : _tzZ3.cta || 0}. Aici formula atinge performanta maxima: R suficient de mare activeaza I×F complet, C (Claritate) este perceput precis, si CTA creste semnificativ. Aceasta este zona unde materialele de marketing produc rezultate masurabile — conversie, click, cumparare.` },
@@ -9019,7 +9046,7 @@ export default function StudiuAdminPage() {
           const _interpResponses = _interpFilteredLog.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
           const avgEvalPerMaterial = Math.round(_interpResponses / n);
 
-          // ── Two-Zone Gate Analysis (R<3 vs R 3-4.99 vs R≥5) — pre-registered sensitivity (OSF H2) ──
+          // ── Relevance Threshold Analysis — OSF H2 pre-registered sensitivity (R=2,3,4,5) ──
           const tzBelow3 = withData.filter(s => s.avg_r < 3);
           const tz3to5 = withData.filter(s => s.avg_r >= 3 && s.avg_r < 5);
           const tzAbove5 = withData.filter(s => s.avg_r >= 5);
@@ -9045,6 +9072,97 @@ export default function StudiuAdminPage() {
           const tzZ3 = tzCalc(tzAbove5);
           const tzGate5PassCount = tzAbove5.length;
           const tzGate5PassRate = Math.round((tzGate5PassCount / n) * 100);
+
+          // ── OSF H2 Sensitivity: all 4 thresholds (R=2,3,4,5) ──
+          const tzSensitivity = [2, 3, 4, 5].map(threshold => {
+            const below = withData.filter(s => s.avg_r < threshold);
+            const above = withData.filter(s => s.avg_r >= threshold);
+            const belowCalc = tzCalc(below);
+            const aboveCalc = tzCalc(above);
+            return {
+              threshold,
+              below: { ...belowCalc },
+              above: { ...aboveCalc },
+              passRate: above.length > 0 ? Math.round((above.length / n) * 100) : 0,
+              ctaDrop: aboveCalc.cta > 0 && belowCalc.cta > 0
+                ? Math.round((1 - belowCalc.cta / aboveCalc.cta) * 100)
+                : null,
+            };
+          });
+
+          // ── OSF Archetype Classification per material ──
+          const osfArchetypes = withData.map(s => {
+            const _c = s.avg_c;
+            if (s.avg_r < GATE) return "Phantom";
+            if (s.avg_f > s.avg_i + 3) return "Aesthetic Noise";
+            if (_c >= 80) return "Diamond";
+            if (_c < 40) return "Background Noise";
+            return "Medium Clarity";
+          });
+          const osfArchCount: Record<string, number> = {};
+          osfArchetypes.forEach(a => { osfArchCount[a] = (osfArchCount[a] || 0) + 1; });
+
+          // ── H2 Individual-level analysis (respondent × stimulus) ──
+          const scatter = results.hypothesisScatterData || [];
+          const h2IndSensitivity = [2, 3, 4, 5].map(threshold => {
+            const below = scatter.filter(d => d.r < threshold);
+            const above = scatter.filter(d => d.r >= threshold);
+            const belowWithC = below.filter(d => d.c_score != null);
+            const aboveWithC = above.filter(d => d.c_score != null);
+            const belowWithCTA = below.filter(d => d.cta != null && d.cta > 0);
+            const aboveWithCTA = above.filter(d => d.cta != null && d.cta > 0);
+            const avgCBelow = belowWithC.length > 0 ? belowWithC.reduce((a, d) => a + (d.c_score || 0), 0) / belowWithC.length : 0;
+            const avgCAbove = aboveWithC.length > 0 ? aboveWithC.reduce((a, d) => a + (d.c_score || 0), 0) / aboveWithC.length : 0;
+            const avgCtaBelow = belowWithCTA.length > 0 ? belowWithCTA.reduce((a, d) => a + (d.cta || 0), 0) / belowWithCTA.length : 0;
+            const avgCtaAbove = aboveWithCTA.length > 0 ? aboveWithCTA.reduce((a, d) => a + (d.cta || 0), 0) / aboveWithCTA.length : 0;
+            // Percentile check — H2 says below should be under 25th percentile
+            const allCta = scatter.filter(d => d.cta != null && d.cta > 0).map(d => d.cta!).sort((a, b) => a - b);
+            const p25Cta = allCta.length > 0 ? allCta[Math.floor(allCta.length * 0.25)] : 0;
+            const allCp = scatter.filter(d => d.c_score != null).map(d => d.c_score!).sort((a, b) => a - b);
+            const p25Cp = allCp.length > 0 ? allCp[Math.floor(allCp.length * 0.25)] : 0;
+            return {
+              threshold,
+              nBelow: below.length,
+              nAbove: above.length,
+              avgCpBelow: Math.round(avgCBelow * 100) / 100,
+              avgCpAbove: Math.round(avgCAbove * 100) / 100,
+              avgCtaBelow: Math.round(avgCtaBelow * 100) / 100,
+              avgCtaAbove: Math.round(avgCtaAbove * 100) / 100,
+              p25Cta: Math.round(p25Cta * 100) / 100,
+              p25Cp: Math.round(p25Cp * 100) / 100,
+              ctaBelowP25: avgCtaBelow <= p25Cta && belowWithCTA.length > 0,
+              cpBelowP25: avgCBelow <= p25Cp && belowWithC.length > 0,
+              h2Supported: (avgCtaBelow <= p25Cta || belowWithCTA.length === 0) && (avgCBelow <= p25Cp || belowWithC.length === 0) && below.length > 0,
+            };
+          });
+
+          // ── OSF H2 Chow Test + Piecewise Regression (per threshold) ──
+          const scValid = scatter.filter(d => d.c_score != null && d.cta != null);
+          const h2ChowTests = [2, 3, 4, 5].map(threshold => {
+            const below = scValid.filter(d => d.r < threshold);
+            const above = scValid.filter(d => d.r >= threshold);
+            // Chow test on I×F → Cp relationship (structural break at threshold)
+            const bX = below.map(d => d.i * d.f);
+            const bY = below.map(d => d.c_score!);
+            const aX = above.map(d => d.i * d.f);
+            const aY = above.map(d => d.c_score!);
+            const chow = _chowTest(bX, bY, aX, aY);
+            // Piecewise: I×F slope below vs above
+            const regBelow = below.length >= 3 ? _linReg(bX, bY) : null;
+            const regAbove = above.length >= 3 ? _linReg(aX, aY) : null;
+            return {
+              threshold,
+              chowF: chow.f,
+              chowP: chow.p,
+              chowSig: chow.p < 0.05,
+              slopeBelow: regBelow?.slope ?? null,
+              slopeAbove: regAbove?.slope ?? null,
+              r2Below: regBelow?.r2 ?? null,
+              r2Above: regAbove?.r2 ?? null,
+              nBelow: below.length,
+              nAbove: above.length,
+            };
+          });
 
           // ── Zone distribution ──
           // Cf uses getZone (0-110 scale), Cp uses getZoneCp (1-10 scale) — proportional zones
@@ -9668,8 +9786,8 @@ export default function StudiuAdminPage() {
                         <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)", padding: "14px 20px", display: "flex", alignItems: "center", gap: 10 }}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>ANALIZA DOUA ZONE — PRAGUL DE RELEVANTA</div>
-                            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Confirmatory: R &ge; {GATE} (OSF H2 primar) &middot; Sensitivity: R &ge; 5 (OSF H2 pre-inregistrat, threshold R=2,3,4,5)</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 0.5 }}>ANALIZA PRAGURI DE RELEVANTA — OSF H2</div>
+                            <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>Confirmatory: R &ge; {GATE} (OSF H2 primar) &middot; Sensitivity: R=2,3,4,5 (OSF H2 Inference Criteria) &middot; Convergenta H7</div>
                           </div>
                           <div style={{ marginLeft: "auto" }}>
                             <InterpBtn k="two-zone-gate" title="Analiza Doua Zone" val={`${gatePassRate}% vs ${tzGate5PassRate}%`} ctx={{ g3pass: gatePassCount, g3rate: gatePassRate, g5pass: tzGate5PassCount, g5rate: tzGate5PassRate, z1: JSON.stringify(tzZ1), z2: JSON.stringify(tzZ2), z3: JSON.stringify(tzZ3), n }} />
@@ -9708,7 +9826,7 @@ export default function StudiuAdminPage() {
                                   <>
                                     {/* Hero: Validation % */}
                                     <div style={{ background: "#fff", border: `1px solid ${z.border}`, borderRadius: 8, padding: "8px 10px", marginBottom: 8, textAlign: "center" as const }}>
-                                      <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 2 }}>VALIDARE IPOTEZA</div>
+                                      <div style={{ fontSize: 9, fontWeight: 700, color: "#9CA3AF", letterSpacing: 1, marginBottom: 2 }}>CONVERGENTA H7</div>
                                       <div style={{ fontSize: 24, fontWeight: 900, color: getValidationColor(d.hypPct) }}>{d.hypPct}%</div>
                                       <div style={{ fontSize: 9, color: getValidationColor(d.hypPct), fontWeight: 600 }}>{getValidationLabel(d.hypPct)}</div>
                                     </div>
@@ -9853,9 +9971,239 @@ export default function StudiuAdminPage() {
                             </div>
                           )}
 
+                          {/* ── OSF H2 Sensitivity: All 4 Thresholds (R=2,3,4,5) ── */}
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#2563EB", marginBottom: 8 }}>
+                              OSF H2 SENSITIVITY — PRAGURI R=2,3,4,5
+                            </div>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Sub prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Peste prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Pass %</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H7 sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H7 peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>&Delta; CTA</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {tzSensitivity.map((ts, si) => {
+                                  const isConfirmatory = ts.threshold === GATE;
+                                  return (
+                                    <tr key={ts.threshold} style={{
+                                      borderBottom: "1px solid #f3f4f6",
+                                      background: isConfirmatory ? "#eff6ff" : si % 2 === 0 ? "#fafafa" : "#fff",
+                                    }}>
+                                      <td style={{ padding: "5px 6px", fontWeight: isConfirmatory ? 800 : 600 }}>
+                                        R={ts.threshold}
+                                        {isConfirmatory && <span style={{ fontSize: 8, color: "#2563EB", marginLeft: 4 }}>PRIMAR</span>}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626" }}>{ts.below.n}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontWeight: 600 }}>{ts.above.n}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 700 }}>{ts.passRate}%</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.below.n > 0 ? "#DC2626" : "#d4d4d4" }}>{ts.below.n > 0 ? `${ts.below.hypPct}%` : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontWeight: 600 }}>{ts.above.n > 0 ? `${ts.above.hypPct}%` : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.below.n > 0 ? "#DC2626" : "#d4d4d4" }}>{ts.below.n > 0 ? ts.below.cta.toFixed(2) : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.above.n > 0 ? ts.above.cta.toFixed(2) : "—"}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 700, color: ts.ctaDrop != null && ts.ctaDrop > 0 ? "#DC2626" : "#059669" }}>
+                                        {ts.ctaDrop != null ? `${ts.ctaDrop > 0 ? "-" : "+"}${Math.abs(ts.ctaDrop)}%` : "—"}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
+                              H7 = Convergenta Formula (|Cf/11 - Cp|). &Delta; CTA = scadere CTA sub prag vs peste prag. Prag PRIMAR = R={GATE} (confirmatory OSF H2).
+                            </div>
+                          </div>
+
+                          {/* ── OSF H2 Individual-Level Test (respondent × stimulus) ── */}
+                          {scatter.length > 0 && (
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #DC2626" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#DC2626", marginBottom: 4 }}>
+                              OSF H2 — NIVEL INDIVIDUAL ({scatter.length.toLocaleString()} observatii)
+                            </div>
+                            <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
+                              H2: &quot;Cand R &lt; prag, C si CTA vor fi uniform scazute (sub percentila 25), indiferent de I si F.&quot;
+                            </div>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>N sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>N peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Cp sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Cp peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>CTA peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>P25 Cp</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>P25 CTA</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>H2</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {h2IndSensitivity.map((ts, si) => {
+                                  const isConfirmatory = ts.threshold === GATE;
+                                  return (
+                                    <tr key={ts.threshold} style={{
+                                      borderBottom: "1px solid #f3f4f6",
+                                      background: isConfirmatory ? "#fef2f2" : si % 2 === 0 ? "#fafafa" : "#fff",
+                                    }}>
+                                      <td style={{ padding: "5px 6px", fontWeight: isConfirmatory ? 800 : 600 }}>
+                                        R={ts.threshold}
+                                        {isConfirmatory && <span style={{ fontSize: 8, color: "#DC2626", marginLeft: 4 }}>PRIMAR</span>}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626", fontWeight: 600 }}>{ts.nBelow.toLocaleString()}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.nAbove.toLocaleString()}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.cpBelowP25 ? "#DC2626" : "#374151", fontWeight: ts.cpBelowP25 ? 700 : 400 }}>
+                                        {ts.nBelow > 0 ? ts.avgCpBelow.toFixed(2) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.avgCpAbove.toFixed(2)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ts.ctaBelowP25 ? "#DC2626" : "#374151", fontWeight: ts.ctaBelowP25 ? 700 : 400 }}>
+                                        {ts.nBelow > 0 ? ts.avgCtaBelow.toFixed(2) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>{ts.avgCtaAbove.toFixed(2)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#9CA3AF", fontSize: 9 }}>{ts.p25Cp.toFixed(1)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#9CA3AF", fontSize: 9 }}>{ts.p25Cta.toFixed(1)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px" }}>
+                                        {ts.nBelow === 0 ? (
+                                          <span style={{ fontSize: 9, color: "#9CA3AF" }}>N/A</span>
+                                        ) : ts.h2Supported ? (
+                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#059669" }}>DA</span>
+                                        ) : (
+                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#DC2626" }}>NU</span>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
+                              Nivel individual: fiecare rand = un respondent × un stimulus. P25 = percentila 25 din toata distributia. H2 = DA daca Cp si CTA sub prag sunt &le; P25.
+                              {h2IndSensitivity.find(t => t.threshold === GATE)?.nBelow === 0 && (
+                                <span style={{ color: "#D97706" }}> Nota: La nivel agregat (medie per material), zona R &lt; {GATE} e goala. La nivel individual, exista {h2IndSensitivity.find(t => t.threshold === GATE)?.nBelow || 0} observatii cu R &lt; {GATE}.</span>
+                              )}
+                            </div>
+                          </div>
+                          )}
+
+                          {/* ── OSF H2 Chow Test + Piecewise Regression ── */}
+                          {scValid.length >= 10 && (
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #7C3AED" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#7C3AED", marginBottom: 4 }}>
+                              OSF H2 — CHOW TEST &amp; PIECEWISE REGRESSION
+                            </div>
+                            <div style={{ fontSize: 9, color: "#6B7280", marginBottom: 8 }}>
+                              Testam daca relatia I&times;F &rarr; Cp are un structural break la fiecare prag. Chow F sig. (p&lt;0.05) = coefficientii difera semnificativ sub vs peste prag.
+                            </div>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" }}>
+                              <thead>
+                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ textAlign: "left", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Prag</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Chow F</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>p</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#6B7280", fontWeight: 700 }}>Sig.</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>Slope sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>Slope peste</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#DC2626", fontWeight: 700 }}>R&sup2; sub</th>
+                                  <th style={{ textAlign: "center", padding: "4px 6px", color: "#059669", fontWeight: 700 }}>R&sup2; peste</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {h2ChowTests.map((ct, ci) => {
+                                  const isConf = ct.threshold === GATE;
+                                  return (
+                                    <tr key={ct.threshold} style={{
+                                      borderBottom: "1px solid #f3f4f6",
+                                      background: isConf ? "#f5f3ff" : ci % 2 === 0 ? "#fafafa" : "#fff",
+                                    }}>
+                                      <td style={{ padding: "5px 6px", fontWeight: isConf ? 800 : 600 }}>
+                                        R={ct.threshold}
+                                        {isConf && <span style={{ fontSize: 8, color: "#7C3AED", marginLeft: 4 }}>PRIMAR</span>}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", fontWeight: 600 }}>{ct.chowF.toFixed(2)}</td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: ct.chowP < 0.05 ? "#059669" : "#9CA3AF" }}>
+                                        {ct.chowP < 0.001 ? "<.001" : ct.chowP.toFixed(3)}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px" }}>
+                                        {ct.chowSig ? (
+                                          <span style={{ fontSize: 9, fontWeight: 700, color: "#059669" }}>DA</span>
+                                        ) : (
+                                          <span style={{ fontSize: 9, color: "#9CA3AF" }}>NU</span>
+                                        )}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626" }}>
+                                        {ct.slopeBelow != null ? ct.slopeBelow.toFixed(3) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669" }}>
+                                        {ct.slopeAbove != null ? ct.slopeAbove.toFixed(3) : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#DC2626", fontSize: 9 }}>
+                                        {ct.r2Below != null ? (ct.r2Below * 100).toFixed(1) + "%" : "—"}
+                                      </td>
+                                      <td style={{ textAlign: "center", padding: "5px 6px", color: "#059669", fontSize: 9 }}>
+                                        {ct.r2Above != null ? (ct.r2Above * 100).toFixed(1) + "%" : "—"}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 6 }}>
+                              Chow test: H0 = coeficientii sunt identici sub si peste prag. Sig. (p&lt;0.05) = structural break confirmat.
+                              Slope = panta I&times;F &rarr; Cp. Daca slope_sub &asymp; 0 si slope_peste &gt; 0, Relevance Gate este confirmat: sub prag, I&times;F nu influenteaza Cp.
+                              {(() => {
+                                const best = h2ChowTests.reduce((a, b) => a.chowF > b.chowF ? a : b);
+                                return best.chowSig ? ` Cel mai puternic breakpoint: R=${best.threshold} (F=${best.chowF.toFixed(2)}, p=${best.chowP < 0.001 ? "<.001" : best.chowP.toFixed(3)}).` : "";
+                              })()}
+                            </div>
+                          </div>
+                          )}
+
+                          {/* ── OSF Archetype Distribution ── */}
+                          <div style={{ marginTop: 10, background: "#fff", borderRadius: 8, padding: "10px 14px", border: "1px solid #e2e8f0", borderLeft: "4px solid #6366f1" }}>
+                            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, color: "#6366f1", marginBottom: 8 }}>
+                              CLASIFICARE ARHETIPURI OSF — {n} MATERIALE
+                            </div>
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              {[
+                                { key: "Phantom", label: "Fantoma", color: "#DC2626", desc: "R < 3" },
+                                { key: "Aesthetic Noise", label: "Zgomot Estetic", color: "#D97706", desc: "F > I + 3" },
+                                { key: "Diamond", label: "Diamant", color: "#059669", desc: "C \u2265 80" },
+                                { key: "Background Noise", label: "Zgomot de Fond", color: "#6B7280", desc: "C < 40" },
+                                { key: "Medium Clarity", label: "Claritate Medie", color: "#2563EB", desc: "40 \u2264 C < 80" },
+                              ].map(arch => {
+                                const cnt = osfArchCount[arch.key] || 0;
+                                const pct = n > 0 ? Math.round((cnt / n) * 100) : 0;
+                                return (
+                                  <div key={arch.key} style={{
+                                    flex: "1 1 0", minWidth: 100,
+                                    padding: "8px 10px", borderRadius: 6,
+                                    border: `1px solid ${cnt > 0 ? arch.color + "40" : "#e5e7eb"}`,
+                                    background: cnt > 0 ? arch.color + "08" : "#f9fafb",
+                                    opacity: cnt === 0 ? 0.5 : 1,
+                                  }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+                                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: arch.color, display: "inline-block" }} />
+                                      <span style={{ fontSize: 10, fontWeight: 700, color: arch.color }}>{arch.label}</span>
+                                    </div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: cnt > 0 ? arch.color : "#d4d4d4" }}>{cnt}</div>
+                                    <div style={{ fontSize: 9, color: "#6B7280" }}>{pct}% &middot; {arch.desc}</div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
                           {/* Academic citation box */}
                           <div style={{ marginTop: 10, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5, padding: "6px 10px", background: "#f1f5f9", borderRadius: 4 }}>
-                            <strong>Nota metodologica:</strong> Analiza cu gate R &ge; {GATE} este <strong>confirmatorie</strong> (OSF H2 — analiza primara). Testarea la R=5 este <strong>pre-inregistrata</strong> ca sensitivity analysis (OSF H2 Inference Criteria: &quot;All three methods repeated at R = 2, 3, 4, and 5&quot;). Interpretarea modelului cu doua zone (inflexiunea R=5) se incadreaza in &quot;Other Planned Analysis #1: Nonlinear Threshold Exploration&quot; — de asemenea pre-anuntat in protocolul OSF.
+                            <strong>Nota metodologica:</strong> Analiza cu gate R &ge; {GATE} este <strong>confirmatorie</strong> (OSF H2 — analiza primara). Testarea la R=2,3,4,5 este <strong>pre-inregistrata</strong> ca sensitivity analysis (OSF H2 Inference Criteria: &quot;All three methods repeated at R = 2, 3, 4, and 5&quot;). Clasificarea arhetipurilor urmeaza definitiile OSF: Phantom (R&lt;3), Aesthetic Noise (F&gt;I+3), Diamond (C&ge;80), Background Noise (C&lt;40), Medium Clarity (rest). Metrica &quot;Convergenta H7&quot; valideaza ipoteza H7 (C_calc ~ C_perc, r &ge; 0.60).
                           </div>
                         </div>
                       </div>

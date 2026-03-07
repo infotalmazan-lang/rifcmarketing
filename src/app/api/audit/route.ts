@@ -204,7 +204,7 @@ RESPOND IN STRICT JSON FORMAT (no markdown, no code blocks, just raw JSON):
   "iJustification": "<1-2 sentences explaining I score>",
   "fJustification": "<1-2 sentences explaining F score>",
   "diagnosis": "<2-3 sentence overall assessment>",
-  "archetype": "invisible_phantom" | "aesthetic_noise" | "buried_diamond" | "none",
+  "archetype": "phantom" | "aesthetic_noise" | "buried_diamond" | "diamond" | "background_noise" | "medium_clarity" | "none",
   "clarityLevel": "critical" | "noise" | "medium" | "supreme",
   "recommendations": [
     { "variable": "R" | "I" | "F", "action": "<specific actionable recommendation>", "impact": "<expected improvement>" }
@@ -427,11 +427,15 @@ export async function POST(request: Request) {
     const f = Math.min(10, Math.max(1, Math.round(auditResult.f || 1)));
     const c = r + i * f;
 
-    // Determine archetype
-    let archetype = auditResult.archetype || "none";
-    if (r < 3) archetype = "invisible_phantom";
-    else if (i <= 3 && f >= 7) archetype = "aesthetic_noise";
-    else if (i >= 7 && f <= 3) archetype = "buried_diamond";
+    // Determine archetype — aligned with OSF pre-registration
+    // OSF: Phantom (R<3), Aesthetic Noise (R≥3, F>I+3), Diamond (C≥80),
+    //       Background Noise (R≥3, C<40), Medium Clarity (remaining)
+    let archetype: string = auditResult.archetype || "none";
+    if (r < 3) archetype = "phantom";
+    else if (f > i + 3) archetype = "aesthetic_noise";
+    else if (c >= 80) archetype = "diamond";
+    else if (c < 40) archetype = "background_noise";
+    else archetype = "medium_clarity";
 
     // Determine clarity level
     let clarityLevel: string;

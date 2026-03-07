@@ -11,12 +11,13 @@ function detectArchetype(
   c: number,
   t: ReturnType<typeof useTranslation>["t"]
 ): { label: string; color: string } | null {
+  // OSF-aligned archetype detection
   if (r < 3) return { label: t.archetypes.simulatorPresets[0].label, color: VARIABLE_COLORS.R };
-  if (i < 3 && f > 7) return { label: t.archetypes.simulatorPresets[1].label, color: VARIABLE_COLORS.F };
-  if (i > 7 && f < 3) return { label: t.archetypes.simulatorPresets[2].label, color: VARIABLE_COLORS.I };
-  if (c > 80) return { label: t.archetypes.simulatorLevels.supreme + " \u2713", color: "#059669" };
-  if (c >= 50) return { label: t.archetypes.simulatorLevels.medium, color: "#2563EB" };
-  if (c < 50) return { label: t.archetypes.simulatorLevels.inefficient, color: "#D97706" };
+  if (f > i + 3) return { label: t.archetypes.simulatorPresets[1].label, color: VARIABLE_COLORS.F };
+  if (i > f + 3) return { label: t.archetypes.simulatorPresets[2].label, color: VARIABLE_COLORS.I };
+  if (c >= 80) return { label: t.archetypes.simulatorLevels.supreme + " \u2713", color: "#059669" };
+  if (c >= 40) return { label: t.archetypes.simulatorLevels.medium, color: "#2563EB" };
+  if (c < 40) return { label: t.archetypes.simulatorLevels.inefficient, color: "#D97706" };
   return null;
 }
 

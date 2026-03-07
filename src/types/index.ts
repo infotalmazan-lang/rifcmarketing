@@ -62,7 +62,7 @@ export interface AuditResult {
   iJustification: string;
   fJustification: string;
   diagnosis: string;
-  archetype: "invisible_phantom" | "aesthetic_noise" | "buried_diamond" | "none";
+  archetype: "phantom" | "aesthetic_noise" | "buried_diamond" | "diamond" | "background_noise" | "medium_clarity" | "none";
   clarityLevel: "critical" | "noise" | "medium" | "supreme";
   recommendations: AuditRecommendation[];
   summary: string;
