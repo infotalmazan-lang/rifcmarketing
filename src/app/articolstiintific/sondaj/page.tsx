@@ -8416,16 +8416,40 @@ export default function StudiuAdminPage() {
             whiteSpace: "nowrap",
           });
 
-          // Render source pills helper
-          const renderSourcePills = () => (
-            <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" as const, alignItems: "center" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", letterSpacing: 0.5 }}>SURSA:</span>
-              <button onClick={() => setInterpSource("all")} style={sourcePillStyle(interpSource === "all")}>Toate sursele</button>
-              <button onClick={() => setInterpSource("general")} style={sourcePillStyle(interpSource === "general")}>General</button>
+          // Render source dropdown helper
+          const dropdownStyle: React.CSSProperties = {
+            padding: "6px 12px", fontSize: 11, fontWeight: 600, borderRadius: 6,
+            border: "1px solid #e5e7eb", cursor: "pointer", background: "#fff",
+            color: "#374151", minWidth: 160, appearance: "none" as const,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+            backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center", paddingRight: 28,
+          };
+          const renderSourceDropdown = () => (
+            <select
+              value={interpSource}
+              onChange={e => setInterpSource(e.target.value)}
+              style={{ ...dropdownStyle, borderColor: interpSource !== "all" ? "#7C3AED" : "#e5e7eb", color: interpSource !== "all" ? "#7C3AED" : "#374151" }}
+            >
+              <option value="all">Toate sursele</option>
+              <option value="general">General (fara tag)</option>
               {distributions.map(d => (
-                <button key={d.id} onClick={() => setInterpSource(d.id)} style={sourcePillStyle(interpSource === d.id)}>{d.name}</button>
+                <option key={d.id} value={d.id}>{d.name}</option>
               ))}
-            </div>
+            </select>
+          );
+          const renderMonthDropdown = () => (
+            <select
+              value={interpMonth}
+              onChange={e => setInterpMonth(e.target.value)}
+              style={{ ...dropdownStyle, borderColor: interpMonth !== "all" ? "#DC2626" : "#e5e7eb", color: interpMonth !== "all" ? "#DC2626" : "#374151" }}
+            >
+              <option value="all">Toata perioada</option>
+              <option value="current">{MONTHS_RO[currentMonthIdx]} {currentYear} (luna curenta)</option>
+              {MONTHS_RO.map((name, i) => {
+                const val = `${currentYear}-${String(i + 1).padStart(2, "0")}`;
+                return <option key={val} value={val}>{name} {currentYear}</option>;
+              })}
+            </select>
           );
 
           // ── Check loading / empty states ──
@@ -8466,18 +8490,11 @@ export default function StudiuAdminPage() {
                     <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
                   ))}
                 </div>}
-                {/* Month filter pills — always visible */}
-                <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-                  <button onClick={() => setInterpMonth("all")} style={monthPillStyle(interpMonth === "all")}>Toata perioada</button>
-                  <button onClick={() => setInterpMonth("current")} style={monthPillStyle(interpMonth === "current")}>Luna curenta</button>
-                  <span style={{ width: 1, height: 20, background: "#e5e7eb", margin: "0 4px" }} />
-                  {MONTHS_RO.map((name, i) => {
-                    const val = `${currentYear}-${String(i + 1).padStart(2, "0")}`;
-                    return <button key={val} onClick={() => setInterpMonth(val)} style={monthPillStyle(interpMonth === val)}>{name}</button>;
-                  })}
+                {/* Month & Source dropdown filters */}
+                <div style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  {renderMonthDropdown()}
+                  {renderSourceDropdown()}
                 </div>
-                {/* Source filter pills — always visible */}
-                {renderSourcePills()}
                 <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>
                   Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
                   {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
@@ -9138,20 +9155,11 @@ export default function StudiuAdminPage() {
                 ))}
               </div>}
 
-              {/* Month filter pills */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <button onClick={() => setInterpMonth("all")} style={monthPillStyle(interpMonth === "all")}>Toata perioada</button>
-                <button onClick={() => setInterpMonth("current")} style={monthPillStyle(interpMonth === "current")}>Luna curenta</button>
-                <span style={{ width: 1, height: 20, background: "#e5e7eb", margin: "0 4px" }} />
-                {MONTHS_RO.map((name, i) => {
-                  const val = `${currentYear}-${String(i + 1).padStart(2, "0")}`;
-                  return (
-                    <button key={val} onClick={() => setInterpMonth(val)} style={monthPillStyle(interpMonth === val)}>{name}</button>
-                  );
-                })}
+              {/* Month & Source dropdown filters */}
+              <div style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
+                {renderMonthDropdown()}
+                {renderSourceDropdown()}
               </div>
-              {/* Source filter pills */}
-              {renderSourcePills()}
               <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 20 }}>
                 Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
                 {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
