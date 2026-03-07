@@ -2961,18 +2961,36 @@ export default function StudiuAdminPage() {
                             const gCp = _mean(withData.map(s => s.avg_c_score));
                             const gDelta = Math.abs(gCf / 11 - gCp);
                             const gValPct = Math.round(Math.max(0, (1 - gDelta / 10) * 100));
-                            // H1 threshold effect — uses c_score (perceput) and CTA, NOT c_computed (tautologic)
-                            const h1BelowCp = scValid.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0);
-                            const h1AboveCp = scValid.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
-                            const h1BelowCpAvg = h1BelowCp.length > 0 ? _mean(h1BelowCp.map(d => d.c_score!)) : 0;
-                            const h1AboveCpAvg = h1AboveCp.length > 0 ? _mean(h1AboveCp.map(d => d.c_score!)) : 0;
-                            const h1DiffCp = Math.abs(h1AboveCpAvg - h1BelowCpAvg);
-                            const h1BelowCta = scValid.filter(d => d.r < GATE && d.cta != null && d.cta > 0);
-                            const h1AboveCta = scValid.filter(d => d.r >= GATE && d.cta != null && d.cta > 0);
-                            const h1BelowCtaAvg = h1BelowCta.length > 0 ? _mean(h1BelowCta.map(d => d.cta!)) : 0;
-                            const h1AboveCtaAvg = h1AboveCta.length > 0 ? _mean(h1AboveCta.map(d => d.cta!)) : 0;
-                            const h1DiffCta = Math.abs(h1AboveCtaAvg - h1BelowCtaAvg);
-                            const h1Diff = h1DiffCta; // verdict bazat pe CTA
+                            // OSF H1 — Scale-Independent Interaction Test (Spearman + Partial Correlation) — Multiplicativ > Aditiv
+                            const osfH1D = scValid.filter(d => d.c_score != null && d.c_score > 0);
+                            const osfH1MultPreds = osfH1D.map(d => d.r + d.i * d.f);
+                            const osfH1AditPreds = osfH1D.map(d => d.r + d.i + d.f);
+                            const osfH1Cps = osfH1D.map(d => d.c_score!);
+                            const osfH1SpearmanMult = osfH1D.length >= 3 ? _spearmanRho(osfH1MultPreds, osfH1Cps) : 0;
+                            const osfH1SpearmanAdit = osfH1D.length >= 3 ? _spearmanRho(osfH1AditPreds, osfH1Cps) : 0;
+                            const osfH1DeltaRho = osfH1SpearmanMult - osfH1SpearmanAdit;
+                            const osfH1FisherZ = _fisherZTest(osfH1SpearmanMult, osfH1SpearmanAdit, osfH1D.length, osfH1D.length);
+                            const osfH1AditReg = _linReg(osfH1D.map(d => d.r + d.i + d.f), osfH1Cps);
+                            const osfH1Residuals = osfH1Cps.map((cp, i) => cp - (osfH1AditReg.slope * (osfH1D[i].r + osfH1D[i].i + osfH1D[i].f) + osfH1AditReg.intercept));
+                            const osfH1IxF = osfH1D.map(d => d.i * d.f);
+                            const osfH1PartialR = osfH1D.length >= 3 ? _pearsonR(osfH1Residuals, osfH1IxF) : 0;
+                            const osfH1PartialP = _pValuePearson(osfH1PartialR, osfH1D.length);
+                            const osfH1SpearmanSig = osfH1FisherZ.p < 0.05 && osfH1DeltaRho > 0;
+                            const osfH1PartialSig = osfH1PartialP < 0.05 && Math.abs(osfH1PartialR) > 0.1;
+                            const osfH1Verdict = osfH1SpearmanSig && osfH1PartialSig ? "CONFIRMATA" : (osfH1SpearmanSig || osfH1PartialSig) ? "PARTIAL" : "NECONFIRMATA";
+                            const osfH1VerdictColor = osfH1Verdict === "CONFIRMATA" ? "#059669" : osfH1Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
+                            // OSF H2 — Poarta Relevantei: c_score (perceput) + CTA, NOT c_computed (tautologic)
+                            const osfH2BelowCp = scValid.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0);
+                            const osfH2AboveCp = scValid.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0);
+                            const osfH2BelowCpAvg = osfH2BelowCp.length > 0 ? _mean(osfH2BelowCp.map(d => d.c_score!)) : 0;
+                            const osfH2AboveCpAvg = osfH2AboveCp.length > 0 ? _mean(osfH2AboveCp.map(d => d.c_score!)) : 0;
+                            const osfH2DiffCp = Math.abs(osfH2AboveCpAvg - osfH2BelowCpAvg);
+                            const osfH2BelowCta = scValid.filter(d => d.r < GATE && d.cta != null && d.cta > 0);
+                            const osfH2AboveCta = scValid.filter(d => d.r >= GATE && d.cta != null && d.cta > 0);
+                            const osfH2BelowCtaAvg = osfH2BelowCta.length > 0 ? _mean(osfH2BelowCta.map(d => d.cta!)) : 0;
+                            const osfH2AboveCtaAvg = osfH2AboveCta.length > 0 ? _mean(osfH2AboveCta.map(d => d.cta!)) : 0;
+                            const osfH2DiffCta = Math.abs(osfH2AboveCtaAvg - osfH2BelowCtaAvg);
+                            const osfH2Diff = osfH2DiffCta; // verdict bazat pe CTA
                             // Compute Factor Calibrare
                             const calD = scValid.filter(d => d.c_score != null && d.c_score > 0);
                             const cfN = calD.length >= 2 ? _mean(calD.map(d => d.c_computed / 11)) : 0;
@@ -2980,26 +2998,6 @@ export default function StudiuAdminPage() {
                             const fc = cfN > 0 ? cpN / cfN : 0;
                             const fcColor = fc >= 1.0 && fc <= 1.2 ? "#059669" : fc <= 1.5 ? "#D97706" : "#DC2626";
                             const fcLabel = fc >= 1.0 && fc <= 1.2 ? "Calibrat excelent" : fc <= 1.5 ? "Subestimare moderata" : fc <= 2.0 ? "Subestimare semnificativa" : "Discrepanta mare";
-
-
-                            // H4 — Scale-Independent Interaction Test (Spearman + Partial Correlation)
-                            const h4D = scValid.filter(d => d.c_score != null && d.c_score > 0);
-                            const h4MultPreds = h4D.map(d => d.r + d.i * d.f);
-                            const h4AditPreds = h4D.map(d => d.r + d.i + d.f);
-                            const h4Cps = h4D.map(d => d.c_score!);
-                            const h4SpearmanMult = h4D.length >= 3 ? _spearmanRho(h4MultPreds, h4Cps) : 0;
-                            const h4SpearmanAdit = h4D.length >= 3 ? _spearmanRho(h4AditPreds, h4Cps) : 0;
-                            const h4DeltaRho = h4SpearmanMult - h4SpearmanAdit;
-                            const h4FisherZ = _fisherZTest(h4SpearmanMult, h4SpearmanAdit, h4D.length, h4D.length);
-                            const h4AditReg = _linReg(h4D.map(d => d.r + d.i + d.f), h4Cps);
-                            const h4Residuals = h4Cps.map((cp, i) => cp - (h4AditReg.slope * (h4D[i].r + h4D[i].i + h4D[i].f) + h4AditReg.intercept));
-                            const h4IxF = h4D.map(d => d.i * d.f);
-                            const h4PartialR = h4D.length >= 3 ? _pearsonR(h4Residuals, h4IxF) : 0;
-                            const h4PartialP = _pValuePearson(h4PartialR, h4D.length);
-                            const h4SpearmanSig = h4FisherZ.p < 0.05 && h4DeltaRho > 0;
-                            const h4PartialSig = h4PartialP < 0.05 && Math.abs(h4PartialR) > 0.1;
-                            const h4Verdict = h4SpearmanSig && h4PartialSig ? "CONFIRMATA" : (h4SpearmanSig || h4PartialSig) ? "PARTIAL" : "NECONFIRMATA";
-                            const h4VerdictColor = h4Verdict === "CONFIRMATA" ? "#059669" : h4Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
 
                             // Metric card builder
                             const metricCard = (icon: string, title: string, value: string, color: string, explanation: string, thresholds: string) => (
@@ -3115,14 +3113,14 @@ export default function StudiuAdminPage() {
                                 </div>
 
                                 {/* Hypotheses verdicts - full names */}
-                                <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, letterSpacing: 0.3, borderBottom: "1px solid #e5e7eb", paddingBottom: 6 }}>VERDICT IPOTEZE</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 8, letterSpacing: 0.3, borderBottom: "1px solid #e5e7eb", paddingBottom: 6 }}>VERDICT IPOTEZE OSF</div>
                                 <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                                   {[
-                                    { code: "H1", name: "Poarta Relevantei (Threshold Effect)", verdict: h1Diff > 2 ? `Confirmata — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}, ΔCp=${h1DiffCp.toFixed(1)}). Poarta Relevantei functioneaza.` : h1Diff >= 1 ? `Partial — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}). Efect moderat al pragului.` : `Neconfirmata — CTA cand R<${GATE}: ${h1BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${h1AboveCtaAvg.toFixed(1)} (ΔCTA=${h1DiffCta.toFixed(1)}). Pragul nu produce efect semnificativ.`, color: h1Diff > 2 ? "#059669" : h1Diff >= 1 ? "#D97706" : "#DC2626" },
-                                    { code: "H2", name: "Formula prezice actiunea reala (C→CTA Correlation)", verdict: `r(C,CTA) = ${cfCtaR.toFixed(2)} — ${Math.abs(cfCtaR) >= 0.5 ? "Corelatie puternica. Formula prezice cu succes intentia de actiune." : Math.abs(cfCtaR) >= 0.3 ? "Corelatie moderata. Formula are putere predictiva, dar exista si alti factori." : "Corelatie slaba. Formula necesita ajustari suplimentare."}`, color: Math.abs(cfCtaR) >= 0.3 ? "#059669" : "#D97706" },
-                                    { code: "H3", name: "Brandul modereaza C (Moderation Analysis)", verdict: "Vezi graficul H3 — analiza compara corelatia C→CTA intre brand cunoscut vs necunoscut.", color: "#6B7280" },
-                                    { code: "H4", name: "Test Scale-Independent al Interactiei I\u00D7F", verdict: h4Verdict === "CONFIRMATA" ? `Spearman \u03C1mult=${h4SpearmanMult.toFixed(3)} > \u03C1adit=${h4SpearmanAdit.toFixed(3)} (Fisher Z p=${h4FisherZ.p.toFixed(3)}) + Partial r(I\u00D7F|R+I+F)=${h4PartialR.toFixed(3)} (p=${h4PartialP.toFixed(3)}). Sinergia I\u00D7F confirmata fara artefact de scala.` : h4Verdict === "PARTIAL" ? `${h4SpearmanSig ? `Spearman favorizeaza multiplicativ (\u0394\u03C1=${h4DeltaRho.toFixed(3)}, p=${h4FisherZ.p.toFixed(3)})` : `Spearman nesemnificativ (\u0394\u03C1=${h4DeltaRho.toFixed(3)}, p=${h4FisherZ.p.toFixed(3)})`}. ${h4PartialSig ? `Partial r=${h4PartialR.toFixed(3)} semnificativ.` : `Partial r=${h4PartialR.toFixed(3)} nesemnificativ.`} Evidenta mixta.` : `Nici Spearman (\u0394\u03C1=${h4DeltaRho.toFixed(3)}, p=${h4FisherZ.p.toFixed(3)}) nici Partial r=${h4PartialR.toFixed(3)} (p=${h4PartialP.toFixed(3)}) nu confirma sinergia I\u00D7F.`, color: h4VerdictColor },
-                                    { code: "H5", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul H5 — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
+                                    { code: "OSF H1", name: "Multiplicativ > Aditiv (Scale-Independent Interaction Test)", verdict: osfH1Verdict === "CONFIRMATA" ? `Spearman \u03C1mult=${osfH1SpearmanMult.toFixed(3)} > \u03C1adit=${osfH1SpearmanAdit.toFixed(3)} (Fisher Z p=${osfH1FisherZ.p.toFixed(3)}) + Partial r(I\u00D7F|R+I+F)=${osfH1PartialR.toFixed(3)} (p=${osfH1PartialP.toFixed(3)}). Sinergia I\u00D7F confirmata fara artefact de scala.` : osfH1Verdict === "PARTIAL" ? `${osfH1SpearmanSig ? `Spearman favorizeaza multiplicativ (\u0394\u03C1=${osfH1DeltaRho.toFixed(3)}, p=${osfH1FisherZ.p.toFixed(3)})` : `Spearman nesemnificativ (\u0394\u03C1=${osfH1DeltaRho.toFixed(3)}, p=${osfH1FisherZ.p.toFixed(3)})`}. ${osfH1PartialSig ? `Partial r=${osfH1PartialR.toFixed(3)} semnificativ.` : `Partial r=${osfH1PartialR.toFixed(3)} nesemnificativ.`} Evidenta mixta.` : `Nici Spearman (\u0394\u03C1=${osfH1DeltaRho.toFixed(3)}, p=${osfH1FisherZ.p.toFixed(3)}) nici Partial r=${osfH1PartialR.toFixed(3)} (p=${osfH1PartialP.toFixed(3)}) nu confirma sinergia I\u00D7F.`, color: osfH1VerdictColor },
+                                    { code: "OSF H2", name: "Poarta Relevantei (Threshold Effect)", verdict: osfH2Diff > 2 ? `Confirmata — CTA cand R<${GATE}: ${osfH2BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${osfH2AboveCtaAvg.toFixed(1)} (\u0394CTA=${osfH2DiffCta.toFixed(1)}, \u0394Cp=${osfH2DiffCp.toFixed(1)}). Poarta Relevantei functioneaza.` : osfH2Diff >= 1 ? `Partial — CTA cand R<${GATE}: ${osfH2BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${osfH2AboveCtaAvg.toFixed(1)} (\u0394CTA=${osfH2DiffCta.toFixed(1)}). Efect moderat al pragului.` : `Neconfirmata — CTA cand R<${GATE}: ${osfH2BelowCtaAvg.toFixed(1)} vs R>=${GATE}: ${osfH2AboveCtaAvg.toFixed(1)} (\u0394CTA=${osfH2DiffCta.toFixed(1)}). Pragul nu produce efect semnificativ.`, color: osfH2Diff > 2 ? "#059669" : osfH2Diff >= 1 ? "#D97706" : "#DC2626" },
+                                    { code: "OSF H3", name: "Brand modereaza C\u2192CTA (Moderation Analysis)", verdict: "Vezi sectiunea OSF H3 — analiza compara corelatia C\u2192CTA intre brand cunoscut vs necunoscut.", color: "#6B7280" },
+                                    { code: "OSF H4", name: "C prezice CTA (r\u22650.50)", verdict: `r(C,CTA) = ${cfCtaR.toFixed(2)} — ${Math.abs(cfCtaR) >= 0.50 ? "Corelatie confirmata (prag OSF). Formula prezice cu succes intentia de actiune." : Math.abs(cfCtaR) >= 0.30 ? "Corelatie moderata. Formula are putere predictiva, dar exista si alti factori." : "Corelatie slaba. Formula necesita ajustari suplimentare."}`, color: Math.abs(cfCtaR) >= 0.30 ? "#059669" : "#D97706" },
+                                    { code: "Extra", name: "Claritate si recognoscibilitate (Bar Chart Comparison)", verdict: "Vezi graficul comparativ — compara scorul C cu rata de recunoastere a brandului per material.", color: "#6B7280" },
                                   ].map(h => (
                                     <div key={h.code} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 10, padding: "8px 12px", background: "#fff", borderRadius: 6, border: "1px solid #f3f4f6", borderLeft: `3px solid ${h.color}` }}>
                                       <div style={{ minWidth: 24 }}>
@@ -7244,13 +7242,13 @@ export default function StudiuAdminPage() {
                           <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
                             <strong>Ce testeaza:</strong> Lantul cauzal C {"\u2192"} CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H2 valideaza ca pasul C{"\u2192"}CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
                             <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
-                            <strong>Interpretare:</strong> r &gt; 0.7 = corelatie puternica (confirmata), r 0.4-0.7 = moderata (partial), r &lt; 0.4 = slaba (nesemnificativa).
+                            <strong>Interpretare (prag OSF):</strong> r &ge; 0.50 = corelatie confirmata, r 0.30-0.49 = moderata (partial), r &lt; 0.30 = slaba (neconfirmata).
                           </div>
                           {/* Stats banner */}
                           {(() => {
                             const absR = Math.abs(exH2PearsonR);
-                            const verdict = absR > 0.7 ? "Corelatie puternica" : absR >= 0.4 ? "Corelatie moderata" : "Corelatie slaba";
-                            const verdColor = absR > 0.7 ? "#059669" : absR >= 0.4 ? "#D97706" : "#DC2626";
+                            const verdict = absR >= 0.50 ? "Corelatie confirmata (OSF)" : absR >= 0.30 ? "Corelatie moderata" : "Corelatie slaba";
+                            const verdColor = absR >= 0.50 ? "#059669" : absR >= 0.30 ? "#D97706" : "#DC2626";
                             return (
                               <div style={{ marginBottom: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
@@ -11015,19 +11013,19 @@ export default function StudiuAdminPage() {
                     </OsfH>
 
                     {/* ── OSF H4 — Corelatie C → CTA ── */}
-                    <OsfH id="h4" num="OSF H4" title={`Ipoteza 4 \u2014 Claritate prezice Intentie de Actiune (C\u2192CTA)`} color="#2563EB" verdict={Math.abs(h2PearsonR) > 0.7 ? "CONFIRMATA" : Math.abs(h2PearsonR) >= 0.4 ? "PARTIAL" : "NECONFIRMATA"}>
+                    <OsfH id="h4" num="OSF H4" title={`Ipoteza 4 \u2014 Claritate prezice Intentie de Actiune (C\u2192CTA)`} color="#2563EB" verdict={Math.abs(h2PearsonR) >= 0.50 ? "CONFIRMATA" : Math.abs(h2PearsonR) >= 0.30 ? "PARTIAL" : "NECONFIRMATA"}>
                     <div style={{ ...S.configItem, marginBottom: 0 }}>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
                         <strong>Ce testeaza:</strong> Lantul cauzal C → CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H2 valideaza ca pasul C→CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
                         <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
-                        <strong>Interpretare:</strong> r &gt; 0.7 = corelatie puternica (confirmata), r 0.4-0.7 = moderata (partial), r &lt; 0.4 = slaba (nesemnificativa).
+                        <strong>Interpretare (prag OSF):</strong> r &ge; 0.50 = corelatie confirmata, r 0.30-0.49 = moderata (partial), r &lt; 0.30 = slaba (neconfirmata).
                       </div>
                       {/* Stats banner */}
                       {(() => {
                         const absR = Math.abs(h2PearsonR);
-                        const verdict = absR > 0.7 ? "Corelatie puternica" : absR >= 0.4 ? "Corelatie moderata" : "Corelatie slaba";
-                        const verdColor = absR > 0.7 ? "#059669" : absR >= 0.4 ? "#D97706" : "#DC2626";
-                        const verdIcon = absR > 0.7 ? "\u2705" : absR >= 0.4 ? "\u26A0\uFE0F" : "\u274C";
+                        const verdict = absR >= 0.50 ? "Corelatie confirmata (OSF)" : absR >= 0.30 ? "Corelatie moderata" : "Corelatie slaba";
+                        const verdColor = absR >= 0.50 ? "#059669" : absR >= 0.30 ? "#D97706" : "#DC2626";
+                        const verdIcon = absR >= 0.50 ? "\u2705" : absR >= 0.30 ? "\u26A0\uFE0F" : "\u274C";
                         return (
                           <div style={{ marginBottom: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
                             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
@@ -11046,7 +11044,7 @@ export default function StudiuAdminPage() {
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <div style={{ fontSize: 9, color: "#6B7280" }}>{_fmtP(_pValuePearson(h2PearsonR, h2Data.length))}</div>
-                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} H2 {verdict}</div>
+                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} H4 {verdict}</div>
                             </div>
                           </div>
                         );
@@ -11273,6 +11271,10 @@ export default function StudiuAdminPage() {
                           <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #0891b2" }}>
                             <strong>Ce testeaza:</strong> Structura factoriala RIFC se mentine consistent peste toate canalele media. Criteriu OSF: CFI &ge; 0.90 in multi-group CFA.{" "}
                             <strong>Aproximare:</strong> Cronbach &alpha; per canal (&ge; 0.70 = consistent) + corelatii inter-item + factor loadings.
+                          </div>
+                          <div style={{ fontSize: 10, color: "#92400e", lineHeight: 1.5, marginBottom: 12, padding: "6px 10px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a", display: "flex", alignItems: "flex-start", gap: 6 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                            <span><strong>Nota metodologica:</strong> Testul OSF pre-registrat specifica multi-group CFA cu CFI &ge; 0.90. Cronbach &alpha; per canal este o <em>aproximare acceptabila</em> pentru esantionul disponibil, dar nu echivaleaza cu CFA confirmatorie. Rezultatele trebuie interpretate cu aceasta limitare.</span>
                           </div>
 
                           {/* Table */}
@@ -11893,44 +11895,44 @@ export default function StudiuAdminPage() {
                       // Recompute summary data from scatter
                       const _sc = results.hypothesisScatterData || [];
                       const _scV = _sc.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_computed > 0);
-                      // H1 — uses c_score (perceput) + CTA, NOT c_computed (tautologic)
-                      const _h1BcpArr = _scV.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0).map(d => d.c_score!);
-                      const _h1AcpArr = _scV.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0).map(d => d.c_score!);
-                      const _h1DiffCp = _h1AcpArr.length > 0 && _h1BcpArr.length > 0 ? _mean(_h1AcpArr) - _mean(_h1BcpArr) : 0;
-                      const _h1BctaArr = _scV.filter(d => d.r < GATE && d.cta != null && d.cta > 0).map(d => d.cta!);
-                      const _h1ActaArr = _scV.filter(d => d.r >= GATE && d.cta != null && d.cta > 0).map(d => d.cta!);
-                      const _h1DiffCta = _h1ActaArr.length > 0 && _h1BctaArr.length > 0 ? _mean(_h1ActaArr) - _mean(_h1BctaArr) : 0;
-                      const _h1D = _cohensD(_h1BctaArr, _h1ActaArr);
-                      const _h1Diff = _h1DiffCta; // verdict bazat pe CTA
-                      // H2
-                      const _h2D = _scV.filter(d => d.cta != null && d.cta > 0);
-                      const _h2R = _h2D.length >= 3 ? _pearsonR(_h2D.map(d => d.c_computed / 11), _h2D.map(d => d.cta!)) : 0;
-                      const _h2P = _pValuePearson(_h2R, _h2D.length);
-                      // H3
-                      const _h3K = _scV.filter(d => d.cta != null && d.cta > 0 && d.brand === true);
-                      const _h3U = _scV.filter(d => d.cta != null && d.cta > 0 && d.brand === false);
-                      const _h3Rk = _h3K.length >= 3 ? _pearsonR(_h3K.map(d => d.c_computed / 11), _h3K.map(d => d.cta!)) : 0;
-                      const _h3Ru = _h3U.length >= 3 ? _pearsonR(_h3U.map(d => d.c_computed / 11), _h3U.map(d => d.cta!)) : 0;
-                      const _h3Fz = _fisherZTest(_h3Rk, _h3Ru, _h3K.length, _h3U.length);
-                      // H4
-                      const _h4V = _scV.filter(d => d.c_score != null && d.c_score > 0);
-                      const _h4RhoM = _h4V.length >= 3 ? _spearmanRho(_h4V.map(d => d.r + d.i * d.f), _h4V.map(d => d.c_score!)) : 0;
-                      const _h4RhoA = _h4V.length >= 3 ? _spearmanRho(_h4V.map(d => d.r + d.i + d.f), _h4V.map(d => d.c_score!)) : 0;
-                      const _h4Fz = _fisherZTest(_h4RhoM, _h4RhoA, _h4V.length, _h4V.length);
-                      const _h4Reg = _linReg(_h4V.map(d => d.r + d.i + d.f), _h4V.map(d => d.c_score!));
-                      const _h4Res = _h4V.map((d, i) => d.c_score! - (_h4Reg.slope * (d.r + d.i + d.f) + _h4Reg.intercept));
-                      const _h4PartR = _h4V.length >= 3 ? _pearsonR(_h4Res, _h4V.map(d => d.i * d.f)) : 0;
-                      const _h4PartP = _pValuePearson(_h4PartR, _h4V.length);
-                      const _h4SpSig = _h4Fz.p < 0.05 && (_h4RhoM - _h4RhoA) > 0;
-                      const _h4PaSig = _h4PartP < 0.05 && Math.abs(_h4PartR) > 0.1;
-                      const _h4Verd = _h4SpSig && _h4PaSig ? "CONFIRMATA" : (_h4SpSig || _h4PaSig) ? "PARTIAL" : "NECONFIRMATA";
-                      const _h4VerdColor = _h4Verd === "CONFIRMATA" ? "#059669" : _h4Verd === "PARTIAL" ? "#D97706" : "#DC2626";
+                      // OSF H1 — Multiplicativ > Aditiv (Spearman + Partial Correlation)
+                      const _osfH1V = _scV.filter(d => d.c_score != null && d.c_score > 0);
+                      const _osfH1RhoM = _osfH1V.length >= 3 ? _spearmanRho(_osfH1V.map(d => d.r + d.i * d.f), _osfH1V.map(d => d.c_score!)) : 0;
+                      const _osfH1RhoA = _osfH1V.length >= 3 ? _spearmanRho(_osfH1V.map(d => d.r + d.i + d.f), _osfH1V.map(d => d.c_score!)) : 0;
+                      const _osfH1Fz = _fisherZTest(_osfH1RhoM, _osfH1RhoA, _osfH1V.length, _osfH1V.length);
+                      const _osfH1Reg = _linReg(_osfH1V.map(d => d.r + d.i + d.f), _osfH1V.map(d => d.c_score!));
+                      const _osfH1Res = _osfH1V.map((d, i) => d.c_score! - (_osfH1Reg.slope * (d.r + d.i + d.f) + _osfH1Reg.intercept));
+                      const _osfH1PartR = _osfH1V.length >= 3 ? _pearsonR(_osfH1Res, _osfH1V.map(d => d.i * d.f)) : 0;
+                      const _osfH1PartP = _pValuePearson(_osfH1PartR, _osfH1V.length);
+                      const _osfH1SpSig = _osfH1Fz.p < 0.05 && (_osfH1RhoM - _osfH1RhoA) > 0;
+                      const _osfH1PaSig = _osfH1PartP < 0.05 && Math.abs(_osfH1PartR) > 0.1;
+                      const _osfH1Verd = _osfH1SpSig && _osfH1PaSig ? "CONFIRMATA" : (_osfH1SpSig || _osfH1PaSig) ? "PARTIAL" : "NECONFIRMATA";
+                      const _osfH1VerdColor = _osfH1Verd === "CONFIRMATA" ? "#059669" : _osfH1Verd === "PARTIAL" ? "#D97706" : "#DC2626";
+                      // OSF H2 — Poarta Relevantei: c_score (perceput) + CTA, NOT c_computed (tautologic)
+                      const _osfH2BcpArr = _scV.filter(d => d.r < GATE && d.c_score != null && d.c_score > 0).map(d => d.c_score!);
+                      const _osfH2AcpArr = _scV.filter(d => d.r >= GATE && d.c_score != null && d.c_score > 0).map(d => d.c_score!);
+                      const _osfH2DiffCp = _osfH2AcpArr.length > 0 && _osfH2BcpArr.length > 0 ? _mean(_osfH2AcpArr) - _mean(_osfH2BcpArr) : 0;
+                      const _osfH2BctaArr = _scV.filter(d => d.r < GATE && d.cta != null && d.cta > 0).map(d => d.cta!);
+                      const _osfH2ActaArr = _scV.filter(d => d.r >= GATE && d.cta != null && d.cta > 0).map(d => d.cta!);
+                      const _osfH2DiffCta = _osfH2ActaArr.length > 0 && _osfH2BctaArr.length > 0 ? _mean(_osfH2ActaArr) - _mean(_osfH2BctaArr) : 0;
+                      const _osfH2D = _cohensD(_osfH2BctaArr, _osfH2ActaArr);
+                      const _osfH2Diff = _osfH2DiffCta; // verdict bazat pe CTA
+                      // OSF H3 — Brand Moderator
+                      const _osfH3K = _scV.filter(d => d.cta != null && d.cta > 0 && d.brand === true);
+                      const _osfH3U = _scV.filter(d => d.cta != null && d.cta > 0 && d.brand === false);
+                      const _osfH3Rk = _osfH3K.length >= 3 ? _pearsonR(_osfH3K.map(d => d.c_computed / 11), _osfH3K.map(d => d.cta!)) : 0;
+                      const _osfH3Ru = _osfH3U.length >= 3 ? _pearsonR(_osfH3U.map(d => d.c_computed / 11), _osfH3U.map(d => d.cta!)) : 0;
+                      const _osfH3Fz = _fisherZTest(_osfH3Rk, _osfH3Ru, _osfH3K.length, _osfH3U.length);
+                      // OSF H4 — C prezice CTA (Pearson r)
+                      const _osfH4D = _scV.filter(d => d.cta != null && d.cta > 0);
+                      const _osfH4R = _osfH4D.length >= 3 ? _pearsonR(_osfH4D.map(d => d.c_computed / 11), _osfH4D.map(d => d.cta!)) : 0;
+                      const _osfH4P = _pValuePearson(_osfH4R, _osfH4D.length);
 
                       const rows: { code: string; name: string; metric: string; n: string; pVal: string; verdict: string; color: string }[] = [
-                        { code: "OSF H1", name: "Multiplicativ > Aditiv", metric: `\u03C1m=${_h4RhoM.toFixed(3)}, \u03C1a=${_h4RhoA.toFixed(3)}, pr=${_h4PartR.toFixed(3)}`, n: `${_h4V.length}`, pVal: `Z=${_h4Fz.z.toFixed(2)}, ${_fmtP(_h4Fz.p)}; pr ${_fmtP(_h4PartP)}`, verdict: _h4Verd, color: _h4VerdColor },
-                        { code: "OSF H2", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "\u2014", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
-                        { code: "OSF H3", name: "Brand modereaza C\u2192CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
-                        { code: "OSF H4", name: "C prezice CTA (r\u22650.50)", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
+                        { code: "OSF H1", name: "Multiplicativ > Aditiv", metric: `\u03C1m=${_osfH1RhoM.toFixed(3)}, \u03C1a=${_osfH1RhoA.toFixed(3)}, pr=${_osfH1PartR.toFixed(3)}`, n: `${_osfH1V.length}`, pVal: `Z=${_osfH1Fz.z.toFixed(2)}, ${_fmtP(_osfH1Fz.p)}; pr ${_fmtP(_osfH1PartP)}`, verdict: _osfH1Verd, color: _osfH1VerdColor },
+                        { code: "OSF H2", name: "Poarta Relevantei", metric: `\u0394Cp=${_osfH2DiffCp.toFixed(2)}, \u0394CTA=${_osfH2DiffCta.toFixed(2)}, d=${_osfH2D.toFixed(2)}`, n: `${_osfH2BcpArr.length + _osfH2AcpArr.length}`, pVal: "\u2014", verdict: _osfH2Diff > 2 ? "CONFIRMATA" : _osfH2Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _osfH2Diff > 2 ? "#059669" : _osfH2Diff >= 1 ? "#D97706" : "#DC2626" },
+                        { code: "OSF H3", name: "Brand modereaza C\u2192CTA", metric: `r\u2096=${_osfH3Rk.toFixed(3)}, r\u1D64=${_osfH3Ru.toFixed(3)}`, n: `${_osfH3K.length + _osfH3U.length}`, pVal: `Z=${_osfH3Fz.z.toFixed(2)}, ${_fmtP(_osfH3Fz.p)}`, verdict: _osfH3Fz.p < 0.05 && Math.abs(_osfH3Ru) > Math.abs(_osfH3Rk) ? "CONFIRMATA" : _osfH3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _osfH3Fz.p < 0.05 && Math.abs(_osfH3Ru) > Math.abs(_osfH3Rk) ? "#059669" : _osfH3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
+                        { code: "OSF H4", name: "C prezice CTA (r\u22650.50)", metric: `r=${_osfH4R.toFixed(3)}, r\u00B2=${(_osfH4R * _osfH4R).toFixed(3)}`, n: `${_osfH4D.length}`, pVal: _fmtP(_osfH4P), verdict: Math.abs(_osfH4R) >= 0.50 ? "CONFIRMATA" : Math.abs(_osfH4R) >= 0.30 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_osfH4R) >= 0.50 ? "#059669" : Math.abs(_osfH4R) >= 0.30 ? "#D97706" : "#DC2626" },
                         (() => {
                           // Compute H5 from scatter — group by stimulus_id category → compute alpha per channel
                           const _h5ChMap: Record<string, { r: number[]; i: number[]; f: number[] }> = {};
@@ -11945,7 +11947,7 @@ export default function StudiuAdminPage() {
                           const _h5Min = Math.min(..._h5Alphas);
                           const _h5Max = Math.max(..._h5Alphas);
                           const _h5AllOk = _h5Alphas.every(a => a >= 0.70);
-                          return { code: "OSF H5", name: "Invarianta Cross-Channel", metric: `\u03B1 range: ${_h5Min.toFixed(2)}\u2014${_h5Max.toFixed(2)} (${_h5Alphas.length} canale)`, n: `${_scV.length}`, pVal: _h5AllOk ? "toate \u2265 0.70" : `${_h5Alphas.filter(a => a < 0.70).length} sub 0.70`, verdict: _h5AllOk ? "CONFIRMATA" : _h5Min >= 0.50 ? "PARTIAL" : "NECONFIRMATA", color: _h5AllOk ? "#059669" : _h5Min >= 0.50 ? "#D97706" : "#DC2626" };
+                          return { code: "OSF H5", name: "Invarianta Cross-Channel*", metric: `\u03B1 range: ${_h5Min.toFixed(2)}\u2014${_h5Max.toFixed(2)} (${_h5Alphas.length} canale)`, n: `${_scV.length}`, pVal: _h5AllOk ? "toate \u2265 0.70" : `${_h5Alphas.filter(a => a < 0.70).length} sub 0.70`, verdict: _h5AllOk ? "CONFIRMATA" : _h5Min >= 0.50 ? "PARTIAL" : "NECONFIRMATA", color: _h5AllOk ? "#059669" : _h5Min >= 0.50 ? "#D97706" : "#DC2626" };
                         })(),
                         (() => {
                           // Compute H6 ANOVA for summary row
@@ -11975,7 +11977,16 @@ export default function StudiuAdminPage() {
                           const _h6ColorSum = _h6AllPassSum ? "#059669" : _h6SomePassSum ? "#D97706" : "#DC2626";
                           return { code: "OSF H6", name: "Segmente nu afecteaza R (\u03B7\u00B2<0.05)", metric: `max \u03B7\u00B2=${_h6MaxEtaSum.toFixed(4)} (${_h6Etas.length} factori)`, n: `${_h6TotalN}`, pVal: _h6AllPassSum ? "toti < 0.05" : `${_h6Etas.filter(e => e >= 0.05).length}/${_h6Etas.length} \u2265 0.05`, verdict: _h6VerdSum, color: _h6ColorSum };
                         })(),
-                        { code: "OSF H7", name: "Validitate Construct (r\u22650.60)", metric: `Valid=${grandHypPct.toFixed(1)}%, \u0394=${grandDelta.toFixed(2)}`, n: `${n}`, pVal: "\u2014", verdict: grandHypPct >= 80 ? "CONFIRMATA" : grandHypPct >= 50 ? "PARTIAL" : "NECONFIRMATA", color: grandHypPct >= 80 ? "#059669" : grandHypPct >= 50 ? "#D97706" : "#DC2626" },
+                        (() => {
+                          // H7: compute Pearson r(Cf_norm, Cp) — same as individual section, aligned with OSF criterion r >= 0.60
+                          const _h7CfN = withData.map(s => normCf(s.avg_c));
+                          const _h7Cps = withData.map(s => s.avg_c_score);
+                          const _h7R = withData.length >= 3 ? _pearsonR(_h7CfN, _h7Cps) : 0;
+                          const _h7P = _pValuePearson(_h7R, withData.length);
+                          const _h7Verd = Math.abs(_h7R) >= 0.60 ? "CONFIRMATA" : Math.abs(_h7R) >= 0.40 ? "PARTIAL" : "NECONFIRMATA";
+                          const _h7Color = _h7Verd === "CONFIRMATA" ? "#059669" : _h7Verd === "PARTIAL" ? "#D97706" : "#DC2626";
+                          return { code: "OSF H7", name: "Validitate Construct (r\u22650.60)", metric: `r=${_h7R.toFixed(3)}, r\u00B2=${(_h7R * _h7R).toFixed(3)}, Valid=${grandHypPct.toFixed(1)}%`, n: `${n}`, pVal: _fmtP(_h7P), verdict: _h7Verd, color: _h7Color };
+                        })(),
                       ];
                       return (
                         <div style={{ marginTop: 30 }}>
@@ -12011,7 +12022,10 @@ export default function StudiuAdminPage() {
                             </table>
                           </div>
                           <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF", lineHeight: 1.5 }}>
-                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). OSF H1: Spearman rho + partial correlation. OSF H2: Cohen&apos;s d pentru efect standardizat. OSF H3: Fisher Z-test. OSF H4: Pearson r. OSF H5: Cronbach &alpha; per canal. OSF H6: ANOVA one-way, &eta;&sup2; per factor demografic (&lt; 0.05 = confirmat). OSF H7: Validare % = 100 - (&Delta;/10 &times; 100).
+                            N = dimensiunea esantionului per ipoteza (variaza din cauza filtrarii). OSF H1: Spearman rho + partial correlation. OSF H2: Cohen&apos;s d pentru efect standardizat. OSF H3: Fisher Z-test. OSF H4: Pearson r (prag OSF: r &ge; 0.50). OSF H5: Cronbach &alpha; per canal. OSF H6: ANOVA one-way, &eta;&sup2; per factor demografic (&lt; 0.05 = confirmat). OSF H7: Pearson r(Cf, Cp) &ge; 0.60.
+                          </div>
+                          <div style={{ marginTop: 4, fontSize: 9, color: "#92400e", lineHeight: 1.4 }}>
+                            * OSF H5: Testul pre-registrat specifica multi-group CFA (CFI &ge; 0.90). Cronbach &alpha; per canal este o aproximare acceptabila — nu echivaleaza CFA confirmatorie.
                           </div>
                         </div>
                       );
