@@ -889,7 +889,7 @@ export default function StudiuAdminPage() {
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
   const [interpViewMode, setInterpViewMode] = useState<"osf" | "additional">("osf");
-  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true });
+  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true });
 
   // ── OSF Collapsible Section Header ──
   const OsfH = ({ id, num, title, color, verdict, children }: { id: string; num: string; title: string; color: string; verdict?: string; children?: React.ReactNode }) => (
@@ -901,7 +901,14 @@ export default function StudiuAdminPage() {
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: osfCollapsed[id] ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.15s ease", flexShrink: 0 }}><path d="M6 9l6 6 6-6"/></svg>
         <span style={{ fontSize: 11, fontWeight: 900, color, letterSpacing: 0.5, flexShrink: 0 }}>{num}</span>
         <span style={{ fontSize: 13, fontWeight: 800, color: "#111827", flex: 1 }}>{title}</span>
-        {verdict && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: verdict.includes("CONFIRMATA") && !verdict.includes("NECONFIRMATA") && !verdict.includes("PARTIAL") ? "#dcfce7" : verdict.includes("PARTIAL") || verdict.includes("MIXTA") || verdict.includes("NEUTRA") || verdict.includes("EVIDENTA") ? "#fef3c7" : "#fee2e2", color: verdict.includes("CONFIRMATA") && !verdict.includes("NECONFIRMATA") && !verdict.includes("PARTIAL") ? "#166534" : verdict.includes("PARTIAL") || verdict.includes("MIXTA") || verdict.includes("NEUTRA") || verdict.includes("EVIDENTA") ? "#92400e" : "#991b1b" }}>{verdict}</span>}
+        {verdict && (() => {
+          const isGreen = (verdict.includes("CONFIRMATA") && !verdict.includes("NECONFIRMATA") && !verdict.includes("PARTIAL")) || verdict.includes("CONSISTENTA") && !verdict.includes("INCONSISTENTA") && !verdict.includes("PARTIAL");
+          const isYellow = !isGreen && (verdict.includes("PARTIAL") || verdict.includes("MIXTA") || verdict.includes("NEUTRA") || verdict.includes("EVIDENTA") || verdict.includes("DESCRIPTIV"));
+          const isGray = verdict.includes("LIPSESC") || verdict.includes("INSUFICIENTE") || verdict.includes("AGREGATE");
+          const bg = isGreen ? "#dcfce7" : isYellow ? "#fef3c7" : isGray ? "#f3f4f6" : "#fee2e2";
+          const fg = isGreen ? "#166534" : isYellow ? "#92400e" : isGray ? "#6B7280" : "#991b1b";
+          return <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: bg, color: fg }}>{verdict}</span>;
+        })()}
       </div>
       {!osfCollapsed[id] && children && (
         <div style={{ padding: "12px 14px", borderRadius: "0 0 8px 8px", border: `1px solid ${color}20`, borderTop: "none", background: "#fff" }}>
@@ -11258,7 +11265,7 @@ export default function StudiuAdminPage() {
                       const allAlphasOk = _h5Channels.every(c => c.alpha >= 0.70);
                       const minAlpha = Math.min(..._h5Channels.map(c => c.alpha));
                       const maxAlpha = Math.max(..._h5Channels.map(c => c.alpha));
-                      const h5Verdict = allAlphasOk ? "STRUCTURA CONSISTENTA" : minAlpha >= 0.50 ? "PARTIAL CONSISTENTA" : "INCONSISTENTA";
+                      const h5Verdict = allAlphasOk ? "CONFIRMATA" : minAlpha >= 0.50 ? "PARTIAL" : "NECONFIRMATA";
                       const h5VerdColor = allAlphasOk ? "#059669" : minAlpha >= 0.50 ? "#D97706" : "#DC2626";
 
                       return (
@@ -11274,7 +11281,7 @@ export default function StudiuAdminPage() {
                               <thead>
                                 <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
                                   <th style={{ padding: "6px 8px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Canal</th>
-                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>N</th>
+                                  <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>N raspunsuri</th>
                                   <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>&alpha;</th>
                                   <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#6B7280" }}>r(R,I)</th>
                                   <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#6B7280" }}>r(R,F)</th>
@@ -11467,6 +11474,79 @@ export default function StudiuAdminPage() {
                             <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
                               <strong>Prag OSF:</strong> &eta;&sup2; &lt; 0.05 = factorul demografic explica &lt; 5% din varianta scorurilor R. ANOVA one-way per factor, variabila dependenta = scorul R per raspuns individual.{" "}
                               Un &eta;&sup2; mic confirma ca Relevanta perceputa nu depinde de profilul respondentului.
+                            </div>
+                          </div>
+                        </OsfH>
+                      );
+                    })()}
+
+                    {/* ═══ OSF H7 — VALIDITATE CONSTRUCT r(Cf, Cp) ═══ */}
+                    {(() => {
+                      const _h7CfNorms = withData.map(s => normCf(s.avg_c));
+                      const _h7Cps = withData.map(s => s.avg_c_score);
+                      const _h7R = withData.length >= 3 ? _pearsonR(_h7CfNorms, _h7Cps) : 0;
+                      const _h7P = _pValuePearson(_h7R, withData.length);
+                      const _h7R2 = _h7R * _h7R;
+                      const _h7Verdict = Math.abs(_h7R) >= 0.60 ? "CONFIRMATA" : Math.abs(_h7R) >= 0.40 ? "PARTIAL" : "NECONFIRMATA";
+                      return (
+                        <OsfH id="h7" num="OSF H7" title={`Ipoteza 7 \u2014 Validitate Construct r(Cf, Cp) \u2265 0.60`} color="#be185d" verdict={_h7Verdict}>
+                          <div>
+                            <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #be185d" }}>
+                              <strong>Ce testeaza:</strong> Corelatia Pearson intre C formula normalizat (Cf/11, pe scala 0-10) si C perceput (Cp evaluat de respondenti, 1-10) trebuie sa fie &ge; 0.60.{" "}
+                              <strong>De ce conteaza:</strong> Daca formula R+(I&times;F)=C prezice adecvat perceptia de claritate, cele doua masurari (formula vs perceptie) trebuie sa coreleze puternic.{" "}
+                              <strong>Metoda:</strong> Pearson r pe mediile per material ({withData.length} materiale).
+                            </div>
+
+                            {/* Stats row */}
+                            <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" as const }}>
+                              <div style={{ flex: 1, minWidth: 100, background: "#fdf2f8", border: "1px solid #fce7f3", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Pearson r</div>
+                                <div style={{ fontSize: 28, fontWeight: 900, color: _h7Verdict === "CONFIRMATA" ? "#059669" : _h7Verdict === "PARTIAL" ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{_h7R.toFixed(3)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>prag &ge; 0.60</div>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>r&sup2;</div>
+                                <div style={{ fontSize: 22, fontWeight: 800, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{_h7R2.toFixed(3)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>{(_h7R2 * 100).toFixed(1)}% varianta explicata</div>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>p-value</div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: _h7P < 0.001 ? "#059669" : _h7P < 0.05 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{_fmtP(_h7P)}</div>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>N (materiale)</div>
+                                <div style={{ fontSize: 22, fontWeight: 800, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{withData.length}</div>
+                              </div>
+                            </div>
+
+                            {/* Additional metrics */}
+                            <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" as const }}>
+                              <div style={{ flex: 1, minWidth: 120, padding: "8px 12px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0" }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", marginBottom: 2 }}>Validare %</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{grandHypPct.toFixed(1)}%</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>100 - (&Delta;/10 &times; 100)</div>
+                              </div>
+                              <div style={{ flex: 1, minWidth: 120, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", marginBottom: 2 }}>&Delta; |Cf_norm - Cp|</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{grandDelta.toFixed(2)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>Cf_norm={grandCfNorm.toFixed(2)} vs Cp={grandCp.toFixed(2)}</div>
+                              </div>
+                            </div>
+
+                            {/* Verdict */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 6, background: _h7Verdict === "CONFIRMATA" ? "#f0fdf4" : _h7Verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2", border: `1px solid ${_h7Verdict === "CONFIRMATA" ? "#bbf7d0" : _h7Verdict === "PARTIAL" ? "#fde68a" : "#fecaca"}` }}>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: _h7Verdict === "CONFIRMATA" ? "#166534" : _h7Verdict === "PARTIAL" ? "#92400e" : "#991b1b" }}>{_h7Verdict}</span>
+                              <span style={{ fontSize: 10, color: "#374151" }}>
+                                {_h7Verdict === "CONFIRMATA"
+                                  ? `Corelatia r=${_h7R.toFixed(3)} \u2265 0.60 confirma validitatea de construct — formula RIFC prezice adecvat perceptia de claritate.`
+                                  : _h7Verdict === "PARTIAL"
+                                  ? `Corelatia r=${_h7R.toFixed(3)} este moderata (0.40-0.60) — relatie existenta dar sub pragul OSF de 0.60.`
+                                  : `Corelatia r=${_h7R.toFixed(3)} < 0.40 — formula nu prezice adecvat perceptia de claritate.`}
+                              </span>
+                            </div>
+
+                            <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
+                              <strong>Prag OSF:</strong> r(Cf_norm, Cp) &ge; 0.60. Cf_norm = C_formula / 11 (normalizat pe scala 0-10). r&sup2; arata proportia de varianta in Cp explicata de Cf. Validare % = 100 - (&Delta;/10 &times; 100).
                             </div>
                           </div>
                         </OsfH>
@@ -11851,7 +11931,22 @@ export default function StudiuAdminPage() {
                         { code: "OSF H2", name: "Poarta Relevantei", metric: `\u0394Cp=${_h1DiffCp.toFixed(2)}, \u0394CTA=${_h1DiffCta.toFixed(2)}, d=${_h1D.toFixed(2)}`, n: `${_h1BcpArr.length + _h1AcpArr.length}`, pVal: "\u2014", verdict: _h1Diff > 2 ? "CONFIRMATA" : _h1Diff >= 1 ? "PARTIAL" : "NECONFIRMATA", color: _h1Diff > 2 ? "#059669" : _h1Diff >= 1 ? "#D97706" : "#DC2626" },
                         { code: "OSF H3", name: "Brand modereaza C\u2192CTA", metric: `r\u2096=${_h3Rk.toFixed(3)}, r\u1D64=${_h3Ru.toFixed(3)}`, n: `${_h3K.length + _h3U.length}`, pVal: `Z=${_h3Fz.z.toFixed(2)}, ${_fmtP(_h3Fz.p)}`, verdict: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "CONFIRMATA" : _h3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: _h3Fz.p < 0.05 && Math.abs(_h3Ru) > Math.abs(_h3Rk) ? "#059669" : _h3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
                         { code: "OSF H4", name: "C prezice CTA (r\u22650.50)", metric: `r=${_h2R.toFixed(3)}, r\u00B2=${(_h2R * _h2R).toFixed(3)}`, n: `${_h2D.length}`, pVal: _fmtP(_h2P), verdict: Math.abs(_h2R) > 0.7 ? "CONFIRMATA" : Math.abs(_h2R) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_h2R) > 0.7 ? "#059669" : Math.abs(_h2R) >= 0.4 ? "#D97706" : "#DC2626" },
-                        { code: "OSF H5", name: "Invarianta Cross-Channel", metric: "Cronbach \u03B1 per canal", n: `${_scV.length}`, pVal: "\u2014", verdict: "DESCRIPTIV", color: "#7C3AED" },
+                        (() => {
+                          // Compute H5 from scatter — group by stimulus_id category → compute alpha per channel
+                          const _h5ChMap: Record<string, { r: number[]; i: number[]; f: number[] }> = {};
+                          _scV.forEach(d => {
+                            const stim = results.stimuliResults.find((s: any) => s.id === d.stimulus_id);
+                            const ch = stim?.type || "unknown";
+                            if (!_h5ChMap[ch]) _h5ChMap[ch] = { r: [], i: [], f: [] };
+                            _h5ChMap[ch].r.push(d.r); _h5ChMap[ch].i.push(d.i); _h5ChMap[ch].f.push(d.f);
+                          });
+                          const _h5Alphas = Object.entries(_h5ChMap).filter(([, v]) => v.r.length >= 10).map(([, v]) => _cronbachAlpha([v.r, v.i, v.f]));
+                          if (_h5Alphas.length < 2) return { code: "OSF H5", name: "Invarianta Cross-Channel", metric: "Canale insuficiente", n: `${_scV.length}`, pVal: "\u2014", verdict: "INSUFICIENT", color: "#9CA3AF" };
+                          const _h5Min = Math.min(..._h5Alphas);
+                          const _h5Max = Math.max(..._h5Alphas);
+                          const _h5AllOk = _h5Alphas.every(a => a >= 0.70);
+                          return { code: "OSF H5", name: "Invarianta Cross-Channel", metric: `\u03B1 range: ${_h5Min.toFixed(2)}\u2014${_h5Max.toFixed(2)} (${_h5Alphas.length} canale)`, n: `${_scV.length}`, pVal: _h5AllOk ? "toate \u2265 0.70" : `${_h5Alphas.filter(a => a < 0.70).length} sub 0.70`, verdict: _h5AllOk ? "CONFIRMATA" : _h5Min >= 0.50 ? "PARTIAL" : "NECONFIRMATA", color: _h5AllOk ? "#059669" : _h5Min >= 0.50 ? "#D97706" : "#DC2626" };
+                        })(),
                         (() => {
                           // Compute H6 ANOVA for summary row
                           const _h6ScSum = _sc;
