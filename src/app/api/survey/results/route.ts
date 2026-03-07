@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const totalResponses = allFilteredResponses.length;
+    let totalResponses = allFilteredResponses.length;
 
     // Build response count AND distinct stimuli count per respondent
     const respCountByRespondent: Record<string, number> = {};
@@ -173,6 +173,7 @@ export async function GET(request: Request) {
       console.log(`[Results API] ${completedRespondents} completed, ${fullDataCount} with all ${expectedResponseCount} stimuli, ${completedRespondents - fullDataCount} partial`);
     }
     allFilteredResponses = allFilteredResponses.filter(r => completedIdSet.has(r.respondent_id));
+    totalResponses = allFilteredResponses.length;
 
     // Today / this month / avg session time
     const now = new Date();

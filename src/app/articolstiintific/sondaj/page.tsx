@@ -2642,7 +2642,7 @@ export default function StudiuAdminPage() {
                   const _isDone = (l: any) => !!l.completed_at || (_activeStimN > 0 && (l.responseCount || 0) >= _activeStimN);
                   const _computeStats = (logs: any[]) => {
                     const completed = logs.filter(_isDone).length;
-                    const responses = logs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+                    const responses = logs.filter(_isDone).reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
                     const now = new Date();
                     const todayStr = now.toISOString().slice(0, 10);
                     const monthStr = now.toISOString().slice(0, 7);
@@ -2875,8 +2875,8 @@ export default function StudiuAdminPage() {
                     ? (resultsSegment === "general" ? "General (fara link)" : (distributions.find((d: any) => d.id === resultsSegment)?.name || resultsSegment))
                     : "Toate segmentele";
 
-                  // Response count from LOG data (single source of truth — matches LOG tab header "RASPUNSURI")
-                  const _ibResponses = _ibLogs.reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
+                  // Response count from LOG data — only completed respondents
+                  const _ibResponses = _ibLogs.filter(_ibIsDone).reduce((s: number, l: any) => s + (l.responseCount || 0), 0);
                   const _ibMaterials = results.stimuliResults.filter((s: any) => s.response_count > 0).length;
                   const _ibTotalMaterials = results.stimuliResults.length;
 
@@ -14201,7 +14201,7 @@ export default function StudiuAdminPage() {
           // Stats
           const completedCount = filtered.filter((l: any) => isLogCompleted(l)).length;
           const rate = filtered.length > 0 ? Math.round((completedCount / filtered.length) * 100) : 0;
-          const totalResponses = filtered.reduce((sum: number, l: any) => sum + (l.responseCount || 0), 0);
+          const totalResponses = filtered.filter((l: any) => isLogCompleted(l)).reduce((sum: number, l: any) => sum + (l.responseCount || 0), 0);
 
           // Unique distributions in data for segment tabs
           const distIds = new Set<string>();
