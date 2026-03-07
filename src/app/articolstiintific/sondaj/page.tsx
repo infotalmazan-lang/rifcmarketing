@@ -6944,7 +6944,7 @@ export default function StudiuAdminPage() {
                             const strongBelowCta = exH1StrongBelow.length > 0 ? Math.round(_mean(exH1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
                             const strongAboveCta = exH1StrongAbove.length > 0 ? Math.round(_mean(exH1StrongAbove.map(d => d.cta!)) * 100) / 100 : 0;
                             const diffStrong = Math.round((strongAboveCta - strongBelowCta) * 100) / 100;
-                            const verdict = diffCta > 2 ? "H1 CONFIRMATA" : diffCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
+                            const verdict = diffCta > 2 ? "H2 CONFIRMATA" : diffCta >= 1 ? "H2 PARTIAL CONFIRMATA" : "H2 NECONFIRMATA";
                             const verdColor = diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626";
                             const verdIcon = diffCta > 2 ? "\u2705" : diffCta >= 1 ? "\u26A0\uFE0F" : "\u274C";
                             const rowLbl: React.CSSProperties = { fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: 0.5, padding: "4px 0 2px", gridColumn: "1 / -1" };
@@ -10627,7 +10627,7 @@ export default function StudiuAdminPage() {
                         const strongBelowCta = h1StrongBelow.length > 0 ? Math.round(_mean(h1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
                         const strongAboveCta = h1StrongAbove.length > 0 ? Math.round(_mean(h1StrongAbove.map(d => d.cta!)) * 100) / 100 : 0;
                         const diffStrong = Math.round((strongAboveCta - strongBelowCta) * 100) / 100;
-                        const verdict = diffCta > 2 ? "H1 CONFIRMATA" : diffCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
+                        const verdict = diffCta > 2 ? "H2 CONFIRMATA" : diffCta >= 1 ? "H2 PARTIAL CONFIRMATA" : "H2 NECONFIRMATA";
                         const verdColor = diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626";
                         const verdIcon = diffCta > 2 ? "\u2705" : diffCta >= 1 ? "\u26A0\uFE0F" : "\u274C";
                         const rowLbl: React.CSSProperties = { fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: 0.5, padding: "4px 0 2px", gridColumn: "1 / -1" };
@@ -10653,10 +10653,14 @@ export default function StudiuAdminPage() {
                                 <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={h1CohenDCp.toFixed(2)}</div>
                               </div>
                               {/* Annotation A */}
-                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fef2f2", borderRadius: 4, borderLeft: "3px solid #DC2626", margin: "2px 0 6px" }}>
+                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: diffCp >= 2 ? "#f0fdf4" : diffCp >= 1 ? "#fffbeb" : "#fef2f2", borderRadius: 4, borderLeft: `3px solid ${diffCp >= 2 ? "#059669" : diffCp >= 1 ? "#D97706" : "#DC2626"}`, margin: "2px 0 6px" }}>
                                 <strong style={{ color: diffCp >= 2 ? "#059669" : diffCp >= 1 ? "#D97706" : "#DC2626" }}>{diffCp >= 2 ? "\u2705 CONFIRMAT" : diffCp >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
-                                Claritate perceputa (c_score 1-10): cat de clar a inteles consumatorul mesajul. Media {h1BelowAvgC} sub prag vs {h1AboveAvgC} peste prag = &Delta;{diffCp.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={h1CohenDCp.toFixed(2)} ({Math.abs(h1CohenDCp) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCp) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
-                                <span style={{ color: "#6B7280" }}>n={h1BelowGate.length}+{h1AboveGate.length} = raspunsuri cu c_score valid.</span>
+                                Claritate perceputa (c_score 1-10): cat de clar a inteles consumatorul mesajul. Media {h1BelowAvgC} sub prag vs {h1AboveAvgC} peste prag = &Delta;{diffCp.toFixed(2)}.{" "}
+                                d={h1CohenDCp.toFixed(2)} ({Math.abs(h1CohenDCp) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCp) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                <strong style={{ color: "#6B7280" }}>Nota:</strong>{" "}
+                                <span style={{ color: "#6B7280" }}>PARTIAL e asteptat — Cp masoara {"\""}inteleg ce vad{"\""}, nu {"\""}vreau sa cumpar{"\""}.{" "}
+                                Oamenii inteleg mesajul indiferent de relevanta (Cp nu scade sub ~5). Metrica decisiva e CTA (sectiunea B).{" "}
+                                n={h1BelowGate.length}+{h1AboveGate.length} raspunsuri cu c_score valid.</span>
                               </div>
                               {/* ROW B: CTA */}
                               <div style={rowLbl}>B. Intentie de actiune (CTA)</div>
