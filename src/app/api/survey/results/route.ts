@@ -153,7 +153,17 @@ export async function GET(request: Request) {
       }
     }
 
-    const completedRespondents = respondents.filter(isEffectivelyCompleted).length;
+    const completedRespondentsList = respondents.filter(isEffectivelyCompleted);
+    const completedRespondents = completedRespondentsList.length;
+
+    // ── CRITICAL: Filter responses to ONLY completed respondents ──
+    // Each completed respondent evaluated ALL 30 stimuli, so every material gets
+    // exactly the same N — no dropout bias. Partial respondents' data is excluded
+    // from aggregated statistics (they saw a random subset of materials, creating
+    // unequal sample sizes and selection bias across materials).
+    const completedIdSet = new Set(completedRespondentsList.map(r => r.id));
+    const allResponsesBeforeFilter = allFilteredResponses.length;
+    allFilteredResponses = allFilteredResponses.filter(r => completedIdSet.has(r.respondent_id));
 
     // Today / this month / avg session time
     const now = new Date();
@@ -169,7 +179,7 @@ export async function GET(request: Request) {
       .filter(s => s > 0 && s < 7200); // ignore outliers > 2h
     const avgSessionTime = durations.length > 0 ? Math.round(durations.reduce((a, v) => a + v, 0) / durations.length) : 0;
 
-    // Build map: stimulus_id → responses[] (from filtered respondents only)
+    // Build map: stimulus_id → responses[] (from COMPLETED respondents only)
     const responsesByStimulus: Record<string, typeof allFilteredResponses> = {};
     for (const resp of allFilteredResponses) {
       if (!responsesByStimulus[resp.stimulus_id]) responsesByStimulus[resp.stimulus_id] = [];
@@ -692,7 +702,9 @@ export async function GET(request: Request) {
         respondentIdsRaw: allIdsRaw.length,
         respondentIdsAfterDistributionFilter: allIds.length,
         respondentsFetched: respondents.length,
-        responsesFetched: allFilteredResponses.length,
+        responsesTotal: allResponsesBeforeFilter,
+        responsesFromCompleted: allFilteredResponses.length,
+        responsesDropped: allResponsesBeforeFilter - allFilteredResponses.length,
         responseBatchErrors: _debugBatchErrors,
         responseBatchesFetched: _debugBatchesFetched,
         scatterDataCount: hypothesisScatterData.length,
