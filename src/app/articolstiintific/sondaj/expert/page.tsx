@@ -40,6 +40,7 @@ interface ExpertInfo {
   brands_worked: string[] | null;
   total_budget_managed: number | null;
   marketing_roles: string[] | null;
+  panel_type?: "efa" | "cfa";
 }
 
 interface Evaluation {
@@ -388,15 +389,18 @@ function ExpertPageContent() {
       setSaveError("Selecteaza toate scorurile (C, R, I, F, CTA) inainte de a salva.");
       return;
     }
-    const requiredJust = [
-      { key: "c_justification", label: "C" }, { key: "r_justification", label: "R" },
-      { key: "i_justification", label: "I" }, { key: "f_justification", label: "F" },
-      { key: "cta_justification", label: "CTA" },
-    ];
-    const shortJust = requiredJust.filter(j => ((form as Record<string, unknown>)[j.key] as string || "").length < MIN_JUSTIFICATION_CHARS);
-    if (shortJust.length > 0) {
-      setSaveError(`Justificarile ${shortJust.map(j => j.label).join(", ")} trebuie sa aiba minim ${MIN_JUSTIFICATION_CHARS} caractere.`);
-      return;
+    const isCfa = expert?.panel_type === "cfa";
+    if (!isCfa) {
+      const requiredJust = [
+        { key: "c_justification", label: "C" }, { key: "r_justification", label: "R" },
+        { key: "i_justification", label: "I" }, { key: "f_justification", label: "F" },
+        { key: "cta_justification", label: "CTA" },
+      ];
+      const shortJust = requiredJust.filter(j => ((form as Record<string, unknown>)[j.key] as string || "").length < MIN_JUSTIFICATION_CHARS);
+      if (shortJust.length > 0) {
+        setSaveError(`Justificarile ${shortJust.map(j => j.label).join(", ")} trebuie sa aiba minim ${MIN_JUSTIFICATION_CHARS} caractere.`);
+        return;
+      }
     }
 
     // Cancel any pending autosave for this stimulus
@@ -627,7 +631,9 @@ function ExpertPageContent() {
     if (!form) return false;
     // All 5 scores must be selected (> 0)
     if (!form.r_score || !form.i_score || !form.f_score || !form.c_score || !form.cta_score) return false;
-    // All 5 justifications must have MIN_JUSTIFICATION_CHARS characters (brand + notes are optional)
+    // CFA mode: scores only, no justification requirement
+    if (expert?.panel_type === "cfa") return true;
+    // EFA mode: all 5 justifications must have MIN_JUSTIFICATION_CHARS characters
     if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
     if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
     if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
@@ -645,11 +651,13 @@ function ExpertPageContent() {
     if (!form.i_score) missing.push("Scor I (Interes)");
     if (!form.f_score) missing.push("Scor F (Forma)");
     if (!form.cta_score) missing.push("Scor CTA");
-    if ((form.c_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare C (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-    if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare R (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-    if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare I (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-    if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare F (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-    if ((form.cta_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare CTA (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if (expert?.panel_type !== "cfa") {
+      if ((form.c_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare C (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+      if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare R (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+      if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare I (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+      if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare F (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+      if ((form.cta_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare CTA (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    }
     return missing;
   };
 
@@ -1319,7 +1327,7 @@ function ExpertPageContent() {
               <div className="expert-scoring" style={P.scoringSection}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 16, textTransform: "uppercase" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 6 }}><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
-                  Calculator R IF C
+                  {expert?.panel_type === "cfa" ? "Calculator R IF C — CFA" : "Calculator R IF C"}
                 </div>
 
                 {/* Formula display */}
@@ -1372,7 +1380,8 @@ function ExpertPageContent() {
                           >{n}</button>
                         ))}
                       </div>
-                      {/* Justification with character counter */}
+                      {/* Justification with character counter — hidden for CFA */}
+                      {expert?.panel_type !== "cfa" && (
                       <div style={{ position: "relative", marginTop: 8 }}>
                         <textarea
                           value={justText}
@@ -1393,6 +1402,7 @@ function ExpertPageContent() {
                           {justValid && <span style={{ marginLeft: 4 }}>✓</span>}
                         </div>
                       </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1422,6 +1432,7 @@ function ExpertPageContent() {
                       }}
                     >Nu recunosc</button>
                   </div>
+                  {expert?.panel_type !== "cfa" && (
                   <textarea
                     value={activeForm.brand_justification}
                     onChange={(e) => updateForm(activeStim.id, "brand_justification", e.target.value)}
@@ -1429,9 +1440,11 @@ function ExpertPageContent() {
                     rows={2}
                     style={P.textarea}
                   />
+                  )}
                 </div>
 
-                {/* Notes */}
+                {/* Notes — hidden for CFA */}
+                {expert?.panel_type !== "cfa" && (
                 <div style={P.dimBlock}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -1445,6 +1458,7 @@ function ExpertPageContent() {
                     style={P.textarea}
                   />
                 </div>
+                )}
 
                 {/* Validation summary */}
                 {(() => {
@@ -1518,7 +1532,9 @@ function ExpertPageContent() {
                   <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280", textAlign: "center" }}>
                     {isFormValid(activeStim.id)
                       ? "Datele se salveaza automat dupa 3 secunde. Apasa butonul pentru salvare imediata."
-                      : "Completeaza toate scorurile si justificarile (min 40 car.) pentru a salva. Brand si Note sunt optionale."}
+                      : expert?.panel_type === "cfa"
+                        ? "Completeaza toate scorurile (C, R, I, F, CTA) pentru a salva. Brand este optional."
+                        : "Completeaza toate scorurile si justificarile (min 40 car.) pentru a salva. Brand si Note sunt optionale."}
                   </div>
                 </div>
               </div>

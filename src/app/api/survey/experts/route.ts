@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
     if (country) insertData.country = country;
     if (education_level) insertData.education_level = education_level;
     if (industry_domain) insertData.industry_domain = industry_domain;
+    if (body.panel_type === "cfa") insertData.panel_type = "cfa";
 
     let { data, error } = await supabase
       .from("survey_experts")
@@ -88,7 +89,8 @@ export async function POST(req: NextRequest) {
           ADD COLUMN IF NOT EXISTS age_range text,
           ADD COLUMN IF NOT EXISTS country text,
           ADD COLUMN IF NOT EXISTS education_level text,
-          ADD COLUMN IF NOT EXISTS industry_domain text;`
+          ADD COLUMN IF NOT EXISTS industry_domain text,
+          ADD COLUMN IF NOT EXISTS panel_type text DEFAULT 'efa';`
       });
       const retry = await supabase.from("survey_experts").insert(insertData).select().single();
       data = retry.data;
@@ -119,7 +121,7 @@ export async function PUT(req: NextRequest) {
     const updates: Record<string, unknown> = {};
     const allowed = ["first_name", "last_name", "email", "phone", "photo_url", "is_active",
       "experience_years", "brands_worked", "total_budget_managed", "marketing_roles",
-      "experience_range", "gender", "age_range", "country", "education_level", "industry_domain"];
+      "experience_range", "gender", "age_range", "country", "education_level", "industry_domain", "panel_type"];
     for (const key of allowed) {
       if (fields[key] !== undefined) updates[key] = fields[key];
     }

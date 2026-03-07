@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     // Try with professional fields first
     const { data: expertFull, error: errFull } = await supabase
       .from("survey_experts")
-      .select("id, first_name, last_name, email, is_active, created_at, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain")
+      .select("id, first_name, last_name, email, is_active, created_at, experience_years, brands_worked, total_budget_managed, marketing_roles, experience_range, gender, age_range, country, education_level, industry_domain, panel_type")
       .eq("access_token", token)
       .single();
 
@@ -78,6 +78,7 @@ export async function GET(req: NextRequest) {
         brands_worked: expert.brands_worked ?? null,
         total_budget_managed: expert.total_budget_managed ?? null,
         marketing_roles: expert.marketing_roles ?? null,
+        panel_type: expert.panel_type ?? "efa",
       },
       stimuli: stimuli || [],
       evaluations: evaluations || [],
