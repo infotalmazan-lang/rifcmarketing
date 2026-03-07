@@ -11,12 +11,14 @@ export async function GET(request: Request) {
     const monthParam = searchParams.get("month"); // "all" | "current" | "YYYY-MM"
 
     // ── Step 1: Fetch ALL non-archived respondent IDs ──
-    // Use the SAME .or() filter as LOG API — proven to return all rows.
-    // Previous approach (no filter + JS filtering) returned fewer rows due to
-    // PostgREST silent truncation on unfiltered queries.
+    // CRITICAL FIX: Select ONLY `id` in the initial query — identical to Log API.
+    // PostgREST silently truncates rows when extra columns (even non-JSONB like
+    // `distribution_id`) increase payload size. Selecting only `id` guarantees
+    // all rows are returned. Archived/distribution filtering is done in JS after
+    // fetching full respondent data in batches (Step 1b).
     const { data: allIdData, error: idError } = await supabase
       .from("survey_respondents")
-      .select("id, is_archived, distribution_id")
+      .select("id")
       .or("is_archived.eq.false,is_archived.is.null")
       .range(0, 9999);
 
@@ -24,17 +26,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Respondent ID query failed", message: idError.message }, { status: 500 });
     }
 
-    // allIdData already filtered by .or() — no JS filtering needed for archived
-    let filteredIdData = allIdData || [];
-
-    // Apply optional distribution filter in JavaScript
-    if (distributionId === "__none__") {
-      filteredIdData = filteredIdData.filter((r: any) => r.distribution_id === null || r.distribution_id === undefined);
-    } else if (distributionId) {
-      filteredIdData = filteredIdData.filter((r: any) => r.distribution_id === distributionId);
-    }
-
-    const allIds = filteredIdData.map((r: any) => r.id as string);
+    // All IDs from initial lightweight query — distribution filtering happens after
+    // full data is fetched in Step 1b (where distribution_id is available).
+    const allIdsRaw = (allIdData || []).map((r: any) => r.id as string);
 
     // ── Step 1b: Fetch full respondent data in BATCHES to prevent PostgREST truncation ──
     // CRITICAL: Even with known IDs, JSONB columns (demographics, behavioral, psychographic)
@@ -42,9 +36,9 @@ export async function GET(request: Request) {
     // FIX: Fetch in small batches (15 IDs per batch) so each query payload stays within limits.
     const RESP_BATCH_SIZE = 15;
     let respondents: any[] = [];
-    if (allIds.length > 0) {
-      for (let i = 0; i < allIds.length; i += RESP_BATCH_SIZE) {
-        const batchIds = allIds.slice(i, i + RESP_BATCH_SIZE);
+    if (allIdsRaw.length > 0) {
+      for (let i = 0; i < allIdsRaw.length; i += RESP_BATCH_SIZE) {
+        const batchIds = allIdsRaw.slice(i, i + RESP_BATCH_SIZE);
         const { data: batchData, error: batchError } = await supabase
           .from("survey_respondents")
           .select("id, started_at, completed_at, demographics, behavioral, psychographic, locale, distribution_id, step_completed")
@@ -57,7 +51,16 @@ export async function GET(request: Request) {
       }
     }
 
-    const respondentIds = respondents.map((r: any) => r.id);
+    // Apply optional distribution filter in JavaScript (AFTER full data fetch,
+    // since distribution_id is now available from the batch-fetched respondent data)
+    if (distributionId === "__none__") {
+      respondents = respondents.filter((r: any) => r.distribution_id === null || r.distribution_id === undefined);
+    } else if (distributionId) {
+      respondents = respondents.filter((r: any) => r.distribution_id === distributionId);
+    }
+
+    const allIds = respondents.map((r: any) => r.id as string);
+    const respondentIds = allIds;
     const totalRespondents = respondents.length;
 
     // ── Step 2: Fetch responses in BATCHES by respondent IDs ──
@@ -686,8 +689,8 @@ export async function GET(request: Request) {
       completionFunnel,
       hypothesisScatterData,
       _debug: {
-        respondentIdsRaw: (allIdData || []).length,
-        respondentIdsFiltered: filteredIdData.length,
+        respondentIdsRaw: allIdsRaw.length,
+        respondentIdsAfterDistributionFilter: allIds.length,
         respondentsFetched: respondents.length,
         responsesFetched: allFilteredResponses.length,
         responseBatchErrors: _debugBatchErrors,
