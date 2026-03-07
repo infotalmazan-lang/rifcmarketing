@@ -852,6 +852,28 @@ export default function StudiuAdminPage() {
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
   const [interpViewMode, setInterpViewMode] = useState<"osf" | "additional">("osf");
+  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true });
+
+  // ── OSF Collapsible Section Header ──
+  const OsfH = ({ id, num, title, color, verdict, children }: { id: string; num: string; title: string; color: string; verdict?: string; children?: React.ReactNode }) => (
+    <div style={{ marginTop: 16, marginBottom: osfCollapsed[id] ? 4 : 0 }}>
+      <div
+        onClick={() => setOsfCollapsed(p => ({ ...p, [id]: !p[id] }))}
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: osfCollapsed[id] ? "#f9fafb" : "#f0f4ff", borderRadius: osfCollapsed[id] ? 8 : "8px 8px 0 0", border: `1px solid ${osfCollapsed[id] ? "#e5e7eb" : color + "40"}`, borderLeft: `4px solid ${color}`, cursor: "pointer", userSelect: "none" as const, transition: "all 0.15s ease" }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: osfCollapsed[id] ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.15s ease", flexShrink: 0 }}><path d="M6 9l6 6 6-6"/></svg>
+        <span style={{ fontSize: 11, fontWeight: 900, color, letterSpacing: 0.5, flexShrink: 0 }}>{num}</span>
+        <span style={{ fontSize: 13, fontWeight: 800, color: "#111827", flex: 1 }}>{title}</span>
+        {verdict && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: verdict.includes("CONFIRMATA") && !verdict.includes("NECONFIRMATA") && !verdict.includes("PARTIAL") ? "#dcfce7" : verdict.includes("PARTIAL") || verdict.includes("MIXTA") || verdict.includes("NEUTRA") || verdict.includes("EVIDENTA") ? "#fef3c7" : "#fee2e2", color: verdict.includes("CONFIRMATA") && !verdict.includes("NECONFIRMATA") && !verdict.includes("PARTIAL") ? "#166534" : verdict.includes("PARTIAL") || verdict.includes("MIXTA") || verdict.includes("NEUTRA") || verdict.includes("EVIDENTA") ? "#92400e" : "#991b1b" }}>{verdict}</span>}
+      </div>
+      {!osfCollapsed[id] && children && (
+        <div style={{ padding: "12px 14px", borderRadius: "0 0 8px 8px", border: `1px solid ${color}20`, borderTop: "none", background: "#fff" }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+
   const [expertSearch, setExpertSearch] = useState("");
   const [expertPage, setExpertPage] = useState(0);
   const [h2ObjFilter, setH2ObjFilter] = useState<string[]>(["awareness", "considerare", "conversie"]);
@@ -10322,13 +10344,16 @@ export default function StudiuAdminPage() {
                           <em>Formula R + (I {"\u00D7"} F) = C prezice cu adevarat claritatea perceputa de consumator? Si daca da, aceasta claritate duce la actiune (CTA)?</em>
                         </div>
                         <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 8 }}>
-                          <strong>Lantul cauzal testat:</strong> R activeaza {"\u2192"} I{"\u00D7"}F produce C (Claritate) {"\u2192"} C coreleaza cu CTA (H2) {"\u2192"} Brand modereaza C{"\u2192"}CTA (H3)
+                          <strong>Lantul cauzal testat:</strong> Mult &gt; Adit (H1) {"\u2192"} R activeaza (H2) {"\u2192"} Brand modereaza (H3) {"\u2192"} C{"\u2192"}CTA (H4) {"\u2192"} Cross-Channel (H5) {"\u2192"} Segmente (H6) {"\u2192"} Construct (H7)
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", fontSize: 10, color: "#374151" }}>
-                          <div><strong style={{ color: "#7C3AED" }}>OSF H1:</strong> Multiplicativ vs Aditiv — sinergia I{"\u00D7"}F e reala</div>
-                          <div><strong style={{ color: "#059669" }}>OSF H2:</strong> Poarta Relevantei — R &lt; {GATE} = audienta se dezangajeaza</div>
-                          <div><strong style={{ color: "#D97706" }}>OSF H3:</strong> Brand modereaza legatura C {"\u2192"} CTA</div>
-                          <div><strong style={{ color: "#059669" }}>OSF H4:</strong> C {"\u2192"} CTA — claritatea prezice actiunea</div>
+                          <div><strong style={{ color: "#7C3AED" }}>OSF H1:</strong> Multiplicativ &gt; Aditiv — R+(I{"\u00D7"}F) vs R+I+F</div>
+                          <div><strong style={{ color: "#059669" }}>OSF H2:</strong> Poarta Relevantei — R &lt; {GATE} = dezangajare</div>
+                          <div><strong style={{ color: "#D97706" }}>OSF H3:</strong> Brand ca Moderator C{"\u2192"}CTA</div>
+                          <div><strong style={{ color: "#059669" }}>OSF H4:</strong> C prezice CTA (r {"\u2265"} 0.50)</div>
+                          <div><strong style={{ color: "#0891b2" }}>OSF H5:</strong> Invarianta Cross-Channel (Cronbach {"\u03B1"})</div>
+                          <div><strong style={{ color: "#6366f1" }}>OSF H6:</strong> Sensibilitate Segmente ({"\u03B7"}&sup2; &lt; 0.05)</div>
+                          <div><strong style={{ color: "#be185d" }}>OSF H7:</strong> Validare Construct r(Cf,Cp) {"\u2265"} 0.60</div>
                         </div>
                       </div>
 
@@ -10418,10 +10443,8 @@ export default function StudiuAdminPage() {
                       );
 
                       return (
-                        <>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 28, marginBottom: 8 }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H1: Superioritate Model Multiplicativ R+(I{"\u00D7"}F)</span>
+                        <OsfH id="h1" num="OSF H1" title={"Ipoteza 1 \u2014 Superioritate Model Multiplicativ R+(I\u00D7F)"} color="#7C3AED" verdict={verdict}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 8 }}>
                             <InterpBtn k="h4" title="H1 — Superioritate Multiplicativ" val={verdict} />
                           </div>
                           <div style={{ ...cardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
@@ -10605,15 +10628,15 @@ export default function StudiuAdminPage() {
                               </div>
                             );
                           })()}
-                        </>
+                        </OsfH>
                       );
                     })()}
 
-                    {/* ── GRAFIC H1 — Poarta Relevanței ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>OSF H2: Poarta Relevantei (Relevance Gate) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
-                        <InterpBtn k="h1" title="H1 — Poarta Relevantei" val={`ΔCTA=${(h1AboveAvgCta - h1BelowAvgCta).toFixed(2)}`} ctx={{ diffCp: h1AboveAvgC - h1BelowAvgC, diffCta: h1AboveAvgCta - h1BelowAvgCta, diffStrong: h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 ? _mean(h1StrongAbove.map(d => d.cta!)) - _mean(h1StrongBelow.map(d => d.cta!)) : 0, cohenDCp: h1CohenDCp, cohenDCta: h1CohenDCta, nBelow: h1CtaBelow.length, nAbove: h1CtaAbove.length, cpBelow: h1BelowAvgC, cpAbove: h1AboveAvgC, ctaBelow: h1BelowAvgCta, ctaAbove: h1AboveAvgCta, brandCtaBelow: h1BrandCtaBelowYes, brandCtaNoBrand: h1BrandCtaBelowNo, nBrandBelow: h1BrandBelowYes.length, nNoBrandBelow: h1BrandBelowNo.length }} />
+                    {/* ── OSF H2 — Poarta Relevanței ── */}
+                    <OsfH id="h2" num="OSF H2" title={`Ipoteza 2 \u2014 Poarta Relevantei (R < ${GATE} = dezangajare)`} color="#059669" verdict={(h1AboveAvgCta - h1BelowAvgCta) > 2 ? "CONFIRMATA" : (h1AboveAvgCta - h1BelowAvgCta) >= 1 ? "PARTIAL" : "NECONFIRMATA"}>
+                    <div style={{ ...S.configItem, marginBottom: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 4 }}>
+                        <InterpBtn k="h1" title="H2 — Poarta Relevantei" val={`ΔCTA=${(h1AboveAvgCta - h1BelowAvgCta).toFixed(2)}`} ctx={{ diffCp: h1AboveAvgC - h1BelowAvgC, diffCta: h1AboveAvgCta - h1BelowAvgCta, diffStrong: h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 ? _mean(h1StrongAbove.map(d => d.cta!)) - _mean(h1StrongBelow.map(d => d.cta!)) : 0, cohenDCp: h1CohenDCp, cohenDCta: h1CohenDCta, nBelow: h1CtaBelow.length, nAbove: h1CtaAbove.length, cpBelow: h1BelowAvgC, cpAbove: h1AboveAvgC, ctaBelow: h1BelowAvgCta, ctaAbove: h1AboveAvgCta, brandCtaBelow: h1BrandCtaBelowYes, brandCtaNoBrand: h1BrandCtaBelowNo, nBrandBelow: h1BrandBelowYes.length, nNoBrandBelow: h1BrandBelowNo.length }} />
                       </div>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
                         <strong>Ce testeaza:</strong> R functioneaza ca cheie de contact — sub R={GATE}, audienta se dezangajeaza: CTA scade ~58%, chiar daca Cp nu scade la zero. R nu opreste formula, opreste audienta din a actiona.{" "}
@@ -10860,10 +10883,11 @@ export default function StudiuAdminPage() {
                         );
                       })()}
                     </div>
+                    </OsfH>
 
-                    {/* ── GRAFIC H3 — Moderarea Brand Awareness ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H3: Brand ca Moderator C{"\u2192"}CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
+                    {/* ── OSF H3 — Moderarea Brand Awareness ── */}
+                    <OsfH id="h3" num="OSF H3" title={`Ipoteza 3 \u2014 Brand ca Moderator C\u2192CTA`} color="#D97706" verdict={(() => { const _fzH3 = _fisherZTest(h3PearsonKnown, h3PearsonUnknown, h3Known.length, h3Unknown.length); return !(_fzH3.p < 0.05) ? "NEUTRA" : Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown) ? "CONFIRMATA" : "INVERSATA"; })()}>
+                    <div style={{ ...S.configItem, marginBottom: 0 }}>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
                         <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
                         <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={h3Known.length}) vs necunoscut (portocaliu, n={h3Unknown.length}).{" "}
@@ -10944,10 +10968,11 @@ export default function StudiuAdminPage() {
                         ) : <> Date insuficiente pentru una dintre serii.</>}
                       </div>
                     </div>
+                    </OsfH>
 
-                    {/* ── GRAFIC H2 — Corelatie C → CTA (cu filtru Obiectiv Marketing) ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H4: Claritate prezice Intentie de Actiune (C{"\u2192"}CTA) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
+                    {/* ── OSF H4 — Corelatie C → CTA ── */}
+                    <OsfH id="h4" num="OSF H4" title={`Ipoteza 4 \u2014 Claritate prezice Intentie de Actiune (C\u2192CTA)`} color="#2563EB" verdict={Math.abs(h2PearsonR) > 0.7 ? "CONFIRMATA" : Math.abs(h2PearsonR) >= 0.4 ? "PARTIAL" : "NECONFIRMATA"}>
+                    <div style={{ ...S.configItem, marginBottom: 0 }}>
                       <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
                         <strong>Ce testeaza:</strong> Lantul cauzal C → CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H2 valideaza ca pasul C→CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
                         <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
@@ -11148,8 +11173,9 @@ export default function StudiuAdminPage() {
                         Analiza filtrata pe materiale Conversie + Considerare (N={h2Data.length}). Materialele Awareness sunt excluse — CTA-ul lor are semnificatie diferita si nu trebuie comparat direct.
                       </div>
                     </div>
+                    </OsfH>
 
-                    {/* ═══ OSF H5 — INVARIANTA CROSS-CHANNEL (Measurement Consistency) ═══ */}
+                    {/* ═══ OSF H5 — INVARIANTA CROSS-CHANNEL ═══ */}
                     {(() => {
                       // Group responses by channel type
                       const _h5Scatter = scatter.filter(d => d.r > 0 && d.i > 0 && d.f > 0);
@@ -11199,13 +11225,8 @@ export default function StudiuAdminPage() {
                       const h5VerdColor = allAlphasOk ? "#059669" : minAlpha >= 0.50 ? "#D97706" : "#DC2626";
 
                       return (
-                        <div style={{ ...cardStyle, marginBottom: 20, borderLeft: `4px solid #7C3AED` }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-6"/></svg>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H5: Invarianta Cross-Channel</span>
-                            <span style={{ fontSize: 10, color: "#6B7280" }}>(Measurement Consistency)</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
+                        <OsfH id="h5" num="OSF H5" title={`Ipoteza 5 \u2014 Invarianta Cross-Channel (Cronbach \u03B1)`} color="#0891b2" verdict={h5Verdict}>
+                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #0891b2" }}>
                             <strong>Ce testeaza:</strong> Structura factoriala RIFC se mentine consistent peste toate canalele media. Criteriu OSF: CFI &ge; 0.90 in multi-group CFA.{" "}
                             <strong>Aproximare:</strong> Cronbach &alpha; per canal (&ge; 0.70 = consistent) + corelatii inter-item + factor loadings.
                           </div>
@@ -11255,72 +11276,62 @@ export default function StudiuAdminPage() {
                           <div style={{ marginTop: 6, fontSize: 9, color: "#9CA3AF" }}>
                             Nota: Multi-group CFA formal (CFI, RMSEA, TLI) necesita software specializat (lavaan/R). Aceste metrici ofera o aproximare robusta a consistentei structurale.
                           </div>
-                        </div>
+                        </OsfH>
                       );
                     })()}
 
                     {/* ═══ OSF H6 — SENSIBILITATE SEGMENTE (ANOVA Demographics) ═══ */}
                     {(() => {
-                      // Check if demographic breakdown data is available
                       const _h6Demographics = results.demographics;
-                      if (!_h6Demographics || Object.keys(_h6Demographics).length === 0) {
-                        return (
-                          <div style={{ ...cardStyle, marginBottom: 20, borderLeft: "4px solid #D97706" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                              <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H6: Sensibilitate Segmente</span>
-                              <span style={{ fontSize: 10, color: "#6B7280" }}>(Demographics ANOVA — &eta;&sup2; &lt; 0.05)</span>
-                            </div>
-                            <div style={{ padding: "12px 16px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Date demografice insuficiente</div>
-                              <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.5 }}>
-                                Testul H6 necesita date demografice individuale (varsta, gen, educatie) per respondent pentru a calcula ANOVA one-way si &eta;&sup2;.{" "}
-                                Datele breakdown agregate sunt disponibile dar nu permit calcul ANOVA la nivel individual.{" "}
-                                <strong>Recomandat:</strong> Adauga intrebari de profil (demografice) in sondaj si exporta datele la nivel de respondent.
+                      const _h6HasData = _h6Demographics && Object.keys(_h6Demographics).length > 0;
+                      return (
+                        <OsfH id="h6" num="OSF H6" title={`Ipoteza 6 \u2014 Sensibilitate Segmente (\u03B7\u00B2 < 0.05)`} color="#6366f1" verdict={_h6HasData ? "DATE AGREGATE" : "DATE INSUFICIENTE"}>
+                          {!_h6HasData ? (
+                            <div>
+                              <div style={{ padding: "12px 16px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 4 }}>Date demografice insuficiente</div>
+                                <div style={{ fontSize: 11, color: "#78350f", lineHeight: 1.5 }}>
+                                  Testul H6 necesita date demografice individuale (varsta, gen, educatie) per respondent pentru a calcula ANOVA one-way si &eta;&sup2;.{" "}
+                                  Datele breakdown agregate sunt disponibile dar nu permit calcul ANOVA la nivel individual.{" "}
+                                  <strong>Recomandat:</strong> Adauga intrebari de profil (demografice) in sondaj si exporta datele la nivel de respondent.
+                                </div>
+                              </div>
+                              <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280" }}>
+                                <strong>Ce ar trebui sa arate:</strong> &eta;&sup2; &lt; 0.05 per factor demografic = &lt; 5% varianta in R explicata de demographics. Daca &eta;&sup2; e mic, formula RIFC functioneaza uniform pe segmente.
                               </div>
                             </div>
-                            <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280" }}>
-                              <strong>Ce ar trebui sa arate:</strong> &eta;&sup2; &lt; 0.05 per factor demografic = &lt; 5% varianta in R explicata de demographics. Daca &eta;&sup2; e mic, formula RIFC functioneaza uniform pe segmente.
-                            </div>
-                          </div>
-                        );
-                      }
-
-                      // If demographic data IS available (individual level), compute ANOVA
-                      // For now, show aggregate demographic breakdown as proxy
-                      const demoKeys = Object.keys(_h6Demographics).slice(0, 5);
-                      return (
-                        <div style={{ ...cardStyle, marginBottom: 20, borderLeft: "4px solid #0EA5E9" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0EA5E9" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                            <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>OSF H6: Sensibilitate Segmente</span>
-                            <span style={{ fontSize: 10, color: "#6B7280" }}>(Profil Demografic — {results.totalRespondents} respondenti)</span>
-                          </div>
-                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #0EA5E9" }}>
-                            <strong>Ce testeaza:</strong> Factorii demografici (varsta, gen, educatie) explica &lt; 5% din varianta scorurilor R (&eta;&sup2; &lt; 0.05).{" "}
-                            <strong>Status:</strong> Distributia demografica este disponibila. ANOVA formal necesita date la nivel de respondent individual.
-                          </div>
-                          {demoKeys.map(dk => {
-                            const groups = _h6Demographics[dk];
-                            const entries = Object.entries(groups).sort((a, b) => b[1] - a[1]);
-                            const total = entries.reduce((a, [, v]) => a + v, 0);
+                          ) : (() => {
+                            const demoKeys = Object.keys(_h6Demographics!).slice(0, 5);
                             return (
-                              <div key={dk} style={{ marginBottom: 10 }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4 }}>{dk}</div>
-                                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const }}>
-                                  {entries.map(([label, count]) => (
-                                    <span key={label} style={{ fontSize: 9, padding: "3px 8px", background: "#f3f4f6", borderRadius: 4, color: "#374151" }}>
-                                      {label}: <strong>{count}</strong> ({total > 0 ? Math.round(count / total * 100) : 0}%)
-                                    </span>
-                                  ))}
+                              <div>
+                                <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #6366f1" }}>
+                                  <strong>Ce testeaza:</strong> Factorii demografici (varsta, gen, educatie) explica &lt; 5% din varianta scorurilor R (&eta;&sup2; &lt; 0.05).{" "}
+                                  <strong>Status:</strong> Distributia demografica este disponibila. ANOVA formal necesita date la nivel de respondent individual.
+                                </div>
+                                {demoKeys.map(dk => {
+                                  const groups = _h6Demographics![dk];
+                                  const entries = Object.entries(groups).sort((a, b) => b[1] - a[1]);
+                                  const total = entries.reduce((a, [, v]) => a + v, 0);
+                                  return (
+                                    <div key={dk} style={{ marginBottom: 10 }}>
+                                      <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 4 }}>{dk}</div>
+                                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" as const }}>
+                                        {entries.map(([label, count]) => (
+                                          <span key={label} style={{ fontSize: 9, padding: "3px 8px", background: "#f3f4f6", borderRadius: 4, color: "#374151" }}>
+                                            {label}: <strong>{count}</strong> ({total > 0 ? Math.round(count / total * 100) : 0}%)
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
+                                  Nota: Distributia demografica este descriptiva. ANOVA one-way si &eta;&sup2; necesita scoruri R individuale per respondent × grup demografic.
                                 </div>
                               </div>
                             );
-                          })}
-                          <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
-                            Nota: Distributia demografica este descriptiva. ANOVA one-way si &eta;&sup2; necesita scoruri R individuale per respondent × grup demografic.
-                          </div>
-                        </div>
+                          })()}
+                        </OsfH>
                       );
                     })()}
 
