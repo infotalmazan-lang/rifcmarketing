@@ -9448,7 +9448,8 @@ export default function StudiuAdminPage() {
                 </div>
               )}
 
-              {/* Month & Source dropdown filters */}
+              {/* Month & Source dropdown filters — only for OSF & Additional */}
+              {(interpViewMode === "osf" || interpViewMode === "additional") && (<>
               <div style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
                 {renderMonthDropdown()}
                 {renderSourceDropdown()}
@@ -9457,9 +9458,10 @@ export default function StudiuAdminPage() {
                 Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
                 {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
               </div>
+              </>)}
 
               {/* ── Info banner (same format as Rezultate) ── */}
-              {(() => {
+              {(interpViewMode === "osf" || interpViewMode === "additional") && (() => {
                 const _iiStats = `${_interpResponses.toLocaleString("ro-RO")} raspunsuri · ${n}/${results.stimuliResults.length} materiale · ${_interpCompleted} completati / ${_interpTotal} inscrisi`;
                 const _iiDescriptions: Record<string, string> = {
                   total: `Interpretare globala — validare ipoteza, scoruri medii R/I/F/C, zone, gates. ${_iiStats}.`,
@@ -10250,7 +10252,7 @@ export default function StudiuAdminPage() {
               {/* ═══════════════════════════════════════════════════════════════
                   TESTARE IPOTEZE H1 – H5 — SVG scatter & bar charts
                   ═══════════════════════════════════════════════════════════════ */}
-              {(() => {
+              {(interpViewMode === "osf" || interpViewMode === "additional") && (() => {
                 const scatter = results.hypothesisScatterData || [];
                 if (scatter.length === 0) return null;
 
