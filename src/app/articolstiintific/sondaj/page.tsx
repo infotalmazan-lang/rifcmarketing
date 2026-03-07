@@ -379,7 +379,7 @@ interface Distribution {
   created_at: string;
 }
 
-type TabKey = "cartonase" | "rezultate" | "distributie" | "interpretare" | "ai" | "preview" | "log";
+type TabKey = "cartonase" | "rezultate" | "distributie" | "interpretare" | "preview" | "log";
 
 const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "cartonase", label: "Cartonase", icon: LayoutGrid },
@@ -389,7 +389,6 @@ const TABS_LEFT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = 
 ];
 const TABS_RIGHT: { key: TabKey; label: string; icon: typeof ClipboardList }[] = [
   { key: "preview", label: "Preview", icon: PlayCircle },
-  { key: "ai", label: "AI Benchmark", icon: Bot },
   { key: "log", label: "Log", icon: ClipboardList },
 ];
 
@@ -915,7 +914,7 @@ export default function StudiuAdminPage() {
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
-  const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "cfa" | "additional">("osf");
+  const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "cfa" | "ai" | "additional">("osf");
   const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true });
 
   // ── OSF Collapsible Section Header ──
@@ -1582,8 +1581,8 @@ export default function StudiuAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "ai") fetchAiEvals();
-  }, [activeTab, fetchAiEvals]);
+    if (activeTab === "interpretare" && interpViewMode === "ai") fetchAiEvals();
+  }, [activeTab, interpViewMode, fetchAiEvals]);
 
   const addAiEval = async () => {
     if (!aiForm.stimulus_id || !aiForm.model_name) return;
@@ -5149,185 +5148,6 @@ export default function StudiuAdminPage() {
         )}
 
 
-        {/* ═══ AI BENCHMARK (Layer 3) ═══ */}
-        {activeTab === "ai" && (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-              <div>
-                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>AI Benchmark (Stratul 3)</h2>
-                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
-                  3 modele AI (Claude, Gemini, GPT) scoreaza aceleasi 30 de stimuli cu prompt-uri identice.
-                </p>
-              </div>
-              <button style={S.addCatBtn} onClick={() => setShowAddAi(true)}>
-                <Plus size={16} />
-                ADAUGA EVALUARE AI
-              </button>
-            </div>
-
-            {/* Add AI eval form */}
-            {showAddAi && (
-              <div style={{ ...S.configCard, borderColor: "#7C3AED", borderWidth: 2, marginBottom: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <Bot size={16} style={{ color: "#7C3AED" }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#7C3AED" }}>EVALUARE AI NOUA</span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-                  <div><label style={S.configLabel}>MATERIAL *</label>
-                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.stimulus_id} onChange={(e) => setAiForm({ ...aiForm, stimulus_id: e.target.value })}>
-                      <option value="">Selecteaza material...</option>
-                      {stimuli.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)}
-                    </select>
-                  </div>
-                  <div><label style={S.configLabel}>MODEL AI *</label>
-                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.model_name} onChange={(e) => setAiForm({ ...aiForm, model_name: e.target.value })}>
-                      {AI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
-                  <div><label style={S.configLabel}>VERSIUNE PROMPT</label><input style={{ ...S.catEditInput, width: "100%", fontFamily: "JetBrains Mono, monospace" }} value={aiForm.prompt_version} onChange={(e) => setAiForm({ ...aiForm, prompt_version: e.target.value })} placeholder="v1" /></div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-                  <div>
-                    <label style={{ ...S.configLabel, color: "#DC2626" }}>R (RELEVANTA) *</label>
-                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#DC2626" }} value={aiForm.r_score} onChange={(e) => setAiForm({ ...aiForm, r_score: parseFloat(e.target.value) || 1 })} />
-                  </div>
-                  <div>
-                    <label style={{ ...S.configLabel, color: "#D97706" }}>I (INTERES) *</label>
-                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#D97706" }} value={aiForm.i_score} onChange={(e) => setAiForm({ ...aiForm, i_score: parseFloat(e.target.value) || 1 })} />
-                  </div>
-                  <div>
-                    <label style={{ ...S.configLabel, color: "#7C3AED" }}>F (FORMA) *</label>
-                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#7C3AED" }} value={aiForm.f_score} onChange={(e) => setAiForm({ ...aiForm, f_score: parseFloat(e.target.value) || 1 })} />
-                  </div>
-                </div>
-                <div style={{ marginBottom: 12 }}><label style={S.configLabel}>JUSTIFICARE AI</label><textarea style={{ ...S.catEditInput, width: "100%" }} value={aiForm.justification} onChange={(e) => setAiForm({ ...aiForm, justification: e.target.value })} placeholder="Output-ul modelului AI..." rows={3} /></div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ ...S.addCatBtn, background: "#7C3AED", opacity: aiSaving ? 0.6 : 1 }} onClick={addAiEval} disabled={aiSaving}>
-                    {aiSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
-                    {aiSaving ? "Se salveaza..." : "Salveaza"}
-                  </button>
-                  <button style={S.galleryEditBtn} onClick={() => setShowAddAi(false)}><X size={14} /> Anuleaza</button>
-                </div>
-              </div>
-            )}
-
-            {/* AI evaluations table */}
-            {aiLoading ? (
-              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}><Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} /></div>
-            ) : aiEvals.length === 0 ? (
-              <div style={S.placeholderTab}>
-                <Bot size={48} style={{ color: "#d1d5db" }} />
-                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio evaluare AI</h3>
-                <p style={{ color: "#6B7280", fontSize: 14 }}>Adauga scorurile modelelor AI (Claude, Gemini, GPT) pe fiecare material.</p>
-              </div>
-            ) : (
-              <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: "#f9fafb" }}>
-                      <th style={{ ...thStyle, textAlign: "left", minWidth: 160 }}>MATERIAL</th>
-                      <th style={thStyle}>MODEL</th>
-                      <th style={thStyle}>PROMPT</th>
-                      <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
-                      <th style={{ ...thStyle, color: "#D97706" }}>I</th>
-                      <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
-                      <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
-                      <th style={thStyle}>DATA</th>
-                      <th style={thStyle}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aiEvals.map((ev) => {
-                      const stim = stimuli.find(s => s.id === ev.stimulus_id);
-                      const modelColors: Record<string, string> = { Claude: "#D97706", Gemini: "#2563EB", GPT: "#059669" };
-                      return (
-                        <tr key={ev.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                          <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, color: "#111827" }}>{stim?.name || "?"}</td>
-                          <td style={tdStyle}>
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 4, background: modelColors[ev.model_name] || "#6B7280", color: "#fff" }}>{ev.model_name}</span>
-                          </td>
-                          <td style={{ ...tdStyle, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{ev.prompt_version}</td>
-                          <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
-                          <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
-                          <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
-                          <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{ev.c_computed}</td>
-                          <td style={{ ...tdStyle, fontSize: 11, color: "#9CA3AF" }}>{new Date(ev.evaluated_at).toLocaleDateString("ro-RO")}</td>
-                          <td style={tdStyle}><button style={S.iconBtnDanger} onClick={() => deleteAiEval(ev.id)}><Trash2 size={14} /></button></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Comparison matrix: per stimulus, show all 3 models side by side */}
-            {aiEvals.length > 0 && (
-              <div style={{ ...S.configCard, marginTop: 20 }}>
-                <div style={S.configHeader}>
-                  <BarChart3 size={16} style={{ color: "#6B7280" }} />
-                  <span style={S.configTitle}>COMPARATIE AI vs CONSUMATORI</span>
-                </div>
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                    <thead>
-                      <tr style={{ background: "#f9fafb" }}>
-                        <th style={{ ...thStyle, textAlign: "left" }}>MATERIAL</th>
-                        {AI_MODELS.map(m => (
-                          <th key={m} colSpan={4} style={{ ...thStyle, borderLeft: "2px solid #e5e7eb" }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{m.toUpperCase()}</span>
-                          </th>
-                        ))}
-                      </tr>
-                      <tr style={{ background: "#f9fafb" }}>
-                        <th style={thStyle}></th>
-                        {AI_MODELS.map(m => (
-                          <React.Fragment key={m}>
-                            <th style={{ ...thStyle, color: "#DC2626", borderLeft: "2px solid #e5e7eb" }}>R</th>
-                            <th style={{ ...thStyle, color: "#D97706" }}>I</th>
-                            <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
-                            <th style={{ ...thStyle, fontWeight: 800 }}>C</th>
-                          </React.Fragment>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stimuli.filter(s => s.is_active).map(stim => {
-                        const hasAny = aiEvals.some(e => e.stimulus_id === stim.id);
-                        if (!hasAny) return null;
-                        return (
-                          <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, fontSize: 12 }}>{stim.name}</td>
-                            {AI_MODELS.map(m => {
-                              const ev = aiEvals.find(e => e.stimulus_id === stim.id && e.model_name === m);
-                              if (!ev) return (
-                                <React.Fragment key={m}>
-                                  <td style={{ ...tdStyle, borderLeft: "2px solid #f3f4f6", color: "#d1d5db" }}>—</td>
-                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
-                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
-                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
-                                </React.Fragment>
-                              );
-                              return (
-                                <React.Fragment key={m}>
-                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600, borderLeft: "2px solid #f3f4f6" }}>{ev.r_score}</td>
-                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
-                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
-                                  <td style={{ ...tdStyle, fontWeight: 800 }}>{ev.c_computed}</td>
-                                </React.Fragment>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ═══ INTERPRETARE TAB ═══ */}
         {activeTab === "interpretare" && (() => {
           // ── Pill styles (always visible, even when loading/empty) ──
@@ -5420,6 +5240,7 @@ export default function StudiuAdminPage() {
                     { key: "pilot" as const, label: "3 Pas Pilot Testing", color: "#7C3AED" },
                     { key: "efa" as const, label: "4 Pas EFA 2A", color: "#2563EB" },
                     { key: "cfa" as const, label: "5 Pas CFA", color: "#EC4899" },
+                    { key: "ai" as const, label: "6 AI Scoring", color: "#0EA5E9" },
                     { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                   ] as const).map(t => (
                     <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
@@ -6232,6 +6053,7 @@ export default function StudiuAdminPage() {
                   { key: "pilot" as const, label: "3 Pas Pilot Testing", color: "#7C3AED" },
                   { key: "efa" as const, label: "4 Pas EFA 2A", color: "#2563EB" },
                   { key: "cfa" as const, label: "5 Pas CFA", color: "#EC4899" },
+                  { key: "ai" as const, label: "6 AI Scoring", color: "#0EA5E9" },
                   { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                 ] as const).map(t => (
                   <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
@@ -18326,6 +18148,185 @@ export default function StudiuAdminPage() {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ═══ AI BENCHMARK (Layer 3) ═══ */}
+        {activeTab === "interpretare" && interpViewMode === "ai" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>AI Benchmark (Stratul 3)</h2>
+                <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  3 modele AI (Claude, Gemini, GPT) scoreaza aceleasi 30 de stimuli cu prompt-uri identice.
+                </p>
+              </div>
+              <button style={S.addCatBtn} onClick={() => setShowAddAi(true)}>
+                <Plus size={16} />
+                ADAUGA EVALUARE AI
+              </button>
+            </div>
+
+            {/* Add AI eval form */}
+            {showAddAi && (
+              <div style={{ ...S.configCard, borderColor: "#7C3AED", borderWidth: 2, marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+                  <Bot size={16} style={{ color: "#7C3AED" }} />
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#7C3AED" }}>EVALUARE AI NOUA</span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div><label style={S.configLabel}>MATERIAL *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.stimulus_id} onChange={(e) => setAiForm({ ...aiForm, stimulus_id: e.target.value })}>
+                      <option value="">Selecteaza material...</option>
+                      {stimuli.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>MODEL AI *</label>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.model_name} onChange={(e) => setAiForm({ ...aiForm, model_name: e.target.value })}>
+                      {AI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div><label style={S.configLabel}>VERSIUNE PROMPT</label><input style={{ ...S.catEditInput, width: "100%", fontFamily: "JetBrains Mono, monospace" }} value={aiForm.prompt_version} onChange={(e) => setAiForm({ ...aiForm, prompt_version: e.target.value })} placeholder="v1" /></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#DC2626" }}>R (RELEVANTA) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#DC2626" }} value={aiForm.r_score} onChange={(e) => setAiForm({ ...aiForm, r_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#D97706" }}>I (INTERES) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#D97706" }} value={aiForm.i_score} onChange={(e) => setAiForm({ ...aiForm, i_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#7C3AED" }}>F (FORMA) *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#7C3AED" }} value={aiForm.f_score} onChange={(e) => setAiForm({ ...aiForm, f_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}><label style={S.configLabel}>JUSTIFICARE AI</label><textarea style={{ ...S.catEditInput, width: "100%" }} value={aiForm.justification} onChange={(e) => setAiForm({ ...aiForm, justification: e.target.value })} placeholder="Output-ul modelului AI..." rows={3} /></div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...S.addCatBtn, background: "#7C3AED", opacity: aiSaving ? 0.6 : 1 }} onClick={addAiEval} disabled={aiSaving}>
+                    {aiSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
+                    {aiSaving ? "Se salveaza..." : "Salveaza"}
+                  </button>
+                  <button style={S.galleryEditBtn} onClick={() => setShowAddAi(false)}><X size={14} /> Anuleaza</button>
+                </div>
+              </div>
+            )}
+
+            {/* AI evaluations table */}
+            {aiLoading ? (
+              <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}><Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} /></div>
+            ) : aiEvals.length === 0 ? (
+              <div style={S.placeholderTab}>
+                <Bot size={48} style={{ color: "#d1d5db" }} />
+                <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio evaluare AI</h3>
+                <p style={{ color: "#6B7280", fontSize: 14 }}>Adauga scorurile modelelor AI (Claude, Gemini, GPT) pe fiecare material.</p>
+              </div>
+            ) : (
+              <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: "#f9fafb" }}>
+                      <th style={{ ...thStyle, textAlign: "left", minWidth: 160 }}>MATERIAL</th>
+                      <th style={thStyle}>MODEL</th>
+                      <th style={thStyle}>PROMPT</th>
+                      <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                      <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                      <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                      <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
+                      <th style={thStyle}>DATA</th>
+                      <th style={thStyle}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aiEvals.map((ev) => {
+                      const stim = stimuli.find(s => s.id === ev.stimulus_id);
+                      const modelColors: Record<string, string> = { Claude: "#D97706", Gemini: "#2563EB", GPT: "#059669" };
+                      return (
+                        <tr key={ev.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, color: "#111827" }}>{stim?.name || "?"}</td>
+                          <td style={tdStyle}>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 4, background: modelColors[ev.model_name] || "#6B7280", color: "#fff" }}>{ev.model_name}</span>
+                          </td>
+                          <td style={{ ...tdStyle, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{ev.prompt_version}</td>
+                          <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
+                          <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                          <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                          <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{ev.c_computed}</td>
+                          <td style={{ ...tdStyle, fontSize: 11, color: "#9CA3AF" }}>{new Date(ev.evaluated_at).toLocaleDateString("ro-RO")}</td>
+                          <td style={tdStyle}><button style={S.iconBtnDanger} onClick={() => deleteAiEval(ev.id)}><Trash2 size={14} /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Comparison matrix: per stimulus, show all 3 models side by side */}
+            {aiEvals.length > 0 && (
+              <div style={{ ...S.configCard, marginTop: 20 }}>
+                <div style={S.configHeader}>
+                  <BarChart3 size={16} style={{ color: "#6B7280" }} />
+                  <span style={S.configTitle}>COMPARATIE AI vs CONSUMATORI</span>
+                </div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={{ ...thStyle, textAlign: "left" }}>MATERIAL</th>
+                        {AI_MODELS.map(m => (
+                          <th key={m} colSpan={4} style={{ ...thStyle, borderLeft: "2px solid #e5e7eb" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{m.toUpperCase()}</span>
+                          </th>
+                        ))}
+                      </tr>
+                      <tr style={{ background: "#f9fafb" }}>
+                        <th style={thStyle}></th>
+                        {AI_MODELS.map(m => (
+                          <React.Fragment key={m}>
+                            <th style={{ ...thStyle, color: "#DC2626", borderLeft: "2px solid #e5e7eb" }}>R</th>
+                            <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                            <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                            <th style={{ ...thStyle, fontWeight: 800 }}>C</th>
+                          </React.Fragment>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stimuli.filter(s => s.is_active).map(stim => {
+                        const hasAny = aiEvals.some(e => e.stimulus_id === stim.id);
+                        if (!hasAny) return null;
+                        return (
+                          <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, fontSize: 12 }}>{stim.name}</td>
+                            {AI_MODELS.map(m => {
+                              const ev = aiEvals.find(e => e.stimulus_id === stim.id && e.model_name === m);
+                              if (!ev) return (
+                                <React.Fragment key={m}>
+                                  <td style={{ ...tdStyle, borderLeft: "2px solid #f3f4f6", color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                </React.Fragment>
+                              );
+                              return (
+                                <React.Fragment key={m}>
+                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600, borderLeft: "2px solid #f3f4f6" }}>{ev.r_score}</td>
+                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
+                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                                  <td style={{ ...tdStyle, fontWeight: 800 }}>{ev.c_computed}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
