@@ -916,7 +916,7 @@ export default function StudiuAdminPage() {
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
   const [interpViewMode, setInterpViewMode] = useState<"osf" | "additional">("osf");
-  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true });
+  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true });
 
   // ── OSF Collapsible Section Header ──
   const OsfH = ({ id, num, title, color, verdict, children }: { id: string; num: string; title: string; color: string; verdict?: string; children?: React.ReactNode }) => (
@@ -7001,7 +7001,7 @@ export default function StudiuAdminPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
                           <div style={{ width: 4, height: 24, borderRadius: 2, background: "#111827" }} />
                           <div>
-                            <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H5) — Evaluare Experti</div>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze (H1 — H7) — Evaluare Experti</div>
                             <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I × F) = C. Bazat pe {exTotalEvalResponses} evaluari de la {completedExperts} experti pe {exN} materiale.</div>
                           </div>
                         </div>
@@ -7058,11 +7058,13 @@ export default function StudiuAdminPage() {
                               <strong>Lantul cauzal testat:</strong> R activeaza {"\u2192"} I{"\u00D7"}F produce C (Claritate) {"\u2192"} C coreleaza cu CTA (H2) {"\u2192"} Brand modereaza C{"\u2192"}CTA (H3)
                             </div>
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", fontSize: 10, color: "#374151" }}>
-                              <div><strong style={{ color: "#059669" }}>H1:</strong> Poarta Relevantei — R &lt; {EX_GATE} = audienta se dezangajeaza</div>
-                              <div><strong style={{ color: "#059669" }}>H2:</strong> C {"\u2192"} CTA — claritatea prezice actiunea</div>
+                              <div><strong style={{ color: "#7C3AED" }}>H1:</strong> Superioritate Multiplicativ — R+(I{"\u00D7"}F) vs R+I+F</div>
+                              <div><strong style={{ color: "#059669" }}>H2:</strong> Poarta Relevantei — R &lt; {EX_GATE} = dezangajare</div>
                               <div><strong style={{ color: "#D97706" }}>H3:</strong> Brand modereaza legatura C {"\u2192"} CTA</div>
-                              <div><strong style={{ color: "#7C3AED" }}>H4:</strong> Scale-Independent — sinergia I{"\u00D7"}F e reala</div>
-                              <div><strong style={{ color: "#6B7280" }}>H5:</strong> Claritate si recognoscibilitate (calitativa)</div>
+                              <div><strong style={{ color: "#2563EB" }}>H4:</strong> Claritate prezice Intentie de Actiune (C{"\u2192"}CTA)</div>
+                              <div><strong style={{ color: "#0891b2" }}>H5:</strong> Invarianta Cross-Channel (Cronbach {"\u03B1"})</div>
+                              <div><strong style={{ color: "#6366f1" }}>H6:</strong> Sensibilitate Segmente ({"\u03B7"}{"\u00B2"} &lt; 0.05)</div>
+                              <div><strong style={{ color: "#be185d" }}>H7:</strong> Validitate Construct r(Cf, Cp) {"\u2265"} 0.60</div>
                             </div>
                           </div>
 
@@ -7086,11 +7088,162 @@ export default function StudiuAdminPage() {
                           </div>
                         </div>
 
-                        {/* ── GRAFIC H1 — Poarta Relevantei (Full Format) ── */}
-                        <div style={{ ...S.configItem, marginBottom: 20 }}>
+                        {/* ═══ OsfH H1 — Superioritate Model Multiplicativ R+(IxF) ═══ */}
+                        <OsfH id="efa-h1" num="OSF H1" title={`Ipoteza 1 \u2014 Superioritate Model Multiplicativ R+(I\u00D7F)`} color="#7C3AED" verdict={exH4Verd}>
+                        {(() => {
+                          if (exH4V.length < 3) return <div style={{ padding: "16px 20px", background: "#f0f9ff", borderRadius: 8, border: "1px solid #bae6fd" }}><div style={{ fontSize: 12, fontWeight: 700, color: "#0c4a6e", marginBottom: 6 }}>Date insuficiente</div><div style={{ fontSize: 11, color: "#475569" }}>Minimum 3 raspunsuri necesare pentru analiza H1.</div></div>;
+
+                          const multPreds4 = exH4V.map(d => d.r + d.i * d.f);
+                          const aditPreds4 = exH4V.map(d => d.r + d.i + d.f);
+                          const cps4 = exH4V.map(d => d.c_score!);
+                          const deltaRho4 = exH4RhoM - exH4RhoA;
+
+                          // Rank data for scatter plots
+                          const rankMult4 = _rankArray(multPreds4);
+                          const rankAdit4 = _rankArray(aditPreds4);
+                          const rankCp4 = _rankArray(cps4);
+
+                          const residuals4 = cps4.map((cp, i) => cp - (exH4Reg.slope * (exH4V[i].r + exH4V[i].i + exH4V[i].f) + exH4Reg.intercept));
+                          const ixf4 = exH4V.map(d => d.i * d.f);
+
+                          const exH4ChartW2 = 340, exH4ChartH2 = 220;
+                          const exH4Pad2 = { t: 25, r: 15, b: 35, l: 40 };
+                          const exH4pw = exH4ChartW2 - exH4Pad2.l - exH4Pad2.r, exH4ph = exH4ChartH2 - exH4Pad2.t - exH4Pad2.b;
+                          const maxRank4 = exH4V.length;
+
+                          const scatterSVG4 = (xRanks: number[], yRanks: number[], label: string, rho: number, color: string) => (
+                            <svg viewBox={`0 0 ${exH4ChartW2} ${exH4ChartH2}`} style={{ width: "100%", height: "auto", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                              <text x={exH4ChartW2 / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">{label}</text>
+                              {[0.25, 0.5, 0.75, 1].map(f => {
+                                const yy = exH4Pad2.t + exH4ph * (1 - f);
+                                return <g key={f}><line x1={exH4Pad2.l} y1={yy} x2={exH4Pad2.l + exH4pw} y2={yy} stroke="#f3f4f6" /><text x={exH4Pad2.l - 4} y={yy + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{Math.round(f * maxRank4)}</text></g>;
+                              })}
+                              {xRanks.map((xr, i) => {
+                                const cx4 = exH4Pad2.l + (xr / maxRank4) * exH4pw;
+                                const cy4 = exH4Pad2.t + exH4ph * (1 - yRanks[i] / maxRank4);
+                                return <circle key={i} cx={cx4} cy={cy4} r={3} fill={color} opacity={0.5} />;
+                              })}
+                              {/* trend line */}
+                              {(() => {
+                                const reg4 = _linReg(xRanks, yRanks);
+                                const x1v4 = 1, x2v4 = maxRank4;
+                                const y1v4 = reg4.slope * x1v4 + reg4.intercept, y2v4 = reg4.slope * x2v4 + reg4.intercept;
+                                const sx14 = exH4Pad2.l + (x1v4 / maxRank4) * exH4pw, sx24 = exH4Pad2.l + (x2v4 / maxRank4) * exH4pw;
+                                const sy14 = exH4Pad2.t + exH4ph * (1 - y1v4 / maxRank4), sy24 = exH4Pad2.t + exH4ph * (1 - y2v4 / maxRank4);
+                                return <line x1={sx14} y1={sy14} x2={sx24} y2={sy24} stroke={color} strokeWidth={1.5} strokeDasharray="4,3" />;
+                              })()}
+                              <text x={exH4Pad2.l + 4} y={exH4Pad2.t + 12} fontSize={8} fill="#6B7280">Rank Predictor</text>
+                              <text x={exH4ChartW2 - exH4Pad2.r - 5} y={exH4Pad2.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill={color}>{"\u03C1"} = {rho.toFixed(3)}</text>
+                              <text x={exH4ChartW2 / 2} y={exH4ChartH2 - 4} textAnchor="middle" fontSize={8} fill="#6B7280">Rang predictor</text>
+                              <text x={10} y={exH4ChartH2 / 2} textAnchor="middle" fontSize={8} fill="#6B7280" transform={`rotate(-90, 10, ${exH4ChartH2 / 2})`}>Rang C perceput</text>
+                            </svg>
+                          );
+
+                          return (
+                            <>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
+                                <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Test Scale-Independent al Interactiei I{"\u00D7"}F</span>
+                                <InterpBtnE k="expert-h4" title="H1 — Scale-Independent" val={exH4Verd} />
+                              </div>
+                              <div style={{ ...exCardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
+                                <strong>Ce testeaza H1?</strong> Sinergia I{"\u00D7"}F (motorul formulei, ~90% din C) este reala? Comparatia directa normalizata (/110 vs /30) are un artefact de scala. H1 testeaza acelasi lucru prin metode scale-independent: Spearman Rank Correlation (ordinea predictiilor) si Partial Correlation (informatia suplimentara a I{"\u00D7"}F fata de modelul aditiv).
+                              </div>
+
+                              {/* Stats banner */}
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+                                {[
+                                  { label: "\u03C1 Multiplicativ", value: exH4RhoM.toFixed(3), sub: "Spearman R+(I\u00D7F)", color: "#2563EB" },
+                                  { label: "\u03C1 Aditiv", value: exH4RhoA.toFixed(3), sub: "Spearman R+I+F", color: "#D97706" },
+                                  { label: "\u0394\u03C1 (Fisher Z)", value: `${deltaRho4 >= 0 ? "+" : ""}${deltaRho4.toFixed(3)}`, sub: `Z=${exH4Fz.z.toFixed(2)}, p=${_fmtP(exH4Fz.p)}`, color: exH4SpSig ? "#059669" : "#DC2626" },
+                                  { label: "Partial r(I\u00D7F)", value: exH4PartR.toFixed(3), sub: `p=${_fmtP(exH4PartP)}`, color: exH4PaSig ? "#059669" : "#DC2626" },
+                                ].map((s, i) => (
+                                  <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", borderTop: `3px solid ${s.color}`, textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: s.color }}>{s.value}</div>
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginTop: 2 }}>{s.label}</div>
+                                    <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 1 }}>{s.sub}</div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* All 3 scatter plots in one row */}
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+                                {scatterSVG4(rankMult4, rankCp4, "Rang Multiplicativ vs Rang C perceput", exH4RhoM, "#2563EB")}
+                                {scatterSVG4(rankAdit4, rankCp4, "Rang Aditiv vs Rang C perceput", exH4RhoA, "#D97706")}
+
+                                {/* Residual scatter — Partial correlation */}
+                                <svg viewBox={`0 0 ${exH4ChartW2} ${exH4ChartH2}`} style={{ width: "100%", height: "auto", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                                  <text x={exH4ChartW2 / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">Partial Correlation: I{"\u00D7"}F vs Rezidual din C ~ (R+I+F)</text>
+                                  {(() => {
+                                    const rPad4 = { t: 25, r: 20, b: 35, l: 50 };
+                                    const rW4 = exH4ChartW2 - rPad4.l - rPad4.r, rH4 = exH4ChartH2 - rPad4.t - rPad4.b;
+                                    const minIxF4 = Math.min(...ixf4), maxIxF4 = Math.max(...ixf4);
+                                    const minRes4 = Math.min(...residuals4), maxRes4 = Math.max(...residuals4);
+                                    const rangeIxF4 = maxIxF4 - minIxF4 || 1, rangeRes4 = maxRes4 - minRes4 || 1;
+                                    const reg4b = _linReg(ixf4, residuals4);
+                                    return (
+                                      <g>
+                                        {[-0.5, 0, 0.5, 1].map(f => {
+                                          const val4 = minRes4 + (f + 0.5) / 2 * rangeRes4;
+                                          const yy4 = rPad4.t + rH4 * (1 - (val4 - minRes4) / rangeRes4);
+                                          return <g key={f}><line x1={rPad4.l} y1={yy4} x2={rPad4.l + rW4} y2={yy4} stroke={f === 0 ? "#d1d5db" : "#f3f4f6"} strokeDasharray={f === 0 ? "4,2" : "0"} /><text x={rPad4.l - 4} y={yy4 + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{val4.toFixed(1)}</text></g>;
+                                        })}
+                                        {ixf4.map((x, i) => {
+                                          const cx4b = rPad4.l + ((x - minIxF4) / rangeIxF4) * rW4;
+                                          const cy4b = rPad4.t + rH4 * (1 - (residuals4[i] - minRes4) / rangeRes4);
+                                          return <circle key={i} cx={cx4b} cy={cy4b} r={3} fill="#7C3AED" opacity={0.5} />;
+                                        })}
+                                        {(() => {
+                                          const x1v4b = minIxF4, x2v4b = maxIxF4;
+                                          const y1v4b = reg4b.slope * x1v4b + reg4b.intercept, y2v4b = reg4b.slope * x2v4b + reg4b.intercept;
+                                          return <line x1={rPad4.l} y1={rPad4.t + rH4 * (1 - (y1v4b - minRes4) / rangeRes4)} x2={rPad4.l + rW4} y2={rPad4.t + rH4 * (1 - (y2v4b - minRes4) / rangeRes4)} stroke="#7C3AED" strokeWidth={1.5} strokeDasharray="4,3" />;
+                                        })()}
+                                        <text x={rPad4.l + 4} y={rPad4.t + 12} fontSize={8} fill="#6B7280">r = {exH4PartR.toFixed(3)}, p = {_fmtP(exH4PartP)}</text>
+                                        <text x={exH4ChartW2 / 2} y={exH4ChartH2 - 4} textAnchor="middle" fontSize={8} fill="#6B7280">I {"\u00D7"} F (produs brut)</text>
+                                        <text x={14} y={exH4ChartH2 / 2} textAnchor="middle" fontSize={8} fill="#6B7280" transform={`rotate(-90, 14, ${exH4ChartH2 / 2})`}>Rezidual (C - predictat de R+I+F)</text>
+                                      </g>
+                                    );
+                                  })()}
+                                </svg>
+                              </div>
+
+                              {/* Explanation cards */}
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+                                <div style={exCardStyle}>
+                                  <strong style={{ color: "#2563EB" }}>Analiza 1 — Spearman Rank:</strong> Converteste valorile in ranguri (pozitii). Ignora magnitudinea, testeaza doar daca ordinea predictiilor e corecta. {"\u03C1"}mult={exH4RhoM.toFixed(3)} vs {"\u03C1"}adit={exH4RhoA.toFixed(3)}{" "}
+                                  {deltaRho4 > 0 ? <span style={{ color: "#059669" }}>Multiplicativul prezice ordinea mai bine.</span> : <span style={{ color: "#DC2626" }}>Aditivul prezice ordinea mai bine.</span>}
+                                </div>
+                                <div style={exCardStyle}>
+                                  <strong style={{ color: "#7C3AED" }}>Analiza 2 — Partial Correlation:</strong> Dupa ce R+I+F explica tot ce poate, rezidualul coreleaza cu I{"\u00D7"}F? r={exH4PartR.toFixed(3)}, p={_fmtP(exH4PartP)}.{" "}
+                                  {exH4PaSig ? <span style={{ color: "#059669" }}>Da — I{"\u00D7"}F aduce informatie suplimentara pe care aditivul nu o capteaza.</span> : <span style={{ color: "#DC2626" }}>Nu — I{"\u00D7"}F nu adauga informatie dincolo de R+I+F.</span>}
+                                </div>
+                                <div style={exCardStyle}>
+                                  <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. Analiza H1 elimina artefactul complet prin Spearman ranks + Partial Correlation.
+                                </div>
+                              </div>
+
+                              {/* Verdict card */}
+                              <div style={{ ...exCardStyle, borderLeft: `4px solid ${exH4VerdColor}`, background: exH4Verd === "CONFIRMATA" ? "#f0fdf4" : exH4Verd === "PARTIAL" ? "#fffbeb" : "#fef2f2" }}>
+                                <strong>H1 — Verdict: <span style={{ color: exH4VerdColor }}>{exH4Verd}</span></strong>
+                                <div style={{ marginTop: 4 }}>
+                                  {exH4Verd === "CONFIRMATA"
+                                    ? `Ambele analize confirma: sinergia I\u00D7F este reala si nu e un artefact de scala. Multiplicativul prezice mai bine ordinea (\u0394\u03C1=${deltaRho4.toFixed(3)}, p=${_fmtP(exH4Fz.p)}) si I\u00D7F aduce informatie suplimentara (partial r=${exH4PartR.toFixed(3)}, p=${_fmtP(exH4PartP)}).`
+                                    : exH4Verd === "PARTIAL"
+                                      ? `Evidenta mixta: ${exH4SpSig ? "Spearman favorizeaza multiplicativul" : "Spearman nu diferentiaza modelele"}, ${exH4PaSig ? "dar partial correlation confirma sinergia" : "iar partial correlation nu detecteaza sinergie suplimentara"}. Rezultatul necesita N mai mare pentru concluzie definitiva.`
+                                      : `Niciuna din analize nu confirma superioritatea sinergiei I\u00D7F. Modelul aditiv (R+I+F) explica la fel de bine ca multiplicativul, iar I\u00D7F nu aduce informatie suplimentara. Sinergia nu e sustinuta de date.`}
+                                </div>
+                                <div style={{ marginTop: 4, fontSize: 10, color: "#9CA3AF" }}>N={exH4V.length} raspunsuri. Spearman rho: mult={exH4RhoM.toFixed(3)}, adit={exH4RhoA.toFixed(3)}. Fisher Z={exH4Fz.z.toFixed(2)}, p={_fmtP(exH4Fz.p)}. Partial r={exH4PartR.toFixed(3)}, p={_fmtP(exH4PartP)}.</div>
+                              </div>
+                            </>
+                          );
+                        })()}
+                        </OsfH>
+
+                        {/* ═══ OsfH H2 — Poarta Relevantei ═══ */}
+                        <OsfH id="efa-h2" num="OSF H2" title={`Ipoteza 2 \u2014 Poarta Relevantei (R < ${EX_GATE} = dezangajare)`} color="#059669" verdict={exH1DiffCta > 2 ? "CONFIRMATA" : exH1DiffCta >= 1 ? "PARTIAL" : "NECONFIRMATA"}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>Ipoteza H1: Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
-                            <InterpBtnE k="expert-h1" title="H1 — Poarta Relevantei" val={`ΔCTA=${exH1DiffCta.toFixed(2)}`} ctx={{ diffCp: exH1DiffCp, diffCta: exH1DiffCta, cohenDCp: exH1CohenD, cohenDCta: exH1CohenDCta, nBelow: exH1CtaBelow.length, nAbove: exH1CtaAbove.length, cpBelow: exH1BelowAvgC, cpAbove: exH1AboveAvgC, ctaBelow: exH1BelowAvgCta, ctaAbove: exH1AboveAvgCta }} />
+                            <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>Poarta Relevantei <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
+                            <InterpBtnE k="expert-h1" title="H2 — Poarta Relevantei" val={`ΔCTA=${exH1DiffCta.toFixed(2)}`} ctx={{ diffCp: exH1DiffCp, diffCta: exH1DiffCta, cohenDCp: exH1CohenD, cohenDCta: exH1CohenDCta, nBelow: exH1CtaBelow.length, nAbove: exH1CtaAbove.length, cpBelow: exH1BelowAvgC, cpAbove: exH1AboveAvgC, ctaBelow: exH1BelowAvgCta, ctaAbove: exH1AboveAvgCta }} />
                           </div>
                           <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
                             <strong>Ce testeaza:</strong> R functioneaza ca cheie de contact — sub R={EX_GATE}, expertii evalueaza ca audienta se dezangajeaza: CTA scade, chiar daca Cp nu scade la zero. R nu opreste formula, opreste audienta din a actiona.{" "}
@@ -7176,24 +7329,18 @@ export default function StudiuAdminPage() {
                                     <div style={cellStyle("#e5e7eb")}>
                                       <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA (gate)</div>
                                       <div style={{ fontSize: 16, fontWeight: 900, color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffStrong.toFixed(2)}</div>
-                                      <div style={{ fontSize: 8, color: "#9CA3AF" }}>chiar cu I,F excelente</div>
+                                      <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={exH1StrongBelow.length}+{exH1StrongAbove.length}</div>
                                     </div>
                                     {/* Annotation C */}
-                                    <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fefce8", borderRadius: 4, borderLeft: "3px solid #D97706", margin: "2px 0 4px" }}>
+                                    <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fefce8", borderRadius: 4, borderLeft: "3px solid #D97706", margin: "2px 0 2px" }}>
                                       <strong style={{ color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626" }}>{diffStrong > 2 ? "\u2705 CONFIRMAT" : diffStrong >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
-                                      <strong>TEST MAXIM.</strong> Doar cazuri cu I&ge;5 SI F&ge;5 (continut+forma excelente). CTA {strongBelowCta} fara relevanta vs {strongAboveCta} cu relevanta = &Delta;{diffStrong.toFixed(2)}.{" "}
-                                      {diffStrong > 2 ? <strong style={{ color: "#059669" }}>&quot;Chiar super frumos si chiar am prins, dar fara relevanta — nu cumpar.&quot;</strong> : diffStrong >= 1 ? <strong style={{ color: "#D97706" }}>Calitatea compenseaza partial dar nu suficient.</strong> : <strong style={{ color: "#DC2626" }}>Calitatea compenseaza lipsa relevantei.</strong>}{" "}
-                                      <span style={{ color: "#6B7280" }}>n={exH1StrongBelow.length}+{exH1StrongAbove.length} = subset cu I&ge;5, F&ge;5 (din {exH1CtaData.length} total).</span>
+                                      Chiar cu I&ge;5 si F&ge;5 (continut de calitate), CTA ramane {strongBelowCta} fara relevanta vs {strongAboveCta} cu relevanta (&Delta;={diffStrong.toFixed(2)}). {diffStrong > 1.5 ? "Calitatea NU compenseaza lipsa relevantei." : "Efectul e vizibil dar moderat."}
                                     </div>
                                   </>)}
                                 </div>
-                                {/* N explanation */}
-                                <div style={{ marginTop: 6, padding: "4px 10px", background: "#f9fafb", borderRadius: 4, fontSize: 9, color: "#6B7280", lineHeight: 1.4 }}>
-                                  <strong>De ce N difera intre metrici?</strong> Fiecare rand filtreaza evaluarile care au valoarea respectiva completata: A = {exH1Below.length}+{exH1Above.length} cu c_score valid, B = {exH1CtaBelow.length}+{exH1CtaAbove.length} cu CTA valid{exH1StrongBelow.length >= 3 && exH1StrongAbove.length >= 3 ? `, C = ${exH1StrongBelow.length}+${exH1StrongAbove.length} (subset I≥5, F≥5)` : ""}. N nu e &quot;date lipsa&quot; — e cate evaluari au acea valoare completata.
-                                </div>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280" }}>Cohen&apos;s d(CTA)={exH1CohenDCta.toFixed(2)} ({Math.abs(exH1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(exH1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}) &middot; N(Cp)={exH1N} &middot; N(CTA)={exH1CtaData.length}</div>
-                                  <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                                  <div style={{ fontSize: 9, color: "#6B7280" }}>Gate R={EX_GATE} | N={exH1Data.length} raspunsuri</div>
+                                  <div style={{ fontWeight: 800, color: verdColor, fontSize: 12 }}>{verdIcon} {verdict}</div>
                                 </div>
                               </div>
                             );
@@ -7253,11 +7400,11 @@ export default function StudiuAdminPage() {
                               </svg>
                             </div>
                           </div>
-                          {/* ═══ INTERPRETARE H1 ═══ */}
+                          {/* ═══ INTERPRETARE H2 ═══ */}
                           <div style={{ marginTop: 10, padding: "14px 16px", background: "#f0fdf4", borderRadius: 8, border: "2px solid #059669" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
                               <CheckCircle2 size={16} style={{ color: "#059669" }} />
-                              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE H1</span>
+                              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE H2</span>
                             </div>
                             <div style={{ fontSize: 12, color: "#111827", lineHeight: 1.7 }}>
                               <strong>Formula e validata?</strong>{" "}
@@ -7309,7 +7456,7 @@ export default function StudiuAdminPage() {
                               <div style={{ marginTop: 12, padding: "14px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
                                   <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#1e40af" }}>SINTEZA R — 4 REGULI ALE RELEVANTEI</span>
-                                  <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", marginLeft: "auto" }}>Derivate din H1 + date</span>
+                                  <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", marginLeft: "auto" }}>Derivate din H2 + date</span>
                                 </div>
                                 <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 10, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
                                   <em>R nu este o poarta de esec, ci conditia de activare a intregii formule. Fara R suficient, I si F exista dar nu produc claritate actionabila — mesajul poate fi frumos si interesant, dar irelevant pentru acea audienta in acel moment.</em>
@@ -7331,13 +7478,88 @@ export default function StudiuAdminPage() {
                               </div>
                             );
                           })()}
-                        </div>
+                        </OsfH>
 
-                        {/* ── GRAFIC H2 — Corelatie C → CTA (cu filtru Obiectiv Marketing) — EFA ── */}
-                        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H2: Formula prezice actiunea reala <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
+                        {/* ═══ OsfH H3 — Brand ca Moderator C→CTA ═══ */}
+                        <OsfH id="efa-h3" num="OSF H3" title={`Ipoteza 3 \u2014 Brand ca Moderator C\u2192CTA`} color="#D97706" verdict={(() => { const _fzH3e = _fisherZTest(exH3PearsonKnown, exH3PearsonUnknown, exH3Known.length, exH3Unknown.length); return _fzH3e.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "CONFIRMATA" : _fzH3e.p >= 0.05 ? "NEUTRA" : "INVERSATA"; })()}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Brandul modereaza relatia C {"\u2192"} CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
+                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
+                            <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
+                            <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={exH3Known.length}) vs necunoscut (portocaliu, n={exH3Unknown.length}).{" "}
+                            <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
+                          </div>
+                          <svg viewBox={`0 0 ${exChartW} ${exChartH + 10}`} style={{ width: "100%", height: "auto" }}>
+                            {exRenderGrid(exH2XMin, exH2XMax, exH2YMin, exH2YMax, "C formula (norm. 0-10)", "CTA")}
+                            {/* Trend lines */}
+                            {exH3Known.length >= 2 && (() => {
+                              const y1v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegKnown.slope * exH2XMin + exH3RegKnown.intercept));
+                              const y2v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegKnown.slope * exH2XMax + exH3RegKnown.intercept));
+                              return <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(y1v, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(y2v, exH2YMin, exH2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                            })()}
+                            {exH3Unknown.length >= 2 && (() => {
+                              const y1v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegUnknown.slope * exH2XMin + exH3RegUnknown.intercept));
+                              const y2v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegUnknown.slope * exH2XMax + exH3RegUnknown.intercept));
+                              return <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(y1v, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(y2v, exH2YMin, exH2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                            })()}
+                            {/* Known dots */}
+                            {exH3Known.map((d, i) => <circle key={`k${i}`} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3} fill="#2563EB" opacity={0.4} />)}
+                            {/* Unknown dots */}
+                            {exH3Unknown.map((d, i) => <circle key={`u${i}`} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3} fill="#D97706" opacity={0.4} />)}
+                            {/* Legend */}
+                            <circle cx={exPad.l + 10} cy={exChartH + 8} r={3} fill="#2563EB" />
+                            <text x={exPad.l + 18} y={exChartH + 11} fontSize={8} fill="#2563EB" fontWeight={600}>Brand cunoscut (n={exH3Known.length}, r={exH3PearsonKnown.toFixed(2)})</text>
+                            <circle cx={exChartW / 2 + 20} cy={exChartH + 8} r={3} fill="#D97706" />
+                            <text x={exChartW / 2 + 28} y={exChartH + 11} fontSize={8} fill="#D97706" fontWeight={600}>Brand necunoscut (n={exH3Unknown.length}, r={exH3PearsonUnknown.toFixed(2)})</text>
+                          </svg>
+                          {/* Stats banner H3 */}
+                          {exH3Known.length > 0 && exH3Unknown.length > 0 && (() => {
+                            const unknownStronger = Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown);
+                            const diff3 = Math.abs(Math.abs(exH3PearsonUnknown) - Math.abs(exH3PearsonKnown));
+                            const sigDiff3 = exH3Fz.p < 0.05;
+                            const verdict3 = !sigDiff3 ? "H3 NEUTRA" : unknownStronger ? "H3 CONFIRMATA" : "H3 INVERSATA";
+                            const verdColor3 = !sigDiff3 ? "#D97706" : unknownStronger ? "#059669" : "#2563EB";
+                            const pK3 = _pValuePearson(exH3PearsonKnown, exH3Known.length);
+                            const pU3 = _pValuePearson(exH3PearsonUnknown, exH3Unknown.length);
+                            return (
+                              <div style={{ marginBottom: 0, marginTop: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                                  <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={exH3Known.length})</div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={exH3PearsonKnown.toFixed(3)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pK3)}</div>
+                                  </div>
+                                  <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={exH3Unknown.length})</div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={exH3PearsonUnknown.toFixed(3)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pU3)}</div>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280" }}>Fisher Z={exH3Fz.z.toFixed(2)}, {_fmtP(exH3Fz.p)} &middot; {"\u0394"}r={diff3.toFixed(3)}</div>
+                                  <div style={{ fontWeight: 800, color: verdColor3, fontSize: 11 }}>{verdict3}</div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                          <div style={exCardStyle}>
+                            <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
+                            {exH3Known.length > 0 && exH3Unknown.length > 0 ? (
+                              <>
+                              {Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown)
+                                ? <> <strong style={{ color: "#059669" }}>RIFC conteaza mai mult cand brandul nu e familiar. Brand-ul cunoscut compenseaza un scor C slab.</strong></>
+                                : Math.abs(Math.abs(exH3PearsonUnknown) - Math.abs(exH3PearsonKnown)) < 0.05
+                                  ? <> <strong style={{ color: "#D97706" }}>Brand awareness nu modereaza semnificativ relatia C{"\u2192"}CTA in acest esantion.</strong></>
+                                  : <> <strong style={{ color: "#2563EB" }}>Brand familiar amplifica efectul C{"\u2192"}CTA — ipoteza inversata.</strong></>}
+                              </>
+                            ) : <> Date insuficiente pentru una dintre serii.</>}
+                          </div>
+                        </OsfH>
+
+                        {/* ═══ OsfH H4 — Claritate prezice Intentie de Actiune (C→CTA) ═══ */}
+                        <OsfH id="efa-h4" num="OSF H4" title={`Ipoteza 4 \u2014 Claritate prezice Intentie de Actiune (C\u2192CTA)`} color="#2563EB" verdict={Math.abs(exH2PearsonR) >= 0.50 ? "CONFIRMATA" : Math.abs(exH2PearsonR) >= 0.30 ? "PARTIAL" : "NECONFIRMATA"}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Formula prezice actiunea reala <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
                           <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
-                            <strong>Ce testeaza:</strong> Lantul cauzal C {"\u2192"} CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H2 valideaza ca pasul C{"\u2192"}CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
+                            <strong>Ce testeaza:</strong> Lantul cauzal C {"\u2192"} CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H4 valideaza ca pasul C{"\u2192"}CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
                             <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
                             <strong>Interpretare (prag OSF):</strong> r &ge; 0.50 = corelatie confirmata, r 0.30-0.49 = moderata (partial), r &lt; 0.30 = slaba (neconfirmata).
                           </div>
@@ -7364,7 +7586,7 @@ export default function StudiuAdminPage() {
                                 </div>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                   <div style={{ fontSize: 9, color: "#6B7280" }}>{_fmtP(exH2P)}</div>
-                                  <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>H2 {verdict}</div>
+                                  <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>H4 {verdict}</div>
                                 </div>
                               </div>
                             );
@@ -7513,249 +7735,100 @@ export default function StudiuAdminPage() {
                           </div>
 
                           <div style={exCardStyle}>
-                            <strong>H2 — Formula prezice actiunea:</strong> Daca RIFC functioneaza, materialele cu scor C mai mare ar trebui sa genereze intentie de actiune mai mare. Corelatia pozitiva confirma ca formula nu e doar teoretica — prezice comportamentul real.{" "}
+                            <strong>H4 — Formula prezice actiunea:</strong> Daca RIFC functioneaza, materialele cu scor C mai mare ar trebui sa genereze intentie de actiune mai mare. Corelatia pozitiva confirma ca formula nu e doar teoretica — prezice comportamentul real.{" "}
                             {Math.abs(exH2PearsonR) > 0.7
-                              ? <strong style={{ color: "#059669" }}>Corelatie puternica (r={exH2PearsonR.toFixed(3)}) — H2 confirmata.</strong>
+                              ? <strong style={{ color: "#059669" }}>Corelatie puternica (r={exH2PearsonR.toFixed(3)}) — H4 confirmata.</strong>
                               : Math.abs(exH2PearsonR) >= 0.4
-                                ? <strong style={{ color: "#D97706" }}>Corelatie moderata (r={exH2PearsonR.toFixed(3)}) — H2 partial confirmata.</strong>
+                                ? <strong style={{ color: "#D97706" }}>Corelatie moderata (r={exH2PearsonR.toFixed(3)}) — H4 partial confirmata.</strong>
                                 : <strong style={{ color: "#DC2626" }}>Corelatie slaba (r={exH2PearsonR.toFixed(3)}) — relatie nesemnificativa.</strong>}
                           </div>
                           <div style={{ ...exCardStyle, marginTop: 8, borderLeft: "3px solid #6B7280", color: "#6B7280", fontSize: 11 }}>
                             Analiza filtrata pe {exH2Filtered.length} raspunsuri (din {exH2Data.length} total). Filtrele de obiectiv marketing permit analiza segmentata.
                           </div>
-                        </div>
+                        </OsfH>
 
-                        {/* ── GRAFIC H3 — Moderarea Brand Awareness — EFA ── */}
-                        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H3: Brandul modereaza relatia C {"\u2192"} CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
-                          <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
-                            <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
-                            <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={exH3Known.length}) vs necunoscut (portocaliu, n={exH3Unknown.length}).{" "}
-                            <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
+                        {/* ═══ OsfH H5 — Invarianta Cross-Channel ═══ */}
+                        <OsfH id="efa-h5" num="OSF H5" title={`Ipoteza 5 \u2014 Invarianta Cross-Channel (Cronbach \u03B1)`} color="#0891b2" verdict="LIPSESC DATE">
+                          <div style={{ padding: "16px 20px", background: "#f0f9ff", borderRadius: 8, border: "1px solid #bae6fd" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#0c4a6e", marginBottom: 6 }}>Date insuficiente pentru analiza Cross-Channel</div>
+                            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.6 }}>
+                              Panelul expert ({completedExperts} experti, {exTotalEvalResponses} evaluari) nu dispune de suficiente evaluari per canal pentru a calcula Cronbach &alpha; cross-channel. Aceasta ipoteza este testabila doar pe esantionul de consumatori (Layer 1).
+                            </div>
                           </div>
-                          <svg viewBox={`0 0 ${exChartW} ${exChartH + 10}`} style={{ width: "100%", height: "auto" }}>
-                            {exRenderGrid(exH2XMin, exH2XMax, exH2YMin, exH2YMax, "C formula (norm. 0-10)", "CTA")}
-                            {/* Trend lines */}
-                            {exH3Known.length >= 2 && (() => {
-                              const y1v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegKnown.slope * exH2XMin + exH3RegKnown.intercept));
-                              const y2v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegKnown.slope * exH2XMax + exH3RegKnown.intercept));
-                              return <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(y1v, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(y2v, exH2YMin, exH2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
-                            })()}
-                            {exH3Unknown.length >= 2 && (() => {
-                              const y1v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegUnknown.slope * exH2XMin + exH3RegUnknown.intercept));
-                              const y2v = Math.max(exH2YMin, Math.min(exH2YMax, exH3RegUnknown.slope * exH2XMax + exH3RegUnknown.intercept));
-                              return <line x1={exToX(exH2XMin, exH2XMin, exH2XMax)} y1={exToY(y1v, exH2YMin, exH2YMax)} x2={exToX(exH2XMax, exH2XMin, exH2XMax)} y2={exToY(y2v, exH2YMin, exH2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
-                            })()}
-                            {/* Known brand dots */}
-                            {exH3Known.map((d, i) => (
-                              <circle key={`k-${i}`} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3} fill="#2563EB" opacity={0.5} />
-                            ))}
-                            {/* Unknown brand dots */}
-                            {exH3Unknown.map((d, i) => (
-                              <circle key={`u-${i}`} cx={exToX(d.c_computed / 11, exH2XMin, exH2XMax)} cy={exToY(d.cta!, exH2YMin, exH2YMax)} r={3} fill="#D97706" opacity={0.5} />
-                            ))}
-                            {/* Legend with Pearson R */}
-                            <circle cx={exPad.l + 10} cy={exChartH + 8} r={3} fill="#2563EB" />
-                            <text x={exPad.l + 18} y={exChartH + 11} fontSize={8} fill="#2563EB" fontWeight={600}>Brand cunoscut (n={exH3Known.length}, r={exH3PearsonKnown.toFixed(2)})</text>
-                            <circle cx={exChartW / 2 + 20} cy={exChartH + 8} r={3} fill="#D97706" />
-                            <text x={exChartW / 2 + 28} y={exChartH + 11} fontSize={8} fill="#D97706" fontWeight={600}>Brand necunoscut (n={exH3Unknown.length}, r={exH3PearsonUnknown.toFixed(2)})</text>
-                          </svg>
-                          {/* Stats banner H3 */}
-                          {exH3Known.length > 0 && exH3Unknown.length > 0 && (() => {
-                            const unknownStronger = Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown);
-                            const diff3 = Math.abs(Math.abs(exH3PearsonUnknown) - Math.abs(exH3PearsonKnown));
-                            const sigDiff3 = exH3Fz.p < 0.05;
-                            const verdict3 = !sigDiff3 ? "H3 NEUTRA" : unknownStronger ? "H3 CONFIRMATA" : "H3 INVERSATA";
-                            const verdColor3 = !sigDiff3 ? "#D97706" : unknownStronger ? "#059669" : "#2563EB";
-                            const pK3 = _pValuePearson(exH3PearsonKnown, exH3Known.length);
-                            const pU3 = _pValuePearson(exH3PearsonUnknown, exH3Unknown.length);
-                            return (
-                              <div style={{ marginBottom: 0, marginTop: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                                  <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
-                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={exH3Known.length})</div>
-                                    <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={exH3PearsonKnown.toFixed(3)}</div>
-                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pK3)}</div>
-                                  </div>
-                                  <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
-                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={exH3Unknown.length})</div>
-                                    <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={exH3PearsonUnknown.toFixed(3)}</div>
-                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pU3)}</div>
-                                  </div>
-                                </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280" }}>Fisher Z={exH3Fz.z.toFixed(2)}, {_fmtP(exH3Fz.p)} &middot; {"\u0394"}r={diff3.toFixed(3)}</div>
-                                  <div style={{ fontWeight: 800, color: verdColor3, fontSize: 11 }}>{verdict3}</div>
-                                </div>
-                              </div>
-                            );
-                          })()}
-                          <div style={exCardStyle}>
-                            <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
-                            {exH3Known.length > 0 && exH3Unknown.length > 0 ? (
-                              <>
-                              {Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown)
-                                ? <> <strong style={{ color: "#059669" }}>RIFC conteaza mai mult cand brandul nu e familiar. Brand-ul cunoscut compenseaza un scor C slab.</strong></>
-                                : Math.abs(Math.abs(exH3PearsonUnknown) - Math.abs(exH3PearsonKnown)) < 0.05
-                                  ? <> <strong style={{ color: "#D97706" }}>Brand awareness nu modereaza semnificativ relatia C{"\u2192"}CTA in acest esantion.</strong></>
-                                  : <> <strong style={{ color: "#2563EB" }}>Brand familiar amplifica efectul C{"\u2192"}CTA — ipoteza inversata.</strong></>}
-                              </>
-                            ) : <> Date insuficiente pentru una dintre serii.</>}
-                          </div>
-                        </div>
+                        </OsfH>
 
-                        {/* ═══ GRAFIC H4 — Test Scale-Independent al Interactiei I×F — EFA ═══ */}
+                        {/* ═══ OsfH H6 — Sensibilitate Segmente ═══ */}
+                        <OsfH id="efa-h6" num="OSF H6" title={`Ipoteza 6 \u2014 Sensibilitate Segmente (\u03B7\u00B2 < 0.05)`} color="#6366f1" verdict="LIPSESC DATE">
+                          <div style={{ padding: "16px 20px", background: "#f0f9ff", borderRadius: 8, border: "1px solid #bae6fd" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "#0c4a6e", marginBottom: 6 }}>Date demografice individuale indisponibile</div>
+                            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.6 }}>
+                              Evaluarea expertilor nu include segmentare demografica (varsta, gen, educatie, locatie, venit). Testul &eta;&sup2; pentru sensibilitate segmente este aplicabil doar pe esantionul de consumatori (Layer 1).
+                            </div>
+                          </div>
+                        </OsfH>
+
+                        {/* ═══ OsfH H7 — Validitate Construct ═══ */}
                         {(() => {
-                          if (exH4V.length < 3) return null;
-
-                          const multPreds4 = exH4V.map(d => d.r + d.i * d.f);
-                          const aditPreds4 = exH4V.map(d => d.r + d.i + d.f);
-                          const cps4 = exH4V.map(d => d.c_score!);
-                          const deltaRho4 = exH4RhoM - exH4RhoA;
-
-                          // Rank data for scatter plots
-                          const rankMult4 = _rankArray(multPreds4);
-                          const rankAdit4 = _rankArray(aditPreds4);
-                          const rankCp4 = _rankArray(cps4);
-
-                          const residuals4 = cps4.map((cp, i) => cp - (exH4Reg.slope * (exH4V[i].r + exH4V[i].i + exH4V[i].f) + exH4Reg.intercept));
-                          const ixf4 = exH4V.map(d => d.i * d.f);
-
-                          const exH4ChartW2 = 340, exH4ChartH2 = 220;
-                          const exH4Pad2 = { t: 25, r: 15, b: 35, l: 40 };
-                          const exH4pw = exH4ChartW2 - exH4Pad2.l - exH4Pad2.r, exH4ph = exH4ChartH2 - exH4Pad2.t - exH4Pad2.b;
-                          const maxRank4 = exH4V.length;
-
-                          const scatterSVG4 = (xRanks: number[], yRanks: number[], label: string, rho: number, color: string) => (
-                            <svg viewBox={`0 0 ${exH4ChartW2} ${exH4ChartH2}`} style={{ width: "100%", height: "auto", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                              <text x={exH4ChartW2 / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">{label}</text>
-                              {[0.25, 0.5, 0.75, 1].map(f => {
-                                const yy = exH4Pad2.t + exH4ph * (1 - f);
-                                return <g key={f}><line x1={exH4Pad2.l} y1={yy} x2={exH4Pad2.l + exH4pw} y2={yy} stroke="#f3f4f6" /><text x={exH4Pad2.l - 4} y={yy + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{Math.round(f * maxRank4)}</text></g>;
-                              })}
-                              {xRanks.map((xr, i) => {
-                                const cx4 = exH4Pad2.l + (xr / maxRank4) * exH4pw;
-                                const cy4 = exH4Pad2.t + exH4ph * (1 - yRanks[i] / maxRank4);
-                                return <circle key={i} cx={cx4} cy={cy4} r={3} fill={color} opacity={0.5} />;
-                              })}
-                              {/* trend line */}
-                              {(() => {
-                                const reg4 = _linReg(xRanks, yRanks);
-                                const x1v4 = 1, x2v4 = maxRank4;
-                                const y1v4 = reg4.slope * x1v4 + reg4.intercept, y2v4 = reg4.slope * x2v4 + reg4.intercept;
-                                const sx14 = exH4Pad2.l + (x1v4 / maxRank4) * exH4pw, sx24 = exH4Pad2.l + (x2v4 / maxRank4) * exH4pw;
-                                const sy14 = exH4Pad2.t + exH4ph * (1 - y1v4 / maxRank4), sy24 = exH4Pad2.t + exH4ph * (1 - y2v4 / maxRank4);
-                                return <line x1={sx14} y1={sy14} x2={sx24} y2={sy24} stroke={color} strokeWidth={1.5} strokeDasharray="4,3" />;
-                              })()}
-                              <text x={exH4Pad2.l + 4} y={exH4Pad2.t + 12} fontSize={8} fill="#6B7280">Rank Predictor</text>
-                              <text x={exH4ChartW2 - exH4Pad2.r - 5} y={exH4Pad2.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill={color}>{"\u03C1"} = {rho.toFixed(3)}</text>
-                              <text x={exH4ChartW2 / 2} y={exH4ChartH2 - 4} textAnchor="middle" fontSize={8} fill="#6B7280">Rang predictor</text>
-                              <text x={10} y={exH4ChartH2 / 2} textAnchor="middle" fontSize={8} fill="#6B7280" transform={`rotate(-90, 10, ${exH4ChartH2 / 2})`}>Rang C perceput</text>
-                            </svg>
-                          );
-
+                          const _exH7CfNorms = materialAggs.map(m => exNormCf(m.avg_c));
+                          const _exH7Cps = materialAggs.map(m => m.avg_c_score);
+                          const _exH7R = materialAggs.length >= 3 ? _pearsonR(_exH7CfNorms, _exH7Cps) : 0;
+                          const _exH7P = _pValuePearson(_exH7R, materialAggs.length);
+                          const _exH7R2 = _exH7R * _exH7R;
+                          const _exH7Verdict = Math.abs(_exH7R) >= 0.60 ? "CONFIRMATA" : Math.abs(_exH7R) >= 0.40 ? "PARTIAL" : "NECONFIRMATA";
                           return (
-                            <>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, marginBottom: 8 }}>
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 6-10"/></svg>
-                                <span style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>H4 — Test Scale-Independent al Interactiei I{"\u00D7"}F</span>
-                                <InterpBtnE k="expert-h4" title="H4 — Scale-Independent" val={exH4Verd} />
-                              </div>
-                              <div style={{ ...exCardStyle, borderLeft: "3px solid #7C3AED", marginBottom: 12 }}>
-                                <strong>Ce testeaza H4?</strong> Sinergia I{"\u00D7"}F (motorul formulei, ~90% din C) este reala? Comparatia directa normalizata (/110 vs /30) are un artefact de scala. H4 testeaza acelasi lucru prin metode scale-independent: Spearman Rank Correlation (ordinea predictiilor) si Partial Correlation (informatia suplimentara a I{"\u00D7"}F fata de modelul aditiv).
-                              </div>
+                            <OsfH id="efa-h7" num="OSF H7" title={`Ipoteza 7 \u2014 Validitate Construct r(Cf, Cp) \u2265 0.60`} color="#be185d" verdict={_exH7Verdict}>
+                              <div>
+                                <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #be185d" }}>
+                                  <strong>Ce testeaza:</strong> Corelatia Pearson intre C formula normalizat (Cf/11, pe scala 0-10) si C perceput (Cp evaluat de experti, 1-10) trebuie sa fie &ge; 0.60.{" "}
+                                  <strong>De ce conteaza:</strong> Daca formula R+(I&times;F)=C prezice adecvat perceptia de claritate, cele doua masurari (formula vs perceptie) trebuie sa coreleze puternic.{" "}
+                                  <strong>Metoda:</strong> Pearson r pe mediile per material ({materialAggs.length} materiale).
+                                </div>
 
-                              {/* Stats banner */}
-                              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
-                                {[
-                                  { label: "\u03C1 Multiplicativ", value: exH4RhoM.toFixed(3), sub: "Spearman R+(I\u00D7F)", color: "#2563EB" },
-                                  { label: "\u03C1 Aditiv", value: exH4RhoA.toFixed(3), sub: "Spearman R+I+F", color: "#D97706" },
-                                  { label: "\u0394\u03C1 (Fisher Z)", value: `${deltaRho4 >= 0 ? "+" : ""}${deltaRho4.toFixed(3)}`, sub: `Z=${exH4Fz.z.toFixed(2)}, p=${_fmtP(exH4Fz.p)}`, color: exH4SpSig ? "#059669" : "#DC2626" },
-                                  { label: "Partial r(I\u00D7F)", value: exH4PartR.toFixed(3), sub: `p=${_fmtP(exH4PartP)}`, color: exH4PaSig ? "#059669" : "#DC2626" },
-                                ].map((s, i) => (
-                                  <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", borderTop: `3px solid ${s.color}`, textAlign: "center" as const }}>
-                                    <div style={{ fontSize: 18, fontWeight: 900, color: s.color }}>{s.value}</div>
-                                    <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginTop: 2 }}>{s.label}</div>
-                                    <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 1 }}>{s.sub}</div>
+                                {/* Stats row */}
+                                <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" as const }}>
+                                  <div style={{ flex: 1, minWidth: 100, background: "#fdf2f8", border: "1px solid #fce7f3", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Pearson r</div>
+                                    <div style={{ fontSize: 28, fontWeight: 900, color: _exH7Verdict === "CONFIRMATA" ? "#059669" : _exH7Verdict === "PARTIAL" ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{_exH7R.toFixed(3)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>prag &ge; 0.60</div>
                                   </div>
-                                ))}
-                              </div>
-
-                              {/* All 3 scatter plots in one row */}
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
-                                {scatterSVG4(rankMult4, rankCp4, "Rang Multiplicativ vs Rang C perceput", exH4RhoM, "#2563EB")}
-                                {scatterSVG4(rankAdit4, rankCp4, "Rang Aditiv vs Rang C perceput", exH4RhoA, "#D97706")}
-
-                                {/* Residual scatter — Partial correlation */}
-                                <svg viewBox={`0 0 ${exH4ChartW2} ${exH4ChartH2}`} style={{ width: "100%", height: "auto", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                                  <text x={exH4ChartW2 / 2} y={14} textAnchor="middle" fontSize={10} fontWeight={700} fill="#374151">Partial Correlation: I{"\u00D7"}F vs Rezidual din C ~ (R+I+F)</text>
-                                  {(() => {
-                                    const rPad4 = { t: 25, r: 20, b: 35, l: 50 };
-                                    const rW4 = exH4ChartW2 - rPad4.l - rPad4.r, rH4 = exH4ChartH2 - rPad4.t - rPad4.b;
-                                    const minIxF4 = Math.min(...ixf4), maxIxF4 = Math.max(...ixf4);
-                                    const minRes4 = Math.min(...residuals4), maxRes4 = Math.max(...residuals4);
-                                    const rangeIxF4 = maxIxF4 - minIxF4 || 1, rangeRes4 = maxRes4 - minRes4 || 1;
-                                    const reg4b = _linReg(ixf4, residuals4);
-                                    return (
-                                      <g>
-                                        {[-0.5, 0, 0.5, 1].map(f => {
-                                          const val4 = minRes4 + (f + 0.5) / 2 * rangeRes4;
-                                          const yy4 = rPad4.t + rH4 * (1 - (val4 - minRes4) / rangeRes4);
-                                          return <g key={f}><line x1={rPad4.l} y1={yy4} x2={rPad4.l + rW4} y2={yy4} stroke={f === 0 ? "#d1d5db" : "#f3f4f6"} strokeDasharray={f === 0 ? "4,2" : "0"} /><text x={rPad4.l - 4} y={yy4 + 3} textAnchor="end" fontSize={8} fill="#9CA3AF">{val4.toFixed(1)}</text></g>;
-                                        })}
-                                        {ixf4.map((x, i) => {
-                                          const cx4b = rPad4.l + ((x - minIxF4) / rangeIxF4) * rW4;
-                                          const cy4b = rPad4.t + rH4 * (1 - (residuals4[i] - minRes4) / rangeRes4);
-                                          return <circle key={i} cx={cx4b} cy={cy4b} r={3} fill="#7C3AED" opacity={0.5} />;
-                                        })}
-                                        {(() => {
-                                          const x1v4b = minIxF4, x2v4b = maxIxF4;
-                                          const y1v4b = reg4b.slope * x1v4b + reg4b.intercept, y2v4b = reg4b.slope * x2v4b + reg4b.intercept;
-                                          return <line x1={rPad4.l} y1={rPad4.t + rH4 * (1 - (y1v4b - minRes4) / rangeRes4)} x2={rPad4.l + rW4} y2={rPad4.t + rH4 * (1 - (y2v4b - minRes4) / rangeRes4)} stroke="#7C3AED" strokeWidth={1.5} strokeDasharray="4,3" />;
-                                        })()}
-                                        <text x={rPad4.l + 4} y={rPad4.t + 12} fontSize={8} fill="#6B7280">r = {exH4PartR.toFixed(3)}, p = {_fmtP(exH4PartP)}</text>
-                                        <text x={exH4ChartW2 / 2} y={exH4ChartH2 - 4} textAnchor="middle" fontSize={8} fill="#6B7280">I {"\u00D7"} F (produs brut)</text>
-                                        <text x={14} y={exH4ChartH2 / 2} textAnchor="middle" fontSize={8} fill="#6B7280" transform={`rotate(-90, 14, ${exH4ChartH2 / 2})`}>Rezidual (C - predictat de R+I+F)</text>
-                                      </g>
-                                    );
-                                  })()}
-                                </svg>
-                              </div>
-
-                              {/* Explanation cards */}
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
-                                <div style={exCardStyle}>
-                                  <strong style={{ color: "#2563EB" }}>Analiza 1 — Spearman Rank:</strong> Converteste valorile in ranguri (pozitii). Ignora magnitudinea, testeaza doar daca ordinea predictiilor e corecta. {"\u03C1"}mult={exH4RhoM.toFixed(3)} vs {"\u03C1"}adit={exH4RhoA.toFixed(3)}{" "}
-                                  {deltaRho4 > 0 ? <span style={{ color: "#059669" }}>Multiplicativul prezice ordinea mai bine.</span> : <span style={{ color: "#DC2626" }}>Aditivul prezice ordinea mai bine.</span>}
+                                  <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>r&sup2;</div>
+                                    <div style={{ fontSize: 22, fontWeight: 800, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{_exH7R2.toFixed(3)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>{(_exH7R2 * 100).toFixed(1)}% varianta explicata</div>
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>p-value</div>
+                                    <div style={{ fontSize: 16, fontWeight: 700, color: _exH7P < 0.001 ? "#059669" : _exH7P < 0.05 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{_fmtP(_exH7P)}</div>
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                                    <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>N (materiale)</div>
+                                    <div style={{ fontSize: 22, fontWeight: 800, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{materialAggs.length}</div>
+                                  </div>
                                 </div>
-                                <div style={exCardStyle}>
-                                  <strong style={{ color: "#7C3AED" }}>Analiza 2 — Partial Correlation:</strong> Dupa ce R+I+F explica tot ce poate, rezidualul coreleaza cu I{"\u00D7"}F? r={exH4PartR.toFixed(3)}, p={_fmtP(exH4PartP)}.{" "}
-                                  {exH4PaSig ? <span style={{ color: "#059669" }}>Da — I{"\u00D7"}F aduce informatie suplimentara pe care aditivul nu o capteaza.</span> : <span style={{ color: "#DC2626" }}>Nu — I{"\u00D7"}F nu adauga informatie dincolo de R+I+F.</span>}
+
+                                {/* Verdict */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 6, background: _exH7Verdict === "CONFIRMATA" ? "#f0fdf4" : _exH7Verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2", border: `1px solid ${_exH7Verdict === "CONFIRMATA" ? "#bbf7d0" : _exH7Verdict === "PARTIAL" ? "#fde68a" : "#fecaca"}` }}>
+                                  <span style={{ fontSize: 11, fontWeight: 800, color: _exH7Verdict === "CONFIRMATA" ? "#166534" : _exH7Verdict === "PARTIAL" ? "#92400e" : "#991b1b" }}>{_exH7Verdict}</span>
+                                  <span style={{ fontSize: 10, color: "#374151" }}>
+                                    {_exH7Verdict === "CONFIRMATA"
+                                      ? `Corelatia r=${_exH7R.toFixed(3)} \u2265 0.60 confirma validitatea de construct — formula RIFC prezice adecvat perceptia de claritate.`
+                                      : _exH7Verdict === "PARTIAL"
+                                      ? `Corelatia r=${_exH7R.toFixed(3)} este moderata (0.40-0.60) — relatie existenta dar sub pragul OSF de 0.60.`
+                                      : `Corelatia r=${_exH7R.toFixed(3)} < 0.40 — formula nu prezice adecvat perceptia de claritate.`}
+                                  </span>
                                 </div>
-                                <div style={exCardStyle}>
-                                  <strong style={{ color: "#374151" }}>De ce scale-independent:</strong> Comparatia directa normalizata (mult/110 vs adit/30) are artefact de scala — comprima multiplicativul in 0.1-0.5 (vs Cp 0.5-0.9), biased in favoarea aditivului. Analiza H1 elimina artefactul complet prin Spearman ranks + Partial Correlation.
+
+                                <div style={{ marginTop: 8, fontSize: 9, color: "#9CA3AF" }}>
+                                  <strong>Prag OSF:</strong> r(Cf_norm, Cp) &ge; 0.60. Cf_norm = C_formula / 11 (normalizat pe scala 0-10). r&sup2; arata proportia de varianta in Cp explicata de Cf. N={materialAggs.length} materiale.
                                 </div>
                               </div>
-
-                              {/* Verdict card */}
-                              <div style={{ ...exCardStyle, borderLeft: `4px solid ${exH4VerdColor}`, background: exH4Verd === "CONFIRMATA" ? "#f0fdf4" : exH4Verd === "PARTIAL" ? "#fffbeb" : "#fef2f2" }}>
-                                <strong>H4 — Verdict: <span style={{ color: exH4VerdColor }}>{exH4Verd}</span></strong>
-                                <div style={{ marginTop: 4 }}>
-                                  {exH4Verd === "CONFIRMATA"
-                                    ? `Ambele analize confirma: sinergia I\u00D7F este reala si nu e un artefact de scala. Multiplicativul prezice mai bine ordinea (\u0394\u03C1=${deltaRho4.toFixed(3)}, p=${_fmtP(exH4Fz.p)}) si I\u00D7F aduce informatie suplimentara (partial r=${exH4PartR.toFixed(3)}, p=${_fmtP(exH4PartP)}).`
-                                    : exH4Verd === "PARTIAL"
-                                      ? `Evidenta mixta: ${exH4SpSig ? "Spearman favorizeaza multiplicativul" : "Spearman nu diferentiaza modelele"}, ${exH4PaSig ? "dar partial correlation confirma sinergia" : "iar partial correlation nu detecteaza sinergie suplimentara"}. Rezultatul necesita N mai mare pentru concluzie definitiva.`
-                                      : `Niciuna din analize nu confirma superioritatea sinergiei I\u00D7F. Modelul aditiv (R+I+F) explica la fel de bine ca multiplicativul, iar I\u00D7F nu aduce informatie suplimentara. Sinergia nu e sustinuta de date.`}
-                                </div>
-                                <div style={{ marginTop: 4, fontSize: 10, color: "#9CA3AF" }}>N={exH4V.length} raspunsuri. Spearman rho: mult={exH4RhoM.toFixed(3)}, adit={exH4RhoA.toFixed(3)}. Fisher Z={exH4Fz.z.toFixed(2)}, p={_fmtP(exH4Fz.p)}. Partial r={exH4PartR.toFixed(3)}, p={_fmtP(exH4PartP)}.</div>
-                              </div>
-                            </>
+                            </OsfH>
                           );
                         })()}
 
-                        {/* ── GRAFIC H5 — C vs Brand Recognition per Material — EFA ── */}
-                        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Ipoteza H5: Claritate si recognoscibilitate <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Bar Chart Comparison — C vs Brand Recognition)</span></div>
+                        {/* ── GRAFIC H5 — C vs Brand Recognition per Material — EFA (sectiune aditionala) ── */}
+                        <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16, marginTop: 16 }}>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Claritate si recognoscibilitate <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Bar Chart Comparison — C vs Brand Recognition)</span></div>
                           <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
                             <strong>Ce testeaza:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului — un mesaj clar e si mai usor de recunoscut si retinut.{" "}
                             <strong>Metoda:</strong> Bar chart grupat per material: C formula normalizat (albastru) vs procentul care cunosc brandul (portocaliu).{" "}
@@ -7805,7 +7878,7 @@ export default function StudiuAdminPage() {
                             Brand_familiar% este folosit ca proxy pentru recognoscibilitate. Scala portocalie: 0-100% convertita la 0-100 pentru comparabilitate cu C normalizat.
                           </div>
                           <div style={exCardStyle}>
-                            <strong>H5 — Claritate si recognoscibilitate:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului. Comparati bara albastra (C formulat) cu bara portocalie (% care cunosc brandul). O corelatie pozitiva intre inaltimile barelor confirma H5.
+                            <strong>Claritate si recognoscibilitate:</strong> Materialele cu scor C mai mare ar trebui sa genereze o rata mai mare de recunoastere a brandului. Comparati bara albastra (C formulat) cu bara portocalie (% care cunosc brandul). O corelatie pozitiva intre inaltimile barelor confirma relatia.
                             {exH5Materials.length > 0 && (() => {
                               return <> Pearson r={exH5CorrR.toFixed(3)}, r&sup2;={exH5Reg.r2.toFixed(3)}.{" "}
                                 {exH5Reg.slope > 0 && exH5Reg.r2 > 0.05
@@ -7815,87 +7888,6 @@ export default function StudiuAdminPage() {
                             })()}
                           </div>
                         </div>
-
-                        {/* ═══ VALIDARE V2 — Normalitatea Distributiilor — EFA ═══ */}
-                        {(() => {
-                          const exVData = exScatter.filter(d => d.r > 0 && d.i > 0 && d.f > 0 && d.c_computed > 0);
-                          if (exVData.length < 3) return null;
-                          const exHistDims = [
-                            { label: "R", color: "#DC2626", data: exVData.map(d => d.r) },
-                            { label: "I", color: "#D97706", data: exVData.map(d => d.i) },
-                            { label: "F", color: "#7C3AED", data: exVData.map(d => d.f) },
-                            { label: "C\u2099", color: "#111827", data: exVData.map(d => d.c_computed / 11) },
-                          ];
-                          const exHistW = 125; const exHistH = 100;
-                          const exHPad = { l: 22, r: 4, t: 4, b: 18 };
-                          return (
-                            <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 18px", marginBottom: 16 }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: "#111827" }}>Validare V2: Normalitatea Distributiilor <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Skewness &amp; Kurtosis Analysis)</span></div>
-                                <InterpBtnE k="expert-v2" title="V2 — Distributia Scorurilor" val="0" />
-                              </div>
-                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #7C3AED" }}>
-                                <strong>Ce masoara:</strong> Distributia scorurilor pe fiecare dimensiune — sunt datele aproximativ normale? Normalitatea permite utilizarea testelor statistice parametrice (t-test, regresie).{" "}
-                                <strong>Metoda:</strong> Histograme cu 10 bin-uri (1-10), plus indicatorii Skewness (asimetrie) si Kurtosis (aplatizare). Linia verticala = media.{" "}
-                                <strong>Interpretare:</strong> |Skewness| &lt; 1 si |Kurtosis| &lt; 2 = distributie aproximativ normala (permite statistici parametrice).
-                              </div>
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, overflowX: "auto" as const }}>
-                                {exHistDims.map((dim) => {
-                                  const mV2 = _mean(dim.data);
-                                  const skV2 = _skewness(dim.data);
-                                  const kuV2 = _kurtosis(dim.data);
-                                  // Build 10 bins (1-10)
-                                  const binsV2 = Array.from({ length: 10 }, (_, ii) => ({ bin: ii + 1, count: 0 }));
-                                  for (const v of dim.data) {
-                                    const idx = Math.max(0, Math.min(9, Math.floor(v) - 1));
-                                    binsV2[idx].count++;
-                                  }
-                                  const maxCountV2 = Math.max(...binsV2.map(b => b.count), 1);
-                                  const pwV2 = exHistW - exHPad.l - exHPad.r;
-                                  const phV2 = exHistH - exHPad.t - exHPad.b;
-                                  const barWV2 = pwV2 / 10 - 1;
-                                  return (
-                                    <div key={dim.label}>
-                                      <svg width={exHistW} height={exHistH} style={{ display: "block" }}>
-                                        <rect x={exHPad.l} y={exHPad.t} width={pwV2} height={phV2} fill="#f9fafb" stroke="#e5e7eb" strokeWidth={0.5} />
-                                        {binsV2.map((b, ii) => {
-                                          const bh2 = (b.count / maxCountV2) * phV2;
-                                          const bx2 = exHPad.l + ii * (pwV2 / 10) + 0.5;
-                                          return (
-                                            <g key={ii}>
-                                              <rect x={bx2} y={exHPad.t + phV2 - bh2} width={barWV2} height={bh2} fill={dim.color} opacity={0.65} rx={1} />
-                                              {b.count > 0 && <text x={bx2 + barWV2 / 2} y={exHPad.t + phV2 - bh2 - 2} textAnchor="middle" fontSize={6} fill={dim.color} fontWeight={700}>{b.count}</text>}
-                                              <text x={bx2 + barWV2 / 2} y={exHistH - exHPad.b + 10} textAnchor="middle" fontSize={6} fill="#9CA3AF">{b.bin}</text>
-                                            </g>
-                                          );
-                                        })}
-                                        {/* Mean line */}
-                                        {(() => {
-                                          const mx2 = exHPad.l + ((mV2 - 1) / 9) * pwV2;
-                                          return <line x1={mx2} y1={exHPad.t} x2={mx2} y2={exHPad.t + phV2} stroke={dim.color} strokeWidth={1.5} strokeDasharray="3 2" />;
-                                        })()}
-                                      </svg>
-                                      <div style={{ textAlign: "center" as const, fontSize: 9, fontWeight: 700, color: dim.color }}>{dim.label}</div>
-                                      <div style={{ textAlign: "center" as const, fontSize: 8, color: "#6B7280" }}>
-                                        x&#772;={mV2.toFixed(1)} sk={skV2.toFixed(2)} ku={kuV2.toFixed(2)}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              <div style={exCardStyle}>
-                                <strong>V2 — Normalitatea distributiilor:</strong>{" "}
-                                {exHistDims.map(dim => {
-                                  const sk2 = Math.abs(_skewness(dim.data));
-                                  const ku2 = Math.abs(_kurtosis(dim.data));
-                                  const normal2 = sk2 < 1 && ku2 < 2;
-                                  return `${dim.label}: ${normal2 ? "\u2248 normal" : "non-normal"} (sk=${_skewness(dim.data).toFixed(2)}, ku=${_kurtosis(dim.data).toFixed(2)})`;
-                                }).join("; ")}.{" "}
-                                Distributii aproximativ normale (|skewness| &lt; 1, |kurtosis| &lt; 2) permit utilizarea testelor parametrice.
-                              </div>
-                            </div>
-                          );
-                        })()}
 
                         {/* ═══ CALIBRARE SI FACTOR DE CORECTIE — EFA ═══ */}
                         {(() => {
@@ -7953,14 +7945,20 @@ export default function StudiuAdminPage() {
                           );
                         })()}
 
+
                         {/* ═══ TABEL SUMAR IPOTEZE (Academic Summary) ═══ */}
                         {(() => {
+                          const _exH7CfNormsT = materialAggs.map(m => exNormCf(m.avg_c));
+                          const _exH7CpsT = materialAggs.map(m => m.avg_c_score);
+                          const _exH7RT = materialAggs.length >= 3 ? _pearsonR(_exH7CfNormsT, _exH7CpsT) : 0;
                           const exRows: { code: string; name: string; metric: string; n: string; pVal: string; verdict: string; color: string }[] = [
-                            { code: "H1", name: "Poarta Relevantei", metric: `\u0394Cp=${exH1DiffCp.toFixed(2)}, \u0394CTA=${exH1DiffCta.toFixed(2)}, d=${exH1CohenD.toFixed(2)}`, n: `${exH1Data.length}`, pVal: "\u2014", verdict: Math.abs(exH1DiffCp) > 2 ? "CONFIRMATA" : Math.abs(exH1DiffCp) >= 1 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(exH1DiffCp) > 2 ? "#059669" : Math.abs(exH1DiffCp) >= 1 ? "#D97706" : "#DC2626" },
-                            { code: "H2", name: "C prezice CTA", metric: `r=${exH2PearsonR.toFixed(3)}, r\u00B2=${(exH2PearsonR * exH2PearsonR).toFixed(3)}`, n: `${exH2Data.length}`, pVal: _fmtP(exH2P), verdict: Math.abs(exH2PearsonR) > 0.7 ? "CONFIRMATA" : Math.abs(exH2PearsonR) >= 0.4 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(exH2PearsonR) > 0.7 ? "#059669" : Math.abs(exH2PearsonR) >= 0.4 ? "#D97706" : "#DC2626" },
+                            { code: "H1", name: "Superioritate Multiplicativ I\u00D7F", metric: `\u03C1m=${exH4RhoM.toFixed(3)}, \u03C1a=${exH4RhoA.toFixed(3)}, pr=${exH4PartR.toFixed(3)}`, n: `${exH4V.length}`, pVal: `Z=${exH4Fz.z.toFixed(2)}, ${_fmtP(exH4Fz.p)}; pr ${_fmtP(exH4PartP)}`, verdict: exH4Verd, color: exH4VerdColor },
+                            { code: "H2", name: "Poarta Relevantei", metric: `\u0394Cp=${exH1DiffCp.toFixed(2)}, \u0394CTA=${exH1DiffCta.toFixed(2)}, d=${exH1CohenD.toFixed(2)}`, n: `${exH1Data.length}`, pVal: "\u2014", verdict: exH1DiffCta > 2 ? "CONFIRMATA" : exH1DiffCta >= 1 ? "PARTIAL" : "NECONFIRMATA", color: exH1DiffCta > 2 ? "#059669" : exH1DiffCta >= 1 ? "#D97706" : "#DC2626" },
                             { code: "H3", name: "Brand modereaza C\u2192CTA", metric: `r\u2096=${exH3PearsonKnown.toFixed(3)}, r\u1D64=${exH3PearsonUnknown.toFixed(3)}`, n: `${exH3Known.length + exH3Unknown.length}`, pVal: `Z=${exH3Fz.z.toFixed(2)}, ${_fmtP(exH3Fz.p)}`, verdict: exH3Fz.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "CONFIRMATA" : exH3Fz.p >= 0.05 ? "NEUTRA" : "INVERSATA", color: exH3Fz.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "#059669" : exH3Fz.p >= 0.05 ? "#D97706" : "#2563EB" },
-                            { code: "H4", name: "Scale-Independent I\u00D7F", metric: `\u03C1m=${exH4RhoM.toFixed(3)}, \u03C1a=${exH4RhoA.toFixed(3)}, pr=${exH4PartR.toFixed(3)}`, n: `${exH4V.length}`, pVal: `Z=${exH4Fz.z.toFixed(2)}, ${_fmtP(exH4Fz.p)}; pr ${_fmtP(exH4PartP)}`, verdict: exH4Verd, color: exH4VerdColor },
-                            { code: "H5", name: "Claritate vs Recognoscibilitate", metric: "Bar chart comparativ C vs Brand", n: `${exH5Materials.length}`, pVal: "\u2014", verdict: "CALITATIVA", color: "#6B7280" },
+                            { code: "H4", name: "C prezice CTA", metric: `r=${exH2PearsonR.toFixed(3)}, r\u00B2=${(exH2PearsonR * exH2PearsonR).toFixed(3)}`, n: `${exH2Data.length}`, pVal: _fmtP(exH2P), verdict: Math.abs(exH2PearsonR) >= 0.50 ? "CONFIRMATA" : Math.abs(exH2PearsonR) >= 0.30 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(exH2PearsonR) >= 0.50 ? "#059669" : Math.abs(exH2PearsonR) >= 0.30 ? "#D97706" : "#DC2626" },
+                            { code: "H5", name: "Invarianta Cross-Channel", metric: "Cronbach \u03B1", n: "\u2014", pVal: "\u2014", verdict: "LIPSESC DATE", color: "#6B7280" },
+                            { code: "H6", name: "Sensibilitate Segmente", metric: "\u03B7\u00B2", n: "\u2014", pVal: "\u2014", verdict: "LIPSESC DATE", color: "#6B7280" },
+                            { code: "H7", name: "Validitate Construct r(Cf, Cp)", metric: `r=${_exH7RT.toFixed(3)}, r\u00B2=${(_exH7RT * _exH7RT).toFixed(3)}`, n: `${materialAggs.length}`, pVal: _fmtP(_pValuePearson(_exH7RT, materialAggs.length)), verdict: Math.abs(_exH7RT) >= 0.60 ? "CONFIRMATA" : Math.abs(_exH7RT) >= 0.40 ? "PARTIAL" : "NECONFIRMATA", color: Math.abs(_exH7RT) >= 0.60 ? "#059669" : Math.abs(_exH7RT) >= 0.40 ? "#D97706" : "#DC2626" },
                           ];
                           return (
                             <div style={{ marginTop: 30 }}>
