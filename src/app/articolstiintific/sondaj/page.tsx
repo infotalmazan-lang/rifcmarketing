@@ -10351,542 +10351,6 @@ export default function StudiuAdminPage() {
                       </div>
                     </div>
 
-                    {/* ── GRAFIC H1 — Poarta Relevanței ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>OSF H2: Poarta Relevantei (Relevance Gate) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
-                        <InterpBtn k="h1" title="H1 — Poarta Relevantei" val={`ΔCTA=${(h1AboveAvgCta - h1BelowAvgCta).toFixed(2)}`} ctx={{ diffCp: h1AboveAvgC - h1BelowAvgC, diffCta: h1AboveAvgCta - h1BelowAvgCta, diffStrong: h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 ? _mean(h1StrongAbove.map(d => d.cta!)) - _mean(h1StrongBelow.map(d => d.cta!)) : 0, cohenDCp: h1CohenDCp, cohenDCta: h1CohenDCta, nBelow: h1CtaBelow.length, nAbove: h1CtaAbove.length, cpBelow: h1BelowAvgC, cpAbove: h1AboveAvgC, ctaBelow: h1BelowAvgCta, ctaAbove: h1AboveAvgCta, brandCtaBelow: h1BrandCtaBelowYes, brandCtaNoBrand: h1BrandCtaBelowNo, nBrandBelow: h1BrandBelowYes.length, nNoBrandBelow: h1BrandBelowNo.length }} />
-                      </div>
-                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
-                        <strong>Ce testeaza:</strong> R functioneaza ca cheie de contact — sub R={GATE}, audienta se dezangajeaza: CTA scade ~58%, chiar daca Cp nu scade la zero. R nu opreste formula, opreste audienta din a actiona.{" "}
-                        <strong>Metoda:</strong> Comparatie medii C<sub>perceput</sub> si CTA pe doua grupuri (R&lt;{GATE} vs R&ge;{GATE}). Testul foloseste c_score (perceptia consumatorului), nu C din formula (care contine R si ar fi tautologic).{" "}
-                        <strong>Interpretare:</strong> ΔCTA &gt; 2 = confirmat, 1-2 = partial, &lt; 1 = neconfirmat.
-                        <span style={{ marginLeft: 8, padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 700, background: "#f3f4f6", color: "#6B7280" }}>{h1GatePct}% sub Gate ({h1CtaBelow.length}/{h1CtaData.length})</span>
-                      </div>
-                      {/* Stats banner — 3 rows: C_perceput, CTA, Gate puternic */}
-                      {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
-                        const diffCp = Math.round((h1AboveAvgC - h1BelowAvgC) * 100) / 100;
-                        const diffCta = Math.round((h1AboveAvgCta - h1BelowAvgCta) * 100) / 100;
-                        const strongBelowCta = h1StrongBelow.length > 0 ? Math.round(_mean(h1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
-                        const strongAboveCta = h1StrongAbove.length > 0 ? Math.round(_mean(h1StrongAbove.map(d => d.cta!)) * 100) / 100 : 0;
-                        const diffStrong = Math.round((strongAboveCta - strongBelowCta) * 100) / 100;
-                        const verdict = diffCta > 2 ? "H1 CONFIRMATA" : diffCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
-                        const verdColor = diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626";
-                        const verdIcon = diffCta > 2 ? "\u2705" : diffCta >= 1 ? "\u26A0\uFE0F" : "\u274C";
-                        const rowLbl: React.CSSProperties = { fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: 0.5, padding: "4px 0 2px", gridColumn: "1 / -1" };
-                        const cellStyle = (border: string): React.CSSProperties => ({ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${border}` });
-                        return (
-                          <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
-                              {/* ROW A: C perceput */}
-                              <div style={rowLbl}>A. Claritate perceputa (c_score)</div>
-                              <div style={cellStyle("#fee2e2")}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&lt;{GATE}</div>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgC}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1BelowGate.length}</div>
-                              </div>
-                              <div style={cellStyle("#d1fae5")}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&ge;{GATE}</div>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgC}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1AboveGate.length}</div>
-                              </div>
-                              <div style={cellStyle("#e5e7eb")}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;C<sub>perceput</sub></div>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{diffCp.toFixed(2)}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={h1CohenDCp.toFixed(2)}</div>
-                              </div>
-                              {/* Annotation A */}
-                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fef2f2", borderRadius: 4, borderLeft: "3px solid #DC2626", margin: "2px 0 6px" }}>
-                                <strong style={{ color: diffCp >= 2 ? "#059669" : diffCp >= 1 ? "#D97706" : "#DC2626" }}>{diffCp >= 2 ? "\u2705 CONFIRMAT" : diffCp >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
-                                Claritate perceputa (c_score 1-10): cat de clar a inteles consumatorul mesajul. Media {h1BelowAvgC} sub prag vs {h1AboveAvgC} peste prag = &Delta;{diffCp.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={h1CohenDCp.toFixed(2)} ({Math.abs(h1CohenDCp) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCp) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
-                                <span style={{ color: "#6B7280" }}>n={h1BelowGate.length}+{h1AboveGate.length} = raspunsuri cu c_score valid.</span>
-                              </div>
-                              {/* ROW B: CTA */}
-                              <div style={rowLbl}>B. Intentie de actiune (CTA)</div>
-                              <div style={cellStyle("#fee2e2")}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&lt;{GATE}</div>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgCta}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1CtaBelow.length}</div>
-                              </div>
-                              <div style={cellStyle("#d1fae5")}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&ge;{GATE}</div>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgCta}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1CtaAbove.length}</div>
-                              </div>
-                              <div style={cellStyle("#e5e7eb")}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA</div>
-                                <div style={{ fontSize: 16, fontWeight: 900, color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffCta.toFixed(2)}</div>
-                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={h1CohenDCta.toFixed(2)}</div>
-                              </div>
-                              {/* Annotation B */}
-                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#eff6ff", borderRadius: 4, borderLeft: "3px solid #2563EB", margin: "2px 0 6px" }}>
-                                <strong style={{ color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626" }}>{diffCta > 2 ? "\u2705 CONFIRMAT" : diffCta >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
-                                <strong>METRICA DECISIVA.</strong> Intentia de cumparare (CTA 1-10): ar cumpara consumatorul sau nu? CTA {h1BelowAvgCta} sub prag vs {h1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={h1CohenDCta.toFixed(2)} ({Math.abs(h1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
-                                {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, consumatorul NU cumpara.</strong>}{" "}
-                                <span style={{ color: "#6B7280" }}>n={h1CtaBelow.length}+{h1CtaAbove.length} = raspunsuri cu CTA valid.</span>
-                              </div>
-                              {/* ROW C: Gate puternic */}
-                              {h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 && (<>
-                                <div style={rowLbl}>C. Gate puternic (I&ge;5, F&ge;5 — continut excelent)</div>
-                                <div style={cellStyle("#fef3c7")}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 dar R&lt;{GATE}</div>
-                                  <div style={{ fontSize: 16, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>{strongBelowCta}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1StrongBelow.length}</div>
-                                </div>
-                                <div style={cellStyle("#d1fae5")}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 si R&ge;{GATE}</div>
-                                  <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{strongAboveCta}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1StrongAbove.length}</div>
-                                </div>
-                                <div style={cellStyle("#e5e7eb")}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA (gate)</div>
-                                  <div style={{ fontSize: 16, fontWeight: 900, color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffStrong.toFixed(2)}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>chiar cu I,F excelente</div>
-                                </div>
-                                {/* Annotation C */}
-                                <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fefce8", borderRadius: 4, borderLeft: "3px solid #D97706", margin: "2px 0 4px" }}>
-                                  <strong style={{ color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626" }}>{diffStrong > 2 ? "\u2705 CONFIRMAT" : diffStrong >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
-                                  <strong>TEST MAXIM.</strong> Doar cazuri cu I&ge;5 SI F&ge;5 (continut+forma excelente). CTA {strongBelowCta} fara relevanta vs {strongAboveCta} cu relevanta = &Delta;{diffStrong.toFixed(2)}.{" "}
-                                  {diffStrong > 2 ? <strong style={{ color: "#059669" }}>&quot;Chiar super frumos si chiar am prins, dar fara relevanta — nu cumpar.&quot;</strong> : diffStrong >= 1 ? <strong style={{ color: "#D97706" }}>Calitatea compenseaza partial dar nu suficient.</strong> : <strong style={{ color: "#DC2626" }}>Calitatea compenseaza lipsa relevantei.</strong>}{" "}
-                                  <span style={{ color: "#6B7280" }}>n={h1StrongBelow.length}+{h1StrongAbove.length} = subset cu I&ge;5, F&ge;5 (din {h1CtaData.length} total).</span>
-                                </div>
-                              </>)}
-                            </div>
-                            {/* N explanation */}
-                            <div style={{ marginTop: 6, padding: "4px 10px", background: "#f9fafb", borderRadius: 4, fontSize: 9, color: "#6B7280", lineHeight: 1.4 }}>
-                              <strong>De ce N difera intre metrici?</strong> Fiecare rand filtreaza raspunsurile care au valoarea respectiva completata: A = {h1BelowGate.length}+{h1AboveGate.length} cu c_score valid, B = {h1CtaBelow.length}+{h1CtaAbove.length} cu CTA valid, C = {h1StrongBelow.length}+{h1StrongAbove.length} (subset I&ge;5, F&ge;5). N nu e &quot;date lipsa&quot; — e cate formulare au acea valoare completata.
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                              <div style={{ fontSize: 9, color: "#6B7280" }}>Cohen&apos;s d(CTA)={h1CohenDCta.toFixed(2)} ({Math.abs(h1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}) &middot; N(Cp)={h1N} &middot; N(CTA)={h1CtaData.length}</div>
-                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      {/* ═══ DUAL SCATTER: R vs Cp + R vs CTA ═══ */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                        {/* Scatter 1: R vs C perceput */}
-                        <div style={{ overflowX: "auto" as const }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs C perceput (Claritate)</div>
-                          <svg width={chartW / 2} height={chartH + 10} viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ display: "block", width: "100%" }}>
-                            {renderGrid(h1XMin, h1XMax, h1YMin, h1YMax, "R (Relevanta)", "C perceput (c_score 1-10)")}
-                            {/* Gate line */}
-                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
-                            <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={GATE}</text>
-                            {/* Mean lines */}
-                            <line x1={pad.l} y1={toY(h1BelowAvgC, h1YMin, h1YMax)} x2={toX(GATE, h1XMin, h1XMax)} y2={toY(h1BelowAvgC, h1YMin, h1YMax)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
-                            <text x={pad.l + 4} y={toY(h1BelowAvgC, h1YMin, h1YMax) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={h1BelowAvgC}</text>
-                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={toY(h1AboveAvgC, h1YMin, h1YMax)} x2={chartW - pad.r} y2={toY(h1AboveAvgC, h1YMin, h1YMax)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
-                            <text x={chartW - pad.r - 50} y={toY(h1AboveAvgC, h1YMin, h1YMax) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={h1AboveAvgC}</text>
-                            {/* Dots with jitter */}
-                            {h1Data.map((d, i) => {
-                              const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
-                              const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
-                              return <circle key={i} cx={toX(d.r, h1XMin, h1XMax) + jx} cy={toY(d.c_score!, h1YMin, h1YMax) + jy} r={2.5} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
-                            })}
-                            {/* Legend */}
-                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
-                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1BelowGate.length})</text>
-                            <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
-                            <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1AboveGate.length})</text>
-                          </svg>
-                        </div>
-                        {/* Scatter 2: R vs CTA */}
-                        <div style={{ overflowX: "auto" as const }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs CTA (Intentie de actiune)</div>
-                          <svg width={chartW / 2} height={chartH + 10} viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ display: "block", width: "100%" }}>
-                            {renderGrid(h1XMin, h1XMax, 0, 10, "R (Relevanta)", "CTA (1-10)")}
-                            {/* Gate line */}
-                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
-                            <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={GATE}</text>
-                            {/* Mean lines */}
-                            <line x1={pad.l} y1={toY(h1BelowAvgCta, 0, 10)} x2={toX(GATE, h1XMin, h1XMax)} y2={toY(h1BelowAvgCta, 0, 10)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
-                            <text x={pad.l + 4} y={toY(h1BelowAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={h1BelowAvgCta}</text>
-                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={toY(h1AboveAvgCta, 0, 10)} x2={chartW - pad.r} y2={toY(h1AboveAvgCta, 0, 10)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
-                            <text x={chartW - pad.r - 50} y={toY(h1AboveAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={h1AboveAvgCta}</text>
-                            {/* Dots with jitter */}
-                            {h1CtaScatterData.map((d, i) => {
-                              const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
-                              const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
-                              return <circle key={i} cx={toX(d.r, h1XMin, h1XMax) + jx} cy={toY(d.cta!, 0, 10) + jy} r={2.5} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
-                            })}
-                            {/* Legend */}
-                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
-                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1CtaBelow.length})</text>
-                            <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
-                            <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1CtaAbove.length})</text>
-                          </svg>
-                        </div>
-                      </div>
-                      {/* ═══ INTERPRETARE — OSF H2 ═══ */}
-                      <div style={{ marginTop: 10, padding: "14px 16px", background: "#f0fdf4", borderRadius: 8, border: "2px solid #059669" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                          <CheckCircle2 size={16} style={{ color: "#059669" }} />
-                          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE — OSF H2</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: "#111827", lineHeight: 1.7 }}>
-                          <strong>Formula e validata?</strong>{" "}
-                          {(() => {
-                            const diffCta = h1AboveAvgCta - h1BelowAvgCta;
-                            const diffCp = h1AboveAvgC - h1BelowAvgC;
-                            const strongN = h1StrongBelow.length;
-                            const strongBelowCta = strongN > 0 ? Math.round(_mean(h1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
-                            return (<>
-                              {diffCta > 2
-                                ? <strong style={{ color: "#059669" }}>DA — Poarta Relevantei functioneaza.</strong>
-                                : diffCta >= 1
-                                  ? <strong style={{ color: "#D97706" }}>PARTIAL — efect prezent dar moderat.</strong>
-                                  : <strong style={{ color: "#DC2626" }}>NU — R nu actioneaza ca gate.</strong>}
-                              <br />
-                              <span style={{ fontSize: 11 }}>
-                                Testul A (perceptie): Cand R&lt;{GATE}, claritatea perceputa scade cu {diffCp.toFixed(2)} puncte ({h1BelowAvgC} vs {h1AboveAvgC}).{" "}
-                                <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({h1BelowAvgCta} vs {h1AboveAvgCta}) — consumatorul nu cumpara.</strong>{" "}
-                                {strongN >= 3 && <>Testul C (test maxim): Chiar cu I&ge;5, F&ge;5, CTA ramane {strongBelowCta} fara relevanta vs {h1AboveAvgCta} cu relevanta. <strong>Calitatea NU compenseaza lipsa relevantei.</strong></>}
-                              </span>
-                            </>);
-                          })()}
-                        </div>
-                        <div style={{ marginTop: 8, fontSize: 11, color: "#374151", padding: "6px 10px", background: "#dcfce7", borderRadius: 4 }}>
-                          <strong>Concluzie:</strong> R (relevanta) e conditia de baza a formulei RIFC. Sub pragul R&lt;{GATE}, indiferent cat de bun e continutul (I) sau prezentarea (F), audienta se dezangajeaza si <strong>CTA scade ~58%</strong>. Formula se valideaza empiric.
-                        </div>
-                      </div>
-
-                      {/* ═══ SINTEZA R — 4 Reguli ale Relevantei ═══ */}
-                      {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
-                        const diffCta = h1AboveAvgCta - h1BelowAvgCta;
-                        const rContrib = grandR > 0 && grandCf > 0 ? Math.round(grandR / grandCf * 1000) / 10 : 0;
-                        const ixfContrib = Math.round((100 - rContrib) * 10) / 10;
-                        const ctaLossPct = h1AboveAvgCta > 0 ? Math.round((1 - h1BelowAvgCta / h1AboveAvgCta) * 100) : 0;
-                        const rules: { nr: number; title: string; icon: string; color: string; text: string; data: string }[] = [
-                          { nr: 1, title: "R = cheie de contact, I×F = motor", icon: "🔑", color: "#2563EB",
-                            text: "Obiectivul nu e sa maximizezi R, ci sa asiguri R >= " + GATE + " (activare). Apoi maximizezi I×F (amplificare). R deschide usa, I×F construieste experienta.",
-                            data: `R contribuie ${rContrib}% la formula (${grandR.toFixed(2)}/${grandCf.toFixed(2)}). I×F contribuie ${ixfContrib}% (${grandIxF.toFixed(2)}). Puterea vine din I×F, dar fara R >= ${GATE}, motorul nu porneste.` },
-                          { nr: 2, title: "R < 3 = diagnostic, nu condamnare", icon: "🔍", color: "#D97706",
-                            text: "Un mesaj cu R mic functioneaza tehnic (I×F produce claritate relativa), dar nu e actionabil. Diagnosticul: schimba audienta sau reformuleaza propunerea de valoare.",
-                            data: `Sub Gate: Cp = ${h1BelowAvgC} (nu zero!), CTA = ${h1BelowAvgCta} (pierdere ${ctaLossPct}% fata de R>=${GATE}). Cu I>=5, F>=5 si R<${GATE}: CTA = ${h1StrongBelow.length >= 3 ? (_mean(h1StrongBelow.map(d => d.cta!)).toFixed(2)) : "N/A"} — calitatea nu compenseaza irelevanta.` },
-                          { nr: 3, title: "R >= 3 = formula devine aplicabila", icon: "✅", color: "#059669",
-                            text: "Dincolo de prag, I×F isi produce efectul real si CTA devine masurabil. Dar 'aplicabila' nu inseamna 'precisa' — precizia depinde de calibrare (Brand, context).",
-                            data: `Gate pass: ${gatePassRate}% (${gatePassCount}/${n}). Zone Match: ${zoneMatchRate}% (doar ${zoneMatchCount}/${n} prezise corect). Delta: ${grandDelta.toFixed(2)} — formula subestimeaza cu ${Math.round(grandDelta / grandCp * 100)}% din Cp.` },
-                          { nr: 4, title: "Delta = indicator de dependenta contextuala", icon: "⚖️", color: "#7C3AED",
-                            text: "Delta pozitiv la R mic = claritate imprumutata din context (brand, experienta) — risc necontrolat. Delta pozitiv la R mare = formula e conservatoare — oportunitate de calibrare.",
-                            data: `Delta global = +${grandDelta.toFixed(2)} (Cf_norm=${grandCfNorm.toFixed(2)} vs Cp=${grandCp.toFixed(2)}). ${grandCfNorm < grandCp ? "Formula subestimeaza sistematic — factori externi (Brand, context) amplifica claritatea perceputa dincolo de R+(I×F)." : "Formula supraestimeaza — bariere cognitive reduc claritatea perceputa."}` },
-                        ];
-                        return (
-                          <div style={{ marginTop: 12, padding: "14px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#1e40af" }}>SINTEZA R — 4 REGULI ALE RELEVANTEI</span>
-                              <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", marginLeft: "auto" }}>Derivate din H1 + date</span>
-                            </div>
-                            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 10, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
-                              <em>R nu este o poarta de esec, ci conditia de activare a intregii formule. Fara R suficient, I si F exista dar nu produc claritate actionabila — mesajul poate fi frumos si interesant, dar irelevant pentru acea audienta in acel moment.</em>
-                            </div>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                              {rules.map(rule => (
-                                <div key={rule.nr} style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid ${rule.color}` }}>
-                                  <div style={{ fontSize: 10, fontWeight: 800, color: rule.color, marginBottom: 3 }}>
-                                    Regula {rule.nr}: {rule.title}
-                                  </div>
-                                  <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 4 }}>{rule.text}</div>
-                                  <div style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.4, padding: "4px 6px", background: "#f9fafb", borderRadius: 3 }}>{rule.data}</div>
-                                </div>
-                              ))}
-                            </div>
-                            <div style={{ marginTop: 8, fontSize: 10, color: "#1e40af", fontWeight: 700, textAlign: "center" as const }}>
-                              &quot;Creste R, si formula lucreaza pentru tine. Lasa R mic, si audienta lucreaza in locul mesajului.&quot;
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-
-                    {/* ── GRAFIC H2 — Corelatie C → CTA (cu filtru Obiectiv Marketing) ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H4: Claritate prezice Intentie de Actiune (C{"\u2192"}CTA) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
-                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
-                        <strong>Ce testeaza:</strong> Lantul cauzal C → CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H2 valideaza ca pasul C→CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
-                        <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
-                        <strong>Interpretare:</strong> r &gt; 0.7 = corelatie puternica (confirmata), r 0.4-0.7 = moderata (partial), r &lt; 0.4 = slaba (nesemnificativa).
-                      </div>
-                      {/* Stats banner */}
-                      {(() => {
-                        const absR = Math.abs(h2PearsonR);
-                        const verdict = absR > 0.7 ? "Corelatie puternica" : absR >= 0.4 ? "Corelatie moderata" : "Corelatie slaba";
-                        const verdColor = absR > 0.7 ? "#059669" : absR >= 0.4 ? "#D97706" : "#DC2626";
-                        const verdIcon = absR > 0.7 ? "\u2705" : absR >= 0.4 ? "\u26A0\uFE0F" : "\u274C";
-                        return (
-                          <div style={{ marginBottom: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Pearson R</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{h2PearsonR.toFixed(3)}</div>
-                              </div>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>N raspunsuri filtrate</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h2Data.length}</div>
-                              </div>
-                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>r&sup2; (coeficient determinare)</div>
-                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h2Reg.r2.toFixed(3)}</div>
-                              </div>
-                            </div>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <div style={{ fontSize: 9, color: "#6B7280" }}>{_fmtP(_pValuePearson(h2PearsonR, h2Data.length))}</div>
-                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} H2 {verdict}</div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      {/* Objective filter pills */}
-                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 12 }}>
-                        <span style={{ fontSize: 10, color: "#6B7280", fontWeight: 600, lineHeight: "24px" }}>Filtru obiectiv:</span>
-                        {MARKETING_OBJECTIVES.map((o) => {
-                          const active = h2ObjFilter.includes(o.value);
-                          const count = (h2ByObj[o.value] || []).length;
-                          return (
-                            <button key={o.value} onClick={() => {
-                              setH2ObjFilter(prev => active ? prev.filter(v => v !== o.value) : [...prev, o.value]);
-                            }} style={{
-                              padding: "3px 10px", fontSize: 10, fontWeight: 700, borderRadius: 12,
-                              border: `1.5px solid ${active ? o.color : "#e5e7eb"}`,
-                              background: active ? o.bg : "#fff",
-                              color: active ? o.color : "#9CA3AF",
-                              cursor: "pointer", transition: "all 0.15s",
-                            }}>
-                              {o.label} ({count})
-                            </button>
-                          );
-                        })}
-                        <button onClick={() => setH2ObjFilter(MARKETING_OBJECTIVES.map(o => o.value))} style={{
-                          padding: "3px 8px", fontSize: 9, borderRadius: 12, border: "1px solid #e5e7eb",
-                          background: "#f9fafb", color: "#6B7280", cursor: "pointer",
-                        }}>Toate</button>
-                      </div>
-
-                      {/* ── Side-by-side: Scatter + Heatmap ── */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
-                      {/* LEFT: Scatter chart */}
-                      <div style={{ overflowX: "auto" as const }}>
-                        <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
-                          {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
-                          {/* Trend line */}
-                          {h2Pts.length >= 2 && (() => {
-                            const x1 = h2XMin;
-                            const x2 = h2XMax;
-                            const y1v = Math.max(h2YMin, Math.min(h2YMax, h2Reg.slope * x1 + h2Reg.intercept));
-                            const y2v = Math.max(h2YMin, Math.min(h2YMax, h2Reg.slope * x2 + h2Reg.intercept));
-                            return <line x1={toX(x1, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(x2, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
-                          })()}
-                          {/* Color-coded dots by objective (normalized X) */}
-                          {h2Data.map((d, i) => {
-                            const obj = stimObjMap[d.stimulus_id] || "conversie";
-                            const mo = MARKETING_OBJECTIVES.find(o => o.value === obj);
-                            return <circle key={i} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3.5} fill={mo?.color || "#2563EB"} opacity={0.55} />;
-                          })}
-                          {/* Legend — per objective counts (stacked vertically) */}
-                          {(() => {
-                            const items = MARKETING_OBJECTIVES.filter(o => h2ObjFilter.includes(o.value) && (h2ByObj[o.value] || []).length > 0);
-                            return items.map((o, idx) => {
-                              const lx = pad.l + 4 + idx * Math.floor((chartW - pad.l - pad.r - 10) / Math.max(items.length, 1));
-                              return (
-                                <g key={o.value}>
-                                  <circle cx={lx} cy={chartH - 2} r={3} fill={o.color} />
-                                  <text x={lx + 6} y={chartH + 1} fontSize={7} fill={o.color} fontWeight={600}>{o.label} ({(h2ByObj[o.value] || []).length})</text>
-                                </g>
-                              );
-                            });
-                          })()}
-                          <text x={chartW - pad.r - 5} y={pad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill="#2563EB">r = {h2PearsonR.toFixed(3)} | r² = {h2Reg.r2.toFixed(3)}</text>
-                        </svg>
-                      </div>
-
-                      {/* RIGHT: H2 Heatmap Densitate */}
-                      {h2Data.length >= 5 ? (() => {
-                        const hmBins = 10;
-                        const hmW = chartW;
-                        const hmLegendW = 50;
-                        const hmPad = { l: 42, r: hmLegendW + 16, t: 14, b: 38 };
-                        const hmPlotW = hmW - hmPad.l - hmPad.r;
-                        const hmPlotH = 220;
-                        const hmH = hmPlotH + hmPad.t + hmPad.b;
-                        const cellW = hmPlotW / hmBins;
-                        const cellH = hmPlotH / hmBins;
-                        // Build count grid
-                        const grid: number[][] = Array.from({ length: hmBins }, () => Array(hmBins).fill(0));
-                        let hmMax = 0;
-                        for (const d of h2Data) {
-                          const cx = Math.min(hmBins - 1, Math.max(0, Math.floor((d.c_computed / 11) - 0.5)));
-                          const cy = Math.min(hmBins - 1, Math.max(0, Math.floor(d.cta! - 0.5)));
-                          grid[cy][cx]++;
-                          hmMax = Math.max(hmMax, grid[cy][cx]);
-                        }
-                        const heatColor = (count: number): string => {
-                          if (count === 0) return "#fafafa";
-                          const t = count / Math.max(hmMax, 1);
-                          if (t < 0.15) return "#fef3c7";
-                          if (t < 0.3) return "#fde68a";
-                          if (t < 0.5) return "#f59e0b";
-                          if (t < 0.7) return "#ea580c";
-                          return "#dc2626";
-                        };
-                        const textColor = (count: number): string => count / Math.max(hmMax, 1) > 0.4 ? "#fff" : "#374151";
-                        return (
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Heatmap Densitate</div>
-                            <div style={{ overflowX: "auto" as const }}>
-                              <svg viewBox={`0 0 ${hmW} ${hmH}`} style={{ width: "100%", height: "auto" }}>
-                                {/* Cells */}
-                                {grid.map((row, ri) => row.map((count, ci) => {
-                                  const x = hmPad.l + ci * cellW;
-                                  const y = hmPad.t + (hmBins - 1 - ri) * cellH;
-                                  return (
-                                    <g key={`hm-${ri}-${ci}`}>
-                                      <rect x={x} y={y} width={cellW} height={cellH} fill={heatColor(count)} stroke="#fff" strokeWidth={1} rx={2} />
-                                      {count > 0 && (
-                                        <text x={x + cellW / 2} y={y + cellH / 2 + 4} textAnchor="middle" fontSize={count > 9 ? 8 : 9} fontWeight={700} fill={textColor(count)}>{count}</text>
-                                      )}
-                                    </g>
-                                  );
-                                }))}
-                                {/* Y axis labels */}
-                                {Array.from({ length: hmBins }, (_, i) => (
-                                  <text key={`hy-${i}`} x={hmPad.l - 5} y={hmPad.t + (hmBins - 1 - i) * cellH + cellH / 2 + 3} textAnchor="end" fontSize={9} fill="#9CA3AF">{i + 1}</text>
-                                ))}
-                                {/* X axis labels */}
-                                {Array.from({ length: hmBins }, (_, i) => (
-                                  <text key={`hx-${i}`} x={hmPad.l + i * cellW + cellW / 2} y={hmH - hmPad.b + 16} textAnchor="middle" fontSize={9} fill="#9CA3AF">{i + 1}</text>
-                                ))}
-                                {/* Axis labels */}
-                                <text x={hmPad.l + hmPlotW / 2} y={hmH - 4} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280">C formula (norm. 1-10)</text>
-                                <text x={8} y={hmPad.t + hmPlotH / 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280" transform={`rotate(-90 8 ${hmPad.t + hmPlotH / 2})`}>CTA (1-10)</text>
-                                {/* Border */}
-                                <rect x={hmPad.l} y={hmPad.t} width={hmPlotW} height={hmPlotH} fill="none" stroke="#e5e7eb" strokeWidth={1} />
-                                {/* Color legend */}
-                                {(() => {
-                                  const lgX = hmW - hmLegendW + 4;
-                                  const lgW = 14;
-                                  const lgH = hmPlotH;
-                                  const lgTop = hmPad.t;
-                                  const colors = ["#fafafa", "#fef3c7", "#fde68a", "#f59e0b", "#ea580c", "#dc2626"];
-                                  const segH = lgH / colors.length;
-                                  return (
-                                    <>
-                                      {colors.map((c, i) => (
-                                        <rect key={`lg-${i}`} x={lgX} y={lgTop + (colors.length - 1 - i) * segH} width={lgW} height={segH} fill={c} stroke="#e5e7eb" strokeWidth={0.5} />
-                                      ))}
-                                      <text x={lgX + lgW + 4} y={lgTop + 10} fontSize={8} fill="#6B7280">{hmMax}</text>
-                                      <text x={lgX + lgW + 4} y={lgTop + lgH} fontSize={8} fill="#6B7280">0</text>
-                                      <text x={lgX + lgW / 2} y={lgTop - 5} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">N</text>
-                                    </>
-                                  );
-                                })()}
-                              </svg>
-                            </div>
-                          </div>
-                        );
-                      })() : <div />}
-                      </div>{/* end scatter+heatmap grid */}
-                      <div style={{ fontSize: 10, color: "#6B7280", lineHeight: 1.5, padding: "6px 10px", background: "#f9fafb", borderRadius: 6, marginBottom: 8 }}>
-                        Fiecare celula arata cate raspunsuri au C=x si CTA=y. Culorile mai intense (rosu) = concentratie mai mare. Un pattern diagonal stanga-jos {"\u2192"} dreapta-sus confirma corelatia pozitiva C{"\u2192"}CTA.
-                      </div>
-
-                      <div style={cardStyle}>
-                        <strong>H2 — Formula prezice actiunea:</strong> Daca RIFC functioneaza, materialele cu scor C mai mare ar trebui sa genereze intentie de actiune mai mare. Corelatia pozitiva confirma ca formula nu e doar teoretica — prezice comportamentul real.{" "}
-                        {Math.abs(h2PearsonR) > 0.7
-                          ? <strong style={{ color: "#059669" }}>Corelatie puternica (r={h2PearsonR.toFixed(3)}) — H2 confirmata.</strong>
-                          : Math.abs(h2PearsonR) >= 0.4
-                            ? <strong style={{ color: "#D97706" }}>Corelatie moderata (r={h2PearsonR.toFixed(3)}) — H2 partial confirmata.</strong>
-                            : <strong style={{ color: "#DC2626" }}>Corelatie slaba (r={h2PearsonR.toFixed(3)}) — relatie nesemnificativa.</strong>}
-                      </div>
-                      <div style={{ ...cardStyle, marginTop: 8, borderLeft: "3px solid #6B7280", color: "#6B7280", fontSize: 11 }}>
-                        Analiza filtrata pe materiale Conversie + Considerare (N={h2Data.length}). Materialele Awareness sunt excluse — CTA-ul lor are semnificatie diferita si nu trebuie comparat direct.
-                      </div>
-                    </div>
-
-                    {/* ── GRAFIC H3 — Moderarea Brand Awareness ── */}
-                    <div style={{ ...S.configItem, marginBottom: 20 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H3: Brand ca Moderator C{"\u2192"}CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
-                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
-                        <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
-                        <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={h3Known.length}) vs necunoscut (portocaliu, n={h3Unknown.length}).{" "}
-                        <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
-                      </div>
-                      {/* ── Side-by-side: Scatter + Stats ── */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
-                        {/* LEFT: Scatter chart */}
-                        <div>
-                          <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
-                            {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
-                            {/* Trend lines */}
-                            {h3Known.length >= 2 && (() => {
-                              const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMin + h3RegKnown.intercept));
-                              const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMax + h3RegKnown.intercept));
-                              return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
-                            })()}
-                            {h3Unknown.length >= 2 && (() => {
-                              const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMin + h3RegUnknown.intercept));
-                              const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMax + h3RegUnknown.intercept));
-                              return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
-                            })()}
-                            {h3Known.map((d, i) => (
-                              <circle key={`k-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#2563EB" opacity={0.5} />
-                            ))}
-                            {h3Unknown.map((d, i) => (
-                              <circle key={`u-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#D97706" opacity={0.5} />
-                            ))}
-                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#2563EB" />
-                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#2563EB" fontWeight={600}>Brand cunoscut (n={h3Known.length}, r={h3PearsonKnown.toFixed(2)})</text>
-                            <circle cx={chartW / 2 + 20} cy={chartH - 2} r={3} fill="#D97706" />
-                            <text x={chartW / 2 + 28} y={chartH + 1} fontSize={8} fill="#D97706" fontWeight={600}>Brand necunoscut (n={h3Unknown.length}, r={h3PearsonUnknown.toFixed(2)})</text>
-                          </svg>
-                        </div>
-                        {/* RIGHT: Stats banner H3 */}
-                        {h3Known.length > 0 && h3Unknown.length > 0 ? (() => {
-                          const unknownStronger = Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown);
-                          const diff = Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown));
-                          const fisherZ = _fisherZTest(h3PearsonKnown, h3PearsonUnknown, h3Known.length, h3Unknown.length);
-                          const sigDiff = fisherZ.p < 0.05;
-                          const verdict = !sigDiff ? "H3 NEUTRA" : unknownStronger ? "H3 CONFIRMATA" : "H3 INVERSATA";
-                          const verdColor = !sigDiff ? "#D97706" : unknownStronger ? "#059669" : "#2563EB";
-                          const verdIcon = !sigDiff ? "\u26A0\uFE0F" : unknownStronger ? "\u2705" : "\u21C4";
-                          const pK = _pValuePearson(h3PearsonKnown, h3Known.length);
-                          const pU = _pValuePearson(h3PearsonUnknown, h3Unknown.length);
-                          return (
-                            <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const, justifyContent: "center" }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={h3Known.length})</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonKnown.toFixed(3)}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pK)}</div>
-                                </div>
-                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
-                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={h3Unknown.length})</div>
-                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonUnknown.toFixed(3)}</div>
-                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pU)}</div>
-                                </div>
-                              </div>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <div style={{ fontSize: 9, color: "#6B7280" }}>Fisher Z={fisherZ.z.toFixed(2)}, {_fmtP(fisherZ.p)} &middot; &Delta;r={diff.toFixed(3)}</div>
-                                <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
-                              </div>
-                            </div>
-                          );
-                        })() : <div />}
-                      </div>{/* end H3 grid */}
-                      <div style={cardStyle}>
-                        <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
-                        {h3Known.length > 0 && h3Unknown.length > 0 ? (
-                          <>
-                          {Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown)
-                            ? <> <strong style={{ color: "#059669" }}>RIFC conteaza mai mult cand brandul nu e familiar. Brand-ul cunoscut compenseaza un scor C slab.</strong></>
-                            : Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown)) < 0.05
-                              ? <> <strong style={{ color: "#D97706" }}>Brand awareness nu modereaza semnificativ relatia C→CTA in acest esantion.</strong></>
-                              : <> <strong style={{ color: "#2563EB" }}>Brand familiar amplifica efectul C→CTA — ipoteza inversata.</strong></>}
-                          </>
-                        ) : <> Date insuficiente pentru una dintre serii.</>}
-                      </div>
-                    </div>
-
                     {/* ═══ GRAFIC H4 — Test Scale-Independent al Interactiei I×F ═══ */}
                     {(() => {
                       const sc = results.hypothesisScatterData || [];
@@ -11143,6 +10607,542 @@ export default function StudiuAdminPage() {
                         </>
                       );
                     })()}
+
+                    {/* ── GRAFIC H1 — Poarta Relevanței ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", flex: 1 }}>OSF H2: Poarta Relevantei (Relevance Gate) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Threshold Effect Analysis)</span></div>
+                        <InterpBtn k="h1" title="H1 — Poarta Relevantei" val={`ΔCTA=${(h1AboveAvgCta - h1BelowAvgCta).toFixed(2)}`} ctx={{ diffCp: h1AboveAvgC - h1BelowAvgC, diffCta: h1AboveAvgCta - h1BelowAvgCta, diffStrong: h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 ? _mean(h1StrongAbove.map(d => d.cta!)) - _mean(h1StrongBelow.map(d => d.cta!)) : 0, cohenDCp: h1CohenDCp, cohenDCta: h1CohenDCta, nBelow: h1CtaBelow.length, nAbove: h1CtaAbove.length, cpBelow: h1BelowAvgC, cpAbove: h1AboveAvgC, ctaBelow: h1BelowAvgCta, ctaAbove: h1AboveAvgCta, brandCtaBelow: h1BrandCtaBelowYes, brandCtaNoBrand: h1BrandCtaBelowNo, nBrandBelow: h1BrandBelowYes.length, nNoBrandBelow: h1BrandBelowNo.length }} />
+                      </div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #111827" }}>
+                        <strong>Ce testeaza:</strong> R functioneaza ca cheie de contact — sub R={GATE}, audienta se dezangajeaza: CTA scade ~58%, chiar daca Cp nu scade la zero. R nu opreste formula, opreste audienta din a actiona.{" "}
+                        <strong>Metoda:</strong> Comparatie medii C<sub>perceput</sub> si CTA pe doua grupuri (R&lt;{GATE} vs R&ge;{GATE}). Testul foloseste c_score (perceptia consumatorului), nu C din formula (care contine R si ar fi tautologic).{" "}
+                        <strong>Interpretare:</strong> ΔCTA &gt; 2 = confirmat, 1-2 = partial, &lt; 1 = neconfirmat.
+                        <span style={{ marginLeft: 8, padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 700, background: "#f3f4f6", color: "#6B7280" }}>{h1GatePct}% sub Gate ({h1CtaBelow.length}/{h1CtaData.length})</span>
+                      </div>
+                      {/* Stats banner — 3 rows: C_perceput, CTA, Gate puternic */}
+                      {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
+                        const diffCp = Math.round((h1AboveAvgC - h1BelowAvgC) * 100) / 100;
+                        const diffCta = Math.round((h1AboveAvgCta - h1BelowAvgCta) * 100) / 100;
+                        const strongBelowCta = h1StrongBelow.length > 0 ? Math.round(_mean(h1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                        const strongAboveCta = h1StrongAbove.length > 0 ? Math.round(_mean(h1StrongAbove.map(d => d.cta!)) * 100) / 100 : 0;
+                        const diffStrong = Math.round((strongAboveCta - strongBelowCta) * 100) / 100;
+                        const verdict = diffCta > 2 ? "H1 CONFIRMATA" : diffCta >= 1 ? "H1 PARTIAL CONFIRMATA" : "H1 NECONFIRMATA";
+                        const verdColor = diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626";
+                        const verdIcon = diffCta > 2 ? "\u2705" : diffCta >= 1 ? "\u26A0\uFE0F" : "\u274C";
+                        const rowLbl: React.CSSProperties = { fontSize: 8, fontWeight: 700, color: "#9CA3AF", textTransform: "uppercase" as const, letterSpacing: 0.5, padding: "4px 0 2px", gridColumn: "1 / -1" };
+                        const cellStyle = (border: string): React.CSSProperties => ({ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: `1px solid ${border}` });
+                        return (
+                          <div style={{ marginBottom: 12, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+                              {/* ROW A: C perceput */}
+                              <div style={rowLbl}>A. Claritate perceputa (c_score)</div>
+                              <div style={cellStyle("#fee2e2")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&lt;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgC}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1BelowGate.length}</div>
+                              </div>
+                              <div style={cellStyle("#d1fae5")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>C<sub>perceput</sub> R&ge;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgC}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1AboveGate.length}</div>
+                              </div>
+                              <div style={cellStyle("#e5e7eb")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;C<sub>perceput</sub></div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{diffCp.toFixed(2)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={h1CohenDCp.toFixed(2)}</div>
+                              </div>
+                              {/* Annotation A */}
+                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fef2f2", borderRadius: 4, borderLeft: "3px solid #DC2626", margin: "2px 0 6px" }}>
+                                <strong style={{ color: diffCp >= 2 ? "#059669" : diffCp >= 1 ? "#D97706" : "#DC2626" }}>{diffCp >= 2 ? "\u2705 CONFIRMAT" : diffCp >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                Claritate perceputa (c_score 1-10): cat de clar a inteles consumatorul mesajul. Media {h1BelowAvgC} sub prag vs {h1AboveAvgC} peste prag = &Delta;{diffCp.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={h1CohenDCp.toFixed(2)} ({Math.abs(h1CohenDCp) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCp) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                <span style={{ color: "#6B7280" }}>n={h1BelowGate.length}+{h1AboveGate.length} = raspunsuri cu c_score valid.</span>
+                              </div>
+                              {/* ROW B: CTA */}
+                              <div style={rowLbl}>B. Intentie de actiune (CTA)</div>
+                              <div style={cellStyle("#fee2e2")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&lt;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{h1BelowAvgCta}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1CtaBelow.length}</div>
+                              </div>
+                              <div style={cellStyle("#d1fae5")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA R&ge;{GATE}</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{h1AboveAvgCta}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1CtaAbove.length}</div>
+                              </div>
+                              <div style={cellStyle("#e5e7eb")}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA</div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffCta.toFixed(2)}</div>
+                                <div style={{ fontSize: 8, color: "#9CA3AF" }}>d={h1CohenDCta.toFixed(2)}</div>
+                              </div>
+                              {/* Annotation B */}
+                              <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#eff6ff", borderRadius: 4, borderLeft: "3px solid #2563EB", margin: "2px 0 6px" }}>
+                                <strong style={{ color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626" }}>{diffCta > 2 ? "\u2705 CONFIRMAT" : diffCta >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                <strong>METRICA DECISIVA.</strong> Intentia de cumparare (CTA 1-10): ar cumpara consumatorul sau nu? CTA {h1BelowAvgCta} sub prag vs {h1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={h1CohenDCta.toFixed(2)} ({Math.abs(h1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, consumatorul NU cumpara.</strong>}{" "}
+                                <span style={{ color: "#6B7280" }}>n={h1CtaBelow.length}+{h1CtaAbove.length} = raspunsuri cu CTA valid.</span>
+                              </div>
+                              {/* ROW C: Gate puternic */}
+                              {h1StrongBelow.length >= 3 && h1StrongAbove.length >= 3 && (<>
+                                <div style={rowLbl}>C. Gate puternic (I&ge;5, F&ge;5 — continut excelent)</div>
+                                <div style={cellStyle("#fef3c7")}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 dar R&lt;{GATE}</div>
+                                  <div style={{ fontSize: 16, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>{strongBelowCta}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1StrongBelow.length}</div>
+                                </div>
+                                <div style={cellStyle("#d1fae5")}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>CTA I&ge;5,F&ge;5 si R&ge;{GATE}</div>
+                                  <div style={{ fontSize: 16, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{strongAboveCta}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>n={h1StrongAbove.length}</div>
+                                </div>
+                                <div style={cellStyle("#e5e7eb")}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>&Delta;CTA (gate)</div>
+                                  <div style={{ fontSize: 16, fontWeight: 900, color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{diffStrong.toFixed(2)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>chiar cu I,F excelente</div>
+                                </div>
+                                {/* Annotation C */}
+                                <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#fefce8", borderRadius: 4, borderLeft: "3px solid #D97706", margin: "2px 0 4px" }}>
+                                  <strong style={{ color: diffStrong > 2 ? "#059669" : diffStrong >= 1 ? "#D97706" : "#DC2626" }}>{diffStrong > 2 ? "\u2705 CONFIRMAT" : diffStrong >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
+                                  <strong>TEST MAXIM.</strong> Doar cazuri cu I&ge;5 SI F&ge;5 (continut+forma excelente). CTA {strongBelowCta} fara relevanta vs {strongAboveCta} cu relevanta = &Delta;{diffStrong.toFixed(2)}.{" "}
+                                  {diffStrong > 2 ? <strong style={{ color: "#059669" }}>&quot;Chiar super frumos si chiar am prins, dar fara relevanta — nu cumpar.&quot;</strong> : diffStrong >= 1 ? <strong style={{ color: "#D97706" }}>Calitatea compenseaza partial dar nu suficient.</strong> : <strong style={{ color: "#DC2626" }}>Calitatea compenseaza lipsa relevantei.</strong>}{" "}
+                                  <span style={{ color: "#6B7280" }}>n={h1StrongBelow.length}+{h1StrongAbove.length} = subset cu I&ge;5, F&ge;5 (din {h1CtaData.length} total).</span>
+                                </div>
+                              </>)}
+                            </div>
+                            {/* N explanation */}
+                            <div style={{ marginTop: 6, padding: "4px 10px", background: "#f9fafb", borderRadius: 4, fontSize: 9, color: "#6B7280", lineHeight: 1.4 }}>
+                              <strong>De ce N difera intre metrici?</strong> Fiecare rand filtreaza raspunsurile care au valoarea respectiva completata: A = {h1BelowGate.length}+{h1AboveGate.length} cu c_score valid, B = {h1CtaBelow.length}+{h1CtaAbove.length} cu CTA valid, C = {h1StrongBelow.length}+{h1StrongAbove.length} (subset I&ge;5, F&ge;5). N nu e &quot;date lipsa&quot; — e cate formulare au acea valoare completata.
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                              <div style={{ fontSize: 9, color: "#6B7280" }}>Cohen&apos;s d(CTA)={h1CohenDCta.toFixed(2)} ({Math.abs(h1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(h1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}) &middot; N(Cp)={h1N} &middot; N(CTA)={h1CtaData.length}</div>
+                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {/* ═══ DUAL SCATTER: R vs Cp + R vs CTA ═══ */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                        {/* Scatter 1: R vs C perceput */}
+                        <div style={{ overflowX: "auto" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs C perceput (Claritate)</div>
+                          <svg width={chartW / 2} height={chartH + 10} viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ display: "block", width: "100%" }}>
+                            {renderGrid(h1XMin, h1XMax, h1YMin, h1YMax, "R (Relevanta)", "C perceput (c_score 1-10)")}
+                            {/* Gate line */}
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
+                            <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={GATE}</text>
+                            {/* Mean lines */}
+                            <line x1={pad.l} y1={toY(h1BelowAvgC, h1YMin, h1YMax)} x2={toX(GATE, h1XMin, h1XMax)} y2={toY(h1BelowAvgC, h1YMin, h1YMax)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={pad.l + 4} y={toY(h1BelowAvgC, h1YMin, h1YMax) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={h1BelowAvgC}</text>
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={toY(h1AboveAvgC, h1YMin, h1YMax)} x2={chartW - pad.r} y2={toY(h1AboveAvgC, h1YMin, h1YMax)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={chartW - pad.r - 50} y={toY(h1AboveAvgC, h1YMin, h1YMax) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={h1AboveAvgC}</text>
+                            {/* Dots with jitter */}
+                            {h1Data.map((d, i) => {
+                              const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
+                              const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
+                              return <circle key={i} cx={toX(d.r, h1XMin, h1XMax) + jx} cy={toY(d.c_score!, h1YMin, h1YMax) + jy} r={2.5} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
+                            })}
+                            {/* Legend */}
+                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
+                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1BelowGate.length})</text>
+                            <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
+                            <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1AboveGate.length})</text>
+                          </svg>
+                        </div>
+                        {/* Scatter 2: R vs CTA */}
+                        <div style={{ overflowX: "auto" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textAlign: "center" as const, marginBottom: 2 }}>R vs CTA (Intentie de actiune)</div>
+                          <svg width={chartW / 2} height={chartH + 10} viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ display: "block", width: "100%" }}>
+                            {renderGrid(h1XMin, h1XMax, 0, 10, "R (Relevanta)", "CTA (1-10)")}
+                            {/* Gate line */}
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={pad.t} x2={toX(GATE, h1XMin, h1XMax)} y2={chartH - pad.b} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="4 3" />
+                            <text x={toX(GATE, h1XMin, h1XMax) + 3} y={pad.t + 10} fontSize={8} fontWeight={700} fill="#DC2626">R={GATE}</text>
+                            {/* Mean lines */}
+                            <line x1={pad.l} y1={toY(h1BelowAvgCta, 0, 10)} x2={toX(GATE, h1XMin, h1XMax)} y2={toY(h1BelowAvgCta, 0, 10)} stroke="#DC2626" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={pad.l + 4} y={toY(h1BelowAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#DC2626">x&#772;={h1BelowAvgCta}</text>
+                            <line x1={toX(GATE, h1XMin, h1XMax)} y1={toY(h1AboveAvgCta, 0, 10)} x2={chartW - pad.r} y2={toY(h1AboveAvgCta, 0, 10)} stroke="#059669" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />
+                            <text x={chartW - pad.r - 50} y={toY(h1AboveAvgCta, 0, 10) - 4} fontSize={7} fontWeight={700} fill="#059669">x&#772;={h1AboveAvgCta}</text>
+                            {/* Dots with jitter */}
+                            {h1CtaScatterData.map((d, i) => {
+                              const jx = ((i * 7 + 13) % 17 - 8) * 0.8;
+                              const jy = ((i * 11 + 7) % 13 - 6) * 0.6;
+                              return <circle key={i} cx={toX(d.r, h1XMin, h1XMax) + jx} cy={toY(d.cta!, 0, 10) + jy} r={2.5} fill={d.r < GATE ? "#DC2626" : "#059669"} opacity={0.35} />;
+                            })}
+                            {/* Legend */}
+                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#DC2626" />
+                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#DC2626" fontWeight={600}>R&lt;{GATE} ({h1CtaBelow.length})</text>
+                            <circle cx={pad.l + 100} cy={chartH - 2} r={3} fill="#059669" />
+                            <text x={pad.l + 108} y={chartH + 1} fontSize={8} fill="#059669" fontWeight={600}>R&ge;{GATE} ({h1CtaAbove.length})</text>
+                          </svg>
+                        </div>
+                      </div>
+                      {/* ═══ INTERPRETARE — OSF H2 ═══ */}
+                      <div style={{ marginTop: 10, padding: "14px 16px", background: "#f0fdf4", borderRadius: 8, border: "2px solid #059669" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                          <CheckCircle2 size={16} style={{ color: "#059669" }} />
+                          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#059669" }}>INTERPRETARE — OSF H2</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#111827", lineHeight: 1.7 }}>
+                          <strong>Formula e validata?</strong>{" "}
+                          {(() => {
+                            const diffCta = h1AboveAvgCta - h1BelowAvgCta;
+                            const diffCp = h1AboveAvgC - h1BelowAvgC;
+                            const strongN = h1StrongBelow.length;
+                            const strongBelowCta = strongN > 0 ? Math.round(_mean(h1StrongBelow.map(d => d.cta!)) * 100) / 100 : 0;
+                            return (<>
+                              {diffCta > 2
+                                ? <strong style={{ color: "#059669" }}>DA — Poarta Relevantei functioneaza.</strong>
+                                : diffCta >= 1
+                                  ? <strong style={{ color: "#D97706" }}>PARTIAL — efect prezent dar moderat.</strong>
+                                  : <strong style={{ color: "#DC2626" }}>NU — R nu actioneaza ca gate.</strong>}
+                              <br />
+                              <span style={{ fontSize: 11 }}>
+                                Testul A (perceptie): Cand R&lt;{GATE}, claritatea perceputa scade cu {diffCp.toFixed(2)} puncte ({h1BelowAvgC} vs {h1AboveAvgC}).{" "}
+                                <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({h1BelowAvgCta} vs {h1AboveAvgCta}) — consumatorul nu cumpara.</strong>{" "}
+                                {strongN >= 3 && <>Testul C (test maxim): Chiar cu I&ge;5, F&ge;5, CTA ramane {strongBelowCta} fara relevanta vs {h1AboveAvgCta} cu relevanta. <strong>Calitatea NU compenseaza lipsa relevantei.</strong></>}
+                              </span>
+                            </>);
+                          })()}
+                        </div>
+                        <div style={{ marginTop: 8, fontSize: 11, color: "#374151", padding: "6px 10px", background: "#dcfce7", borderRadius: 4 }}>
+                          <strong>Concluzie:</strong> R (relevanta) e conditia de baza a formulei RIFC. Sub pragul R&lt;{GATE}, indiferent cat de bun e continutul (I) sau prezentarea (F), audienta se dezangajeaza si <strong>CTA scade ~58%</strong>. Formula se valideaza empiric.
+                        </div>
+                      </div>
+
+                      {/* ═══ SINTEZA R — 4 Reguli ale Relevantei ═══ */}
+                      {h1BelowGate.length > 0 && h1AboveGate.length > 0 && (() => {
+                        const diffCta = h1AboveAvgCta - h1BelowAvgCta;
+                        const rContrib = grandR > 0 && grandCf > 0 ? Math.round(grandR / grandCf * 1000) / 10 : 0;
+                        const ixfContrib = Math.round((100 - rContrib) * 10) / 10;
+                        const ctaLossPct = h1AboveAvgCta > 0 ? Math.round((1 - h1BelowAvgCta / h1AboveAvgCta) * 100) : 0;
+                        const rules: { nr: number; title: string; icon: string; color: string; text: string; data: string }[] = [
+                          { nr: 1, title: "R = cheie de contact, I×F = motor", icon: "🔑", color: "#2563EB",
+                            text: "Obiectivul nu e sa maximizezi R, ci sa asiguri R >= " + GATE + " (activare). Apoi maximizezi I×F (amplificare). R deschide usa, I×F construieste experienta.",
+                            data: `R contribuie ${rContrib}% la formula (${grandR.toFixed(2)}/${grandCf.toFixed(2)}). I×F contribuie ${ixfContrib}% (${grandIxF.toFixed(2)}). Puterea vine din I×F, dar fara R >= ${GATE}, motorul nu porneste.` },
+                          { nr: 2, title: "R < 3 = diagnostic, nu condamnare", icon: "🔍", color: "#D97706",
+                            text: "Un mesaj cu R mic functioneaza tehnic (I×F produce claritate relativa), dar nu e actionabil. Diagnosticul: schimba audienta sau reformuleaza propunerea de valoare.",
+                            data: `Sub Gate: Cp = ${h1BelowAvgC} (nu zero!), CTA = ${h1BelowAvgCta} (pierdere ${ctaLossPct}% fata de R>=${GATE}). Cu I>=5, F>=5 si R<${GATE}: CTA = ${h1StrongBelow.length >= 3 ? (_mean(h1StrongBelow.map(d => d.cta!)).toFixed(2)) : "N/A"} — calitatea nu compenseaza irelevanta.` },
+                          { nr: 3, title: "R >= 3 = formula devine aplicabila", icon: "✅", color: "#059669",
+                            text: "Dincolo de prag, I×F isi produce efectul real si CTA devine masurabil. Dar 'aplicabila' nu inseamna 'precisa' — precizia depinde de calibrare (Brand, context).",
+                            data: `Gate pass: ${gatePassRate}% (${gatePassCount}/${n}). Zone Match: ${zoneMatchRate}% (doar ${zoneMatchCount}/${n} prezise corect). Delta: ${grandDelta.toFixed(2)} — formula subestimeaza cu ${Math.round(grandDelta / grandCp * 100)}% din Cp.` },
+                          { nr: 4, title: "Delta = indicator de dependenta contextuala", icon: "⚖️", color: "#7C3AED",
+                            text: "Delta pozitiv la R mic = claritate imprumutata din context (brand, experienta) — risc necontrolat. Delta pozitiv la R mare = formula e conservatoare — oportunitate de calibrare.",
+                            data: `Delta global = +${grandDelta.toFixed(2)} (Cf_norm=${grandCfNorm.toFixed(2)} vs Cp=${grandCp.toFixed(2)}). ${grandCfNorm < grandCp ? "Formula subestimeaza sistematic — factori externi (Brand, context) amplifica claritatea perceputa dincolo de R+(I×F)." : "Formula supraestimeaza — bariere cognitive reduc claritatea perceputa."}` },
+                        ];
+                        return (
+                          <div style={{ marginTop: 12, padding: "14px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #2563EB" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                              <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: "#1e40af" }}>SINTEZA R — 4 REGULI ALE RELEVANTEI</span>
+                              <span style={{ fontSize: 9, fontWeight: 600, color: "#6B7280", marginLeft: "auto" }}>Derivate din H1 + date</span>
+                            </div>
+                            <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 10, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
+                              <em>R nu este o poarta de esec, ci conditia de activare a intregii formule. Fara R suficient, I si F exista dar nu produc claritate actionabila — mesajul poate fi frumos si interesant, dar irelevant pentru acea audienta in acel moment.</em>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                              {rules.map(rule => (
+                                <div key={rule.nr} style={{ padding: "8px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb", borderLeft: `3px solid ${rule.color}` }}>
+                                  <div style={{ fontSize: 10, fontWeight: 800, color: rule.color, marginBottom: 3 }}>
+                                    Regula {rule.nr}: {rule.title}
+                                  </div>
+                                  <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 4 }}>{rule.text}</div>
+                                  <div style={{ fontSize: 9, color: "#6B7280", lineHeight: 1.4, padding: "4px 6px", background: "#f9fafb", borderRadius: 3 }}>{rule.data}</div>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ marginTop: 8, fontSize: 10, color: "#1e40af", fontWeight: 700, textAlign: "center" as const }}>
+                              &quot;Creste R, si formula lucreaza pentru tine. Lasa R mic, si audienta lucreaza in locul mesajului.&quot;
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
+                    {/* ── GRAFIC H3 — Moderarea Brand Awareness ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H3: Brand ca Moderator C{"\u2192"}CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
+                        <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
+                        <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={h3Known.length}) vs necunoscut (portocaliu, n={h3Unknown.length}).{" "}
+                        <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
+                      </div>
+                      {/* ── Side-by-side: Scatter + Stats ── */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
+                        {/* LEFT: Scatter chart */}
+                        <div>
+                          <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
+                            {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
+                            {/* Trend lines */}
+                            {h3Known.length >= 2 && (() => {
+                              const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMin + h3RegKnown.intercept));
+                              const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegKnown.slope * h2XMax + h3RegKnown.intercept));
+                              return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                            })()}
+                            {h3Unknown.length >= 2 && (() => {
+                              const y1v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMin + h3RegUnknown.intercept));
+                              const y2v = Math.max(h2YMin, Math.min(h2YMax, h3RegUnknown.slope * h2XMax + h3RegUnknown.intercept));
+                              return <line x1={toX(h2XMin, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(h2XMax, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#D97706" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.6} />;
+                            })()}
+                            {h3Known.map((d, i) => (
+                              <circle key={`k-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#2563EB" opacity={0.5} />
+                            ))}
+                            {h3Unknown.map((d, i) => (
+                              <circle key={`u-${i}`} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3} fill="#D97706" opacity={0.5} />
+                            ))}
+                            <circle cx={pad.l + 10} cy={chartH - 2} r={3} fill="#2563EB" />
+                            <text x={pad.l + 18} y={chartH + 1} fontSize={8} fill="#2563EB" fontWeight={600}>Brand cunoscut (n={h3Known.length}, r={h3PearsonKnown.toFixed(2)})</text>
+                            <circle cx={chartW / 2 + 20} cy={chartH - 2} r={3} fill="#D97706" />
+                            <text x={chartW / 2 + 28} y={chartH + 1} fontSize={8} fill="#D97706" fontWeight={600}>Brand necunoscut (n={h3Unknown.length}, r={h3PearsonUnknown.toFixed(2)})</text>
+                          </svg>
+                        </div>
+                        {/* RIGHT: Stats banner H3 */}
+                        {h3Known.length > 0 && h3Unknown.length > 0 ? (() => {
+                          const unknownStronger = Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown);
+                          const diff = Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown));
+                          const fisherZ = _fisherZTest(h3PearsonKnown, h3PearsonUnknown, h3Known.length, h3Unknown.length);
+                          const sigDiff = fisherZ.p < 0.05;
+                          const verdict = !sigDiff ? "H3 NEUTRA" : unknownStronger ? "H3 CONFIRMATA" : "H3 INVERSATA";
+                          const verdColor = !sigDiff ? "#D97706" : unknownStronger ? "#059669" : "#2563EB";
+                          const verdIcon = !sigDiff ? "\u26A0\uFE0F" : unknownStronger ? "\u2705" : "\u21C4";
+                          const pK = _pValuePearson(h3PearsonKnown, h3Known.length);
+                          const pU = _pValuePearson(h3PearsonUnknown, h3Unknown.length);
+                          return (
+                            <div style={{ padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const, justifyContent: "center" }}>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={h3Known.length})</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonKnown.toFixed(3)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pK)}</div>
+                                </div>
+                                <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #fed7aa" }}>
+                                  <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={h3Unknown.length})</div>
+                                  <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={h3PearsonUnknown.toFixed(3)}</div>
+                                  <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(pU)}</div>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280" }}>Fisher Z={fisherZ.z.toFixed(2)}, {_fmtP(fisherZ.p)} &middot; &Delta;r={diff.toFixed(3)}</div>
+                                <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} {verdict}</div>
+                              </div>
+                            </div>
+                          );
+                        })() : <div />}
+                      </div>{/* end H3 grid */}
+                      <div style={cardStyle}>
+                        <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
+                        {h3Known.length > 0 && h3Unknown.length > 0 ? (
+                          <>
+                          {Math.abs(h3PearsonUnknown) > Math.abs(h3PearsonKnown)
+                            ? <> <strong style={{ color: "#059669" }}>RIFC conteaza mai mult cand brandul nu e familiar. Brand-ul cunoscut compenseaza un scor C slab.</strong></>
+                            : Math.abs(Math.abs(h3PearsonUnknown) - Math.abs(h3PearsonKnown)) < 0.05
+                              ? <> <strong style={{ color: "#D97706" }}>Brand awareness nu modereaza semnificativ relatia C→CTA in acest esantion.</strong></>
+                              : <> <strong style={{ color: "#2563EB" }}>Brand familiar amplifica efectul C→CTA — ipoteza inversata.</strong></>}
+                          </>
+                        ) : <> Date insuficiente pentru una dintre serii.</>}
+                      </div>
+                    </div>
+
+                    {/* ── GRAFIC H2 — Corelatie C → CTA (cu filtru Obiectiv Marketing) ── */}
+                    <div style={{ ...S.configItem, marginBottom: 20 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>OSF H4: Claritate prezice Intentie de Actiune (C{"\u2192"}CTA) <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Pearson Correlation — C vs CTA)</span></div>
+                      <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #2563EB" }}>
+                        <strong>Ce testeaza:</strong> Lantul cauzal C → CTA: materialele cu Claritate (C) mai mare genereaza intentie de actiune (CTA) mai mare? IMPORTANT: C = Claritate, nu CTA direct. H2 valideaza ca pasul C→CTA functioneaza — formula prezice claritatea, claritatea prezice actiunea.{" "}
+                        <strong>Metoda:</strong> Corelatie Pearson intre C<sub>formula</sub> normalizat si CTA, cu linie de regresie liniara.{" "}
+                        <strong>Interpretare:</strong> r &gt; 0.7 = corelatie puternica (confirmata), r 0.4-0.7 = moderata (partial), r &lt; 0.4 = slaba (nesemnificativa).
+                      </div>
+                      {/* Stats banner */}
+                      {(() => {
+                        const absR = Math.abs(h2PearsonR);
+                        const verdict = absR > 0.7 ? "Corelatie puternica" : absR >= 0.4 ? "Corelatie moderata" : "Corelatie slaba";
+                        const verdColor = absR > 0.7 ? "#059669" : absR >= 0.4 ? "#D97706" : "#DC2626";
+                        const verdIcon = absR > 0.7 ? "\u2705" : absR >= 0.4 ? "\u26A0\uFE0F" : "\u274C";
+                        return (
+                          <div style={{ marginBottom: 10, padding: "10px 14px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #dbeafe" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Pearson R</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{h2PearsonR.toFixed(3)}</div>
+                              </div>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>N raspunsuri filtrate</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h2Data.length}</div>
+                              </div>
+                              <div style={{ textAlign: "center" as const, padding: "4px 8px", background: "#fff", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                                <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>r&sup2; (coeficient determinare)</div>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: "#111827", fontFamily: "JetBrains Mono, monospace" }}>{h2Reg.r2.toFixed(3)}</div>
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ fontSize: 9, color: "#6B7280" }}>{_fmtP(_pValuePearson(h2PearsonR, h2Data.length))}</div>
+                              <div style={{ fontWeight: 800, color: verdColor, fontSize: 11 }}>{verdIcon} H2 {verdict}</div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Objective filter pills */}
+                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 12 }}>
+                        <span style={{ fontSize: 10, color: "#6B7280", fontWeight: 600, lineHeight: "24px" }}>Filtru obiectiv:</span>
+                        {MARKETING_OBJECTIVES.map((o) => {
+                          const active = h2ObjFilter.includes(o.value);
+                          const count = (h2ByObj[o.value] || []).length;
+                          return (
+                            <button key={o.value} onClick={() => {
+                              setH2ObjFilter(prev => active ? prev.filter(v => v !== o.value) : [...prev, o.value]);
+                            }} style={{
+                              padding: "3px 10px", fontSize: 10, fontWeight: 700, borderRadius: 12,
+                              border: `1.5px solid ${active ? o.color : "#e5e7eb"}`,
+                              background: active ? o.bg : "#fff",
+                              color: active ? o.color : "#9CA3AF",
+                              cursor: "pointer", transition: "all 0.15s",
+                            }}>
+                              {o.label} ({count})
+                            </button>
+                          );
+                        })}
+                        <button onClick={() => setH2ObjFilter(MARKETING_OBJECTIVES.map(o => o.value))} style={{
+                          padding: "3px 8px", fontSize: 9, borderRadius: 12, border: "1px solid #e5e7eb",
+                          background: "#f9fafb", color: "#6B7280", cursor: "pointer",
+                        }}>Toate</button>
+                      </div>
+
+                      {/* ── Side-by-side: Scatter + Heatmap ── */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 8 }}>
+                      {/* LEFT: Scatter chart */}
+                      <div style={{ overflowX: "auto" as const }}>
+                        <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} style={{ width: "100%", height: "auto" }}>
+                          {renderGrid(h2XMin, h2XMax, h2YMin, h2YMax, "C formula (norm. 0-10)", "CTA")}
+                          {/* Trend line */}
+                          {h2Pts.length >= 2 && (() => {
+                            const x1 = h2XMin;
+                            const x2 = h2XMax;
+                            const y1v = Math.max(h2YMin, Math.min(h2YMax, h2Reg.slope * x1 + h2Reg.intercept));
+                            const y2v = Math.max(h2YMin, Math.min(h2YMax, h2Reg.slope * x2 + h2Reg.intercept));
+                            return <line x1={toX(x1, h2XMin, h2XMax)} y1={toY(y1v, h2YMin, h2YMax)} x2={toX(x2, h2XMin, h2XMax)} y2={toY(y2v, h2YMin, h2YMax)} stroke="#2563EB" strokeWidth={1.5} strokeDasharray="6 3" opacity={0.7} />;
+                          })()}
+                          {/* Color-coded dots by objective (normalized X) */}
+                          {h2Data.map((d, i) => {
+                            const obj = stimObjMap[d.stimulus_id] || "conversie";
+                            const mo = MARKETING_OBJECTIVES.find(o => o.value === obj);
+                            return <circle key={i} cx={toX(d.c_computed / 11, h2XMin, h2XMax)} cy={toY(d.cta!, h2YMin, h2YMax)} r={3.5} fill={mo?.color || "#2563EB"} opacity={0.55} />;
+                          })}
+                          {/* Legend — per objective counts (stacked vertically) */}
+                          {(() => {
+                            const items = MARKETING_OBJECTIVES.filter(o => h2ObjFilter.includes(o.value) && (h2ByObj[o.value] || []).length > 0);
+                            return items.map((o, idx) => {
+                              const lx = pad.l + 4 + idx * Math.floor((chartW - pad.l - pad.r - 10) / Math.max(items.length, 1));
+                              return (
+                                <g key={o.value}>
+                                  <circle cx={lx} cy={chartH - 2} r={3} fill={o.color} />
+                                  <text x={lx + 6} y={chartH + 1} fontSize={7} fill={o.color} fontWeight={600}>{o.label} ({(h2ByObj[o.value] || []).length})</text>
+                                </g>
+                              );
+                            });
+                          })()}
+                          <text x={chartW - pad.r - 5} y={pad.t + 12} textAnchor="end" fontSize={9} fontWeight={700} fill="#2563EB">r = {h2PearsonR.toFixed(3)} | r² = {h2Reg.r2.toFixed(3)}</text>
+                        </svg>
+                      </div>
+
+                      {/* RIGHT: H2 Heatmap Densitate */}
+                      {h2Data.length >= 5 ? (() => {
+                        const hmBins = 10;
+                        const hmW = chartW;
+                        const hmLegendW = 50;
+                        const hmPad = { l: 42, r: hmLegendW + 16, t: 14, b: 38 };
+                        const hmPlotW = hmW - hmPad.l - hmPad.r;
+                        const hmPlotH = 220;
+                        const hmH = hmPlotH + hmPad.t + hmPad.b;
+                        const cellW = hmPlotW / hmBins;
+                        const cellH = hmPlotH / hmBins;
+                        // Build count grid
+                        const grid: number[][] = Array.from({ length: hmBins }, () => Array(hmBins).fill(0));
+                        let hmMax = 0;
+                        for (const d of h2Data) {
+                          const cx = Math.min(hmBins - 1, Math.max(0, Math.floor((d.c_computed / 11) - 0.5)));
+                          const cy = Math.min(hmBins - 1, Math.max(0, Math.floor(d.cta! - 0.5)));
+                          grid[cy][cx]++;
+                          hmMax = Math.max(hmMax, grid[cy][cx]);
+                        }
+                        const heatColor = (count: number): string => {
+                          if (count === 0) return "#fafafa";
+                          const t = count / Math.max(hmMax, 1);
+                          if (t < 0.15) return "#fef3c7";
+                          if (t < 0.3) return "#fde68a";
+                          if (t < 0.5) return "#f59e0b";
+                          if (t < 0.7) return "#ea580c";
+                          return "#dc2626";
+                        };
+                        const textColor = (count: number): string => count / Math.max(hmMax, 1) > 0.4 ? "#fff" : "#374151";
+                        return (
+                          <div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#6B7280", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Heatmap Densitate</div>
+                            <div style={{ overflowX: "auto" as const }}>
+                              <svg viewBox={`0 0 ${hmW} ${hmH}`} style={{ width: "100%", height: "auto" }}>
+                                {/* Cells */}
+                                {grid.map((row, ri) => row.map((count, ci) => {
+                                  const x = hmPad.l + ci * cellW;
+                                  const y = hmPad.t + (hmBins - 1 - ri) * cellH;
+                                  return (
+                                    <g key={`hm-${ri}-${ci}`}>
+                                      <rect x={x} y={y} width={cellW} height={cellH} fill={heatColor(count)} stroke="#fff" strokeWidth={1} rx={2} />
+                                      {count > 0 && (
+                                        <text x={x + cellW / 2} y={y + cellH / 2 + 4} textAnchor="middle" fontSize={count > 9 ? 8 : 9} fontWeight={700} fill={textColor(count)}>{count}</text>
+                                      )}
+                                    </g>
+                                  );
+                                }))}
+                                {/* Y axis labels */}
+                                {Array.from({ length: hmBins }, (_, i) => (
+                                  <text key={`hy-${i}`} x={hmPad.l - 5} y={hmPad.t + (hmBins - 1 - i) * cellH + cellH / 2 + 3} textAnchor="end" fontSize={9} fill="#9CA3AF">{i + 1}</text>
+                                ))}
+                                {/* X axis labels */}
+                                {Array.from({ length: hmBins }, (_, i) => (
+                                  <text key={`hx-${i}`} x={hmPad.l + i * cellW + cellW / 2} y={hmH - hmPad.b + 16} textAnchor="middle" fontSize={9} fill="#9CA3AF">{i + 1}</text>
+                                ))}
+                                {/* Axis labels */}
+                                <text x={hmPad.l + hmPlotW / 2} y={hmH - 4} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280">C formula (norm. 1-10)</text>
+                                <text x={8} y={hmPad.t + hmPlotH / 2} textAnchor="middle" fontSize={9} fontWeight={600} fill="#6B7280" transform={`rotate(-90 8 ${hmPad.t + hmPlotH / 2})`}>CTA (1-10)</text>
+                                {/* Border */}
+                                <rect x={hmPad.l} y={hmPad.t} width={hmPlotW} height={hmPlotH} fill="none" stroke="#e5e7eb" strokeWidth={1} />
+                                {/* Color legend */}
+                                {(() => {
+                                  const lgX = hmW - hmLegendW + 4;
+                                  const lgW = 14;
+                                  const lgH = hmPlotH;
+                                  const lgTop = hmPad.t;
+                                  const colors = ["#fafafa", "#fef3c7", "#fde68a", "#f59e0b", "#ea580c", "#dc2626"];
+                                  const segH = lgH / colors.length;
+                                  return (
+                                    <>
+                                      {colors.map((c, i) => (
+                                        <rect key={`lg-${i}`} x={lgX} y={lgTop + (colors.length - 1 - i) * segH} width={lgW} height={segH} fill={c} stroke="#e5e7eb" strokeWidth={0.5} />
+                                      ))}
+                                      <text x={lgX + lgW + 4} y={lgTop + 10} fontSize={8} fill="#6B7280">{hmMax}</text>
+                                      <text x={lgX + lgW + 4} y={lgTop + lgH} fontSize={8} fill="#6B7280">0</text>
+                                      <text x={lgX + lgW / 2} y={lgTop - 5} textAnchor="middle" fontSize={8} fontWeight={600} fill="#6B7280">N</text>
+                                    </>
+                                  );
+                                })()}
+                              </svg>
+                            </div>
+                          </div>
+                        );
+                      })() : <div />}
+                      </div>{/* end scatter+heatmap grid */}
+                      <div style={{ fontSize: 10, color: "#6B7280", lineHeight: 1.5, padding: "6px 10px", background: "#f9fafb", borderRadius: 6, marginBottom: 8 }}>
+                        Fiecare celula arata cate raspunsuri au C=x si CTA=y. Culorile mai intense (rosu) = concentratie mai mare. Un pattern diagonal stanga-jos {"\u2192"} dreapta-sus confirma corelatia pozitiva C{"\u2192"}CTA.
+                      </div>
+
+                      <div style={cardStyle}>
+                        <strong>H2 — Formula prezice actiunea:</strong> Daca RIFC functioneaza, materialele cu scor C mai mare ar trebui sa genereze intentie de actiune mai mare. Corelatia pozitiva confirma ca formula nu e doar teoretica — prezice comportamentul real.{" "}
+                        {Math.abs(h2PearsonR) > 0.7
+                          ? <strong style={{ color: "#059669" }}>Corelatie puternica (r={h2PearsonR.toFixed(3)}) — H2 confirmata.</strong>
+                          : Math.abs(h2PearsonR) >= 0.4
+                            ? <strong style={{ color: "#D97706" }}>Corelatie moderata (r={h2PearsonR.toFixed(3)}) — H2 partial confirmata.</strong>
+                            : <strong style={{ color: "#DC2626" }}>Corelatie slaba (r={h2PearsonR.toFixed(3)}) — relatie nesemnificativa.</strong>}
+                      </div>
+                      <div style={{ ...cardStyle, marginTop: 8, borderLeft: "3px solid #6B7280", color: "#6B7280", fontSize: 11 }}>
+                        Analiza filtrata pe materiale Conversie + Considerare (N={h2Data.length}). Materialele Awareness sunt excluse — CTA-ul lor are semnificatie diferita si nu trebuie comparat direct.
+                      </div>
+                    </div>
 
                     {/* ═══ OSF H5 — INVARIANTA CROSS-CHANNEL (Measurement Consistency) ═══ */}
                     {(() => {
