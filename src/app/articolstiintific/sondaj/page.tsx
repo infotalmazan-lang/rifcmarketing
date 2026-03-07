@@ -6168,6 +6168,27 @@ export default function StudiuAdminPage() {
                     ))}
                   </div>
 
+                  {/* ── Info banner (Sursa date) ── */}
+                  {(() => {
+                    const _efaStats = `${exTotalEvalResponses} evaluari · ${exN}/${stimuli.filter(s => s.is_active).length} materiale · ${completedExperts} experti`;
+                    const _efaDescriptions: Record<string, string> = {
+                      total: `Interpretare globala EFA — validare ipoteza, scoruri medii R/I/F/C, zone, gates. ${_efaStats}.`,
+                      canal: `Interpretare segmentata pe canale — comparatie scoruri si validare per canal. ${_efaStats}.`,
+                      industrie: `Interpretare segmentata pe industrii — comparatie scoruri si validare per industrie. ${_efaStats}.`,
+                    };
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", marginBottom: 16, background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 8, fontSize: 12, color: "#0369a1" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0369a1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        <div>
+                          <span style={{ fontWeight: 700 }}>Sursa date:</span>{" "}
+                          <span style={{ fontWeight: 600, color: "#0c4a6e" }}>Panel Experti (EFA Layer 2A)</span>
+                          {" — "}
+                          {_efaDescriptions[expertInterpSubTab] || _efaStats}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   {/* ═══ VALIDARE IPOTEZA — EXPERT TOTAL (identical to main Interpretare) ═══ */}
                   {expertInterpSubTab === "total" && exN >= 1 && (() => {
                     const _exDirection = exGrandCfNorm < exGrandCp ? "subestimeaza" : exGrandCfNorm > exGrandCp ? "supraevalueaza" : "coincide cu";
@@ -6218,6 +6239,55 @@ export default function StudiuAdminPage() {
                         Gate R&ge;{EX_GATE}: {exGatePassCount}/{exN} materiale ({exGatePassRate}%)
                       </div>
                     </div>
+
+                    {/* ── OSF H7: Direct r(Cf, Cp) correlation — EFA ── */}
+                    {(() => {
+                      const _exH7CfNorms = materialAggs.map(m => exNormCf(m.avg_c));
+                      const _exH7Cps = materialAggs.map(m => m.avg_c_score);
+                      const _exH7R = materialAggs.length >= 3 ? _pearsonR(_exH7CfNorms, _exH7Cps) : 0;
+                      const _exH7P = _pValuePearson(_exH7R, materialAggs.length);
+                      const _exH7Verdict = Math.abs(_exH7R) >= 0.60 ? "CONFIRMATA" : Math.abs(_exH7R) >= 0.40 ? "PARTIAL" : "NECONFIRMATA";
+                      const _exH7Color = _exH7Verdict === "CONFIRMATA" ? "#059669" : _exH7Verdict === "PARTIAL" ? "#D97706" : "#DC2626";
+                      return (
+                        <div style={{ marginTop: 12, padding: "12px 16px", background: "#f0fdf4", borderRadius: 8, border: `2px solid ${_exH7Color}` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={_exH7Color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: 1, color: _exH7Color }}>OSF H7 — VALIDITATE CONSTRUCT (EFA)</span>
+                            <span style={{ fontSize: 9, color: "#6B7280", fontStyle: "italic" }}>Pearson r(Cf_norm, Cp) &ge; 0.60</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" as const }}>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>Pearson r</div>
+                              <div style={{ fontSize: 28, fontWeight: 900, color: _exH7Color, fontFamily: "JetBrains Mono, monospace" }}>{_exH7R.toFixed(3)}</div>
+                            </div>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>r&sup2;</div>
+                              <div style={{ fontSize: 20, fontWeight: 800, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{(_exH7R * _exH7R).toFixed(3)}</div>
+                            </div>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>p-value</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: _exH7P < 0.001 ? "#059669" : _exH7P < 0.05 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{_fmtP(_exH7P)}</div>
+                            </div>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const }}>N (materiale)</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: "#374151", fontFamily: "JetBrains Mono, monospace" }}>{materialAggs.length}</div>
+                            </div>
+                            <div style={{ marginLeft: "auto", padding: "4px 14px", borderRadius: 6, background: `${_exH7Color}15`, border: `1px solid ${_exH7Color}40` }}>
+                              <div style={{ fontSize: 12, fontWeight: 800, color: _exH7Color }}>{_exH7Verdict}</div>
+                              <div style={{ fontSize: 8, color: "#6B7280" }}>prag OSF: r &ge; 0.60</div>
+                            </div>
+                          </div>
+                          <div style={{ marginTop: 8, fontSize: 10, color: "#374151", lineHeight: 1.5 }}>
+                            Corelatia intre C formula normalizat (Cf/11) si C perceput (Cp evaluat de experti) masoara <strong>validitatea de construct</strong> a modelului RIFC in evaluarea expertilor.{" "}
+                            {Math.abs(_exH7R) >= 0.60
+                              ? `r = ${_exH7R.toFixed(3)} confirma ca formula R+(I×F) prezice consistent claritatea perceputa de experti. Modelul explica ${(_exH7R * _exH7R * 100).toFixed(1)}% din varianta.`
+                              : Math.abs(_exH7R) >= 0.40
+                                ? `r = ${_exH7R.toFixed(3)} indica o asociere moderata. Formula prezice partial, dar factori externi (experienta expertilor, context profesional) influenteaza perceptia.`
+                                : `r = ${_exH7R.toFixed(3)} indica o asociere slaba. Formula nu prezice consistent claritatea perceputa de experti — calibrare necesara.`}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* R-Synthesis explanation — orange box */}
                     {(() => {
