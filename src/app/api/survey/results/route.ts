@@ -107,10 +107,13 @@ export async function GET(request: Request) {
 
     const totalResponses = allFilteredResponses.length;
 
-    // Build response count per respondent (needed for completion detection)
+    // Build response count AND distinct stimuli count per respondent
     const respCountByRespondent: Record<string, number> = {};
+    const distinctStimuliByRespondent: Record<string, Set<string>> = {};
     for (const resp of allFilteredResponses) {
       respCountByRespondent[resp.respondent_id] = (respCountByRespondent[resp.respondent_id] || 0) + 1;
+      if (!distinctStimuliByRespondent[resp.respondent_id]) distinctStimuliByRespondent[resp.respondent_id] = new Set();
+      distinctStimuliByRespondent[resp.respondent_id].add(resp.stimulus_id);
     }
 
     // Fetch stimuli count early (for completion detection)
@@ -121,11 +124,17 @@ export async function GET(request: Request) {
       .order("display_order");
     const expectedResponseCount = (stimuli || []).length;
 
-    // A respondent is "completed" ONLY if they have responses for ALL active stimuli (30/30).
-    // completed_at flag alone is insufficient — some legacy respondents have it set without full data.
-    // This ensures uniform N across all materials (no dropout bias).
+    // A respondent is "completed" if completed_at is set OR if they evaluated all active stimuli.
+    // This is used for header stats (total completed count).
     const isEffectivelyCompleted = (r: any) =>
-      expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount;
+      r.completed_at != null ||
+      (expectedResponseCount > 0 && (respCountByRespondent[r.id] || 0) >= expectedResponseCount);
+
+    // For per-material aggregation, require ALL 30 DISTINCT stimuli answered.
+    // This ensures uniform N across all materials (no dropout bias).
+    // Respondents with completed_at but missing stimulus records are excluded from aggregation.
+    const hasAllDistinctStimuli = (rid: string) =>
+      expectedResponseCount > 0 && (distinctStimuliByRespondent[rid]?.size || 0) >= expectedResponseCount;
 
     // Auto-repair: set completed_at for respondents who have all responses but missing completed_at
     // (one-time data fix for legacy wizard entries)
@@ -156,14 +165,17 @@ export async function GET(request: Request) {
     const completedRespondentsList = respondents.filter(isEffectivelyCompleted);
     const completedRespondents = completedRespondentsList.length;
 
-    // ── CRITICAL: Filter responses to ONLY completed respondents ──
-    // Each completed respondent evaluated ALL 30 stimuli, so every material gets
-    // exactly the same N — no dropout bias. Partial respondents' data is excluded
-    // from aggregated statistics (they saw a random subset of materials, creating
-    // unequal sample sizes and selection bias across materials).
-    const completedIdSet = new Set(completedRespondentsList.map(r => r.id));
+    // ── CRITICAL: Filter responses to ONLY respondents with ALL 30 distinct stimuli ──
+    // This ensures uniform N across all materials (no dropout bias).
+    // Uses distinct stimulus count (not just total responses) to handle edge cases.
+    const aggregationIdSet = new Set(
+      completedRespondentsList.filter(r => hasAllDistinctStimuli(r.id)).map(r => r.id)
+    );
     const allResponsesBeforeFilter = allFilteredResponses.length;
-    allFilteredResponses = allFilteredResponses.filter(r => completedIdSet.has(r.respondent_id));
+    const completedWithFullData = aggregationIdSet.size;
+    const completedWithoutFullData = completedRespondents - completedWithFullData;
+    console.log(`[Results API] Completed: ${completedRespondents} (header) | With all ${expectedResponseCount} stimuli: ${completedWithFullData} (aggregation) | Missing data: ${completedWithoutFullData}`);
+    allFilteredResponses = allFilteredResponses.filter(r => aggregationIdSet.has(r.respondent_id));
 
     // Today / this month / avg session time
     const now = new Date();
