@@ -8591,7 +8591,8 @@ export default function StudiuAdminPage() {
                     <button key={t.key} onClick={() => { setInterpSubTab(t.key); setExpandedInterpIndustry(null); }} style={pillStyle(interpSubTab === t.key)}>{t.label}</button>
                   ))}
                 </div>}
-                {/* Month & Source dropdown filters */}
+                {/* Month & Source dropdown filters — only for OSF & Additional */}
+                {(interpViewMode === "osf" || interpViewMode === "additional") && (<>
                 <div style={{ display: "flex", gap: 10, marginBottom: 8, alignItems: "center", flexWrap: "wrap" }}>
                   {renderMonthDropdown()}
                   {renderSourceDropdown()}
@@ -8600,6 +8601,7 @@ export default function StudiuAdminPage() {
                   Filtrat: <strong style={{ color: "#374151" }}>{activeMonthLabel}</strong>
                   {interpSource !== "all" && <> · Sursa: <strong style={{ color: "#7C3AED" }}>{activeSourceLabel}</strong></>}
                 </div>
+                </>)}
                 {/* Empty state message */}
                 {isLoading ? (
                   <div style={{ textAlign: "center", padding: 60 }}>
