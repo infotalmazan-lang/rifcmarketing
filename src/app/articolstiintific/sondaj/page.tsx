@@ -20314,13 +20314,13 @@ export default function StudiuAdminPage() {
                         }
                       }
 
-                      // Compute correlations for each pair, each dimension
+                      // Compute correlations for each pair, each dimension (including C)
                       const corrData: { pair: string; pearson: Record<string, number>; spearman: Record<string, number>; p: Record<string, number> }[] = [];
                       pairs.forEach(([m1, m2]) => {
                         const pearson: Record<string, number> = {};
                         const spearman: Record<string, number> = {};
                         const pvals: Record<string, number> = {};
-                        dims.forEach(dim => {
+                        (["r", "i", "f", "cta", "c"] as const).forEach(dim => {
                           const xs: number[] = [];
                           const ys: number[] = [];
                           stimIds.forEach(sid => {
@@ -20451,7 +20451,7 @@ export default function StudiuAdminPage() {
                         const bias: Record<string, number> = {};
                         const d: Record<string, number> = {};
 
-                        dims.forEach(dim => {
+                        (["r", "i", "f", "cta", "c"] as const).forEach(dim => {
                           const aiVals: number[] = [];
                           const consVals: number[] = [];
                           commonStimIds.forEach(sid => {
@@ -20583,7 +20583,7 @@ export default function StudiuAdminPage() {
                       models.forEach(model => {
                         const evs = byModel[model] || [];
                         const stats: Record<string, { mean: number; sd: number; min: number; max: number; median: number }> = {};
-                        dims.forEach(dim => {
+                        (["r", "i", "f", "cta", "c"] as const).forEach(dim => {
                           const vals = evs.map(e => dim === "r" ? e.r_score : dim === "i" ? e.i_score : dim === "f" ? e.f_score : dim === "cta" ? (e.cta_score ?? 0) : e.c_computed);
                           const sorted = [...vals].sort((a, b) => a - b);
                           stats[dim] = {
