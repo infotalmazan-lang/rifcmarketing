@@ -52,17 +52,84 @@ interface KpiEntry {
   notes: string;
 }
 
-const PRED_KPI_PRESETS: Record<string, { name: string; unit: string }[]> = {
-  "Search": [{ name: "CTR", unit: "%" }, { name: "CPC", unit: "EUR" }, { name: "Conversii", unit: "#" }, { name: "Rata Conversie", unit: "%" }, { name: "Cost/Conversie", unit: "EUR" }, { name: "Impression Share", unit: "%" }],
-  "Display": [{ name: "CTR", unit: "%" }, { name: "CPC", unit: "EUR" }, { name: "Conversii", unit: "#" }, { name: "View-Through Conv", unit: "#" }, { name: "CPM", unit: "EUR" }, { name: "Reach", unit: "#" }],
-  "YouTube / Pre-roll": [{ name: "View Rate", unit: "%" }, { name: "CPV", unit: "EUR" }, { name: "Watch Time", unit: "sec" }, { name: "Earned Actions", unit: "#" }, { name: "Reach", unit: "#" }],
-  "Awareness": [{ name: "Reach", unit: "#" }, { name: "Impressions", unit: "#" }, { name: "CPM", unit: "EUR" }, { name: "Frecventa", unit: "#" }, { name: "ThruPlay Rate", unit: "%" }],
-  "Messages": [{ name: "Cost/Mesaj", unit: "EUR" }, { name: "Rata Raspuns", unit: "%" }, { name: "Conversii", unit: "#" }, { name: "CTR Link", unit: "%" }],
-  "Traffic (Site)": [{ name: "CTR", unit: "%" }, { name: "CPC", unit: "EUR" }, { name: "Landing Page Views", unit: "#" }, { name: "Bounce Rate", unit: "%" }, { name: "Timp pe Pagina", unit: "sec" }],
-  "Boost": [{ name: "Reach", unit: "#" }, { name: "Engagement Rate", unit: "%" }, { name: "Cost/Engagement", unit: "EUR" }, { name: "Saves", unit: "#" }, { name: "Profile Visits", unit: "#" }],
-  "Promotional": [{ name: "Delivery Rate", unit: "%" }, { name: "CTR", unit: "%" }, { name: "Conversii", unit: "#" }, { name: "Opt-out Rate", unit: "%" }, { name: "Cost/SMS", unit: "EUR" }],
-  "Newsletter / Promotional": [{ name: "Open Rate", unit: "%" }, { name: "CTR", unit: "%" }, { name: "Conversii", unit: "#" }, { name: "Unsubscribe Rate", unit: "%" }, { name: "CTOR", unit: "%" }],
-  "Landing Page (GA4)": [{ name: "Bounce Rate", unit: "%" }, { name: "Avg Session Duration", unit: "sec" }, { name: "Conversii", unit: "#" }, { name: "Rata Conversie", unit: "%" }, { name: "Pages/Session", unit: "#" }],
+// required = true means the KPI is mandatory for OSF validation protocol
+const PRED_KPI_PRESETS: Record<string, { name: string; unit: string; required: boolean; description: string }[]> = {
+  "Search": [
+    { name: "CTR", unit: "%", required: true, description: "Click-Through Rate — % utilizatori care au dat click pe anunt" },
+    { name: "CPC", unit: "EUR", required: true, description: "Cost-Per-Click — costul mediu per click" },
+    { name: "Conversii", unit: "#", required: true, description: "Numar total de conversii (achizitii, lead-uri, etc.)" },
+    { name: "Rata Conversie", unit: "%", required: false, description: "% din vizitatori care au convertit" },
+    { name: "Cost/Conversie", unit: "EUR", required: false, description: "Costul mediu per conversie realizata" },
+    { name: "Impression Share", unit: "%", required: false, description: "% din impresii obtinute vs. disponibile" },
+  ],
+  "Display": [
+    { name: "CTR", unit: "%", required: true, description: "Click-Through Rate — % utilizatori care au dat click" },
+    { name: "CPC", unit: "EUR", required: true, description: "Cost-Per-Click — costul mediu per click" },
+    { name: "Conversii", unit: "#", required: true, description: "Numar total de conversii atribuite" },
+    { name: "View-Through Conv", unit: "#", required: false, description: "Conversii dupa vizualizarea (fara click) a anuntului" },
+    { name: "CPM", unit: "EUR", required: false, description: "Cost per 1000 de impresii" },
+    { name: "Reach", unit: "#", required: false, description: "Numar unic de persoane care au vazut anuntul" },
+  ],
+  "YouTube / Pre-roll": [
+    { name: "View Rate", unit: "%", required: true, description: "% utilizatori care au vizionat anuntul (fara skip)" },
+    { name: "CPV", unit: "EUR", required: true, description: "Cost-Per-View — costul mediu per vizionare" },
+    { name: "Watch Time", unit: "sec", required: true, description: "Durata medie de vizionare (secunde)" },
+    { name: "Earned Actions", unit: "#", required: false, description: "Actiuni organice generate (subscribe, share, like)" },
+    { name: "Reach", unit: "#", required: false, description: "Numar unic de persoane care au vazut anuntul" },
+  ],
+  "Awareness": [
+    { name: "Reach", unit: "#", required: true, description: "Numar unic de persoane care au vazut anuntul" },
+    { name: "Impressions", unit: "#", required: true, description: "Numar total de afisari ale anuntului" },
+    { name: "CPM", unit: "EUR", required: true, description: "Cost per 1000 de impresii" },
+    { name: "Frecventa", unit: "#", required: false, description: "De cate ori in medie a vazut o persoana anuntul" },
+    { name: "ThruPlay Rate", unit: "%", required: false, description: "% utilizatori care au vizionat videoclipul complet" },
+  ],
+  "Messages": [
+    { name: "Cost/Mesaj", unit: "EUR", required: true, description: "Costul mediu per conversatie initiata" },
+    { name: "Rata Raspuns", unit: "%", required: true, description: "% din mesaje care au primit raspuns" },
+    { name: "Conversii", unit: "#", required: false, description: "Numar de conversii din conversatii" },
+    { name: "CTR Link", unit: "%", required: false, description: "% din utilizatori care au dat click pe link din mesaj" },
+  ],
+  "Traffic (Site)": [
+    { name: "CTR", unit: "%", required: true, description: "Click-Through Rate — % care au dat click pe anunt" },
+    { name: "CPC", unit: "EUR", required: true, description: "Cost-Per-Click mediu" },
+    { name: "Landing Page Views", unit: "#", required: true, description: "Numar de vizualizari ale paginii de destinatie" },
+    { name: "Bounce Rate", unit: "%", required: false, description: "% vizitatori care au parasit pagina fara interactiune" },
+    { name: "Timp pe Pagina", unit: "sec", required: false, description: "Durata medie petrecuta pe pagina (secunde)" },
+  ],
+  "Boost": [
+    { name: "Reach", unit: "#", required: true, description: "Numar unic de persoane care au vazut postarea" },
+    { name: "Engagement Rate", unit: "%", required: true, description: "% din audienta care a interactionat (like, comment, share)" },
+    { name: "Cost/Engagement", unit: "EUR", required: false, description: "Costul mediu per interactiune" },
+    { name: "Saves", unit: "#", required: false, description: "Numar de utilizatori care au salvat postarea" },
+    { name: "Profile Visits", unit: "#", required: false, description: "Vizite la profil generate de postare" },
+  ],
+  "Promotional": [
+    { name: "Delivery Rate", unit: "%", required: true, description: "% SMS-uri livrate cu succes" },
+    { name: "CTR", unit: "%", required: true, description: "% destinatari care au dat click pe link din SMS" },
+    { name: "Conversii", unit: "#", required: true, description: "Numar de conversii din campania SMS" },
+    { name: "Opt-out Rate", unit: "%", required: false, description: "% destinatari care s-au dezabonat" },
+    { name: "Cost/SMS", unit: "EUR", required: false, description: "Costul mediu per SMS trimis" },
+  ],
+  "Transactional": [
+    { name: "Delivery Rate", unit: "%", required: true, description: "% SMS-uri livrate cu succes" },
+    { name: "CTR", unit: "%", required: true, description: "% destinatari care au dat click pe link" },
+    { name: "Conversii", unit: "#", required: false, description: "Numar de actiuni completate dupa SMS" },
+  ],
+  "Newsletter / Promotional": [
+    { name: "Open Rate", unit: "%", required: true, description: "% destinatari care au deschis email-ul" },
+    { name: "CTR", unit: "%", required: true, description: "% destinatari care au dat click pe link din email" },
+    { name: "Conversii", unit: "#", required: true, description: "Numar de conversii din campania email" },
+    { name: "Unsubscribe Rate", unit: "%", required: false, description: "% destinatari care s-au dezabonat" },
+    { name: "CTOR", unit: "%", required: false, description: "Click-to-Open Rate — % din cei care au deschis si au dat click" },
+  ],
+  "Landing Page (GA4)": [
+    { name: "Bounce Rate", unit: "%", required: true, description: "% vizitatori care au parasit pagina fara interactiune" },
+    { name: "Avg Session Duration", unit: "sec", required: true, description: "Durata medie a sesiunii pe pagina" },
+    { name: "Conversii", unit: "#", required: true, description: "Numar total de conversii (formular, achizitie, etc.)" },
+    { name: "Rata Conversie", unit: "%", required: false, description: "% din vizitatori care au convertit" },
+    { name: "Pages/Session", unit: "#", required: false, description: "Numar mediu de pagini vizitate per sesiune" },
+  ],
 };
 
 const EXPERIENCE_OPTIONS = [
@@ -301,10 +368,11 @@ function EvaluatorPageContent() {
       });
       setScreen(3);
       setKpiStartTime(Date.now());
-      // Initialize KPI fields from presets if empty
+      // Initialize KPI fields from presets if empty — required first, then optional
       if (kpis.length === 0 && campaign) {
-        const presets = PRED_KPI_PRESETS[campaign.campaign_type] || [];
-        setKpis(presets.map(p => ({ kpi_name: p.name, kpi_value: "", kpi_unit: p.unit, data_source: "", notes: "" })));
+        const allPresets = PRED_KPI_PRESETS[campaign.campaign_type] || [];
+        const sorted = [...allPresets.filter(p => p.required), ...allPresets.filter(p => !p.required)];
+        setKpis(sorted.map(p => ({ kpi_name: p.name, kpi_value: "", kpi_unit: p.unit, data_source: "", notes: "" })));
       }
     } catch { /* ignore */ }
     setSaving(false);
@@ -314,6 +382,16 @@ function EvaluatorPageContent() {
   const finalize = async () => {
     const filledKpis = kpis.filter(k => k.kpi_value.trim() !== "");
     if (filledKpis.length === 0) return;
+    // Check required KPIs
+    const presets = campaign ? (PRED_KPI_PRESETS[campaign.campaign_type] || []) : [];
+    const requiredMissing = presets.filter(p => p.required).filter(p => {
+      const kpi = kpis.find(k => k.kpi_name === p.name);
+      return !kpi || kpi.kpi_value.trim() === "";
+    });
+    if (requiredMissing.length > 0) {
+      alert(`KPI-uri obligatorii necompletate: ${requiredMissing.map(p => p.name).join(", ")}`);
+      return;
+    }
     setSaving(true);
     try {
       await fetch("/api/survey/predictive/by-token", {
@@ -588,36 +666,176 @@ function EvaluatorPageContent() {
         )}
 
         {/* ═══ SCREEN 3: KPI Input ═══ */}
-        {screen === 3 && !completed && (
+        {screen === 3 && !completed && (() => {
+          const presets = campaign ? (PRED_KPI_PRESETS[campaign.campaign_type] || []) : [];
+          const requiredPresets = presets.filter(p => p.required);
+          const optionalPresets = presets.filter(p => !p.required);
+          const filledRequired = requiredPresets.filter(p => {
+            const kpi = kpis.find(k => k.kpi_name === p.name);
+            return kpi && kpi.kpi_value.trim() !== "";
+          }).length;
+
+          return (
           <div>
+            {/* Informational block */}
+            <div style={{ padding: "16px 18px", background: "#eff6ff", borderRadius: 10, border: "1px solid #bfdbfe", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#1e40af", marginBottom: 4 }}>Date KPI necesare — Protocolul OSF</div>
+                  <p style={{ fontSize: 12, color: "#374151", margin: 0, lineHeight: 1.6 }}>
+                    Pentru validarea predictiva a scorului C, avem nevoie de <strong>datele KPI reale</strong> din campania <strong>{campaign?.channel} / {campaign?.campaign_type}</strong>.
+                    Aceste date sunt esentiale pentru a masura corelatia dintre evaluarea calitativa (scorul RIFC) si performanta reala a campaniei.
+                  </p>
+                  <div style={{ marginTop: 8, display: "flex", gap: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#DC2626" }}>
+                      Obligatoriu: {requiredPresets.length} KPI-uri
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#6B7280" }}>
+                      Optional: {optionalPresets.length} KPI-uri
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: filledRequired >= requiredPresets.length ? "#166534" : "#D97706" }}>
+                      Completat: {filledRequired}/{requiredPresets.length} obligatorii
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Required KPIs */}
             <div style={{ padding: 20, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 16 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginTop: 0, marginBottom: 4 }}>Date KPI reale</h2>
-              <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 16 }}>
-                Introduceti datele KPI reale din campania publicitara. Minim 1 KPI este obligatoriu.
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>KPI-uri obligatorii</h2>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "#fee2e2", color: "#991b1b" }}>MINIM NECESAR</span>
+              </div>
+              <p style={{ fontSize: 12, color: "#6B7280", marginTop: 2, marginBottom: 14 }}>
+                Aceste KPI-uri sunt cerute de protocolul de validare pentru tipul de campanie selectat.
               </p>
 
-              {kpis.map((kpi, idx) => (
-                <div key={idx} style={{ padding: 12, marginBottom: 8, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px", gap: 8, marginBottom: 6 }}>
-                    <div>
-                      <label style={{ ...labelStyle, fontSize: 10 }}>{kpi.kpi_name}</label>
-                    </div>
-                    <div>
-                      <input
-                        type="number" step="any" placeholder="Valoare"
-                        value={kpi.kpi_value}
-                        onChange={e => setKpis(prev => prev.map((k, i) => i === idx ? { ...k, kpi_value: e.target.value } : k))}
-                        style={{ ...inputStyle, padding: "6px 8px", fontSize: 13 }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, color: "#6B7280", fontWeight: 600 }}>{kpi.kpi_unit}</span>
-                    </div>
+              {kpis.filter(kpi => {
+                const preset = presets.find(p => p.name === kpi.kpi_name);
+                return preset?.required;
+              }).map((kpi, idx) => {
+                const preset = presets.find(p => p.name === kpi.kpi_name);
+                const globalIdx = kpis.findIndex(k => k === kpi);
+                return (
+                <div key={idx} style={{ padding: 12, marginBottom: 8, background: kpi.kpi_value.trim() ? "#f0fdf4" : "#fef2f2", borderRadius: 8, border: `1px solid ${kpi.kpi_value.trim() ? "#86efac" : "#fecaca"}` }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{kpi.kpi_name}</span>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>({kpi.kpi_unit})</span>
+                    {kpi.kpi_value.trim() ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                    ) : (
+                      <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: "#DC2626", color: "#fff" }}>NECESAR</span>
+                    )}
                   </div>
+                  {preset?.description && (
+                    <p style={{ fontSize: 11, color: "#6B7280", margin: "0 0 8px", lineHeight: 1.4 }}>{preset.description}</p>
+                  )}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <input
+                      type="number" step="any" placeholder={`Valoare ${kpi.kpi_name} (${kpi.kpi_unit})`}
+                      value={kpi.kpi_value}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, kpi_value: e.target.value } : k))}
+                      style={{ ...inputStyle, padding: "8px 10px", fontSize: 13, borderColor: kpi.kpi_value.trim() ? "#86efac" : "#fca5a5" }}
+                    />
                     <select
                       value={kpi.data_source}
-                      onChange={e => setKpis(prev => prev.map((k, i) => i === idx ? { ...k, data_source: e.target.value } : k))}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, data_source: e.target.value } : k))}
+                      style={{ ...inputStyle, padding: "8px 10px", fontSize: 12 }}
+                    >
+                      <option value="">Sursa date...</option>
+                      {DATA_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+
+            {/* Optional KPIs */}
+            {kpis.filter(kpi => {
+              const preset = presets.find(p => p.name === kpi.kpi_name);
+              return preset && !preset.required;
+            }).length > 0 && (
+            <div style={{ padding: 20, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>KPI-uri optionale</h2>
+                <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: "#f3f4f6", color: "#6B7280" }}>RECOMANDAT</span>
+              </div>
+              <p style={{ fontSize: 12, color: "#6B7280", marginTop: 2, marginBottom: 14 }}>
+                Aceste KPI-uri imbunatatesc acuratetea analizei, dar nu sunt obligatorii.
+              </p>
+
+              {kpis.filter(kpi => {
+                const preset = presets.find(p => p.name === kpi.kpi_name);
+                return preset && !preset.required;
+              }).map((kpi, idx) => {
+                const preset = presets.find(p => p.name === kpi.kpi_name);
+                const globalIdx = kpis.findIndex(k => k === kpi);
+                return (
+                <div key={idx} style={{ padding: 10, marginBottom: 6, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{kpi.kpi_name}</span>
+                    <span style={{ fontSize: 10, color: "#6B7280" }}>({kpi.kpi_unit})</span>
+                  </div>
+                  {preset?.description && (
+                    <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 6px" }}>{preset.description}</p>
+                  )}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    <input
+                      type="number" step="any" placeholder={`Valoare ${kpi.kpi_name}`}
+                      value={kpi.kpi_value}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, kpi_value: e.target.value } : k))}
+                      style={{ ...inputStyle, padding: "7px 10px", fontSize: 13 }}
+                    />
+                    <select
+                      value={kpi.data_source}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, data_source: e.target.value } : k))}
+                      style={{ ...inputStyle, padding: "7px 10px", fontSize: 12 }}
+                    >
+                      <option value="">Sursa date...</option>
+                      {DATA_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+                );
+              })}
+            </div>
+            )}
+
+            {/* Custom KPIs (not from presets) */}
+            {kpis.filter(kpi => !presets.find(p => p.name === kpi.kpi_name)).length > 0 && (
+            <div style={{ padding: 20, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 12px" }}>KPI-uri custom</h2>
+              {kpis.filter(kpi => !presets.find(p => p.name === kpi.kpi_name)).map((kpi) => {
+                const globalIdx = kpis.findIndex(k => k === kpi);
+                return (
+                <div key={globalIdx} style={{ padding: 10, marginBottom: 6, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 80px", gap: 8, marginBottom: 6 }}>
+                    <input
+                      placeholder="Nume KPI"
+                      value={kpi.kpi_name}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, kpi_name: e.target.value } : k))}
+                      style={{ ...inputStyle, padding: "7px 10px", fontSize: 13 }}
+                    />
+                    <input
+                      type="number" step="any" placeholder="Valoare"
+                      value={kpi.kpi_value}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, kpi_value: e.target.value } : k))}
+                      style={{ ...inputStyle, padding: "7px 10px", fontSize: 13 }}
+                    />
+                    <input
+                      placeholder="Unitate"
+                      value={kpi.kpi_unit}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, kpi_unit: e.target.value } : k))}
+                      style={{ ...inputStyle, padding: "7px 10px", fontSize: 13 }}
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 30px", gap: 8 }}>
+                    <select
+                      value={kpi.data_source}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, data_source: e.target.value } : k))}
                       style={{ ...inputStyle, padding: "5px 8px", fontSize: 11 }}
                     >
                       <option value="">Sursa date...</option>
@@ -626,21 +844,29 @@ function EvaluatorPageContent() {
                     <input
                       placeholder="Observatii..."
                       value={kpi.notes}
-                      onChange={e => setKpis(prev => prev.map((k, i) => i === idx ? { ...k, notes: e.target.value } : k))}
+                      onChange={e => setKpis(prev => prev.map((k, i) => i === globalIdx ? { ...k, notes: e.target.value } : k))}
                       style={{ ...inputStyle, padding: "5px 8px", fontSize: 11 }}
                     />
+                    <button
+                      onClick={() => setKpis(prev => prev.filter((_, i) => i !== globalIdx))}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", padding: 4 }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
                   </div>
                 </div>
-              ))}
-
-              {/* Add custom KPI */}
-              <button
-                onClick={() => setKpis(prev => [...prev, { kpi_name: "", kpi_value: "", kpi_unit: "", data_source: "", notes: "" }])}
-                style={{ marginTop: 8, padding: "6px 12px", borderRadius: 6, border: "1px dashed #d1d5db", background: "#fff", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer" }}
-              >
-                + Adauga KPI custom
-              </button>
+                );
+              })}
             </div>
+            )}
+
+            {/* Add custom KPI */}
+            <button
+              onClick={() => setKpis(prev => [...prev, { kpi_name: "", kpi_value: "", kpi_unit: "", data_source: "", notes: "" }])}
+              style={{ marginBottom: 16, padding: "8px 14px", borderRadius: 6, border: "1px dashed #d1d5db", background: "#fff", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer" }}
+            >
+              + Adauga KPI custom
+            </button>
 
             {/* Scoring summary (readonly) */}
             <div style={{ padding: 14, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 16 }}>
@@ -663,17 +889,18 @@ function EvaluatorPageContent() {
 
             <button
               onClick={finalize}
-              disabled={kpis.filter(k => k.kpi_value.trim() !== "").length === 0 || saving}
+              disabled={filledRequired < requiredPresets.length || saving}
               style={{
                 width: "100%", padding: "14px 24px", borderRadius: 8, border: "none",
-                background: kpis.some(k => k.kpi_value.trim() !== "") ? "#059669" : "#d1d5db",
-                color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer",
+                background: filledRequired >= requiredPresets.length ? "#059669" : "#d1d5db",
+                color: "#fff", fontSize: 15, fontWeight: 700, cursor: filledRequired >= requiredPresets.length ? "pointer" : "not-allowed",
               }}
             >
-              {saving ? "Se finalizeaza..." : "Finalizeaza evaluarea"}
+              {saving ? "Se finalizeaza..." : filledRequired < requiredPresets.length ? `Completeaza ${requiredPresets.length - filledRequired} KPI obligatorii` : "Finalizeaza evaluarea"}
             </button>
           </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
