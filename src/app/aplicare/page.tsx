@@ -1256,8 +1256,7 @@ export default function AplicareProgramePage() {
         saveAutoResults(merged, data.scannedAt);
       }
     } catch (err) {
-      setAutoError("Eroare de retea. Verifica conexiunea.");
-      console.error(err);
+      setAutoError("Eroare de rețea. Verifica conexiunea.");
     } finally {
       setAutoScanning(false);
     }

@@ -87,7 +87,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const updates: Record<string, unknown> = {};
-    const allowed = ["model_name", "r_score", "i_score", "f_score", "cta_score", "justification", "prompt_version"];
+    const allowed = ["stimulus_id", "model_name", "r_score", "i_score", "f_score", "cta_score", "justification", "prompt_version"];
     for (const key of allowed) {
       if (fields[key] !== undefined) updates[key] = fields[key];
     }

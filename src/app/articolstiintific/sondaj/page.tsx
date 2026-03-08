@@ -1660,10 +1660,9 @@ export default function StudiuAdminPage() {
         fetchExperts();
         if (!isEdit) setSelectedExpertId(data.expert.id);
       } else {
-        console.error("saveExpert error:", data);
         alert(`Eroare la salvare: ${data.error || "Eroare necunoscuta"}`);
       }
-    } catch (err) { console.error("saveExpert exception:", err); alert("Eroare de retea la salvare expert"); }
+    } catch { alert("Eroare de rețea la salvare expert"); }
     setExpertSaving(false);
   };
 
@@ -19637,7 +19636,7 @@ export default function StudiuAdminPage() {
                   3 modele AI (Claude, Gemini, GPT) scoreaza aceleasi 30 de stimuli cu prompt-uri identice.
                 </p>
               </div>
-              <button style={S.addCatBtn} onClick={() => setShowAddAi(true)}>
+              <button style={S.addCatBtn} onClick={() => { setAiEditId(null); setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }); setShowAddAi(true); }}>
                 <Plus size={16} />
                 ADAUGA EVALUARE AI
               </button>
