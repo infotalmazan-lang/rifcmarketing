@@ -918,7 +918,7 @@ export default function StudiuAdminPage() {
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
   const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "cfa" | "consumatori" | "ai" | "additional">("osf");
-  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true });
+  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true, "c-h1": true, "c-h2": true, "c-h3": true, "c-h4": true, "c-h5": true, "c-h6": true, "c-h7": true });
 
   // ── OSF Collapsible Section Header ──
   const OsfH = ({ id, num, title, color, verdict, children }: { id: string; num: string; title: string; color: string; verdict?: string; children?: React.ReactNode }) => (
@@ -18263,6 +18263,98 @@ export default function StudiuAdminPage() {
           const cH2Diff = Math.abs(cH2AboveAvg - cH2BelowAvg);
           const cH2Verdict = cH2Diff > 0.5 && cH2AboveAvg > cH2BelowAvg ? "CONFIRMATA" : "NECONFIRMATA";
 
+          // H3: Brand Moderator C→CTA
+          const cH3DataAll = cScValid.filter((d: any) => d.c_computed > 0 && d.cta != null && d.cta > 0);
+          const cH3Known = cH3DataAll.filter((d: any) => d.brand === true);
+          const cH3Unknown = cH3DataAll.filter((d: any) => d.brand === false);
+          const cH3PearsonKnown = cH3Known.length >= 3 ? _pearsonR(cH3Known.map((d: any) => d.c_computed / 11), cH3Known.map((d: any) => d.cta)) : 0;
+          const cH3PearsonUnknown = cH3Unknown.length >= 3 ? _pearsonR(cH3Unknown.map((d: any) => d.c_computed / 11), cH3Unknown.map((d: any) => d.cta)) : 0;
+          const cH3FisherZ = _fisherZTest(cH3PearsonKnown, cH3PearsonUnknown, cH3Known.length, cH3Unknown.length);
+          const cH3Diff = Math.abs(cH3PearsonKnown - cH3PearsonUnknown);
+          const cH3Verdict = cH3FisherZ.p < 0.05 && cH3Diff > 0.05 ? "CONFIRMATA" : cH3Diff > 0.03 ? "NEUTRA" : "NECONFIRMATA";
+
+          // H4: C→CTA (Claritate prezice Intentie de Actiune)
+          const cH4Data = cScValid.filter((d: any) => d.c_computed > 0 && d.cta != null && d.cta > 0);
+          const cH4PearsonR = cH4Data.length >= 3 ? _pearsonR(cH4Data.map((d: any) => d.c_computed / 11), cH4Data.map((d: any) => d.cta)) : 0;
+          const cH4Reg = _linReg(cH4Data.map((d: any) => d.c_computed / 11), cH4Data.map((d: any) => d.cta));
+          const cH4P = _pValuePearson(cH4PearsonR, cH4Data.length);
+          const cH4Verdict = Math.abs(cH4PearsonR) >= 0.50 ? "CONFIRMATA" : Math.abs(cH4PearsonR) >= 0.30 ? "PARTIAL" : "NECONFIRMATA";
+
+          // H5: Cross-Channel Cronbach α
+          const _cH5ByChannel: Record<string, { r: number[]; i: number[]; f: number[]; c: number[] }> = {};
+          cScatter.forEach((d: any) => {
+            const ch = d.channel_type || "unknown";
+            if (!_cH5ByChannel[ch]) _cH5ByChannel[ch] = { r: [], i: [], f: [], c: [] };
+            if (d.r > 0 && d.i > 0 && d.f > 0) {
+              _cH5ByChannel[ch].r.push(d.r);
+              _cH5ByChannel[ch].i.push(d.i);
+              _cH5ByChannel[ch].f.push(d.f);
+              _cH5ByChannel[ch].c.push(d.c_computed / 11);
+            }
+          });
+          const _cH5Channels = Object.entries(_cH5ByChannel)
+            .filter(([, v]) => v.r.length >= 5)
+            .map(([ch, v]) => {
+              const n = v.r.length;
+              const alpha = _cronbachAlpha([v.r, v.i, v.f]);
+              const rRI = n >= 3 ? _pearsonR(v.r, v.i) : 0;
+              const rRF = n >= 3 ? _pearsonR(v.r, v.f) : 0;
+              const rIF = n >= 3 ? _pearsonR(v.i, v.f) : 0;
+              const lambdaR = n >= 3 ? _pearsonR(v.r, v.c) : 0;
+              const lambdaI = n >= 3 ? _pearsonR(v.i, v.c) : 0;
+              const lambdaF = n >= 3 ? _pearsonR(v.f, v.c) : 0;
+              const catMatch = categories.find((c: any) => c.type === ch);
+              return { ch, label: catMatch?.label || ch, color: catMatch?.color || "#6B7280", n, alpha, rRI, rRF, rIF, lambdaR, lambdaI, lambdaF };
+            })
+            .sort((a: any, b: any) => b.n - a.n);
+          const cH5AllOk = _cH5Channels.length >= 2 && _cH5Channels.every((c: any) => c.alpha >= 0.70);
+          const cH5MinAlpha = _cH5Channels.length > 0 ? Math.min(..._cH5Channels.map((c: any) => c.alpha)) : 0;
+          const cH5MaxAlpha = _cH5Channels.length > 0 ? Math.max(..._cH5Channels.map((c: any) => c.alpha)) : 0;
+          const cH5Verdict = _cH5Channels.length < 2 ? "INSUFICIENTE" : cH5AllOk ? "CONFIRMATA" : cH5MinAlpha >= 0.50 ? "PARTIAL" : "NECONFIRMATA";
+
+          // H6: Segment Sensitivity (ANOVA η²)
+          const _cH6HasIndiv = cScatter.some((d: any) => d.gender || d.ageRange || d.education || d.locationType || d.incomeRange);
+          const _cH6Factors = [
+            { key: "gender", label: "Gen", accessor: (d: any) => d.gender },
+            { key: "ageRange", label: "Grupa de varsta", accessor: (d: any) => d.ageRange },
+            { key: "education", label: "Educatie", accessor: (d: any) => d.education },
+            { key: "locationType", label: "Urban / Rural", accessor: (d: any) => d.locationType },
+            { key: "incomeRange", label: "Venit", accessor: (d: any) => d.incomeRange },
+          ];
+          const _cH6Results = _cH6Factors.map((fac: any) => {
+            const groupMap: Record<string, number[]> = {};
+            cScatter.forEach((d: any) => {
+              const val = fac.accessor(d);
+              if (val && val.trim() && d.r != null) { if (!groupMap[val]) groupMap[val] = []; groupMap[val].push(d.r); }
+            });
+            const groupEntries = Object.entries(groupMap).filter(([, arr]) => arr.length >= 2);
+            const groups = groupEntries.map(([, arr]) => arr);
+            const totalN = groups.reduce((a: number, g: number[]) => a + g.length, 0);
+            const nGroups = groupEntries.length;
+            if (nGroups < 2) return { ...fac, available: false as const, totalN: 0, nGroups: 0, groupEntries: [] as [string, number[]][], f: 0, p: 1, etaSq: 0 };
+            const anova = _anovaOneWay(groups);
+            return { ...fac, available: true as const, totalN, nGroups, groupEntries, f: anova.f, p: anova.p, etaSq: anova.etaSq };
+          });
+          const _cH6Available = _cH6Results.filter((r: any) => r.available);
+          const _cH6AllPass = _cH6Available.length > 0 && _cH6Available.every((r: any) => r.etaSq < 0.05);
+          const _cH6SomePass = _cH6Available.some((r: any) => r.etaSq < 0.05);
+          const _cH6MaxEta = _cH6Available.length > 0 ? Math.max(..._cH6Available.map((r: any) => r.etaSq)) : 0;
+          const _cH6Verdict = _cH6Available.length === 0 ? "LIPSESC DATE" : _cH6AllPass ? "CONFIRMATA" : _cH6SomePass ? "PARTIAL" : "NECONFIRMATA";
+
+          // H7 already computed above (cPearsonR, cScWithCp)
+          const cH7P = _pValuePearson(cPearsonR, cScWithCp.length);
+          const cH7Verdict = Math.abs(cPearsonR) >= 0.60 ? "CONFIRMATA" : Math.abs(cPearsonR) >= 0.40 ? "PARTIAL" : "NECONFIRMATA";
+
+          // H2 extended: Gate stats with CTA
+          const cH2CtaData = cScValid.filter((d: any) => d.cta != null && d.cta > 0);
+          const cH2CtaBelow = cH2CtaData.filter((d: any) => d.r < GATE);
+          const cH2CtaAbove = cH2CtaData.filter((d: any) => d.r >= GATE);
+          const cH2BelowAvgCta = cH2CtaBelow.length > 0 ? _mean(cH2CtaBelow.map((d: any) => d.cta)) : 0;
+          const cH2AboveAvgCta = cH2CtaAbove.length > 0 ? _mean(cH2CtaAbove.map((d: any) => d.cta)) : 0;
+          const cH2CohenDCp = _cohensD(cH2Below.map((d: any) => d.c_score), cH2Above.map((d: any) => d.c_score));
+          const cH2CohenDCta = cH2CtaBelow.length >= 2 && cH2CtaAbove.length >= 2 ? _cohensD(cH2CtaBelow.map((d: any) => d.cta), cH2CtaAbove.map((d: any) => d.cta)) : 0;
+
+
           // Cf/Cp calibration
           const cCalibFactor = cGCf > 0 ? Math.round((cGCp / (cGCf / 11)) * 100) / 100 : 0;
           const cRSynthesis = cGValPct >= 80 ? "Excelent" : cGValPct >= 70 ? "Validata" : cGValPct >= 50 ? "Acceptabila" : "Slaba";
@@ -18739,62 +18831,320 @@ export default function StudiuAdminPage() {
                     );
                   })()}
 
-                  {/* H1 & H2 Hypothesis Summary */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
-                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, marginBottom: 4 }}>H1 — MULTIPLICATIV vs ADITIV</div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 12, color: "#6B7280" }}>Spearman: Mult={cH1SpearmanMult.toFixed(3)} vs Adit={cH1SpearmanAdit.toFixed(3)}</div>
-                          <div style={{ fontSize: 12, color: "#6B7280" }}>Fisher Z p={cH1FisherZ.p.toFixed(4)} | Partial r={cH1PartialR.toFixed(3)}</div>
-                        </div>
-                        <span style={{ fontWeight: 800, fontSize: 13, color: cH1Verdict === "CONFIRMATA" ? "#059669" : cH1Verdict === "PARTIAL" ? "#D97706" : "#DC2626", padding: "4px 12px", borderRadius: 6, background: cH1Verdict === "CONFIRMATA" ? "#dcfce7" : cH1Verdict === "PARTIAL" ? "#fef9c3" : "#fee2e2" }}>{cH1Verdict}</span>
+                  {/* ═══ TESTARE IPOTEZE OSF (H1 — H7) — CONSUMATORI 3000 ═══ */}
+                  <div style={{ marginTop: 32, borderTop: "2px solid #e5e7eb", paddingTop: 24 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+                      <div style={{ width: 4, height: 24, borderRadius: 2, background: "#F97316" }} />
+                      <div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: "#111827" }}>Testare Ipoteze OSF (H1 — H7) — Consumatori 3000</div>
+                        <div style={{ fontSize: 11, color: "#6B7280" }}>Fiecare ipoteza testeaza un aspect al modelului RIFC: R + (I &times; F) = C. Bazat pe {cTotalResp.toLocaleString("ro-RO")} raspunsuri de la {cCompletedN} respondenti calibrati din {cWithData.length} materiale.</div>
                       </div>
                     </div>
-                    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "16px 20px" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#9CA3AF", letterSpacing: 0.5, marginBottom: 4 }}>H2 — POARTA RELEVANTEI (R\u2265{GATE})</div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 12, color: "#6B7280" }}>R&lt;{GATE}: Cp={cH2BelowAvg.toFixed(2)} ({cH2Below.length})</div>
-                          <div style={{ fontSize: 12, color: "#6B7280" }}>R\u2265{GATE}: Cp={cH2AboveAvg.toFixed(2)} ({cH2Above.length}) | &Delta;={cH2Diff.toFixed(2)}</div>
+
+                    {/* MODELUL RIFC */}
+                    <div style={{ padding: "16px 18px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0", borderLeft: "4px solid #F97316", marginBottom: 24 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                        <Brain size={18} style={{ color: "#F97316" }} />
+                        <span style={{ fontWeight: 800, fontSize: 14, color: "#111827" }}>MODELUL RIFC</span>
+                        <span style={{ fontSize: 10, color: "#9CA3AF", fontStyle: "italic" }}>Ipoteza centrala a studiului</span>
+                      </div>
+                      <div style={{ textAlign: "center" as const, padding: "12px 0", marginBottom: 12 }}>
+                        <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 2, fontFamily: "JetBrains Mono, monospace" }}>
+                          <span style={{ color: "#DC2626" }}>R</span> + (<span style={{ color: "#D97706" }}>I</span> &times; <span style={{ color: "#7C3AED" }}>F</span>) = <span style={{ color: "#059669" }}>C</span>
                         </div>
-                        <span style={{ fontWeight: 800, fontSize: 13, color: cH2Verdict === "CONFIRMATA" ? "#059669" : "#DC2626", padding: "4px 12px", borderRadius: 6, background: cH2Verdict === "CONFIRMATA" ? "#dcfce7" : "#fee2e2" }}>{cH2Verdict}</span>
+                        <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4 }}><span style={{ color: "#DC2626" }}>Relevanta</span> &middot; <span style={{ color: "#D97706" }}>Interesul</span> &middot; <span style={{ color: "#7C3AED" }}>Forma</span> &middot; <span style={{ color: "#059669" }}>Claritatea</span></div>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12, fontSize: 11 }}>
+                        <div style={{ padding: "8px 10px", background: "#fef2f2", borderRadius: 6, border: "1px solid #fecaca" }}><b style={{ color: "#DC2626" }}>R — Relevanta (cheia de contact)</b><br/><span style={{ color: "#6B7280" }}>~10% din magnitudinea C, dar 100% conditie de activare. Sub R &lt; {GATE} (Gate), audienta se dezangajeaza si CTA scade &gt;58%. R nu opreste formula — opreste audienta din a actiona.</span></div>
+                        <div style={{ padding: "8px 10px", background: "#fffbeb", borderRadius: 6, border: "1px solid #fde68a" }}><b style={{ color: "#D97706" }}>I — Interesul (continut)</b><br/><span style={{ color: "#6B7280" }}>Cat de captivant si interesant este mesajul pentru audienta. Impreuna cu F formeaza motorul IxF — produce ~90% din magnitudinea Claritatii (C).</span></div>
+                        <div style={{ padding: "8px 10px", background: "#f5f3ff", borderRadius: 6, border: "1px solid #ddd6fe" }}><b style={{ color: "#7C3AED" }}>F — Forma (executie)</b><br/><span style={{ color: "#6B7280" }}>Calitatea executiei vizuale si creative. IxF se amplifica multiplicativ: IxR: F=2 = 10, dar I=8: F=0.8 = 6.4 (4x mai mult, nu 1.6x ca la adunare).</span></div>
+                        <div style={{ padding: "8px 10px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0" }}><b style={{ color: "#059669" }}>C — Claritatea (output)</b><br/><span style={{ color: "#6B7280" }}>Rezultatul formulei: cat de clar este mesajul pentru consumator. C si CTA — claritate prezice actiunea, dar sunt pasi separati. H2 valideaza ca C=CTA functioneaza.</span></div>
+                      </div>
+                      <div style={{ background: "#eff6ff", borderRadius: 6, padding: "10px 14px", marginBottom: 10, fontSize: 11, color: "#1e40af" }}>
+                        <b>CE TESTAM</b><br/>
+                        Formula R + (I &times; F) = C prezice cu adevarat claritatea perceputa de consumatori? Si daca da, aceasta claritate duce la actiune (CTA)?<br/>
+                        <span style={{ fontSize: 10, color: "#6B7280" }}>Lantul cauzal testat: Mult &gt; Adit (H1) &rarr; R activeaza (H2) &rarr; Brand modereaza (H3) &rarr; C=CTA (H4) &rarr; Cross-Channel (H5) &rarr; Segmente (H6) &rarr; Construct (H7)</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: "#6B7280" }}>
+                        <b>CUM ANALIZAM:</b> Esantion: {cTotalResp.toLocaleString("ro-RO")} raspunsuri, {cWithData.length} materiale, {cCompletedN} respondenti calibrati | Metode: Pearson r, Fisher Z-test, Spearman rank, Partial correlation, Cohen&apos;s d, ANOVA | Praguri: p &lt; 0.05 = semnificativ, r &gt; 0.7 = puternic, d &gt; 0.8 = efect mare
+                      </div>
+                    </div>
+
+                    {/* ── H1: Superioritate Model Multiplicativ ── */}
+                    <OsfH id="c-h1" num="OSF H1" title={"Ipoteza 1 \u2014 Superioritate Model Multiplicativ R+(I\u00D7F)"} color="#7C3AED" verdict={cH1Verdict}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
+                        {[
+                          { label: "\u03C1 Multiplicativ", value: cH1SpearmanMult.toFixed(3), sub: "Spearman R+(I\u00D7F)", color: "#2563EB" },
+                          { label: "\u03C1 Aditiv", value: cH1SpearmanAdit.toFixed(3), sub: "Spearman R+I+F", color: "#D97706" },
+                          { label: "\u0394\u03C1 (Fisher Z)", value: `${(cH1SpearmanMult - cH1SpearmanAdit) >= 0 ? "+" : ""}${(cH1SpearmanMult - cH1SpearmanAdit).toFixed(3)}`, sub: `Z=${cH1FisherZ.z.toFixed(2)}, ${_fmtP(cH1FisherZ.p)}`, color: cH1FisherZ.p < 0.05 ? "#059669" : "#DC2626" },
+                          { label: "Partial r(I\u00D7F)", value: cH1PartialR.toFixed(3), sub: _fmtP(cH1PartialP), color: cH1PartialP < 0.05 ? "#059669" : "#DC2626" },
+                        ].map((s: any, i: number) => (
+                          <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", borderTop: `3px solid ${s.color}`, textAlign: "center" as const }}>
+                            <div style={{ fontSize: 18, fontWeight: 900, color: s.color, fontFamily: "JetBrains Mono, monospace" }}>{s.value}</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginTop: 2 }}>{s.label}</div>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 1 }}>{s.sub}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ padding: "10px 14px", background: cH1Verdict === "CONFIRMATA" ? "#f0fdf4" : cH1Verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2", borderRadius: 6, border: `1px solid ${cH1Verdict === "CONFIRMATA" ? "#bbf7d0" : cH1Verdict === "PARTIAL" ? "#fde68a" : "#fecaca"}`, fontSize: 12, color: "#374151" }}>
+                        <b style={{ color: cH1Verdict === "CONFIRMATA" ? "#059669" : cH1Verdict === "PARTIAL" ? "#D97706" : "#DC2626" }}>{cH1Verdict}:</b> Modelul multiplicativ R+(I&times;F) {cH1SpearmanMult > cH1SpearmanAdit ? "coreleaza mai puternic" : "nu coreleaza mai puternic"} cu Cp decat modelul aditiv (\u03C1mult={cH1SpearmanMult.toFixed(3)} vs \u03C1adit={cH1SpearmanAdit.toFixed(3)}). Fisher Z {cH1FisherZ.p < 0.05 ? "confirma diferenta semnificativa" : "nu confirma diferenta"} (p={cH1FisherZ.p.toFixed(4)}). Partial r(I&times;F)={cH1PartialR.toFixed(3)} ({cH1PartialP < 0.05 ? "semnificativ" : "nesemnificativ"}). N={cH1D.length} raspunsuri.
+                      </div>
+                    </OsfH>
+
+                    {/* ── H2: Poarta Relevantei ── */}
+                    <OsfH id="c-h2" num="OSF H2" title={"Ipoteza 2 \u2014 Poarta Relevantei (R < " + GATE + " = dezangajare)"} color="#059669" verdict={cH2Verdict}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
+                        {[
+                          { label: `Cp sub R<${GATE}`, value: cH2BelowAvg.toFixed(2), sub: `n=${cH2Below.length}`, color: "#DC2626" },
+                          { label: `Cp peste R\u2265${GATE}`, value: cH2AboveAvg.toFixed(2), sub: `n=${cH2Above.length}`, color: "#059669" },
+                          { label: `CTA sub R<${GATE}`, value: cH2BelowAvgCta.toFixed(2), sub: `n=${cH2CtaBelow.length}`, color: "#DC2626" },
+                          { label: `CTA peste R\u2265${GATE}`, value: cH2AboveAvgCta.toFixed(2), sub: `n=${cH2CtaAbove.length}`, color: "#059669" },
+                        ].map((s: any, i: number) => (
+                          <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", borderTop: `3px solid ${s.color}`, textAlign: "center" as const }}>
+                            <div style={{ fontSize: 18, fontWeight: 900, color: s.color, fontFamily: "JetBrains Mono, monospace" }}>{s.value}</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginTop: 2 }}>{s.label}</div>
+                            <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 1 }}>{s.sub}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                        <div style={{ padding: "8px 12px", background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: 11 }}>
+                          <b>Cohen&apos;s d (Cp):</b> <span style={{ fontWeight: 800, color: Math.abs(cH2CohenDCp) >= 0.8 ? "#059669" : Math.abs(cH2CohenDCp) >= 0.5 ? "#D97706" : "#6B7280" }}>{cH2CohenDCp.toFixed(3)}</span>
+                          <span style={{ color: "#9CA3AF" }}> ({Math.abs(cH2CohenDCp) >= 0.8 ? "mare" : Math.abs(cH2CohenDCp) >= 0.5 ? "mediu" : "mic"})</span>
+                        </div>
+                        <div style={{ padding: "8px 12px", background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: 11 }}>
+                          <b>Cohen&apos;s d (CTA):</b> <span style={{ fontWeight: 800, color: Math.abs(cH2CohenDCta) >= 0.8 ? "#059669" : Math.abs(cH2CohenDCta) >= 0.5 ? "#D97706" : "#6B7280" }}>{cH2CohenDCta.toFixed(3)}</span>
+                          <span style={{ color: "#9CA3AF" }}> ({Math.abs(cH2CohenDCta) >= 0.8 ? "mare" : Math.abs(cH2CohenDCta) >= 0.5 ? "mediu" : "mic"})</span>
+                        </div>
+                      </div>
+                      <div style={{ padding: "10px 14px", background: cH2Verdict === "CONFIRMATA" ? "#f0fdf4" : "#fef2f2", borderRadius: 6, border: `1px solid ${cH2Verdict === "CONFIRMATA" ? "#bbf7d0" : "#fecaca"}`, fontSize: 12, color: "#374151" }}>
+                        <b style={{ color: cH2Verdict === "CONFIRMATA" ? "#059669" : "#DC2626" }}>{cH2Verdict}:</b> Cand R &lt; {GATE}, Cp scade de la {cH2AboveAvg.toFixed(2)} la {cH2BelowAvg.toFixed(2)} (\u0394={cH2Diff.toFixed(2)}). CTA scade de la {cH2AboveAvgCta.toFixed(2)} la {cH2BelowAvgCta.toFixed(2)}. Efectul gate este {Math.abs(cH2CohenDCp) >= 0.5 ? "semnificativ" : "modest"} (d={cH2CohenDCp.toFixed(2)}).
+                      </div>
+                    </OsfH>
+
+                    {/* ── H3: Brand ca Moderator ── */}
+                    <OsfH id="c-h3" num="OSF H3" title={"Ipoteza 3 \u2014 Brand ca Moderator C\u2192CTA"} color="#D97706" verdict={cH3Verdict}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                        <div style={{ background: "#fff", borderRadius: 6, border: "1px solid #dbeafe", padding: "10px 12px", textAlign: "center" as const }}>
+                          <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand cunoscut (n={cH3Known.length})</div>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>r={cH3PearsonKnown.toFixed(3)}</div>
+                          <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(_pValuePearson(cH3PearsonKnown, cH3Known.length))}</div>
+                        </div>
+                        <div style={{ background: "#fff", borderRadius: 6, border: "1px solid #fed7aa", padding: "10px 12px", textAlign: "center" as const }}>
+                          <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600 }}>Brand necunoscut (n={cH3Unknown.length})</div>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: "#D97706", fontFamily: "JetBrains Mono, monospace" }}>r={cH3PearsonUnknown.toFixed(3)}</div>
+                          <div style={{ fontSize: 8, color: "#9CA3AF" }}>{_fmtP(_pValuePearson(cH3PearsonUnknown, cH3Unknown.length))}</div>
+                        </div>
+                      </div>
+                      <div style={{ padding: "8px 12px", background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb", fontSize: 11, marginBottom: 8 }}>
+                        Fisher Z={cH3FisherZ.z.toFixed(2)}, {_fmtP(cH3FisherZ.p)} &middot; &Delta;r={cH3Diff.toFixed(3)}
+                      </div>
+                      <div style={{ padding: "10px 14px", background: cH3Verdict === "CONFIRMATA" ? "#f0fdf4" : cH3Verdict === "NEUTRA" ? "#fffbeb" : "#fef2f2", borderRadius: 6, border: `1px solid ${cH3Verdict === "CONFIRMATA" ? "#bbf7d0" : cH3Verdict === "NEUTRA" ? "#fde68a" : "#fecaca"}`, fontSize: 12, color: "#374151" }}>
+                        <b style={{ color: cH3Verdict === "CONFIRMATA" ? "#059669" : cH3Verdict === "NEUTRA" ? "#D97706" : "#DC2626" }}>{cH3Verdict}:</b> Corelatia C&rarr;CTA {cH3PearsonKnown > cH3PearsonUnknown ? "mai puternica" : "mai slaba"} cand brandul e cunoscut (r={cH3PearsonKnown.toFixed(3)}) vs necunoscut (r={cH3PearsonUnknown.toFixed(3)}). Fisher Z {cH3FisherZ.p < 0.05 ? "confirma diferenta semnificativa" : "nu confirma diferenta"}.
+                      </div>
+                    </OsfH>
+
+                    {/* ── H4: Claritate prezice Intentie de Actiune ── */}
+                    <OsfH id="c-h4" num="OSF H4" title={"Ipoteza 4 \u2014 Claritate prezice Intentie de Actiune (C\u2192CTA)"} color="#2563EB" verdict={cH4Verdict}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 12 }}>
+                        {[
+                          { label: "Pearson r", value: cH4PearsonR.toFixed(3), color: "#2563EB" },
+                          { label: "N raspunsuri", value: cH4Data.length.toString(), color: "#111827" },
+                          { label: "r\u00B2 (det.)", value: cH4Reg.r2.toFixed(3), color: "#111827" },
+                          { label: "p-value", value: _fmtP(cH4P), color: cH4P < 0.05 ? "#059669" : "#DC2626" },
+                        ].map((s: any, i: number) => (
+                          <div key={i} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 12px", textAlign: "center" as const }}>
+                            <div style={{ fontSize: 18, fontWeight: 900, color: s.color, fontFamily: "JetBrains Mono, monospace" }}>{s.value}</div>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: "#374151", marginTop: 2 }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ padding: "10px 14px", background: cH4Verdict === "CONFIRMATA" ? "#f0fdf4" : cH4Verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2", borderRadius: 6, border: `1px solid ${cH4Verdict === "CONFIRMATA" ? "#bbf7d0" : cH4Verdict === "PARTIAL" ? "#fde68a" : "#fecaca"}`, fontSize: 12, color: "#374151" }}>
+                        <b style={{ color: cH4Verdict === "CONFIRMATA" ? "#059669" : cH4Verdict === "PARTIAL" ? "#D97706" : "#DC2626" }}>{cH4Verdict}:</b> Corelatia r(C_formula, CTA)={cH4PearsonR.toFixed(3)} — formula {Math.abs(cH4PearsonR) >= 0.50 ? "prezice semnificativ" : Math.abs(cH4PearsonR) >= 0.30 ? "prezice moderat" : "nu prezice suficient"} intentia de actiune. r\u00B2={cH4Reg.r2.toFixed(3)} ({(cH4Reg.r2 * 100).toFixed(1)}% varianta explicata). Slope={cH4Reg.slope.toFixed(3)}.
+                      </div>
+                    </OsfH>
+
+                    {/* ── H5: Invarianta Cross-Channel ── */}
+                    <OsfH id="c-h5" num="OSF H5" title={"Ipoteza 5 \u2014 Invarianta Cross-Channel (Cronbach \u03B1)"} color="#0891b2" verdict={cH5Verdict}>
+                      {_cH5Channels.length >= 2 ? (
+                        <>
+                          <div style={{ overflowX: "auto" as const }}>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" as const }}>
+                              <thead>
+                                <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+                                  <th style={{ textAlign: "left" as const, padding: "6px 8px", fontWeight: 700 }}>Canal</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700 }}>N</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700 }}>\u03B1</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px" }}>r(R,I)</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px" }}>r(R,F)</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px" }}>r(I,F)</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px" }}>\u03BBR</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px" }}>\u03BBI</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px" }}>\u03BBF</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {_cH5Channels.map((c: any, idx: number) => (
+                                  <tr key={c.ch} style={{ borderBottom: "1px solid #f3f4f6", background: idx % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                    <td style={{ padding: "6px 8px", fontWeight: 700, color: c.color }}><span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: c.color, marginRight: 6 }} />{c.label}</td>
+                                    <td style={{ textAlign: "center" as const, color: "#6B7280" }}>{c.n}</td>
+                                    <td style={{ textAlign: "center" as const, fontWeight: 800, color: c.alpha >= 0.70 ? "#059669" : c.alpha >= 0.50 ? "#D97706" : "#DC2626" }}>{c.alpha.toFixed(2)}</td>
+                                    <td style={{ textAlign: "center" as const }}>{c.rRI.toFixed(2)}</td>
+                                    <td style={{ textAlign: "center" as const }}>{c.rRF.toFixed(2)}</td>
+                                    <td style={{ textAlign: "center" as const }}>{c.rIF.toFixed(2)}</td>
+                                    <td style={{ textAlign: "center" as const }}>{c.lambdaR.toFixed(2)}</td>
+                                    <td style={{ textAlign: "center" as const }}>{c.lambdaI.toFixed(2)}</td>
+                                    <td style={{ textAlign: "center" as const }}>{c.lambdaF.toFixed(2)}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          <div style={{ marginTop: 10, padding: "8px 12px", background: `${cH5Verdict === "CONFIRMATA" ? "#059669" : cH5Verdict === "PARTIAL" ? "#D97706" : "#DC2626"}10`, border: `1px solid ${cH5Verdict === "CONFIRMATA" ? "#059669" : cH5Verdict === "PARTIAL" ? "#D97706" : "#DC2626"}30`, borderRadius: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ fontSize: 11, color: "#374151" }}>Cronbach \u03B1 range: <strong>{cH5MinAlpha.toFixed(2)} — {cH5MaxAlpha.toFixed(2)}</strong> (prag \u2265 0.70)</div>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: cH5Verdict === "CONFIRMATA" ? "#059669" : cH5Verdict === "PARTIAL" ? "#D97706" : "#DC2626" }}>{cH5Verdict}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ padding: 16, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Insuficiente canale cu N \u2265 5 pentru analiza cross-channel.</div>
+                      )}
+                    </OsfH>
+
+                    {/* ── H6: Sensibilitate Segmente ── */}
+                    <OsfH id="c-h6" num="OSF H6" title={"Ipoteza 6 \u2014 Sensibilitate Segmente (\u03B7\u00B2 < 0.05)"} color="#6366f1" verdict={_cH6Verdict}>
+                      {_cH6HasIndiv && _cH6Available.length > 0 ? (
+                        <>
+                          <div style={{ overflowX: "auto" as const }}>
+                            <table style={{ width: "100%", fontSize: 10, borderCollapse: "collapse" as const }}>
+                              <thead>
+                                <tr style={{ background: "#f3f4f6" }}>
+                                  <th style={{ textAlign: "left" as const, padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Factor demografic</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Grupuri</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>N</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>F</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>p</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>\u03B7\u00B2</th>
+                                  <th style={{ textAlign: "center" as const, padding: "6px 8px", fontWeight: 700, borderBottom: "2px solid #e5e7eb" }}>Verdict</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {_cH6Results.filter((r: any) => r.available).map((row: any, ri: number) => {
+                                  const pass = row.etaSq < 0.05;
+                                  return (
+                                    <tr key={ri} style={{ background: ri % 2 ? "#fafafa" : "#fff" }}>
+                                      <td style={{ padding: "5px 8px", fontWeight: 600 }}>{row.label}</td>
+                                      <td style={{ textAlign: "center" as const }}>{row.nGroups}</td>
+                                      <td style={{ textAlign: "center" as const }}>{row.totalN}</td>
+                                      <td style={{ textAlign: "center" as const, fontWeight: 600 }}>{row.f.toFixed(2)}</td>
+                                      <td style={{ textAlign: "center" as const, color: row.p < 0.05 ? "#DC2626" : "#059669", fontWeight: 600 }}>{_fmtP(row.p)}</td>
+                                      <td style={{ textAlign: "center" as const, fontWeight: 700, color: pass ? "#059669" : "#DC2626" }}>{row.etaSq.toFixed(4)}</td>
+                                      <td style={{ textAlign: "center" as const }}><span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: pass ? "#dcfce7" : "#fee2e2", color: pass ? "#166534" : "#991b1b" }}>{pass ? "\u2713 < 5%" : `\u2717 ${(row.etaSq * 100).toFixed(1)}%`}</span></td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                          <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 6, background: _cH6AllPass ? "#f0fdf4" : _cH6SomePass ? "#fffbeb" : "#fef2f2", border: `1px solid ${_cH6AllPass ? "#bbf7d0" : _cH6SomePass ? "#fde68a" : "#fecaca"}` }}>
+                            <span style={{ fontWeight: 800, color: _cH6AllPass ? "#166534" : _cH6SomePass ? "#92400e" : "#991b1b" }}>{_cH6Verdict} </span>
+                            <span style={{ fontSize: 10, color: "#374151" }}>
+                              {_cH6AllPass ? "Toti factorii demografici au \u03B7\u00B2 < 0.05 \u2014 formula RIFC functioneaza uniform pe toate segmentele." : _cH6SomePass ? `Unii factori au \u03B7\u00B2 \u2265 0.05 (max ${(_cH6MaxEta * 100).toFixed(1)}%) \u2014 sensibilitate moderata.` : "Formula variaza semnificativ pe segmente demografice."}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ padding: 16, textAlign: "center" as const, color: "#9CA3AF", fontSize: 12 }}>Date demografice insuficiente pentru analiza ANOVA.</div>
+                      )}
+                    </OsfH>
+
+                    {/* ── H7: Validitate Construct ── */}
+                    <OsfH id="c-h7" num="OSF H7" title={"Ipoteza 7 \u2014 Validitate Construct r(Cf, Cp) \u2265 0.60"} color="#be185d" verdict={cH7Verdict}>
+                      <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" as const }}>
+                        <div style={{ flex: 1, minWidth: 100, background: "#fdf2f8", border: "1px solid #fce7f3", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>Pearson r</div>
+                          <div style={{ fontSize: 28, fontWeight: 900, color: cH7Verdict === "CONFIRMATA" ? "#059669" : cH7Verdict === "PARTIAL" ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{cPearsonR.toFixed(3)}</div>
+                          <div style={{ fontSize: 8, color: "#9CA3AF" }}>prag \u2265 0.60</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>r\u00B2</div>
+                          <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "JetBrains Mono, monospace" }}>{(cPearsonR * cPearsonR).toFixed(3)}</div>
+                          <div style={{ fontSize: 8, color: "#9CA3AF" }}>{(cPearsonR * cPearsonR * 100).toFixed(1)}% varianta explicata</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>p-value</div>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: cH7P < 0.001 ? "#059669" : cH7P < 0.05 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace" }}>{_fmtP(cH7P)}</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 100, background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 8, padding: "10px 14px", textAlign: "center" as const }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", textTransform: "uppercase" as const, letterSpacing: 0.5 }}>N (materiale)</div>
+                          <div style={{ fontSize: 22, fontWeight: 800, fontFamily: "JetBrains Mono, monospace" }}>{cWithData.length}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" as const }}>
+                        <div style={{ flex: 1, minWidth: 120, padding: "8px 12px", background: "#f0fdf4", borderRadius: 6, border: "1px solid #bbf7d0" }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", marginBottom: 2 }}>Validare %</div>
+                          <div style={{ fontSize: 18, fontWeight: 900, color: "#059669", fontFamily: "JetBrains Mono, monospace" }}>{cGValPct}%</div>
+                          <div style={{ fontSize: 8, color: "#9CA3AF" }}>100 - (\u0394/10 \u00D7 100)</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 120, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, border: "1px solid #e5e7eb" }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "#6B7280", marginBottom: 2 }}>\u0394 |Cf_norm - Cp|</div>
+                          <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "JetBrains Mono, monospace" }}>{cGDelta.toFixed(2)}</div>
+                          <div style={{ fontSize: 8, color: "#9CA3AF" }}>Cf_norm={(cGCf / 11).toFixed(2)} vs Cp={cGCp.toFixed(2)}</div>
+                        </div>
+                      </div>
+                      <div style={{ padding: "10px 14px", background: cH7Verdict === "CONFIRMATA" ? "#f0fdf4" : cH7Verdict === "PARTIAL" ? "#fffbeb" : "#fef2f2", borderRadius: 6, border: `1px solid ${cH7Verdict === "CONFIRMATA" ? "#bbf7d0" : cH7Verdict === "PARTIAL" ? "#fde68a" : "#fecaca"}`, fontSize: 12, color: "#374151" }}>
+                        <b style={{ color: cH7Verdict === "CONFIRMATA" ? "#059669" : cH7Verdict === "PARTIAL" ? "#D97706" : "#DC2626" }}>{cH7Verdict}:</b> Corelatia r={cPearsonR.toFixed(3)} {Math.abs(cPearsonR) >= 0.60 ? "\u2265 0.60 confirma validitatea de construct" : Math.abs(cPearsonR) >= 0.40 ? "este moderata (0.40-0.60)" : "< 0.40 nu confirma"}. r\u00B2={((cPearsonR * cPearsonR) * 100).toFixed(1)}% din varianta Cp explicata de Cf. Validare {cGValPct}% pe N={cWithData.length} materiale.
+                      </div>
+                    </OsfH>
+
+                    {/* ═══ SUMAR IPOTEZE OSF ═══ */}
+                    <div style={{ marginTop: 24, marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                        <Brain size={16} style={{ color: "#F97316" }} />
+                        <span style={{ fontWeight: 800, fontSize: 14, color: "#111827" }}>Sumar Ipoteze OSF (H1 — H7)</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 8 }}>Rezumatul tuturor ipotezelor testate, cu metrici principale, dimensiunea esantionului si semnificatia statistica.</div>
+                      <div style={{ overflowX: "auto" as const }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 11 }}>
+                          <thead>
+                            <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                              <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Ipoteza</th>
+                              <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Descriere</th>
+                              <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Metric</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>N</th>
+                              <th style={{ padding: "8px 10px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Semnificatie</th>
+                              <th style={{ padding: "8px 10px", textAlign: "center" as const, fontWeight: 700, color: "#374151" }}>Verdict</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[
+                              { code: "OSF H1", name: "Multiplicativ > Aditiv", metric: `\u03C1=${cH1SpearmanMult.toFixed(3)}, \u03C1a=${cH1SpearmanAdit.toFixed(3)}, pr=${cH1PartialR.toFixed(3)}`, n: cH1D.length, pVal: `Z=${cH1FisherZ.z.toFixed(2)}, ${_fmtP(cH1FisherZ.p)}; pr ${_fmtP(cH1PartialP)}`, verdict: cH1Verdict, color: "#7C3AED" },
+                              { code: "OSF H2", name: `Poarta Relevantei (R < ${GATE} = dezangajare)`, metric: `Cp: ${cH2BelowAvg.toFixed(2)} vs ${cH2AboveAvg.toFixed(2)}, d=${cH2CohenDCp.toFixed(2)}`, n: cScValid.length, pVal: `\u0394Cp=${cH2Diff.toFixed(2)}, d(CTA)=${cH2CohenDCta.toFixed(2)}`, verdict: cH2Verdict, color: "#059669" },
+                              { code: "OSF H3", name: "Brand ca Moderator C\u2192CTA", metric: `rK=${cH3PearsonKnown.toFixed(3)}, rU=${cH3PearsonUnknown.toFixed(3)}, \u0394r=${cH3Diff.toFixed(3)}`, n: cH3DataAll.length, pVal: `Z=${cH3FisherZ.z.toFixed(2)}, ${_fmtP(cH3FisherZ.p)}`, verdict: cH3Verdict, color: "#D97706" },
+                              { code: "OSF H4", name: "C prezice CTA (r\u22650.50)", metric: `r=${cH4PearsonR.toFixed(3)}, r\u00B2=${cH4Reg.r2.toFixed(3)}`, n: cH4Data.length, pVal: _fmtP(cH4P), verdict: cH4Verdict, color: "#2563EB" },
+                              { code: "OSF H5", name: "Invarianta Cross-Channel (Cronbach \u03B1)", metric: _cH5Channels.length >= 2 ? `\u03B1: ${cH5MinAlpha.toFixed(2)}\u2013${cH5MaxAlpha.toFixed(2)}` : "N/A", n: cScValid.length, pVal: _cH5Channels.length >= 2 ? `${_cH5Channels.filter((c: any) => c.alpha >= 0.70).length}/${_cH5Channels.length} canale \u2265 0.70` : "Insuficiente canale", verdict: cH5Verdict, color: "#0891b2" },
+                              { code: "OSF H6", name: "Sensibilitate Segmente (\u03B7\u00B2 < 0.05)", metric: _cH6Available.length > 0 ? `\u03B7\u00B2 max=${(_cH6MaxEta * 100).toFixed(1)}%` : "N/A", n: cScatter.length, pVal: _cH6Available.length > 0 ? `${_cH6Available.filter((r: any) => r.etaSq < 0.05).length}/${_cH6Available.length} factori < 5%` : "Lipsesc date", verdict: _cH6Verdict, color: "#6366f1" },
+                              { code: "OSF H7", name: "Validitate Construct r(Cf, Cp) \u2265 0.60", metric: `r=${cPearsonR.toFixed(3)}, r\u00B2=${(cPearsonR * cPearsonR).toFixed(3)}, \u0394=${cGDelta.toFixed(2)}`, n: cWithData.length, pVal: _fmtP(cH7P), verdict: cH7Verdict, color: "#be185d" },
+                            ].map((r: any, i: number) => (
+                              <tr key={r.code} style={{ borderBottom: "1px solid #f3f4f6", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                <td style={{ padding: "8px 10px", fontWeight: 800, color: r.color, fontFamily: "JetBrains Mono, monospace" }}>{r.code}</td>
+                                <td style={{ padding: "8px 10px", color: "#374151" }}>{r.name}</td>
+                                <td style={{ padding: "8px 10px", fontFamily: "JetBrains Mono, monospace", fontSize: 10, color: "#111827" }}>{r.metric}</td>
+                                <td style={{ padding: "8px 10px", textAlign: "center" as const, fontFamily: "JetBrains Mono, monospace", color: "#6B7280" }}>{typeof r.n === "number" ? r.n.toLocaleString("ro-RO") : r.n}</td>
+                                <td style={{ padding: "8px 10px", fontSize: 10, color: "#6B7280" }}>{r.pVal}</td>
+                                <td style={{ padding: "8px 10px", textAlign: "center" as const }}>
+                                  {(() => {
+                                    const isGreen = r.verdict === "CONFIRMATA";
+                                    const isYellow = r.verdict === "PARTIAL" || r.verdict === "NEUTRA";
+                                    return <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: isGreen ? "#dcfce7" : isYellow ? "#fef3c7" : "#fee2e2", color: isGreen ? "#166534" : isYellow ? "#92400e" : "#991b1b" }}>{r.verdict}</span>;
+                                  })()}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>
-
-                  {/* CONCLUZIE */}
-                  {cWithData.length > 0 && (() => {
-                    const _cR = _mean(cWithData.map((s: any) => s.avg_r));
-                    const _cIxF = _mean(cWithData.map((s: any) => s.avg_i)) * _mean(cWithData.map((s: any) => s.avg_f));
-                    const _rC = cGCf > 0 ? Math.round((_cR / cGCf) * 100) : 0;
-                    const _ixfC = 100 - _rC;
-                    return (
-                      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "16px 20px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                          <Brain size={18} style={{ color: "#F97316" }} />
-                          <span style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>CONCLUZIE — CONSUMATORI 3000</span>
-                        </div>
-                        <p style={{ fontSize: 13, color: "#374151", lineHeight: 1.7, marginBottom: 12 }}>
-                          Formula R+(IxF)=C prezice <b>{cGValPct}%</b> din claritatea perceputa pe {cWithData.length} materiale ({cTotalResp.toLocaleString("ro-RO")} evaluari de la {cCompletedN} respondenti calibrati). Gap de <b>{100 - cGValPct}%</b> provine din factori externi neincorporati (Brand, context, audienta).
-                        </p>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #2563EB", background: "#eff6ff", fontSize: 12, color: "#1e40af" }}>
-                            <b>R1:</b> R este cheia ({_rC}% din Cf), IxF este motorul ({_ixfC}%). Ambele componente functioneaza in tandem.
-                          </div>
-                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #D97706", background: "#fffbeb", fontSize: 12, color: "#92400e" }}>
-                            <b>R2:</b> Cand R &lt; {GATE}, formula se dezactiveaza — materialul nu are relevanta suficienta.
-                          </div>
-                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #059669", background: "#f0fdf4", fontSize: 12, color: "#065f46" }}>
-                            <b>R3:</b> Cand R \u2265 {GATE}, formula este aplicabila — {cGatePass}/{cStimuliResults.length} materiale ({cGatePct}%) trec pragul.
-                          </div>
-                          <div style={{ padding: "8px 12px", borderRadius: 6, borderLeft: "3px solid #7C3AED", background: "#f5f3ff", fontSize: 12, color: "#5b21b6" }}>
-                            <b>R4:</b> Delta ({cGDelta.toFixed(2)}) este contextual — respondentii calibrati percep mai mult decat prezice formula.
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
 
                   {cStimuliResults.length === 0 && <div style={{ textAlign: "center" as const, padding: 40, color: "#9CA3AF" }}>Nu exista date suficiente. Asteapta mai multe completari.</div>}
                 </div>
