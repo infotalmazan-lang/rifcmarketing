@@ -19026,7 +19026,7 @@ export default function StudiuAdminPage() {
                   <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
                     <Info size={16} style={{ color: "#ea580c", flexShrink: 0 }} />
                     <span style={{ fontSize: 12, color: "#9a3412" }}>
-                      Sursa date: Consumatori calibrati (acuratete ≥70%) — {cTotalResp.toLocaleString("ro-RO")} raspunsuri · {cWithData.length}/{stimuli.filter((s: any) => s.is_active).length} materiale · {cCompletedN} respondenti calificati din {cTotalEvaluated} evaluati.
+                      Sursa date: Consumatori calibrati (acuratete ≥70%) — {cTotalResp.toLocaleString("ro-RO")} raspunsuri · {cWithData.length}/{stimuli.filter((s: any) => s.is_active).length} materiale · {cCompletedN} respondenti calificati.
                     </span>
                   </div>
 
