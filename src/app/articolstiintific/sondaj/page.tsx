@@ -19653,7 +19653,7 @@ export default function StudiuAdminPage() {
                   {/* RUN tabs */}
                   <div style={{ display: "flex", gap: 4 }}>
                     {(["run1", "run2", "run3"] as const).map((run, i) => (
-                      <button key={run} onClick={() => { setAiRunTab(run); setAiForm(f => ({ ...f, prompt_version: run })); }} style={{
+                      <button key={run} onClick={() => { setAiRunTab(run); setAiEditId(null); setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: run, justification: "" }); }} style={{
                         padding: "5px 14px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 1,
                         background: aiRunTab === run ? "#7C3AED" : "#f3f4f6",
                         color: aiRunTab === run ? "#fff" : "#6B7280",
@@ -19705,7 +19705,7 @@ export default function StudiuAdminPage() {
               </div>
             )}
 
-            {/* AI evaluations table */}
+            {/* AI evaluations table — filtered by selected RUN */}
             {aiLoading ? (
               <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}><Loader2 size={24} style={{ animation: "spin 1s linear infinite" }} /></div>
             ) : aiEvals.length === 0 ? (
@@ -19714,14 +19714,38 @@ export default function StudiuAdminPage() {
                 <h3 style={{ fontSize: 18, color: "#374151", marginTop: 16 }}>Nicio evaluare AI</h3>
                 <p style={{ color: "#6B7280", fontSize: 14 }}>Adauga scorurile modelelor AI (Claude, Gemini, GPT) pe fiecare material.</p>
               </div>
-            ) : (
+            ) : (() => {
+              const filteredAiEvals = aiEvals.filter(e => e.prompt_version === aiRunTab);
+              const runCounts = { run1: aiEvals.filter(e => e.prompt_version === "run1").length, run2: aiEvals.filter(e => e.prompt_version === "run2").length, run3: aiEvals.filter(e => e.prompt_version === "run3").length };
+              return (
+              <>
+              {/* RUN filter tabs for table */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", textTransform: "uppercase" }}>Filtru Run:</span>
+                {(["run1", "run2", "run3"] as const).map((run, i) => (
+                  <button key={run} onClick={() => { setAiRunTab(run); setAiForm(f => ({ ...f, prompt_version: run })); if (!showAddAi) { setAiEditId(null); } }} style={{
+                    padding: "5px 14px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 1,
+                    background: aiRunTab === run ? "#7C3AED" : "#f3f4f6",
+                    color: aiRunTab === run ? "#fff" : "#6B7280",
+                    border: aiRunTab === run ? "none" : "1px solid #e5e7eb",
+                    cursor: "pointer", transition: "all 0.15s",
+                  }}>RUN {i + 1} ({runCounts[run]})</button>
+                ))}
+                <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: 8 }}>Total: {aiEvals.length} evaluari</span>
+              </div>
+
+              {filteredAiEvals.length === 0 ? (
+                <div style={{ ...S.configCard, textAlign: "center", padding: 32, color: "#9CA3AF" }}>
+                  <Bot size={32} style={{ color: "#d1d5db", margin: "0 auto 8px" }} />
+                  <p style={{ fontSize: 13 }}>Nicio evaluare pentru <strong>RUN {aiRunTab === "run1" ? "1" : aiRunTab === "run2" ? "2" : "3"}</strong>. Apasa &quot;ADAUGA EVALUARE AI&quot; pentru a incepe.</p>
+                </div>
+              ) : (
               <div style={{ ...S.configCard, padding: 0, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#f9fafb" }}>
                       <th style={{ ...thStyle, textAlign: "left", minWidth: 160 }}>MATERIAL</th>
                       <th style={thStyle}>MODEL</th>
-                      <th style={thStyle}>PROMPT</th>
                       <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
                       <th style={{ ...thStyle, color: "#D97706" }}>I</th>
                       <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
@@ -19732,7 +19756,7 @@ export default function StudiuAdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {aiEvals.map((ev) => {
+                    {filteredAiEvals.map((ev) => {
                       const stim = stimuli.find(s => s.id === ev.stimulus_id);
                       const modelColors: Record<string, string> = { Claude: "#D97706", Gemini: "#2563EB", GPT: "#059669" };
                       return (
@@ -19741,7 +19765,6 @@ export default function StudiuAdminPage() {
                           <td style={tdStyle}>
                             <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 4, background: modelColors[ev.model_name] || "#6B7280", color: "#fff" }}>{ev.model_name}</span>
                           </td>
-                          <td style={{ ...tdStyle, fontFamily: "JetBrains Mono, monospace", fontSize: 11 }}>{ev.prompt_version}</td>
                           <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
                           <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
                           <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
@@ -19759,8 +19782,11 @@ export default function StudiuAdminPage() {
                 </table>
               </div>
             )}
+            </>
+              );
+            })()}
 
-            {/* Comparison matrix: per stimulus, show all 3 models side by side */}
+            {/* Comparison matrix: per stimulus, show all 3 models side by side — shows MEDIA across runs */}
             {aiEvals.length > 0 && (
               <div style={{ ...S.configCard, marginTop: 20 }}>
                 <div style={S.configHeader}>
