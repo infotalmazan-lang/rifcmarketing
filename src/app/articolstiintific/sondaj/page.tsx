@@ -18888,9 +18888,7 @@ export default function StudiuAdminPage() {
                       </div>
                       <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, justifyContent: "flex-end" }}>
                         {[
-                          { label: "Total evaluati", value: cTotalEvaluated, color: "#94a3b8" },
                           { label: "Calificati", value: cCompletedN, color: "#F97316" },
-                          { label: "Rata calificare", value: `${cQualRate}%`, color: cQualRate >= 70 ? "#10b981" : "#f59e0b", isText: true },
                           { label: "Raspunsuri", value: cTotalResp, color: "#3b82f6" },
                           { label: "Timp mediu", value: cAvgTStr, color: "#a78bfa", isText: true },
                         ].map((s: any) => (
@@ -19033,7 +19031,7 @@ export default function StudiuAdminPage() {
                   {/* VALIDARE IPOTEZA — CONSUMATORI 3000 */}
                   <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 12, padding: "24px 28px", marginBottom: 20, textAlign: "center" as const }}>
                     <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#9CA3AF", marginBottom: 4 }}>VALIDARE IPOTEZA — CONSUMATORI 3000</div>
-                    <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 4 }}>Bazat pe {cCompletedN} respondenti calibrati din {cTotalEvaluated} evaluati ({cQualRate}% calificati)</div>
+                    <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 4 }}>Bazat pe {cCompletedN} respondenti calibrati</div>
                     <div style={{ fontSize: 48, fontWeight: 900, color: cGValPct >= 80 ? "#059669" : cGValPct >= 70 ? "#16a34a" : cGValPct >= 50 ? "#D97706" : "#DC2626", fontFamily: "JetBrains Mono, monospace", lineHeight: 1.1 }}>{cGValPct}%</div>
                     <div style={{ display: "inline-block", padding: "4px 16px", borderRadius: 20, fontSize: 14, fontWeight: 800, marginTop: 4, color: "#fff", background: cGValPct >= 80 ? "#059669" : cGValPct >= 70 ? "#16a34a" : cGValPct >= 50 ? "#D97706" : "#DC2626" }}>{cRSynthesis}</div>
                     <p style={{ fontSize: 13, color: "#6B7280", marginTop: 8, maxWidth: 600, marginLeft: "auto", marginRight: "auto" }}>
