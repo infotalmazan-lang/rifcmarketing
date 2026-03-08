@@ -19784,7 +19784,7 @@ export default function StudiuAdminPage() {
               );
             })()}
 
-            {/* Comparison matrix: per stimulus, show all 3 models side by side — shows MEDIA across runs */}
+            {/* Comparison matrix: per material × model, show Media + Run 1/2/3 rows with edit/delete */}
             {aiEvals.length > 0 && (
               <div style={{ ...S.configCard, marginTop: 20 }}>
                 <div style={S.configHeader}>
@@ -19795,63 +19795,72 @@ export default function StudiuAdminPage() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                     <thead>
                       <tr style={{ background: "#f9fafb" }}>
-                        <th style={{ ...thStyle, textAlign: "left" }}>MATERIAL</th>
-                        {AI_MODELS.map(m => (
-                          <th key={m} colSpan={5} style={{ ...thStyle, borderLeft: "2px solid #e5e7eb" }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{m.toUpperCase()}</span>
-                          </th>
-                        ))}
-                      </tr>
-                      <tr style={{ background: "#f9fafb" }}>
-                        <th style={thStyle}></th>
-                        {AI_MODELS.map(m => (
-                          <React.Fragment key={m}>
-                            <th style={{ ...thStyle, color: "#DC2626", borderLeft: "2px solid #e5e7eb" }}>R</th>
-                            <th style={{ ...thStyle, color: "#D97706" }}>I</th>
-                            <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
-                            <th style={{ ...thStyle, color: "#059669" }}>CTA</th>
-                            <th style={{ ...thStyle, fontWeight: 800 }}>C</th>
-                          </React.Fragment>
-                        ))}
+                        <th style={{ ...thStyle, textAlign: "left", minWidth: 140 }}>MATERIAL</th>
+                        <th style={{ ...thStyle, textAlign: "left", minWidth: 80 }}>MODEL</th>
+                        <th style={{ ...thStyle, minWidth: 50 }}>RUN</th>
+                        <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
+                        <th style={{ ...thStyle, color: "#D97706" }}>I</th>
+                        <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                        <th style={{ ...thStyle, color: "#059669" }}>CTA</th>
+                        <th style={{ ...thStyle, fontWeight: 800 }}>C</th>
+                        <th style={{ ...thStyle, minWidth: 60 }}></th>
                       </tr>
                     </thead>
                     <tbody>
                       {stimuli.filter(s => s.is_active).map(stim => {
                         const hasAny = aiEvals.some(e => e.stimulus_id === stim.id);
                         if (!hasAny) return null;
-                        return (
-                          <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
-                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, fontSize: 12 }}>{stim.name}</td>
-                            {AI_MODELS.map(m => {
-                              const runs = aiEvals.filter(e => e.stimulus_id === stim.id && e.model_name === m);
-                              if (runs.length === 0) return (
-                                <React.Fragment key={m}>
-                                  <td style={{ ...tdStyle, borderLeft: "2px solid #f3f4f6", color: "#d1d5db" }}>—</td>
-                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
-                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
-                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
-                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
-                                </React.Fragment>
-                              );
-                              const avgR = +(runs.reduce((s, e) => s + e.r_score, 0) / runs.length).toFixed(1);
-                              const avgI = +(runs.reduce((s, e) => s + e.i_score, 0) / runs.length).toFixed(1);
-                              const avgF = +(runs.reduce((s, e) => s + e.f_score, 0) / runs.length).toFixed(1);
-                              const ctaScores = runs.filter(e => e.cta_score != null);
-                              const avgCTA = ctaScores.length > 0 ? +(ctaScores.reduce((s, e) => s + (e.cta_score || 0), 0) / ctaScores.length).toFixed(1) : null;
-                              const avgC = +(avgR + avgI * avgF).toFixed(1);
-                              const isAvg = runs.length > 1;
-                              return (
-                                <React.Fragment key={m}>
-                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600, borderLeft: "2px solid #f3f4f6" }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgR}{isAvg ? "*" : ""}</td>
-                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgI}{isAvg ? "*" : ""}</td>
-                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgF}{isAvg ? "*" : ""}</td>
-                                  <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgCTA != null ? `${avgCTA}${isAvg ? "*" : ""}` : "—"}</td>
-                                  <td style={{ ...tdStyle, fontWeight: 800 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgC}{isAvg ? "*" : ""}</td>
-                                </React.Fragment>
-                              );
-                            })}
-                          </tr>
-                        );
+                        const modelRows: React.ReactNode[] = [];
+                        AI_MODELS.forEach((m, mi) => {
+                          const allRuns = aiEvals.filter(e => e.stimulus_id === stim.id && e.model_name === m);
+                          if (allRuns.length === 0) return;
+                          const modelColors: Record<string, string> = { Claude: "#D97706", Gemini: "#2563EB", GPT: "#059669" };
+                          // Media row
+                          const avgR = +(allRuns.reduce((s, e) => s + e.r_score, 0) / allRuns.length).toFixed(1);
+                          const avgI = +(allRuns.reduce((s, e) => s + e.i_score, 0) / allRuns.length).toFixed(1);
+                          const avgF = +(allRuns.reduce((s, e) => s + e.f_score, 0) / allRuns.length).toFixed(1);
+                          const ctaArr = allRuns.filter(e => e.cta_score != null);
+                          const avgCTA = ctaArr.length > 0 ? +(ctaArr.reduce((s, e) => s + (e.cta_score || 0), 0) / ctaArr.length).toFixed(1) : null;
+                          const avgC = +(avgR + avgI * avgF).toFixed(1);
+                          modelRows.push(
+                            <tr key={`${stim.id}-${m}-avg`} style={{ borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
+                              {mi === 0 && <td rowSpan={AI_MODELS.filter(mm => aiEvals.some(e => e.stimulus_id === stim.id && e.model_name === mm)).length * 4} style={{ ...tdStyle, textAlign: "left", fontWeight: 700, color: "#111827", verticalAlign: "top", borderRight: "2px solid #e5e7eb", paddingTop: 10 }}>{stim.name}</td>}
+                              <td rowSpan={4} style={{ ...tdStyle, verticalAlign: "top", borderRight: "1px solid #f3f4f6", paddingTop: 10 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 4, background: modelColors[m] || "#6B7280", color: "#fff" }}>{m}</span>
+                              </td>
+                              <td style={{ ...tdStyle, fontSize: 10, fontWeight: 800, color: "#7C3AED", letterSpacing: 0.5 }}>MEDIA</td>
+                              <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 700 }}>{avgR}</td>
+                              <td style={{ ...tdStyle, color: "#D97706", fontWeight: 700 }}>{avgI}</td>
+                              <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 700 }}>{avgF}</td>
+                              <td style={{ ...tdStyle, color: "#059669", fontWeight: 700 }}>{avgCTA ?? "—"}</td>
+                              <td style={{ ...tdStyle, fontWeight: 900, fontSize: 14 }}>{avgC}</td>
+                              <td style={tdStyle}></td>
+                            </tr>
+                          );
+                          // Run 1, 2, 3 rows
+                          (["run1", "run2", "run3"] as const).forEach((run, ri) => {
+                            const ev = allRuns.find(e => e.prompt_version === run);
+                            modelRows.push(
+                              <tr key={`${stim.id}-${m}-${run}`} style={{ borderBottom: ri === 2 ? "2px solid #e5e7eb" : "1px solid #f3f4f6" }}>
+                                <td style={{ ...tdStyle, fontSize: 10, fontWeight: 600, color: ev ? "#374151" : "#d1d5db" }}>Run {ri + 1}</td>
+                                <td style={{ ...tdStyle, color: ev ? "#DC2626" : "#d1d5db", fontWeight: 600 }}>{ev ? ev.r_score : "—"}</td>
+                                <td style={{ ...tdStyle, color: ev ? "#D97706" : "#d1d5db", fontWeight: 600 }}>{ev ? ev.i_score : "—"}</td>
+                                <td style={{ ...tdStyle, color: ev ? "#7C3AED" : "#d1d5db", fontWeight: 600 }}>{ev ? ev.f_score : "—"}</td>
+                                <td style={{ ...tdStyle, color: ev ? "#059669" : "#d1d5db", fontWeight: 600 }}>{ev ? (ev.cta_score ?? "—") : "—"}</td>
+                                <td style={{ ...tdStyle, fontWeight: ev ? 800 : 400, color: ev ? "#111827" : "#d1d5db" }}>{ev ? ev.c_computed : "—"}</td>
+                                <td style={{ ...tdStyle }}>
+                                  {ev && (
+                                    <div style={{ display: "flex", gap: 4 }}>
+                                      <button style={{ ...S.iconBtnDanger, background: "#ede9fe", color: "#7C3AED", width: 24, height: 24, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => startEditAi(ev)} title="Editeaza"><Pencil size={12} /></button>
+                                      <button style={{ ...S.iconBtnDanger, width: 24, height: 24, padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => deleteAiEval(ev.id)} title="Sterge"><Trash2 size={12} /></button>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        });
+                        return modelRows;
                       })}
                     </tbody>
                   </table>
