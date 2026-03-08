@@ -20243,19 +20243,28 @@ export default function StudiuAdminPage() {
 
               {/* ═══ INTERPRETARE SUB-TAB ═══ */}
               {predSubTab === "interpretare" && (() => {
-                // Compute statistics from predEvaluations + predKpis
+                // All evaluations with at least one score (regardless of completed_at)
+                const scoredEvals = predEvaluations.filter(e => e.score_r != null || e.score_i != null || e.score_f != null);
+                const totalScoredEvals = scoredEvals.length;
+
+                // Campaigns that have at least 1 scored evaluation
+                const campaignsWithEvals = predCampaigns.filter(c =>
+                  scoredEvals.some(e => e.campaign_id === c.id)
+                );
+
+                // Campaigns with 2 evaluators (for ICC)
                 const completedPairs = predCampaigns.filter(c => {
-                  const evs = predEvaluations.filter(e => e.campaign_id === c.id && e.completed_at);
+                  const evs = scoredEvals.filter(e => e.campaign_id === c.id);
                   return evs.length >= 2;
                 });
 
-                // Per-dimension ICC
+                // Per-dimension ICC (requires pairs)
                 const dimensions = ["r", "i", "f", "cta", "c"] as const;
                 const iccResults = dimensions.map(dim => {
                   const pairs: [number, number][] = [];
                   for (const camp of completedPairs) {
-                    const ev1 = predEvaluations.find(e => e.campaign_id === camp.id && e.evaluator_number === 1 && e.completed_at);
-                    const ev2 = predEvaluations.find(e => e.campaign_id === camp.id && e.evaluator_number === 2 && e.completed_at);
+                    const ev1 = scoredEvals.find(e => e.campaign_id === camp.id && e.evaluator_number === 1);
+                    const ev2 = scoredEvals.find(e => e.campaign_id === camp.id && e.evaluator_number === 2);
                     if (ev1 && ev2) {
                       const key = `score_${dim}` as keyof PredEvaluation;
                       const v1 = ev1[key] as number | null;
@@ -20267,14 +20276,14 @@ export default function StudiuAdminPage() {
                   return { dim: dim.toUpperCase(), ...result, n: pairs.length, level: _iccLevel(result.icc) };
                 });
 
-                // C vs KPI correlations
+                // C vs KPI correlations (uses all campaigns with evals + KPIs)
                 const kpiCorrelations: { kpiName: string; r: number; r2: number; p: number; n: number; verdict: string; color: string }[] = [];
                 const kpiNames = Array.from(new Set(predKpis.map(k => k.kpi_name)));
                 for (const kpiName of kpiNames) {
                   const cScores: number[] = [];
                   const kpiValues: number[] = [];
-                  for (const camp of completedPairs) {
-                    const evs = predEvaluations.filter(e => e.campaign_id === camp.id && e.completed_at);
+                  for (const camp of campaignsWithEvals) {
+                    const evs = scoredEvals.filter(e => e.campaign_id === camp.id);
                     const avgC = evs.reduce((s, e) => s + (e.score_c || 0), 0) / Math.max(evs.length, 1);
                     const kpi = predKpis.find(k => k.evaluation_id === evs[0]?.id && k.kpi_name === kpiName);
                     if (kpi && avgC > 0) {
@@ -20292,15 +20301,15 @@ export default function StudiuAdminPage() {
                   }
                 }
 
-                // Per-channel breakdown
+                // Per-channel breakdown (uses all scored evaluations)
                 const channels = Array.from(new Set(predCampaigns.map(c => c.channel)));
                 const channelStats = channels.map(ch => {
-                  const camps = completedPairs.filter(c => c.channel === ch);
-                  const allEvs = camps.flatMap(c => predEvaluations.filter(e => e.campaign_id === c.id && e.completed_at));
+                  const camps = predCampaigns.filter(c => c.channel === ch);
+                  const allEvs = camps.flatMap(c => scoredEvals.filter(e => e.campaign_id === c.id));
                   const avg = (arr: (number | null)[]) => { const valid = arr.filter((v): v is number => v != null); return valid.length ? valid.reduce((s, v) => s + v, 0) / valid.length : 0; };
                   return {
                     channel: ch,
-                    n: camps.length,
+                    n: allEvs.length,
                     avgR: avg(allEvs.map(e => e.score_r)),
                     avgI: avg(allEvs.map(e => e.score_i)),
                     avgF: avg(allEvs.map(e => e.score_f)),
@@ -20309,8 +20318,8 @@ export default function StudiuAdminPage() {
                   };
                 });
 
-                // Gate analysis (R<3 vs R>=3)
-                const gateEvs = predEvaluations.filter(e => e.completed_at && e.score_r != null);
+                // Gate analysis (R<3 vs R>=3) — uses all scored evaluations
+                const gateEvs = scoredEvals.filter(e => e.score_r != null);
                 const gateLow = gateEvs.filter(e => (e.score_r || 0) < 3);
                 const gateHigh = gateEvs.filter(e => (e.score_r || 0) >= 3);
                 const avgKpi = (evs: PredEvaluation[]) => {
@@ -20322,13 +20331,14 @@ export default function StudiuAdminPage() {
                   <div>
                     <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 4px" }}>Validare Predictiva — Interpretare</h2>
                     <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 20 }}>
-                      {completedPairs.length} campanii cu evaluari complete din {predCampaigns.length} total | {activeCompanies.length} companii
+                      {totalScoredEvals} evaluari cu scoruri ({completedPairs.length} perechi complete) din {predCampaigns.length} campanii | {activeCompanies.length} companii
                     </p>
 
                     {completedPairs.length < 5 && (
                       <div style={{ padding: "16px 20px", background: "#fef3c7", borderRadius: 8, border: "1px solid #fbbf24", marginBottom: 20 }}>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "#92400e" }}>
-                          Minimum 5 campanii cu evaluari complete necesare pentru analize statistice. Progres actual: {completedPairs.length}/5
+                          Minimum 5 perechi de evaluari (2 evaluatori/campanie) necesare pentru analize ICC/corelatie. Progres perechi: {completedPairs.length}/5.
+                          {totalScoredEvals > 0 && ` Datele descriptive (canal, gate) sunt afisate din ${totalScoredEvals} evaluari disponibile.`}
                         </span>
                       </div>
                     )}
