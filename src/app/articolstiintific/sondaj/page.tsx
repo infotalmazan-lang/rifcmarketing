@@ -1524,7 +1524,7 @@ export default function StudiuAdminPage() {
       if (campData.success) setPredCampaigns(campData.campaigns);
       if (evalData.success) setPredEvaluations(evalData.evaluations);
       if (kpiData.success) setPredKpis(kpiData.kpis);
-    } catch { /* ignore */ }
+    } catch { /* tables may not exist yet — that's OK */ }
     setPredLoading(false);
   }, []);
 
@@ -20298,6 +20298,7 @@ export default function StudiuAdminPage() {
                     avgR: avg(allEvs.map(e => e.score_r)),
                     avgI: avg(allEvs.map(e => e.score_i)),
                     avgF: avg(allEvs.map(e => e.score_f)),
+                    avgCta: avg(allEvs.map(e => e.score_cta)),
                     avgC: avg(allEvs.map(e => e.score_c)),
                   };
                 });
@@ -20404,6 +20405,7 @@ export default function StudiuAdminPage() {
                                 <th style={thStyle}>R avg</th>
                                 <th style={thStyle}>I avg</th>
                                 <th style={thStyle}>F avg</th>
+                                <th style={{ ...thStyle, color: "#059669" }}>CTA avg</th>
                                 <th style={thStyle}>C avg</th>
                               </tr>
                             </thead>
@@ -20415,6 +20417,7 @@ export default function StudiuAdminPage() {
                                   <td style={tdStyle}>{row.avgR.toFixed(2)}</td>
                                   <td style={tdStyle}>{row.avgI.toFixed(2)}</td>
                                   <td style={tdStyle}>{row.avgF.toFixed(2)}</td>
+                                  <td style={{ ...tdStyle, color: "#059669" }}>{row.avgCta.toFixed(2)}</td>
                                   <td style={{ ...tdStyle, fontWeight: 700, color: "#0891B2" }}>{row.avgC.toFixed(2)}</td>
                                 </tr>
                               ))}
