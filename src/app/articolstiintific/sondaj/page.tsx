@@ -1709,18 +1709,30 @@ export default function StudiuAdminPage() {
     if (!predCompanyForm.name.trim()) return;
     setPredSaving(true);
     try {
-      const res = await fetch("/api/survey/predictive/companies", {
+      let res = await fetch("/api/survey/predictive/companies", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(predCompanyForm),
       });
-      const data = await res.json();
+      let data = await res.json();
+      // Auto-migrate: if table doesn't exist, create it and retry
+      if (!data.success && data.error && (data.error.includes("42P01") || data.error.includes("does not exist") || data.error.includes("relation"))) {
+        await fetch("/api/survey/migrate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ migration: "023" }) });
+        res = await fetch("/api/survey/predictive/companies", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(predCompanyForm),
+        });
+        data = await res.json();
+      }
       if (data.success) {
         setShowAddCompany(false);
         setPredCompanyForm({ name: "", industry: "Altele", contact_name: "", contact_email: "", notes: "" });
         fetchPredData();
+      } else {
+        alert(`Eroare la salvare: ${data.error || "Eroare necunoscuta"}`);
       }
-    } catch { /* ignore */ }
+    } catch { alert("Eroare de rețea la salvare companie"); }
     setPredSaving(false);
   };
 
@@ -1744,8 +1756,10 @@ export default function StudiuAdminPage() {
         setShowAddCampaign(null);
         setPredCampaignForm({ name: "", channel: "", campaign_type: "", period_start: "", period_end: "", budget_eur: "", creative_image_url: "", creative_link: "", admin_notes: "" });
         fetchPredData();
+      } else {
+        alert(`Eroare la salvare campanie: ${data.error || "Eroare necunoscuta"}`);
       }
-    } catch { /* ignore */ }
+    } catch { alert("Eroare de rețea la salvare campanie"); }
     setPredSaving(false);
   };
 
@@ -20803,6 +20817,16 @@ const S: Record<string, React.CSSProperties> = {
     borderRadius: 6,
     background: "#fff",
     color: "#111827",
+  },
+  input: {
+    padding: "9px 12px",
+    fontSize: 14,
+    border: "1px solid #d1d5db",
+    borderRadius: 6,
+    background: "#fff",
+    color: "#111827",
+    outline: "none",
+    width: "100%",
   },
   colorPicker: {
     width: 32,
