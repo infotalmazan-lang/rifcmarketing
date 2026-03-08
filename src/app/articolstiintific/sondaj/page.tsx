@@ -1969,7 +1969,7 @@ export default function StudiuAdminPage() {
       if (data.success) {
         setShowAddAi(false);
         setAiEditId(null);
-        setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" });
+        setAiForm(prev => ({ stimulus_id: prev.stimulus_id, model_name: prev.model_name, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }));
         fetchAiEvals();
       } else {
         alert("Eroare la salvare: " + (data.error || "Necunoscuta"));
@@ -19799,7 +19799,7 @@ export default function StudiuAdminPage() {
                     </button>
                   ))}
                 </div>
-                <button style={{ ...S.addCatBtn, background: "#7C3AED" }} onClick={() => { setAiEditId(null); setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }); setShowAddAi(true); setAiSubTab("main"); }}>
+                <button style={{ ...S.addCatBtn, background: "#7C3AED" }} onClick={() => { setAiEditId(null); setAiForm(prev => ({ ...prev, stimulus_id: prev.stimulus_id, model_name: prev.model_name || "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" })); setShowAddAi(true); setAiSubTab("main"); }}>
                   <Plus size={16} />
                   ADAUGA EVALUARE AI
                 </button>
@@ -19818,7 +19818,7 @@ export default function StudiuAdminPage() {
                   {/* RUN tabs */}
                   <div style={{ display: "flex", gap: 4 }}>
                     {(["run1", "run2", "run3"] as const).map((run, i) => (
-                      <button key={run} onClick={() => { setAiRunTab(run); setAiEditId(null); setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: run, justification: "" }); }} style={{
+                      <button key={run} onClick={() => { setAiRunTab(run); setAiEditId(null); setAiForm(prev => ({ ...prev, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: run, justification: "" })); }} style={{
                         padding: "5px 14px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 1,
                         background: aiRunTab === run ? "#7C3AED" : "#f3f4f6",
                         color: aiRunTab === run ? "#fff" : "#6B7280",
