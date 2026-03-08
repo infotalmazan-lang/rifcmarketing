@@ -121,6 +121,9 @@ function ExpertPageContent() {
   // Current stimulus being evaluated
   const [activeStimulus, setActiveStimulus] = useState<string | null>(null);
 
+  // Wizard step for progressive scoring (0-4 = C,R,I,F,CTA dimensions, 5 = Brand + Submit)
+  const [wizardStep, setWizardStep] = useState(0);
+
   // Form state per stimulus
   const [forms, setForms] = useState<Record<string, {
     r_score: number; i_score: number; f_score: number; c_score: number; cta_score: number;
@@ -631,9 +634,7 @@ function ExpertPageContent() {
     if (!form) return false;
     // All 5 scores must be selected (> 0)
     if (!form.r_score || !form.i_score || !form.f_score || !form.c_score || !form.cta_score) return false;
-    // CFA mode: scores only, no justification requirement
-    if (expert?.panel_type === "cfa") return true;
-    // EFA mode: all 5 justifications must have MIN_JUSTIFICATION_CHARS characters
+    // Both CFA and EFA require justifications per OSF protocol
     if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
     if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
     if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) return false;
@@ -651,13 +652,12 @@ function ExpertPageContent() {
     if (!form.i_score) missing.push("Scor I (Interes)");
     if (!form.f_score) missing.push("Scor F (Forma)");
     if (!form.cta_score) missing.push("Scor CTA");
-    if (expert?.panel_type !== "cfa") {
-      if ((form.c_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare C (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-      if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare R (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-      if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare I (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-      if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare F (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-      if ((form.cta_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare CTA (min ${MIN_JUSTIFICATION_CHARS} car.)`);
-    }
+    if ((form.c_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare C (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.r_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare R (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.i_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare I (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.f_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare F (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+    if ((form.cta_justification || "").length < MIN_JUSTIFICATION_CHARS) missing.push(`Justificare CTA (min ${MIN_JUSTIFICATION_CHARS} car.)`);
+
     return missing;
   };
 
@@ -665,6 +665,7 @@ function ExpertPageContent() {
   const navigateToStimulus = (targetStimId: string) => {
     if (!activeStimulus || activeStimulus === targetStimId) {
       setActiveStimulus(targetStimId);
+      setWizardStep(isCompleted(targetStimId) ? 5 : 0);
       return;
     }
     const currentForm = forms[activeStimulus];
@@ -673,6 +674,7 @@ function ExpertPageContent() {
     const isSaved = isCompleted(activeStimulus);
     if (isUntouched || isSaved || isFormValid(activeStimulus)) {
       setActiveStimulus(targetStimId);
+      setWizardStep(isCompleted(targetStimId) ? 5 : 0);
     } else {
       // Show alert with missing fields
       const missing = getValidationMissing(activeStimulus);
@@ -1287,7 +1289,7 @@ function ExpertPageContent() {
                 {/* Media preview */}
                 {activeStim.image_url && (
                   <div style={{ marginBottom: 12, borderRadius: 8, overflow: "hidden" }}>
-                    <img src={activeStim.image_url} alt={activeStim.name} style={{ width: "100%", maxHeight: 400, objectFit: "contain", background: "#f3f4f6" }} />
+                    <img src={activeStim.image_url} alt={activeStim.name} style={{ width: "100%", maxHeight: 280, objectFit: "contain", background: "#f3f4f6" }} />
                   </div>
                 )}
                 {activeStim.video_url && (
@@ -1323,11 +1325,33 @@ function ExpertPageContent() {
                 )}
               </div>
 
-              {/* Calculator / Scoring section */}
+              {/* Calculator / Scoring section — Wizard Stepper */}
+              {(() => {
+                const editMode = isCompleted(activeStim.id);
+                const isStepValid = (idx: number) => {
+                  const d = DIMENSIONS[idx];
+                  const sc = activeForm[`${d.key}_score` as keyof typeof activeForm] as number;
+                  const jl = ((activeForm[`${d.key}_justification` as keyof typeof activeForm] as string) || "").length;
+                  return sc > 0 && jl >= MIN_JUSTIFICATION_CHARS;
+                };
+                const allDimsValid = DIMENSIONS.every((_, i) => isStepValid(i));
+                const stepLabels = [...DIMENSIONS.map(d => d.label), "✓"];
+                const stepColors = [...DIMENSIONS.map(d => d.color), "#059669"];
+
+                return (
               <div className="expert-scoring" style={P.scoringSection}>
+                {/* Title */}
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 16, textTransform: "uppercase" }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: "middle", marginRight: 6 }}><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
-                  {expert?.panel_type === "cfa" ? "Calculator R IF C — CFA" : "Calculator R IF C"}
+                  Calculator R IF C
+                </div>
+
+                {/* INFO block — marketing perspective */}
+                <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 8 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                  <span style={{ fontSize: 12, color: "#9a3412", lineHeight: 1.5 }}>
+                    Evalueaza fiecare dimensiune din perspectiva unui <strong>specialist in marketing</strong>, NU ca si consumator. Analizeaza calitatea strategiei si executiei, nu preferintele tale personale.
+                  </span>
                 </div>
 
                 {/* Formula display */}
@@ -1345,25 +1369,90 @@ function ExpertPageContent() {
                   </span>
                 </div>
 
-                {/* Score dimensions */}
-                {DIMENSIONS.map((dim) => {
+                {/* Step indicator */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: 20 }}>
+                  {stepLabels.map((label, i) => {
+                    const isDone = i < 5 ? isStepValid(i) : allDimsValid;
+                    const isActive = wizardStep === i && !editMode;
+                    const isLocked = i > wizardStep && !editMode && !isDone;
+                    return (
+                      <div key={i} style={{ display: "flex", alignItems: "center" }}>
+                        <div
+                          onClick={() => { if (editMode || isDone || i <= wizardStep) setWizardStep(i); }}
+                          style={{
+                            width: 30, height: 30, borderRadius: "50%",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 700, cursor: isLocked ? "not-allowed" : "pointer",
+                            background: isDone ? "#059669" : isActive ? stepColors[i] : "#e5e7eb",
+                            color: isDone || isActive ? "#fff" : isLocked ? "#d1d5db" : "#6B7280",
+                            border: isActive ? `2px solid ${stepColors[i]}` : "2px solid transparent",
+                            transition: "all 0.2s",
+                          }}
+                        >{isDone && i < 5 ? "✓" : label}</div>
+                        {i < stepLabels.length - 1 && (
+                          <div style={{ width: 20, height: 2, background: isDone ? "#059669" : "#e5e7eb" }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Wizard dimension steps */}
+                {DIMENSIONS.map((dim, idx) => {
                   const scoreKey = `${dim.key}_score` as keyof typeof activeForm;
                   const justKey = `${dim.key}_justification` as keyof typeof activeForm;
                   const score = activeForm[scoreKey] as number;
                   const justText = (activeForm[justKey] as string) || "";
                   const justLen = justText.length;
                   const justValid = justLen >= MIN_JUSTIFICATION_CHARS;
+                  const stepDone = score > 0 && justValid;
+                  const isActive = (wizardStep === idx && !editMode) || editMode;
+                  const isLocked = idx > wizardStep && !editMode && !stepDone;
+
+                  // Locked step — collapsed, greyed out
+                  if (isLocked) {
+                    return (
+                      <div key={dim.key} style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", opacity: 0.4, cursor: "not-allowed" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ ...P.dimBadge, background: "#d1d5db" }}>{dim.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#9CA3AF" }}>{dim.full}</span>
+                          </div>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: "#d1d5db" }}>—</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Completed step (not active) — collapsed, clickable to reopen
+                  if (stepDone && wizardStep !== idx && !editMode) {
+                    return (
+                      <div key={dim.key} onClick={() => setWizardStep(idx)} style={{ padding: "12px 16px", borderBottom: "1px solid #f3f4f6", cursor: "pointer", borderLeft: `3px solid ${dim.color}`, background: "#f9fafb", transition: "all 0.15s" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ ...P.dimBadge, background: dim.color }}>{dim.label}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{dim.full}</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                          </div>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: dim.color }}>{score}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Active step — full interactive form
                   return (
-                    <div key={dim.key} style={P.dimBlock}>
+                    <div key={dim.key} style={{ padding: "16px", borderBottom: "1px solid #f3f4f6", borderLeft: editMode ? "none" : `3px solid ${dim.color}`, background: editMode ? "transparent" : "#fefce8", transition: "all 0.2s" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ ...P.dimBadge, background: dim.color }}>{dim.label}</span>
                           <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{dim.full}</span>
+                          {!editMode && <span style={{ fontSize: 10, fontWeight: 700, color: dim.color, background: `${dim.color}15`, padding: "2px 8px", borderRadius: 4 }}>PASUL {idx + 1} / 5</span>}
                         </div>
                         <span style={{ fontSize: 24, fontWeight: 800, color: score ? dim.color : "#d1d5db" }}>{score || "—"}</span>
                       </div>
-                      <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 8px" }}>{dim.desc}</p>
-                      {/* Number buttons only — no slider */}
+                      <p style={{ fontSize: 12, color: "#6B7280", margin: "0 0 10px" }}>{dim.desc}</p>
+                      {/* Score buttons */}
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         {[1,2,3,4,5,6,7,8,9,10].map((n) => (
                           <button
@@ -1380,8 +1469,7 @@ function ExpertPageContent() {
                           >{n}</button>
                         ))}
                       </div>
-                      {/* Justification with character counter — hidden for CFA */}
-                      {expert?.panel_type !== "cfa" && (
+                      {/* Justification */}
                       <div style={{ position: "relative", marginTop: 8 }}>
                         <textarea
                           value={justText}
@@ -1393,151 +1481,150 @@ function ExpertPageContent() {
                             borderColor: justLen > 0 && !justValid ? "#fbbf24" : justValid ? "#059669" : "#e5e7eb",
                           }}
                         />
-                        <div style={{
-                          display: "flex", justifyContent: "flex-end", marginTop: 2,
-                          fontSize: 10, fontWeight: 600,
-                          color: justValid ? "#059669" : justLen > 0 ? "#D97706" : "#9CA3AF",
-                        }}>
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2, fontSize: 10, fontWeight: 600, color: justValid ? "#059669" : justLen > 0 ? "#D97706" : "#9CA3AF" }}>
                           {justLen}/{MIN_JUSTIFICATION_CHARS} caractere
                           {justValid && <span style={{ marginLeft: 4 }}>✓</span>}
                         </div>
                       </div>
+                      {/* Next / Back buttons (wizard mode only) */}
+                      {!editMode && (
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12 }}>
+                          {idx > 0 ? (
+                            <button onClick={() => setWizardStep(idx - 1)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                              ← INAPOI
+                            </button>
+                          ) : <div />}
+                          <button
+                            onClick={() => { if (stepDone) setWizardStep(idx + 1); }}
+                            disabled={!stepDone}
+                            style={{
+                              padding: "8px 20px", borderRadius: 6, border: "none",
+                              background: stepDone ? dim.color : "#e5e7eb",
+                              color: stepDone ? "#fff" : "#9CA3AF",
+                              fontSize: 12, fontWeight: 700,
+                              cursor: stepDone ? "pointer" : "not-allowed",
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {idx < 4 ? "URMATORUL →" : "FINALIZEAZA →"}
+                          </button>
+                        </div>
                       )}
                     </div>
                   );
                 })}
 
-                {/* Brand familiarity */}
-                <div style={P.dimBlock}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <span style={{ ...P.dimBadge, background: "#111827" }}>B</span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Recunoastere Brand</span>
-                  </div>
-                  <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 12px" }}>Recunosti brand-ul care a creat acest material?</p>
-                  <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-                    <button
-                      onClick={() => updateForm(activeStim.id, "brand_familiar", true)}
-                      style={{
-                        ...P.brandBtn,
-                        background: activeForm.brand_familiar === true ? "#059669" : "#f3f4f6",
-                        color: activeForm.brand_familiar === true ? "#fff" : "#374151",
-                      }}
-                    >Da, recunosc</button>
-                    <button
-                      onClick={() => updateForm(activeStim.id, "brand_familiar", false)}
-                      style={{
-                        ...P.brandBtn,
-                        background: activeForm.brand_familiar === false ? "#DC2626" : "#f3f4f6",
-                        color: activeForm.brand_familiar === false ? "#fff" : "#374151",
-                      }}
-                    >Nu recunosc</button>
-                  </div>
-                  {expert?.panel_type !== "cfa" && (
-                  <textarea
-                    value={activeForm.brand_justification}
-                    onChange={(e) => updateForm(activeStim.id, "brand_justification", e.target.value)}
-                    placeholder="Comentariu brand..."
-                    rows={2}
-                    style={P.textarea}
-                  />
-                  )}
-                </div>
+                {/* Brand + Notes + Save — shown at step 5 or in edit mode */}
+                {(wizardStep >= 5 || editMode) && (
+                  <>
+                    {/* Brand familiarity */}
+                    <div style={P.dimBlock}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <span style={{ ...P.dimBadge, background: "#111827" }}>B</span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Recunoastere Brand</span>
+                        <span style={{ fontSize: 10, color: "#9CA3AF" }}>(optional)</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: "#9CA3AF", margin: "0 0 12px" }}>Recunosti brand-ul care a creat acest material?</p>
+                      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                        <button onClick={() => updateForm(activeStim.id, "brand_familiar", true)} style={{ ...P.brandBtn, background: activeForm.brand_familiar === true ? "#059669" : "#f3f4f6", color: activeForm.brand_familiar === true ? "#fff" : "#374151" }}>Da, recunosc</button>
+                        <button onClick={() => updateForm(activeStim.id, "brand_familiar", false)} style={{ ...P.brandBtn, background: activeForm.brand_familiar === false ? "#DC2626" : "#f3f4f6", color: activeForm.brand_familiar === false ? "#fff" : "#374151" }}>Nu recunosc</button>
+                      </div>
+                      <textarea value={activeForm.brand_justification} onChange={(e) => updateForm(activeStim.id, "brand_justification", e.target.value)} placeholder="Comentariu brand..." rows={2} style={P.textarea} />
+                    </div>
 
-                {/* Notes — hidden for CFA */}
-                {expert?.panel_type !== "cfa" && (
-                <div style={P.dimBlock}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Note suplimentare</span>
-                  </div>
-                  <textarea
-                    value={activeForm.notes}
-                    onChange={(e) => updateForm(activeStim.id, "notes", e.target.value)}
-                    placeholder="Observatii generale, recomandari, comentarii..."
-                    rows={3}
-                    style={P.textarea}
-                  />
-                </div>
+                    {/* Notes */}
+                    <div style={P.dimBlock}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>Note suplimentare</span>
+                        <span style={{ fontSize: 10, color: "#9CA3AF" }}>(optional)</span>
+                      </div>
+                      <textarea value={activeForm.notes} onChange={(e) => updateForm(activeStim.id, "notes", e.target.value)} placeholder="Observatii generale, recomandari, comentarii..." rows={3} style={P.textarea} />
+                    </div>
+
+                    {/* Back button (wizard mode) */}
+                    {!editMode && (
+                      <div style={{ marginTop: 8 }}>
+                        <button onClick={() => setWizardStep(4)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>
+                          ← INAPOI LA CTA
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Validation summary */}
+                    {(() => {
+                      const missing = getValidationMissing(activeStim.id);
+                      if (missing.length === 0) return null;
+                      return (
+                        <div style={{ marginTop: 16, padding: "12px 16px", background: "#fffbeb", borderRadius: 10, border: "1px solid #fbbf24" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                            Lipsesc {missing.length} campuri obligatorii:
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                            {missing.map((m, i) => (
+                              <span key={i} style={{ fontSize: 10, padding: "2px 8px", background: "#fef3c7", borderRadius: 4, color: "#92400e" }}>{m}</span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Save button + autosave status */}
+                    <div style={{ marginTop: 20, padding: "16px 20px", background: isFormValid(activeStim.id) ? "#f0fdf4" : "#f9fafb", borderRadius: 10, border: `2px solid ${isFormValid(activeStim.id) ? "#059669" : "#d1d5db"}` }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, fontSize: 12 }}>
+                        {autoSaveStatus[activeStim.id] === "saved" && (
+                          <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669", display: "inline-block" }} /><span style={{ color: "#059669", fontWeight: 600 }}>Salvat pe server</span></>
+                        )}
+                        {autoSaveStatus[activeStim.id] === "saving" && (
+                          <><div style={{ width: 10, height: 10, border: "2px solid #D97706", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", display: "inline-block" }} /><span style={{ color: "#D97706", fontWeight: 600 }}>Se salveaza automat...</span></>
+                        )}
+                        {autoSaveStatus[activeStim.id] === "draft" && (
+                          <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#D97706", display: "inline-block" }} /><span style={{ color: "#D97706", fontWeight: 600 }}>Draft nesalvat (salvat local, se trimite in 3s...)</span></>
+                        )}
+                        {autoSaveStatus[activeStim.id] === "error" && (
+                          <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#DC2626", display: "inline-block" }} /><span style={{ color: "#DC2626", fontWeight: 600 }}>Eroare salvare — datele sunt salvate local, apasa butonul pentru a retrimite</span></>
+                        )}
+                        {!autoSaveStatus[activeStim.id] && (
+                          <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9CA3AF", display: "inline-block" }} /><span style={{ color: "#9CA3AF" }}>Nesalvat</span></>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => saveEvaluation(activeStim.id)}
+                        disabled={saving || !isFormValid(activeStim.id)}
+                        style={{
+                          ...P.saveBtn, width: "100%", padding: "14px 24px", fontSize: 15, fontWeight: 800,
+                          opacity: (saving || !isFormValid(activeStim.id)) ? 0.5 : 1,
+                          cursor: !isFormValid(activeStim.id) ? "not-allowed" : "pointer",
+                        }}
+                      >
+                        {saving ? (
+                          <div style={{ width: 18, height: 18, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        )}
+                        {saving ? "SE SALVEAZA..." : isCompleted(activeStim.id) ? "ACTUALIZEAZA EVALUAREA" : "TRIMITE EVALUAREA"}
+                      </button>
+                      {saveSuccess === activeStim.id && (
+                        <div style={{ marginTop: 8, padding: "8px 12px", background: "#dcfce7", borderRadius: 6, textAlign: "center", fontSize: 13, color: "#059669", fontWeight: 700 }}>
+                          Salvat cu succes pe server!
+                        </div>
+                      )}
+                      {saveError && (
+                        <div style={{ marginTop: 8, padding: "8px 12px", background: "#fef2f2", borderRadius: 6, textAlign: "center", fontSize: 12, color: "#DC2626", fontWeight: 600 }}>
+                          {saveError}
+                        </div>
+                      )}
+                      <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280", textAlign: "center" }}>
+                        {isFormValid(activeStim.id)
+                          ? "Datele se salveaza automat dupa 3 secunde. Apasa butonul pentru salvare imediata."
+                          : "Completeaza toate scorurile si justificarile (min 40 car.) pentru a salva. Brand si Note sunt optionale."}
+                      </div>
+                    </div>
+                  </>
                 )}
-
-                {/* Validation summary */}
-                {(() => {
-                  const missing = getValidationMissing(activeStim.id);
-                  if (missing.length === 0) return null;
-                  return (
-                    <div style={{ marginTop: 16, padding: "12px 16px", background: "#fffbeb", borderRadius: 10, border: "1px solid #fbbf24" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#92400e", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>
-                        Lipsesc {missing.length} campuri obligatorii:
-                      </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {missing.map((m, i) => (
-                          <span key={i} style={{ fontSize: 10, padding: "2px 8px", background: "#fef3c7", borderRadius: 4, color: "#92400e" }}>{m}</span>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Save button + autosave status */}
-                <div style={{ marginTop: 20, padding: "16px 20px", background: isFormValid(activeStim.id) ? "#f0fdf4" : "#f9fafb", borderRadius: 10, border: `2px solid ${isFormValid(activeStim.id) ? "#059669" : "#d1d5db"}` }}>
-                  {/* Autosave status indicator */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, fontSize: 12 }}>
-                    {autoSaveStatus[activeStim.id] === "saved" && (
-                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#059669", display: "inline-block" }} /><span style={{ color: "#059669", fontWeight: 600 }}>Salvat pe server</span></>
-                    )}
-                    {autoSaveStatus[activeStim.id] === "saving" && (
-                      <><div style={{ width: 10, height: 10, border: "2px solid #D97706", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", display: "inline-block" }} /><span style={{ color: "#D97706", fontWeight: 600 }}>Se salveaza automat...</span></>
-                    )}
-                    {autoSaveStatus[activeStim.id] === "draft" && (
-                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#D97706", display: "inline-block" }} /><span style={{ color: "#D97706", fontWeight: 600 }}>Draft nesalvat (salvat local, se trimite in 3s...)</span></>
-                    )}
-                    {autoSaveStatus[activeStim.id] === "error" && (
-                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#DC2626", display: "inline-block" }} /><span style={{ color: "#DC2626", fontWeight: 600 }}>Eroare salvare — datele sunt salvate local, apasa butonul pentru a retrimite</span></>
-                    )}
-                    {!autoSaveStatus[activeStim.id] && (
-                      <><span style={{ width: 8, height: 8, borderRadius: "50%", background: "#9CA3AF", display: "inline-block" }} /><span style={{ color: "#9CA3AF" }}>Nesalvat</span></>
-                    )}
-                  </div>
-                  {/* Big save button */}
-                  <button
-                    onClick={() => saveEvaluation(activeStim.id)}
-                    disabled={saving || !isFormValid(activeStim.id)}
-                    style={{
-                      ...P.saveBtn,
-                      width: "100%",
-                      padding: "14px 24px",
-                      fontSize: 15,
-                      fontWeight: 800,
-                      opacity: (saving || !isFormValid(activeStim.id)) ? 0.5 : 1,
-                      cursor: !isFormValid(activeStim.id) ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {saving ? (
-                      <div style={{ width: 18, height: 18, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                    ) : (
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    )}
-                    {saving ? "SE SALVEAZA..." : isCompleted(activeStim.id) ? "ACTUALIZEAZA EVALUAREA" : "SALVEAZA EVALUAREA"}
-                  </button>
-                  {saveSuccess === activeStim.id && (
-                    <div style={{ marginTop: 8, padding: "8px 12px", background: "#dcfce7", borderRadius: 6, textAlign: "center", fontSize: 13, color: "#059669", fontWeight: 700 }}>
-                      Salvat cu succes pe server!
-                    </div>
-                  )}
-                  {saveError && (
-                    <div style={{ marginTop: 8, padding: "8px 12px", background: "#fef2f2", borderRadius: 6, textAlign: "center", fontSize: 12, color: "#DC2626", fontWeight: 600 }}>
-                      {saveError}
-                    </div>
-                  )}
-                  <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280", textAlign: "center" }}>
-                    {isFormValid(activeStim.id)
-                      ? "Datele se salveaza automat dupa 3 secunde. Apasa butonul pentru salvare imediata."
-                      : expert?.panel_type === "cfa"
-                        ? "Completeaza toate scorurile (C, R, I, F, CTA) pentru a salva. Brand este optional."
-                        : "Completeaza toate scorurile si justificarile (min 40 car.) pentru a salva. Brand si Note sunt optionale."}
-                  </div>
-                </div>
               </div>
+                );
+              })()}
             </>
           ) : (
             <div style={{ textAlign: "center", padding: 60, color: "#9CA3AF" }}>
@@ -1769,6 +1856,9 @@ const P: Record<string, React.CSSProperties> = {
     border: "1px solid #e5e7eb",
     padding: 24,
     marginBottom: 20,
+    position: "sticky" as const,
+    top: 10,
+    zIndex: 10,
   },
   scoringSection: {
     background: "#fff",
