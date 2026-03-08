@@ -1753,13 +1753,19 @@ export default function StudiuAdminPage() {
   };
 
   const savePredCampaign = async (companyId: string) => {
-    if (!predCampaignForm.name.trim() || !predCampaignForm.channel || !predCampaignForm.campaign_type) return;
+    if (!predCampaignForm.name.trim()) { alert("Numele campaniei este obligatoriu."); return; }
     setPredSaving(true);
     try {
       const res = await fetch("/api/survey/predictive/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...predCampaignForm, company_id: companyId, budget_eur: predCampaignForm.budget_eur ? Number(predCampaignForm.budget_eur) : null }),
+        body: JSON.stringify({
+          ...predCampaignForm,
+          company_id: companyId,
+          channel: predCampaignForm.channel || "Nedefinit",
+          campaign_type: predCampaignForm.campaign_type || "General",
+          budget_eur: predCampaignForm.budget_eur ? Number(predCampaignForm.budget_eur) : null,
+        }),
       });
       const data = await res.json();
       if (data.success) {

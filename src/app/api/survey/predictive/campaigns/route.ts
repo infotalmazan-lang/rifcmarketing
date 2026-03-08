@@ -72,12 +72,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { company_id, name, channel, campaign_type, period_start, period_end, budget_eur, creative_image_url, creative_link, admin_notes, paired_campaign_id } = body;
 
-    if (!company_id || !name || !channel || !campaign_type) {
-      return NextResponse.json({ error: "company_id, name, channel, campaign_type required" }, { status: 400 });
+    if (!company_id || !name) {
+      return NextResponse.json({ error: "company_id and name required" }, { status: 400 });
     }
 
     const insertData: Record<string, unknown> = {
-      company_id, name, channel, campaign_type,
+      company_id, name, channel: channel || "Nedefinit", campaign_type: campaign_type || "General",
       eval1_token: generateToken(),
       eval2_token: generateToken(),
     };
