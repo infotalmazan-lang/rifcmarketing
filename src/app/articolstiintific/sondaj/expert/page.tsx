@@ -1346,26 +1346,37 @@ function ExpertPageContent() {
                   Calculator R IF C
                 </div>
 
-                {/* INFO block — marketing perspective */}
-                <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 8 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                  <span style={{ fontSize: 12, color: "#9a3412", lineHeight: 1.5 }}>
-                    Evalueaza fiecare dimensiune din perspectiva unui <strong>specialist in marketing</strong>, NU ca si consumator. Analizeaza calitatea strategiei si executiei, nu preferintele tale personale.
-                  </span>
+                {/* INFO block — marketing perspective + guidance */}
+                <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8, padding: "12px 16px", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span style={{ fontSize: 12, color: "#9a3412", lineHeight: 1.6, fontWeight: 600 }}>
+                      Instructiuni pentru evaluare
+                    </span>
+                  </div>
+                  <ul style={{ fontSize: 11.5, color: "#9a3412", lineHeight: 1.7, margin: 0, paddingLeft: 24, listStyleType: "disc" }}>
+                    <li>Evalueaza din perspectiva unui <strong>specialist in marketing</strong>, NU ca si consumator. Analizeaza calitatea strategiei si executiei, nu preferintele personale.</li>
+                    <li>La <strong>CTA</strong> (Call-to-Action): evalueaza daca indeamna la actiune eficient — claritate, urgenta, vizibilitate, nu daca TU personal ai da click.</li>
+                    <li>Foloseste <strong>intreaga scala 1–10</strong> fara retineri. Nota 1 sau 10 sunt valide daca sunt justificate. Nu exista raspunsuri gresite.</li>
+                    <li>Exemplu de justificare buna: <em style={{ color: "#c2410c" }}>{'"'}Headline-ul este generic si nu diferentiaza brandul. Lipseste un beneficiu concret pentru audienta tinta. CTA-ul e vizibil dar nu creaza urgenta.{'"'}</em></li>
+                  </ul>
                 </div>
 
-                {/* Formula display */}
-                <div style={P.formulaBar}>
-                  <span style={{ color: "#DC2626", fontWeight: 800 }}>{activeForm.r_score || "—"}</span>
-                  <span style={{ color: "#9CA3AF" }}>+</span>
-                  <span style={{ color: "#D97706", fontWeight: 800 }}>{activeForm.i_score || "—"}</span>
-                  <span style={{ color: "#9CA3AF" }}>x</span>
-                  <span style={{ color: "#7C3AED", fontWeight: 800 }}>{activeForm.f_score || "—"}</span>
-                  <span style={{ color: "#9CA3AF" }}>=</span>
-                  <span style={{ fontSize: 24, fontWeight: 900, color: "#111827" }}>
+                {/* Formula compact — R + I × F = C */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 16px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 13, fontFamily: "JetBrains Mono, monospace", marginBottom: 20 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#DC2626", letterSpacing: 0.5 }}>R</span>
+                  <span style={{ color: "#DC2626", fontWeight: 700 }}>{activeForm.r_score || "·"}</span>
+                  <span style={{ color: "#9CA3AF", fontSize: 11 }}>+</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#D97706", letterSpacing: 0.5 }}>I</span>
+                  <span style={{ color: "#D97706", fontWeight: 700 }}>{activeForm.i_score || "·"}</span>
+                  <span style={{ color: "#9CA3AF", fontSize: 11 }}>×</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#7C3AED", letterSpacing: 0.5 }}>F</span>
+                  <span style={{ color: "#7C3AED", fontWeight: 700 }}>{activeForm.f_score || "·"}</span>
+                  <span style={{ color: "#9CA3AF", fontSize: 11 }}>=</span>
+                  <span style={{ fontWeight: 800, color: "#111827", fontSize: 15 }}>
                     {activeForm.r_score && activeForm.i_score && activeForm.f_score
                       ? activeForm.r_score + (activeForm.i_score * activeForm.f_score)
-                      : "—"}
+                      : "·"}
                   </span>
                 </div>
 
@@ -1870,14 +1881,14 @@ const P: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    padding: "16px 24px",
+    gap: 6,
+    padding: "8px 16px",
     background: "#f9fafb",
-    borderRadius: 10,
+    borderRadius: 8,
     border: "1px solid #e5e7eb",
-    fontSize: 18,
+    fontSize: 13,
     fontFamily: "JetBrains Mono, monospace",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   dimBlock: {
     padding: "16px 0",
