@@ -1983,6 +1983,7 @@ export default function StudiuAdminPage() {
 
   const startEditAi = (ev: AiEvaluation) => {
     setAiEditId(ev.id);
+    setAiSubTab("main");
     setAiRunTab((ev.prompt_version || "run1") as "run1" | "run2" | "run3");
     setAiForm({
       stimulus_id: ev.stimulus_id,
@@ -1995,6 +1996,10 @@ export default function StudiuAdminPage() {
       justification: typeof ev.justification === "object" && ev.justification?.text ? ev.justification.text : "",
     });
     setShowAddAi(true);
+    // Scroll to form after state update
+    setTimeout(() => {
+      document.getElementById("aiEvalForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
   };
 
   const deleteAiEval = async (id: string) => {
@@ -19804,7 +19809,7 @@ export default function StudiuAdminPage() {
             {aiSubTab === "main" && (<>
             {/* Add AI eval form */}
             {showAddAi && (
-              <div style={{ ...S.configCard, borderColor: "#7C3AED", borderWidth: 2, marginBottom: 20 }}>
+              <div id="aiEvalForm" style={{ ...S.configCard, borderColor: "#7C3AED", borderWidth: 2, marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <Bot size={16} style={{ color: "#7C3AED" }} />
