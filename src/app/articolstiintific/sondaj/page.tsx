@@ -5661,16 +5661,16 @@ export default function StudiuAdminPage() {
                 <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10, overflowX: "auto" as const }}>
                   {([
                     { key: "osf" as const, label: "OSF Statistic", color: "#059669" },
-                    { key: "itemi" as const, label: "1 Pas Itemi", color: "#6366f1" },
-                    { key: "cvi" as const, label: "2 Pas CVI Evaluare", color: "#DC2626" },
-                    { key: "pilot" as const, label: "3 Pas Pilot Testing", color: "#7C3AED" },
-                    { key: "efa" as const, label: "4 Pas EFA 2A", color: "#2563EB" },
-                    { key: "cfa" as const, label: "5 Pas CFA", color: "#EC4899" },
-                    { key: "consumatori" as const, label: "6 Consumatori 3000", color: "#F97316" },
+                    { key: "itemi" as const, label: "1 Itemi", color: "#6366f1" },
+                    { key: "cvi" as const, label: "2 CVI", color: "#DC2626" },
+                    { key: "pilot" as const, label: "3 Pilot", color: "#7C3AED" },
+                    { key: "efa" as const, label: "4 EFA", color: "#2563EB" },
+                    { key: "consumatori" as const, label: "5 Consumatori 3000", color: "#F97316" },
+                    { key: "cfa" as const, label: "6 CFA", color: "#EC4899" },
                     { key: "ai" as const, label: "7 AI Scoring", color: "#0EA5E9" },
-                    { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
-                    { key: "validare" as const, label: "8 Validare Predictiva", color: "#0891B2" },
+                    { key: "validare" as const, label: "8 Validare Predictivă", color: "#0891B2" },
                     { key: "focusGrupuri" as const, label: "9 Focus Grupuri", color: "#8B5CF6" },
+                    { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                   ] as const).map(t => (
                     <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
                       padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
@@ -6477,16 +6477,16 @@ export default function StudiuAdminPage() {
               <div style={{ display: "flex", gap: 6, marginBottom: 14, borderBottom: "2px solid #e5e7eb", paddingBottom: 10, overflowX: "auto" as const }}>
                 {([
                   { key: "osf" as const, label: "OSF Statistic", color: "#059669" },
-                  { key: "itemi" as const, label: "1 Pas Itemi", color: "#6366f1" },
-                  { key: "cvi" as const, label: "2 Pas CVI Evaluare", color: "#DC2626" },
-                  { key: "pilot" as const, label: "3 Pas Pilot Testing", color: "#7C3AED" },
-                  { key: "efa" as const, label: "4 Pas EFA 2A", color: "#2563EB" },
-                  { key: "cfa" as const, label: "5 Pas CFA", color: "#EC4899" },
-                  { key: "consumatori" as const, label: "6 Consumatori 3000", color: "#F97316" },
+                  { key: "itemi" as const, label: "1 Itemi", color: "#6366f1" },
+                  { key: "cvi" as const, label: "2 CVI", color: "#DC2626" },
+                  { key: "pilot" as const, label: "3 Pilot", color: "#7C3AED" },
+                  { key: "efa" as const, label: "4 EFA", color: "#2563EB" },
+                  { key: "consumatori" as const, label: "5 Consumatori 3000", color: "#F97316" },
+                  { key: "cfa" as const, label: "6 CFA", color: "#EC4899" },
                   { key: "ai" as const, label: "7 AI Scoring", color: "#0EA5E9" },
+                  { key: "validare" as const, label: "8 Validare Predictivă", color: "#0891B2" },
+                  { key: "focusGrupuri" as const, label: "9 Focus Grupuri", color: "#8B5CF6" },
                   { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
-                  { key: "validare" as const, label: "8 Validare Predictiva", color: "#0891B2" },
-                    { key: "focusGrupuri" as const, label: "9 Focus Grupuri", color: "#8B5CF6" },
                 ] as const).map(t => (
                   <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
                     padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
@@ -6512,7 +6512,7 @@ export default function StudiuAdminPage() {
               </div>}
 
 
-              {/* ═══ 1 Pas Itemi — RIFC Items table ═══ */}
+              {/* ═══ 1 Itemi — RIFC Items table ═══ */}
               {interpViewMode === "itemi" && (
                 <div>
                   <div style={{ marginBottom: 16 }}>
