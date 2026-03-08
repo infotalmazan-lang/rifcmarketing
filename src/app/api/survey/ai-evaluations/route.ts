@@ -59,13 +59,15 @@ export async function POST(req: NextRequest) {
     };
     if (cta_score != null) insertData.cta_score = Math.min(10, Math.max(1, parseFloat(cta_score)));
 
+    // Upsert: if same stimulus + model + run already exists, update scores
     const { data, error } = await supabase
       .from("survey_ai_evaluations")
-      .insert(insertData)
+      .upsert(insertData, { onConflict: "stimulus_id,model_name,prompt_version" })
       .select()
       .single();
 
     if (error) {
+      console.error("[AI Eval POST] Error:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

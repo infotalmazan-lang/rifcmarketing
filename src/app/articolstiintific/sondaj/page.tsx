@@ -1952,24 +1952,32 @@ export default function StudiuAdminPage() {
     setAiSaving(true);
     try {
       const isEdit = !!aiEditId;
+      const payload = {
+        ...(isEdit ? { id: aiEditId } : {}),
+        ...aiForm,
+        prompt_version: aiRunTab,
+        justification: aiForm.justification ? { text: aiForm.justification } : {},
+      };
+      console.log("[AI Save] Sending:", isEdit ? "PUT" : "POST", payload);
       const res = await fetch("/api/survey/ai-evaluations", {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...(isEdit ? { id: aiEditId } : {}),
-          ...aiForm,
-          prompt_version: aiRunTab,
-          justification: aiForm.justification ? { text: aiForm.justification } : {},
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+      console.log("[AI Save] Response:", data);
       if (data.success) {
         setShowAddAi(false);
         setAiEditId(null);
         setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" });
         fetchAiEvals();
+      } else {
+        alert("Eroare la salvare: " + (data.error || "Necunoscuta"));
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error("[AI Save] Error:", err);
+      alert("Eroare de retea la salvare. Verifica conexiunea.");
+    }
     setAiSaving(false);
   };
 
