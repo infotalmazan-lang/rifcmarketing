@@ -20038,23 +20038,48 @@ export default function StudiuAdminPage() {
 
             {/* ═══ AI BENCHMARK INTERPRETARE ═══ */}
             {aiSubTab === "interpretare" && (() => {
-              // ── Data preparation ──
-              const thStyle: React.CSSProperties = { padding: "8px 12px", fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#6B7280", textTransform: "uppercase" as const, borderBottom: "2px solid #e5e7eb", textAlign: "left" as const };
-              const tdStyle: React.CSSProperties = { padding: "8px 12px", fontSize: 13, borderBottom: "1px solid #f3f4f6" };
-              const sectionCard: React.CSSProperties = { background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: 24, marginBottom: 20 };
-              const sectionHeader = (num: number, title: string, desc: string) => (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-                    <span style={{ background: "#7C3AED", color: "#fff", borderRadius: "50%", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700 }}>{num}</span>
-                    <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: 0 }}>{title}</h3>
+              // ── Styles ──
+              const thS: React.CSSProperties = { padding: "10px 14px", fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "#6B7280", textTransform: "uppercase" as const, borderBottom: "2px solid #e5e7eb", textAlign: "left" as const };
+              const tdS: React.CSSProperties = { padding: "10px 14px", fontSize: 13, borderBottom: "1px solid #f3f4f6", color: "#374151" };
+              const sectionCard: React.CSSProperties = { background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb", padding: 28, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" };
+              // Interpretation expand state
+              const [aiInterpExpanded, setAiInterpExpanded] = React.useState<Record<number, boolean>>({});
+              const toggleInterp = (n: number) => setAiInterpExpanded(prev => ({ ...prev, [n]: !prev[n] }));
+
+              const sectionHeader = (num: number, title: string, desc: string, interpText?: string) => (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <span style={{ background: "linear-gradient(135deg, #7C3AED, #6D28D9)", color: "#fff", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{num}</span>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontSize: 17, fontWeight: 800, color: "#111827", margin: 0 }}>{title}</h3>
+                      <p style={{ fontSize: 12, color: "#9CA3AF", margin: 0, marginTop: 2 }}>{desc}</p>
+                    </div>
+                    {interpText && (
+                      <button onClick={() => toggleInterp(num)} style={{ background: aiInterpExpanded[num] ? "#7C3AED" : "#f5f3ff", color: aiInterpExpanded[num] ? "#fff" : "#7C3AED", border: "1px solid #ddd6fe", borderRadius: 8, padding: "6px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s", whiteSpace: "nowrap" as const }}>
+                        <Info size={13} /> Interpretare
+                      </button>
+                    )}
                   </div>
-                  <p style={{ fontSize: 13, color: "#6B7280", margin: 0, marginLeft: 38 }}>{desc}</p>
+                  {interpText && aiInterpExpanded[num] && (
+                    <div style={{ marginLeft: 42, marginTop: 8, background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 10, padding: "14px 16px" }}>
+                      <div style={{ fontSize: 12, lineHeight: 1.7, color: "#4c1d95", whiteSpace: "pre-line" as const }}>{interpText}</div>
+                    </div>
+                  )}
                 </div>
               );
+
               const metricBadge = (val: number, thresholds: [number, number] = [0.7, 0.5]) => {
                 const color = val >= thresholds[0] ? "#166534" : val >= thresholds[1] ? "#92400e" : "#991b1b";
                 const bg = val >= thresholds[0] ? "#dcfce7" : val >= thresholds[1] ? "#fef3c7" : "#fee2e2";
-                return { color, bg };
+                const label = val >= thresholds[0] ? "Bun" : val >= thresholds[1] ? "Moderat" : "Slab";
+                return { color, bg, label };
+              };
+
+              // Conclusion badge helper
+              const conclusionBadge = (status: "pass" | "warning" | "fail", text: string) => {
+                const styles = { pass: { bg: "#dcfce7", color: "#166534", icon: "✓" }, warning: { bg: "#fef3c7", color: "#92400e", icon: "!" }, fail: { bg: "#fee2e2", color: "#991b1b", icon: "✗" } };
+                const s = styles[status];
+                return <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: s.bg, color: s.color, padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700 }}><span style={{ fontSize: 14 }}>{s.icon}</span> {text}</div>;
               };
 
               // Group by model
@@ -20104,15 +20129,39 @@ export default function StudiuAdminPage() {
               // Get stimulus name
               const stimName = (sid: string) => stimuli.find(s => s.id === sid)?.name || sid.slice(0, 8);
 
-              const dims = ["r", "i", "f", "cta", "c"] as const;
-              const dimLabels: Record<string, string> = { r: "R", i: "I", f: "F", cta: "CTA", c: "C" };
+              const dims = ["r", "i", "f", "cta"] as const;
+              const dimsAll = ["r", "i", "f", "cta", "c"] as const;
+              const dimLabels: Record<string, string> = { r: "Relevanta (R)", i: "Interes (I)", f: "Forma (F)", cta: "CTA", c: "Compozit (C)" };
+              const dimShort: Record<string, string> = { r: "R", i: "I", f: "F", cta: "CTA", c: "C" };
               const dimColors: Record<string, string> = { r: "#DC2626", i: "#D97706", f: "#7C3AED", cta: "#059669", c: "#1e40af" };
+
+              // ── Pre-compute key metrics for hero banner ──
+              const nStimScored = Array.from(new Set(aiEvals.map(e => e.stimulus_id))).length;
+              const nActiveStim = stimuli.filter(s => s.is_active).length;
+              const coverage = nActiveStim > 0 ? Math.round((nStimScored / nActiveStim) * 100) : 0;
+              const nRuns = Array.from(new Set(aiEvals.map(e => e.prompt_version))).length;
 
               return (
                 <div>
+                  {/* ═══ HERO STATS BANNER ═══ */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+                    {[
+                      { label: "Evaluari totale", value: aiEvals.length, sub: `${models.length} modele × ${nRuns} run-uri`, color: "#7C3AED" },
+                      { label: "Stimuli scorati", value: `${nStimScored}/${nActiveStim}`, sub: `${coverage}% acoperire`, color: coverage === 100 ? "#059669" : "#D97706" },
+                      { label: "Modele AI", value: models.join(", "), sub: "Evaluatori independenti", color: "#2563EB" },
+                      { label: "Consumer match", value: commonStimIds.length, sub: `din ${nStimScored} cu date consumatori`, color: "#059669" },
+                    ].map((stat, i) => (
+                      <div key={i} style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "16px 20px" }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "#9CA3AF", textTransform: "uppercase" as const, marginBottom: 6 }}>{stat.label}</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                        <div style={{ fontSize: 11, color: "#9CA3AF", marginTop: 2 }}>{stat.sub}</div>
+                      </div>
+                    ))}
+                  </div>
+
                   {/* ═══ SECTION 1: INTRA-MODEL CONSISTENCY ═══ */}
                   <div style={sectionCard}>
-                    {sectionHeader(1, "Consistenta Intra-Model (Test-Retest)", "Cat de stabil evalueaza fiecare model AI pe parcursul celor 3 run-uri?")}
+                    {sectionHeader(1, "Consistenta Intra-Model (Test-Retest)", "Stabilitatea scorurilor fiecarui model AI pe parcursul celor 3 run-uri independente.", "Cronbach Alpha masoara cat de consistent evalueaza un model acelasi stimulus pe parcursul mai multor run-uri. Valori >= 0.70 indica consistenta buna (modelul produce scoruri stabile). CV (Coeficient de Variatie) arata variabilitatea procentuala — sub 5% = excelent, 5-15% = acceptabil, peste 15% = instabil.\n\nPentru manuscris: valorile alpha ridicate confirma ca evaluarea AI nu este aleatoare, ci reflecta un pattern consistent de scoring.")}
                     {(() => {
                       // For each model, for each dimension, compute Cronbach alpha across runs
                       const runs = ["run1", "run2", "run3"] as const;
@@ -20162,9 +20211,9 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={thStyle}>Model</th>
-                                  {["R", "I", "F", "CTA"].map(d => <th key={d} style={{ ...thStyle, textAlign: "center" as const }}>{d}</th>)}
-                                  <th style={{ ...thStyle, textAlign: "center" as const }}>Verdict</th>
+                                  <th style={thS}>Model</th>
+                                  {["R", "I", "F", "CTA"].map(d => <th key={d} style={{ ...thS, textAlign: "center" as const }}>{d}</th>)}
+                                  <th style={{ ...thS, textAlign: "center" as const }}>Verdict</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -20175,13 +20224,13 @@ export default function StudiuAdminPage() {
                                   const vBg = avgAlpha >= 0.9 ? "#dcfce7" : avgAlpha >= 0.7 ? "#dbeafe" : avgAlpha >= 0.5 ? "#fef3c7" : "#fee2e2";
                                   return (
                                     <tr key={row.model}>
-                                      <td style={{ ...tdStyle, fontWeight: 700 }}>{row.model}</td>
+                                      <td style={{ ...tdS, fontWeight: 700 }}>{row.model}</td>
                                       {(["r", "i", "f", "cta"] as const).map(d => {
                                         const a = row.alphas[d];
                                         const badge = metricBadge(a);
-                                        return <td key={d} style={{ ...tdStyle, textAlign: "center" as const }}><span style={{ background: badge.bg, color: badge.color, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.toFixed(2)}</span></td>;
+                                        return <td key={d} style={{ ...tdS, textAlign: "center" as const }}><span style={{ background: badge.bg, color: badge.color, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{a.toFixed(2)}</span></td>;
                                       })}
-                                      <td style={{ ...tdStyle, textAlign: "center" as const }}><span style={{ background: vBg, color: vColor, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{verdict} ({avgAlpha.toFixed(2)})</span></td>
+                                      <td style={{ ...tdS, textAlign: "center" as const }}><span style={{ background: vBg, color: vColor, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700 }}>{verdict} ({avgAlpha.toFixed(2)})</span></td>
                                     </tr>
                                   );
                                 })}
@@ -20193,9 +20242,9 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={thStyle}>Model</th>
-                                  {["R", "I", "F", "CTA"].map(d => <th key={d} style={{ ...thStyle, textAlign: "center" as const }}>{d}</th>)}
-                                  <th style={{ ...thStyle, textAlign: "center" as const }}>Media CV</th>
+                                  <th style={thS}>Model</th>
+                                  {["R", "I", "F", "CTA"].map(d => <th key={d} style={{ ...thS, textAlign: "center" as const }}>{d}</th>)}
+                                  <th style={{ ...thS, textAlign: "center" as const }}>Media CV</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -20204,20 +20253,27 @@ export default function StudiuAdminPage() {
                                   const cvBadge = (cv: number) => cv < 5 ? { color: "#166534", bg: "#dcfce7" } : cv < 15 ? { color: "#92400e", bg: "#fef3c7" } : { color: "#991b1b", bg: "#fee2e2" };
                                   return (
                                     <tr key={row.model}>
-                                      <td style={{ ...tdStyle, fontWeight: 700 }}>{row.model}</td>
+                                      <td style={{ ...tdS, fontWeight: 700 }}>{row.model}</td>
                                       {(["r", "i", "f", "cta"] as const).map(d => {
                                         const cv = row.cvs[d];
                                         const badge = cvBadge(cv);
-                                        return <td key={d} style={{ ...tdStyle, textAlign: "center" as const }}><span style={{ background: badge.bg, color: badge.color, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{cv.toFixed(1)}%</span></td>;
+                                        return <td key={d} style={{ ...tdS, textAlign: "center" as const }}><span style={{ background: badge.bg, color: badge.color, padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{cv.toFixed(1)}%</span></td>;
                                       })}
-                                      <td style={{ ...tdStyle, textAlign: "center" as const }}><span style={{ background: avgCV < 5 ? "#dcfce7" : avgCV < 15 ? "#fef3c7" : "#fee2e2", color: avgCV < 5 ? "#166534" : avgCV < 15 ? "#92400e" : "#991b1b", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{avgCV.toFixed(1)}%</span></td>
+                                      <td style={{ ...tdS, textAlign: "center" as const }}><span style={{ background: avgCV < 5 ? "#dcfce7" : avgCV < 15 ? "#fef3c7" : "#fee2e2", color: avgCV < 5 ? "#166534" : avgCV < 15 ? "#92400e" : "#991b1b", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{avgCV.toFixed(1)}%</span></td>
                                     </tr>
                                   );
                                 })}
                               </tbody>
                             </table>
                           </div>
-                          <p style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8, fontStyle: "italic" }}>Cronbach alpha &ge; 0.70 = consistenta buna. CV &lt; 5% = stabilitate excelenta, 5-15% = acceptabila.</p>
+                          {/* Conclusion badge */}
+                          {(() => {
+                            const avgAll = _mean(intraData.map(d => _mean(Object.values(d.alphas))));
+                            const status = avgAll >= 0.7 ? "pass" as const : avgAll >= 0.5 ? "warning" as const : "fail" as const;
+                            return <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                              {conclusionBadge(status, avgAll >= 0.7 ? `Consistenta intra-model confirmata (alpha mediu = ${avgAll.toFixed(2)})` : avgAll >= 0.5 ? `Consistenta moderata (alpha = ${avgAll.toFixed(2)})` : `Consistenta slaba`)}
+                            </div>;
+                          })()}
                         </div>
                       );
                     })()}
@@ -20225,7 +20281,7 @@ export default function StudiuAdminPage() {
 
                   {/* ═══ SECTION 2: INTER-MODEL AGREEMENT ═══ */}
                   <div style={sectionCard}>
-                    {sectionHeader(2, "Consistenta Inter-Model (Agreement)", "Cat de mult sunt de acord cele 3 modele AI intre ele?")}
+                    {sectionHeader(2, "Consistenta Inter-Model (Agreement)", "Gradul de acord intre modelele AI pentru aceleasi stimuli.", "Corelatiile Pearson r si Spearman rho masoara cat de similar evalueaza modelele AI acelasi stimulus. Pearson r capteaza relatia liniara, Spearman rho compara rangurile.\n\nValori r >= 0.70 indica acord puternic. Matricea heatmap vizualizeaza corelatiile pe scorul compozit C.")}
                     {(() => {
                       // Per-stimulus means per model (already in stimModelMeans)
                       const stimIds = Object.keys(stimModelMeans);
@@ -20265,19 +20321,19 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={thStyle}>Pereche</th>
-                                  {dims.map(d => <th key={d} style={{ ...thStyle, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]}</th>)}
+                                  <th style={thS}>Pereche</th>
+                                  {dims.map(d => <th key={d} style={{ ...thS, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]}</th>)}
                                 </tr>
                               </thead>
                               <tbody>
                                 {corrData.map(row => (
                                   <tr key={row.pair}>
-                                    <td style={{ ...tdStyle, fontWeight: 600, fontSize: 12 }}>{row.pair}</td>
+                                    <td style={{ ...tdS, fontWeight: 600, fontSize: 12 }}>{row.pair}</td>
                                     {dims.map(d => {
                                       const r = row.pearson[d];
                                       const p = row.p[d];
                                       const badge = metricBadge(Math.abs(r), [0.7, 0.4]);
-                                      return <td key={d} style={{ ...tdStyle, textAlign: "center" as const }}>
+                                      return <td key={d} style={{ ...tdS, textAlign: "center" as const }}>
                                         <span style={{ background: badge.bg, color: badge.color, padding: "3px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{r.toFixed(2)}</span>
                                         <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: 4 }}>{_fmtP(p)}</span>
                                       </td>;
@@ -20292,18 +20348,18 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={thStyle}>Pereche</th>
-                                  {dims.map(d => <th key={d} style={{ ...thStyle, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]}</th>)}
+                                  <th style={thS}>Pereche</th>
+                                  {dims.map(d => <th key={d} style={{ ...thS, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]}</th>)}
                                 </tr>
                               </thead>
                               <tbody>
                                 {corrData.map(row => (
                                   <tr key={row.pair}>
-                                    <td style={{ ...tdStyle, fontWeight: 600, fontSize: 12 }}>{row.pair}</td>
+                                    <td style={{ ...tdS, fontWeight: 600, fontSize: 12 }}>{row.pair}</td>
                                     {dims.map(d => {
                                       const rho = row.spearman[d];
                                       const badge = metricBadge(Math.abs(rho), [0.7, 0.4]);
-                                      return <td key={d} style={{ ...tdStyle, textAlign: "center" as const }}>
+                                      return <td key={d} style={{ ...tdS, textAlign: "center" as const }}>
                                         <span style={{ background: badge.bg, color: badge.color, padding: "3px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{rho.toFixed(2)}</span>
                                       </td>;
                                     })}
@@ -20318,28 +20374,35 @@ export default function StudiuAdminPage() {
                             <table style={{ borderCollapse: "collapse" }}>
                               <thead>
                                 <tr>
-                                  <th style={{ ...thStyle, minWidth: 80 }}></th>
-                                  {models.map(m => <th key={m} style={{ ...thStyle, textAlign: "center" as const, minWidth: 80 }}>{m}</th>)}
+                                  <th style={{ ...thS, minWidth: 80 }}></th>
+                                  {models.map(m => <th key={m} style={{ ...thS, textAlign: "center" as const, minWidth: 80 }}>{m}</th>)}
                                 </tr>
                               </thead>
                               <tbody>
                                 {models.map((m1, i) => (
                                   <tr key={m1}>
-                                    <td style={{ ...tdStyle, fontWeight: 700 }}>{m1}</td>
+                                    <td style={{ ...tdS, fontWeight: 700 }}>{m1}</td>
                                     {models.map((m2, j) => {
-                                      if (i === j) return <td key={m2} style={{ ...tdStyle, textAlign: "center" as const, background: "#f3f4f6" }}>—</td>;
+                                      if (i === j) return <td key={m2} style={{ ...tdS, textAlign: "center" as const, background: "#f3f4f6" }}>—</td>;
                                       const pairRow = corrData.find(r => r.pair === `${m1} — ${m2}` || r.pair === `${m2} — ${m1}`);
                                       const r = pairRow?.pearson.c ?? 0;
                                       const intensity = Math.min(1, Math.abs(r));
                                       const hue = r >= 0 ? 142 : 0;
-                                      return <td key={m2} style={{ ...tdStyle, textAlign: "center" as const, background: `hsla(${hue}, 70%, 50%, ${intensity * 0.3})`, fontWeight: 700, fontSize: 14 }}>{r.toFixed(2)}</td>;
+                                      return <td key={m2} style={{ ...tdS, textAlign: "center" as const, background: `hsla(${hue}, 70%, 50%, ${intensity * 0.3})`, fontWeight: 700, fontSize: 14 }}>{r.toFixed(2)}</td>;
                                     })}
                                   </tr>
                                 ))}
                               </tbody>
                             </table>
                           </div>
-                          <p style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8, fontStyle: "italic" }}>Pearson r &ge; 0.70 = acord puternic. Valorile pe diagonala sunt identice (1.00).</p>
+                          {/* Conclusion badge */}
+                          {(() => {
+                            const avgR = _mean(corrData.map(r => Math.abs(r.pearson.c)));
+                            const status = avgR >= 0.7 ? "pass" as const : avgR >= 0.4 ? "warning" as const : "fail" as const;
+                            return <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                              {conclusionBadge(status, avgR >= 0.7 ? `Acord inter-model puternic pe C (r mediu = ${avgR.toFixed(2)})` : avgR >= 0.4 ? `Acord moderat intre modele (r = ${avgR.toFixed(2)})` : `Dezacord semnificativ intre modele`)}
+                            </div>;
+                          })()}
                         </div>
                       );
                     })()}
@@ -20347,7 +20410,7 @@ export default function StudiuAdminPage() {
 
                   {/* ═══ SECTION 3: AI VS CONSUMATORI ═══ */}
                   <div style={sectionCard}>
-                    {sectionHeader(3, "AI vs Consumatori", "Cat de bine prezice AI-ul perceptia consumatorilor?")}
+                    {sectionHeader(3, "AI vs Consumatori — Validitate Convergenta", "Corelatia intre scorurile AI si perceptia consumatorilor din sondaj.", "Aceasta sectiune compara scorurile medii AI cu scorurile consumatorilor pentru aceleasi materiale de marketing. Corelatia pozitiva confirma ca AI-ul evalueaza in aceeasi directie ca publicul tinta.\n\nBias pozitiv = AI supraevalueaza fata de consumatori. Cohen's d masoara marimea efectului: <0.2 neglijabil, 0.2-0.5 mic, 0.5-0.8 mediu, >0.8 mare.\n\nScatter plot-ul vizualizeaza fiecare stimulus ca un punct — axa X = scorul AI, axa Y = scorul consumatorilor.")}
                     {(() => {
                       if (commonStimIds.length < 3) {
                         return <p style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", padding: 20 }}>Sunt necesare minim 3 stimuli evaluati atat de AI cat si de consumatori. ({commonStimIds.length} gasiti)</p>;
@@ -20398,19 +20461,19 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={thStyle}>Model</th>
-                                  {dims.map(d => <th key={d} style={{ ...thStyle, textAlign: "center" as const, color: dimColors[d] }}>r ({dimLabels[d]})</th>)}
+                                  <th style={thS}>Model</th>
+                                  {dims.map(d => <th key={d} style={{ ...thS, textAlign: "center" as const, color: dimColors[d] }}>r ({dimLabels[d]})</th>)}
                                 </tr>
                               </thead>
                               <tbody>
                                 {modelConsCorr.map(row => (
                                   <tr key={row.model} style={row.model === "Media AI" ? { background: "#f5f3ff" } : {}}>
-                                    <td style={{ ...tdStyle, fontWeight: 700, fontSize: 12 }}>{row.model}</td>
+                                    <td style={{ ...tdS, fontWeight: 700, fontSize: 12 }}>{row.model}</td>
                                     {dims.map(d => {
                                       const r = row.pearson[d];
                                       const p = row.p[d];
                                       const badge = metricBadge(Math.abs(r), [0.6, 0.3]);
-                                      return <td key={d} style={{ ...tdStyle, textAlign: "center" as const }}>
+                                      return <td key={d} style={{ ...tdS, textAlign: "center" as const }}>
                                         <span style={{ background: badge.bg, color: badge.color, padding: "3px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{r.toFixed(2)}</span>
                                         <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: 4 }}>{_fmtP(p)}</span>
                                       </td>;
@@ -20425,16 +20488,16 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={thStyle}>Model</th>
-                                  {dims.map(d => <th key={d} style={{ ...thStyle, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]} (bias / d)</th>)}
+                                  <th style={thS}>Model</th>
+                                  {dims.map(d => <th key={d} style={{ ...thS, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]} (bias / d)</th>)}
                                 </tr>
                               </thead>
                               <tbody>
                                 {modelConsCorr.map(row => (
                                   <tr key={row.model} style={row.model === "Media AI" ? { background: "#f5f3ff" } : {}}>
-                                    <td style={{ ...tdStyle, fontWeight: 700, fontSize: 12 }}>{row.model}</td>
+                                    <td style={{ ...tdS, fontWeight: 700, fontSize: 12 }}>{row.model}</td>
                                     {dims.map(d => (
-                                      <td key={d} style={{ ...tdStyle, textAlign: "center" as const, fontSize: 12 }}>
+                                      <td key={d} style={{ ...tdS, textAlign: "center" as const, fontSize: 12 }}>
                                         <span style={{ color: row.bias[d] > 0 ? "#DC2626" : "#059669", fontWeight: 600 }}>{row.bias[d] > 0 ? "+" : ""}{row.bias[d].toFixed(2)}</span>
                                         <span style={{ color: "#9CA3AF", margin: "0 3px" }}>/</span>
                                         <span style={{ color: "#374151" }}>{Math.abs(row.d[d]).toFixed(2)}</span>
@@ -20445,7 +20508,46 @@ export default function StudiuAdminPage() {
                               </tbody>
                             </table>
                           </div>
-                          <p style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8, fontStyle: "italic" }}>Bias pozitiv = AI supraevalueaza. Cohen&apos;s d: &lt;0.2 neglijabil, 0.2-0.5 mic, 0.5-0.8 mediu, &gt;0.8 mare.</p>
+                          {/* Scatter Plot: AI vs Consumer C scores */}
+                          <div style={{ marginTop: 20, fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 8 }}>Scatter Plot — AI (C) vs Consumatori (C)</div>
+                          <div style={{ position: "relative" as const, width: "100%", height: 280, background: "#fafafa", borderRadius: 10, border: "1px solid #e5e7eb", overflow: "hidden" }}>
+                            {/* Y axis label */}
+                            <div style={{ position: "absolute" as const, left: 4, top: "50%", transform: "rotate(-90deg) translateX(-50%)", fontSize: 10, color: "#9CA3AF", fontWeight: 600, whiteSpace: "nowrap" as const }}>Consumatori (C)</div>
+                            {/* X axis label */}
+                            <div style={{ position: "absolute" as const, bottom: 4, left: "50%", transform: "translateX(-50%)", fontSize: 10, color: "#9CA3AF", fontWeight: 600 }}>AI Media (C)</div>
+                            {/* Grid lines */}
+                            {[0, 25, 50, 75, 100].map(v => (
+                              <React.Fragment key={v}>
+                                <div style={{ position: "absolute" as const, left: 40, right: 20, top: `${(1 - v / 100) * 85 + 5}%`, height: 1, background: "#e5e7eb" }} />
+                                <div style={{ position: "absolute" as const, left: 22, top: `${(1 - v / 100) * 85 + 3}%`, fontSize: 9, color: "#d1d5db" }}>{v}</div>
+                                <div style={{ position: "absolute" as const, top: 10, bottom: 30, left: `${v * 0.6 + 12}%`, width: 1, background: "#e5e7eb" }} />
+                              </React.Fragment>
+                            ))}
+                            {/* Data points */}
+                            {commonStimIds.map(sid => {
+                              const aiMeans = models.map(m => stimModelMeans[sid]?.[m]?.c).filter(v => v != null);
+                              const aiC = _mean(aiMeans);
+                              const consC = consumerMeans[sid]?.c ?? 0;
+                              const maxC = 100;
+                              const xPct = Math.min(95, Math.max(8, (aiC / maxC) * 60 + 12));
+                              const yPct = Math.min(90, Math.max(8, (1 - consC / maxC) * 85 + 5));
+                              return <div key={sid} title={`${stimName(sid)}\nAI: ${aiC.toFixed(1)} | Consumer: ${consC.toFixed(1)}`} style={{ position: "absolute" as const, left: `${xPct}%`, top: `${yPct}%`, width: 10, height: 10, borderRadius: "50%", background: "#7C3AED", border: "2px solid #fff", cursor: "pointer", transform: "translate(-50%, -50%)", opacity: 0.8 }} />;
+                            })}
+                            {/* Diagonal reference line */}
+                            <div style={{ position: "absolute" as const, left: "12%", top: "5%", width: "60%", height: "85%", overflow: "hidden", pointerEvents: "none" as const }}>
+                              <div style={{ position: "absolute" as const, left: 0, bottom: 0, width: "141%", height: 1, background: "#d1d5db", transformOrigin: "0 0", transform: "rotate(-45deg)" }} />
+                            </div>
+                          </div>
+
+                          {/* Conclusion badge */}
+                          {(() => {
+                            const aiMeanRow = modelConsCorr.find(r => r.model === "Media AI");
+                            const rC = aiMeanRow?.pearson.c ?? 0;
+                            const status = Math.abs(rC) >= 0.5 ? "pass" as const : Math.abs(rC) >= 0.3 ? "warning" as const : "fail" as const;
+                            return <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                              {conclusionBadge(status, Math.abs(rC) >= 0.5 ? `Validitate convergenta confirmata (r = ${rC.toFixed(2)} pe C)` : Math.abs(rC) >= 0.3 ? `Validitate partiala (r = ${rC.toFixed(2)})` : `Validitate slaba — AI nu coreleaza cu consumatorii`)}
+                            </div>;
+                          })()}
                         </div>
                       );
                     })()}
@@ -20453,7 +20555,7 @@ export default function StudiuAdminPage() {
 
                   {/* ═══ SECTION 4: DESCRIPTIVE STATISTICS ═══ */}
                   <div style={sectionCard}>
-                    {sectionHeader(4, "Statistici Descriptive per Model", "Media, deviatie standard, range per dimensiune pentru fiecare model AI.")}
+                    {sectionHeader(4, "Statistici Descriptive per Model", "Media, deviatie standard si range per dimensiune pentru fiecare model AI.", "Statistica descriptiva ofera o imagine de ansamblu a distributiei scorurilor. M (media) arata tendinta centrala, SD (deviatie standard) arata cat de dispersate sunt scorurile.\n\nRange-ul vizual (min-max) arata spectrul complet de scoruri — o banda ingusta inseamna consistenta, una larga inseamna variabilitate.")}
                     {(() => {
                       const statsData: { model: string; n: number; stats: Record<string, { mean: number; sd: number; min: number; max: number; median: number }> }[] = [];
                       models.forEach(model => {
@@ -20479,18 +20581,18 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={thStyle}>Model</th>
-                                  <th style={{ ...thStyle, textAlign: "center" as const }}>N</th>
-                                  {dims.map(d => <th key={d} style={{ ...thStyle, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]} (M ± SD)</th>)}
+                                  <th style={thS}>Model</th>
+                                  <th style={{ ...thS, textAlign: "center" as const }}>N</th>
+                                  {dims.map(d => <th key={d} style={{ ...thS, textAlign: "center" as const, color: dimColors[d] }}>{dimLabels[d]} (M ± SD)</th>)}
                                 </tr>
                               </thead>
                               <tbody>
                                 {statsData.map(row => (
                                   <tr key={row.model}>
-                                    <td style={{ ...tdStyle, fontWeight: 700 }}>{row.model}</td>
-                                    <td style={{ ...tdStyle, textAlign: "center" as const, fontWeight: 600 }}>{row.n}</td>
+                                    <td style={{ ...tdS, fontWeight: 700 }}>{row.model}</td>
+                                    <td style={{ ...tdS, textAlign: "center" as const, fontWeight: 600 }}>{row.n}</td>
                                     {dims.map(d => (
-                                      <td key={d} style={{ ...tdStyle, textAlign: "center" as const }}>
+                                      <td key={d} style={{ ...tdS, textAlign: "center" as const }}>
                                         <span style={{ fontWeight: 700, color: dimColors[d] }}>{row.stats[d].mean.toFixed(1)}</span>
                                         <span style={{ color: "#9CA3AF" }}> ± {row.stats[d].sd.toFixed(1)}</span>
                                       </td>
@@ -20535,7 +20637,7 @@ export default function StudiuAdminPage() {
 
                   {/* ═══ SECTION 5: RANKING ═══ */}
                   <div style={sectionCard}>
-                    {sectionHeader(5, "Clasament Stimuli", "Cum clasifica fiecare model AI materialele — comparatie de ranguri.")}
+                    {sectionHeader(5, "Clasament Stimuli", "Cum clasifica fiecare model AI materialele — comparatie de ranguri.", "Clasamentul arata Top 5 (verde) si Bottom 5 (rosu) materiale. Spearman rho masoara cat de similara e ordinea intre modele — valori > 0.70 confirma ca modelele identifica aceleasi materiale de top/flop.\n\nAceasta analiza e esentiala pentru a valida ca formula RIFC discrimineaza consistent materialele performante de cele slabe, indiferent de evaluator.")}
                     {(() => {
                       const stimIds = Object.keys(stimModelMeans);
                       if (stimIds.length < 3) return <p style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center", padding: 20 }}>Minim 3 stimuli necesari pentru clasament.</p>;
@@ -20584,10 +20686,10 @@ export default function StudiuAdminPage() {
                             <table style={{ width: "100%", borderCollapse: "collapse" }}>
                               <thead>
                                 <tr style={{ background: "#f9fafb" }}>
-                                  <th style={{ ...thStyle, minWidth: 40 }}>#</th>
-                                  <th style={thStyle}>Material</th>
-                                  {models.map(m => <th key={m} style={{ ...thStyle, textAlign: "center" as const }}>{m}</th>)}
-                                  {consItems.length > 0 && <th style={{ ...thStyle, textAlign: "center" as const }}>Consumatori</th>}
+                                  <th style={{ ...thS, minWidth: 40 }}>#</th>
+                                  <th style={thS}>Material</th>
+                                  {models.map(m => <th key={m} style={{ ...thS, textAlign: "center" as const }}>{m}</th>)}
+                                  {consItems.length > 0 && <th style={{ ...thS, textAlign: "center" as const }}>Consumatori</th>}
                                 </tr>
                               </thead>
                               <tbody>
@@ -20597,17 +20699,17 @@ export default function StudiuAdminPage() {
                                   const rowBg = isTop5 ? "#f0fdf4" : isBottom5 ? "#fef2f2" : "#fff";
                                   return (
                                     <tr key={item.sid} style={{ background: rowBg }}>
-                                      <td style={{ ...tdStyle, fontWeight: 700, color: "#6B7280" }}>{idx + 1}</td>
-                                      <td style={{ ...tdStyle, fontWeight: 600, fontSize: 12 }}>{stimName(item.sid)}</td>
+                                      <td style={{ ...tdS, fontWeight: 700, color: "#6B7280" }}>{idx + 1}</td>
+                                      <td style={{ ...tdS, fontWeight: 600, fontSize: 12 }}>{stimName(item.sid)}</td>
                                       {models.map(m => {
                                         const rank = rankings[m]?.find(x => x.sid === item.sid)?.rank ?? "—";
                                         const score = rankings[m]?.find(x => x.sid === item.sid)?.c ?? 0;
-                                        return <td key={m} style={{ ...tdStyle, textAlign: "center" as const }}>
+                                        return <td key={m} style={{ ...tdS, textAlign: "center" as const }}>
                                           <span style={{ fontWeight: 700 }}>{rank}</span>
                                           <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: 4 }}>({score.toFixed(0)})</span>
                                         </td>;
                                       })}
-                                      {consItems.length > 0 && <td style={{ ...tdStyle, textAlign: "center" as const }}>
+                                      {consItems.length > 0 && <td style={{ ...tdS, textAlign: "center" as const }}>
                                         <span style={{ fontWeight: 700 }}>{consRanking[item.sid] ?? "—"}</span>
                                         {consumerMeans[item.sid] && <span style={{ fontSize: 10, color: "#9CA3AF", marginLeft: 4 }}>({consumerMeans[item.sid].c.toFixed(0)})</span>}
                                       </td>}
@@ -20629,15 +20731,63 @@ export default function StudiuAdminPage() {
                               );
                             })}
                           </div>
-                          <p style={{ fontSize: 11, color: "#9CA3AF", marginTop: 8, fontStyle: "italic" }}>Top 5 = verde, Bottom 5 = rosu. Scorul C in paranteze.</p>
+                          {/* Conclusion */}
+                          {(() => {
+                            const avgRho = spearmanPairs.length > 0 ? _mean(spearmanPairs.map(s => Math.abs(s.rho))) : 0;
+                            const status = avgRho >= 0.7 ? "pass" as const : avgRho >= 0.4 ? "warning" as const : "fail" as const;
+                            return <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                              {conclusionBadge(status, avgRho >= 0.7 ? `Clasamente convergente (Spearman mediu = ${avgRho.toFixed(2)})` : avgRho >= 0.4 ? `Clasamente partial similare (rho = ${avgRho.toFixed(2)})` : `Clasamente divergente`)}
+                            </div>;
+                          })()}
                         </div>
                       );
                     })()}
                   </div>
 
-                  {/* ═══ SECTION 6: MANUSCRIPT SYNTHESIS ═══ */}
+                  {/* ═══ SECTION 6: PROFIL DIMENSIONAL ═══ */}
                   <div style={sectionCard}>
-                    {sectionHeader(6, "Sinteza pentru Manuscris", "Text auto-generat cu metrici cheie pentru sectiunea AI Benchmark din articolul stiintific.")}
+                    {sectionHeader(6, "Profil Dimensional", "Comparatie medie per dimensiune RIFC intre AI si consumatori.", "Profilul dimensional arata ce dimensiuni sunt supraevaluate sau subevaluate de AI comparativ cu consumatorii. Barile suprapuse permit identificarea vizuala a discrepantelor pe fiecare dimensiune.\n\nDaca AI si consumatorii au profile similare (bare de aceeasi lungime), validitatea convergenta este confirmata.")}
+                    {(() => {
+                      if (commonStimIds.length < 3) return <p style={{ fontSize: 13, color: "#9CA3AF", textAlign: "center" as const, padding: 20 }}>Date insuficiente.</p>;
+                      return (
+                        <div>
+                          {dims.map(dim => {
+                            const aiVals = commonStimIds.map(sid => { const mVals = models.map(m => stimModelMeans[sid]?.[m]?.[dim]).filter(v => v != null); return _mean(mVals); });
+                            const consVals = commonStimIds.map(sid => consumerMeans[sid]?.[dim] ?? 0);
+                            const aiM = _mean(aiVals);
+                            const consM = _mean(consVals);
+                            const maxVal = 10;
+                            return (
+                              <div key={dim} style={{ marginBottom: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                                  <span style={{ fontSize: 12, fontWeight: 800, color: dimColors[dim], width: 40 }}>{dimShort[dim]}</span>
+                                  <div style={{ flex: 1, position: "relative" as const, height: 28 }}>
+                                    {/* AI bar */}
+                                    <div style={{ position: "absolute" as const, top: 0, left: 0, height: 12, width: `${(aiM / maxVal) * 100}%`, background: "#7C3AED", borderRadius: 4, opacity: 0.8 }} />
+                                    {/* Consumer bar */}
+                                    <div style={{ position: "absolute" as const, top: 14, left: 0, height: 12, width: `${(consM / maxVal) * 100}%`, background: "#059669", borderRadius: 4, opacity: 0.8 }} />
+                                  </div>
+                                  <div style={{ fontSize: 11, textAlign: "right" as const, minWidth: 90 }}>
+                                    <span style={{ color: "#7C3AED", fontWeight: 700 }}>{aiM.toFixed(1)}</span>
+                                    <span style={{ color: "#9CA3AF" }}> vs </span>
+                                    <span style={{ color: "#059669", fontWeight: 700 }}>{consM.toFixed(1)}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 11 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 8, background: "#7C3AED", borderRadius: 2 }} /> AI Media</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}><div style={{ width: 12, height: 8, background: "#059669", borderRadius: 2 }} /> Consumatori</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* ═══ SECTION 7: MANUSCRIPT SYNTHESIS ═══ */}
+                  <div style={sectionCard}>
+                    {sectionHeader(7, "Sinteza pentru Manuscris", "Text auto-generat cu metrici cheie pentru sectiunea AI Benchmark din articolul stiintific.")}
                     {(() => {
                       // Gather key metrics for text
                       const nStim = Array.from(new Set(aiEvals.map(e => e.stimulus_id))).length;
