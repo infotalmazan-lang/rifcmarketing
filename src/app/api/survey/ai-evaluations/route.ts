@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createServiceRole();
     const body = await req.json();
-    const { stimulus_id, model_name, r_score, i_score, f_score, justification, prompt_version } = body;
+    const { stimulus_id, model_name, r_score, i_score, f_score, cta_score, justification, prompt_version } = body;
 
     if (!stimulus_id || !model_name || r_score == null || i_score == null || f_score == null) {
       return NextResponse.json(
@@ -48,17 +48,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const insertData: Record<string, unknown> = {
+      stimulus_id,
+      model_name,
+      r_score: Math.min(10, Math.max(1, parseFloat(r_score))),
+      i_score: Math.min(10, Math.max(1, parseFloat(i_score))),
+      f_score: Math.min(10, Math.max(1, parseFloat(f_score))),
+      justification: justification || {},
+      prompt_version: prompt_version || "run1",
+    };
+    if (cta_score != null) insertData.cta_score = Math.min(10, Math.max(1, parseFloat(cta_score)));
+
     const { data, error } = await supabase
       .from("survey_ai_evaluations")
-      .insert({
-        stimulus_id,
-        model_name,
-        r_score: Math.min(10, Math.max(1, parseFloat(r_score))),
-        i_score: Math.min(10, Math.max(1, parseFloat(i_score))),
-        f_score: Math.min(10, Math.max(1, parseFloat(f_score))),
-        justification: justification || {},
-        prompt_version: prompt_version || "v1",
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -84,7 +87,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const updates: Record<string, unknown> = {};
-    const allowed = ["model_name", "r_score", "i_score", "f_score", "justification", "prompt_version"];
+    const allowed = ["model_name", "r_score", "i_score", "f_score", "cta_score", "justification", "prompt_version"];
     for (const key of allowed) {
       if (fields[key] !== undefined) updates[key] = fields[key];
     }
@@ -92,6 +95,7 @@ export async function PUT(req: NextRequest) {
     if (updates.r_score != null) updates.r_score = Math.min(10, Math.max(1, parseFloat(updates.r_score as string)));
     if (updates.i_score != null) updates.i_score = Math.min(10, Math.max(1, parseFloat(updates.i_score as string)));
     if (updates.f_score != null) updates.f_score = Math.min(10, Math.max(1, parseFloat(updates.f_score as string)));
+    if (updates.cta_score != null) updates.cta_score = Math.min(10, Math.max(1, parseFloat(updates.cta_score as string)));
 
     const { data, error } = await supabase
       .from("survey_ai_evaluations")

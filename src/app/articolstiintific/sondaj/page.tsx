@@ -365,6 +365,7 @@ interface AiEvaluation {
   r_score: number;
   i_score: number;
   f_score: number;
+  cta_score: number | null;
   c_computed: number;
   justification: Record<string, string>;
   prompt_version: string;
@@ -1241,8 +1242,10 @@ export default function StudiuAdminPage() {
   const [aiEvals, setAiEvals] = useState<AiEvaluation[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [showAddAi, setShowAddAi] = useState(false);
-  const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
+  const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: "run1", justification: "" });
   const [aiSaving, setAiSaving] = useState(false);
+  const [aiRunTab, setAiRunTab] = useState<"run1" | "run2" | "run3">("run1");
+  const [aiEditId, setAiEditId] = useState<string | null>(null);
 
   // ── Predictive Validation state ──
   const [predCompanies, setPredCompanies] = useState<PredCompany[]>([]);
@@ -1821,22 +1824,42 @@ export default function StudiuAdminPage() {
     if (!aiForm.stimulus_id || !aiForm.model_name) return;
     setAiSaving(true);
     try {
+      const isEdit = !!aiEditId;
       const res = await fetch("/api/survey/ai-evaluations", {
-        method: "POST",
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(isEdit ? { id: aiEditId } : {}),
           ...aiForm,
+          prompt_version: aiRunTab,
           justification: aiForm.justification ? { text: aiForm.justification } : {},
         }),
       });
       const data = await res.json();
       if (data.success) {
         setShowAddAi(false);
-        setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
+        setAiEditId(null);
+        setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" });
         fetchAiEvals();
       }
     } catch { /* ignore */ }
     setAiSaving(false);
+  };
+
+  const startEditAi = (ev: AiEvaluation) => {
+    setAiEditId(ev.id);
+    setAiRunTab((ev.prompt_version || "run1") as "run1" | "run2" | "run3");
+    setAiForm({
+      stimulus_id: ev.stimulus_id,
+      model_name: ev.model_name,
+      r_score: ev.r_score,
+      i_score: ev.i_score,
+      f_score: ev.f_score,
+      cta_score: ev.cta_score ?? 5,
+      prompt_version: ev.prompt_version || "run1",
+      justification: typeof ev.justification === "object" && ev.justification?.text ? ev.justification.text : "",
+    });
+    setShowAddAi(true);
   };
 
   const deleteAiEval = async (id: string) => {
@@ -19623,11 +19646,25 @@ export default function StudiuAdminPage() {
             {/* Add AI eval form */}
             {showAddAi && (
               <div style={{ ...S.configCard, borderColor: "#7C3AED", borderWidth: 2, marginBottom: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
-                  <Bot size={16} style={{ color: "#7C3AED" }} />
-                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#7C3AED" }}>EVALUARE AI NOUA</span>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Bot size={16} style={{ color: "#7C3AED" }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 2, color: "#7C3AED" }}>{aiEditId ? "EDITARE EVALUARE AI" : "EVALUARE AI NOUA"}</span>
+                  </div>
+                  {/* RUN tabs */}
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {(["run1", "run2", "run3"] as const).map((run, i) => (
+                      <button key={run} onClick={() => { setAiRunTab(run); setAiForm(f => ({ ...f, prompt_version: run })); }} style={{
+                        padding: "5px 14px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 1,
+                        background: aiRunTab === run ? "#7C3AED" : "#f3f4f6",
+                        color: aiRunTab === run ? "#fff" : "#6B7280",
+                        border: aiRunTab === run ? "none" : "1px solid #e5e7eb",
+                        cursor: "pointer", transition: "all 0.15s",
+                      }}>RUN {i + 1}</button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div><label style={S.configLabel}>MATERIAL *</label>
                     <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.stimulus_id} onChange={(e) => setAiForm({ ...aiForm, stimulus_id: e.target.value })}>
                       <option value="">Selecteaza material...</option>
@@ -19639,9 +19676,8 @@ export default function StudiuAdminPage() {
                       {AI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
-                  <div><label style={S.configLabel}>VERSIUNE PROMPT</label><input style={{ ...S.catEditInput, width: "100%", fontFamily: "JetBrains Mono, monospace" }} value={aiForm.prompt_version} onChange={(e) => setAiForm({ ...aiForm, prompt_version: e.target.value })} placeholder="v1" /></div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div>
                     <label style={{ ...S.configLabel, color: "#DC2626" }}>R (RELEVANTA) *</label>
                     <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#DC2626" }} value={aiForm.r_score} onChange={(e) => setAiForm({ ...aiForm, r_score: parseFloat(e.target.value) || 1 })} />
@@ -19654,14 +19690,18 @@ export default function StudiuAdminPage() {
                     <label style={{ ...S.configLabel, color: "#7C3AED" }}>F (FORMA) *</label>
                     <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#7C3AED" }} value={aiForm.f_score} onChange={(e) => setAiForm({ ...aiForm, f_score: parseFloat(e.target.value) || 1 })} />
                   </div>
+                  <div>
+                    <label style={{ ...S.configLabel, color: "#059669" }}>CTA *</label>
+                    <input type="number" min={1} max={10} step={0.1} style={{ ...S.catEditInput, width: "100%", fontWeight: 700, color: "#059669" }} value={aiForm.cta_score} onChange={(e) => setAiForm({ ...aiForm, cta_score: parseFloat(e.target.value) || 1 })} />
+                  </div>
                 </div>
                 <div style={{ marginBottom: 12 }}><label style={S.configLabel}>JUSTIFICARE AI</label><textarea style={{ ...S.catEditInput, width: "100%" }} value={aiForm.justification} onChange={(e) => setAiForm({ ...aiForm, justification: e.target.value })} placeholder="Output-ul modelului AI..." rows={3} /></div>
                 <div style={{ display: "flex", gap: 8 }}>
                   <button style={{ ...S.addCatBtn, background: "#7C3AED", opacity: aiSaving ? 0.6 : 1 }} onClick={addAiEval} disabled={aiSaving}>
                     {aiSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
-                    {aiSaving ? "Se salveaza..." : "Salveaza"}
+                    {aiSaving ? "Se salveaza..." : aiEditId ? "Actualizeaza" : "Salveaza"}
                   </button>
-                  <button style={S.galleryEditBtn} onClick={() => setShowAddAi(false)}><X size={14} /> Anuleaza</button>
+                  <button style={S.galleryEditBtn} onClick={() => { setShowAddAi(false); setAiEditId(null); setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }); }}><X size={14} /> Anuleaza</button>
                 </div>
               </div>
             )}
@@ -19686,6 +19726,7 @@ export default function StudiuAdminPage() {
                       <th style={{ ...thStyle, color: "#DC2626" }}>R</th>
                       <th style={{ ...thStyle, color: "#D97706" }}>I</th>
                       <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                      <th style={{ ...thStyle, color: "#059669" }}>CTA</th>
                       <th style={{ ...thStyle, color: "#111827", fontWeight: 800 }}>C</th>
                       <th style={thStyle}>DATA</th>
                       <th style={thStyle}></th>
@@ -19705,9 +19746,13 @@ export default function StudiuAdminPage() {
                           <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600 }}>{ev.r_score}</td>
                           <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
                           <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
+                          <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }}>{ev.cta_score ?? "—"}</td>
                           <td style={{ ...tdStyle, color: "#111827", fontWeight: 800 }}>{ev.c_computed}</td>
                           <td style={{ ...tdStyle, fontSize: 11, color: "#9CA3AF" }}>{new Date(ev.evaluated_at).toLocaleDateString("ro-RO")}</td>
-                          <td style={tdStyle}><button style={S.iconBtnDanger} onClick={() => deleteAiEval(ev.id)}><Trash2 size={14} /></button></td>
+                          <td style={{ ...tdStyle, display: "flex", gap: 4 }}>
+                            <button style={{ ...S.iconBtnDanger, background: "#ede9fe", color: "#7C3AED" }} onClick={() => startEditAi(ev)} title="Editeaza"><Pencil size={14} /></button>
+                            <button style={S.iconBtnDanger} onClick={() => deleteAiEval(ev.id)} title="Sterge"><Trash2 size={14} /></button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -19729,7 +19774,7 @@ export default function StudiuAdminPage() {
                       <tr style={{ background: "#f9fafb" }}>
                         <th style={{ ...thStyle, textAlign: "left" }}>MATERIAL</th>
                         {AI_MODELS.map(m => (
-                          <th key={m} colSpan={4} style={{ ...thStyle, borderLeft: "2px solid #e5e7eb" }}>
+                          <th key={m} colSpan={5} style={{ ...thStyle, borderLeft: "2px solid #e5e7eb" }}>
                             <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1 }}>{m.toUpperCase()}</span>
                           </th>
                         ))}
@@ -19741,6 +19786,7 @@ export default function StudiuAdminPage() {
                             <th style={{ ...thStyle, color: "#DC2626", borderLeft: "2px solid #e5e7eb" }}>R</th>
                             <th style={{ ...thStyle, color: "#D97706" }}>I</th>
                             <th style={{ ...thStyle, color: "#7C3AED" }}>F</th>
+                            <th style={{ ...thStyle, color: "#059669" }}>CTA</th>
                             <th style={{ ...thStyle, fontWeight: 800 }}>C</th>
                           </React.Fragment>
                         ))}
@@ -19754,21 +19800,30 @@ export default function StudiuAdminPage() {
                           <tr key={stim.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
                             <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600, fontSize: 12 }}>{stim.name}</td>
                             {AI_MODELS.map(m => {
-                              const ev = aiEvals.find(e => e.stimulus_id === stim.id && e.model_name === m);
-                              if (!ev) return (
+                              const runs = aiEvals.filter(e => e.stimulus_id === stim.id && e.model_name === m);
+                              if (runs.length === 0) return (
                                 <React.Fragment key={m}>
                                   <td style={{ ...tdStyle, borderLeft: "2px solid #f3f4f6", color: "#d1d5db" }}>—</td>
                                   <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
                                   <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
                                   <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
+                                  <td style={{ ...tdStyle, color: "#d1d5db" }}>—</td>
                                 </React.Fragment>
                               );
+                              const avgR = +(runs.reduce((s, e) => s + e.r_score, 0) / runs.length).toFixed(1);
+                              const avgI = +(runs.reduce((s, e) => s + e.i_score, 0) / runs.length).toFixed(1);
+                              const avgF = +(runs.reduce((s, e) => s + e.f_score, 0) / runs.length).toFixed(1);
+                              const ctaScores = runs.filter(e => e.cta_score != null);
+                              const avgCTA = ctaScores.length > 0 ? +(ctaScores.reduce((s, e) => s + (e.cta_score || 0), 0) / ctaScores.length).toFixed(1) : null;
+                              const avgC = +(avgR + avgI * avgF).toFixed(1);
+                              const isAvg = runs.length > 1;
                               return (
                                 <React.Fragment key={m}>
-                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600, borderLeft: "2px solid #f3f4f6" }}>{ev.r_score}</td>
-                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }}>{ev.i_score}</td>
-                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }}>{ev.f_score}</td>
-                                  <td style={{ ...tdStyle, fontWeight: 800 }}>{ev.c_computed}</td>
+                                  <td style={{ ...tdStyle, color: "#DC2626", fontWeight: 600, borderLeft: "2px solid #f3f4f6" }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgR}{isAvg ? "*" : ""}</td>
+                                  <td style={{ ...tdStyle, color: "#D97706", fontWeight: 600 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgI}{isAvg ? "*" : ""}</td>
+                                  <td style={{ ...tdStyle, color: "#7C3AED", fontWeight: 600 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgF}{isAvg ? "*" : ""}</td>
+                                  <td style={{ ...tdStyle, color: "#059669", fontWeight: 600 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgCTA != null ? `${avgCTA}${isAvg ? "*" : ""}` : "—"}</td>
+                                  <td style={{ ...tdStyle, fontWeight: 800 }} title={isAvg ? `Media din ${runs.length} run-uri` : undefined}>{avgC}{isAvg ? "*" : ""}</td>
                                 </React.Fragment>
                               );
                             })}
