@@ -71,11 +71,11 @@ function youtubeEmbed(url: string | null): string | null {
 
 // ── Score dimension config ──
 const DIMENSIONS = [
-  { key: "c", label: "C", full: "Claritate", color: "#2563EB", desc: "Cit de clar este mesajul principal transmis?" },
-  { key: "r", label: "R", full: "Relevanta", color: "#DC2626", desc: "Cit de relevant este mesajul pentru publicul-tinta?" },
-  { key: "i", label: "I", full: "Interes", color: "#D97706", desc: "Cit de mult capteaza atentia si trezeste interesul?" },
-  { key: "f", label: "F", full: "Forma", color: "#7C3AED", desc: "Cit de buna este executia (design, claritate, calitate)?" },
-  { key: "cta", label: "CTA", full: "Call-to-Action", color: "#059669", desc: "Cit de eficient este apelul la actiune?" },
+  { key: "c", label: "C", full: "Claritate", color: "#2563EB", desc: "Cat de clar este mesajul principal pentru publicul-tinta?" },
+  { key: "r", label: "R", full: "Relevanta", color: "#DC2626", desc: "Cat de relevant este mesajul pentru publicul-tinta?" },
+  { key: "i", label: "I", full: "Interes", color: "#D97706", desc: "Cat de mult capteaza atentia publicului-tinta?" },
+  { key: "f", label: "F", full: "Forma", color: "#7C3AED", desc: "Cat de buna este executia vizuala si creativa?" },
+  { key: "cta", label: "CTA", full: "Call-to-Action", color: "#059669", desc: "Cat de eficient este CTA-ul pentru publicul-tinta? (evalueaza designul, nu daca ai cumpara tu)" },
 ] as const;
 
 const MIN_JUSTIFICATION_CHARS = 40;
