@@ -140,6 +140,30 @@ const DATA_SOURCES = [
   "Google Ads Dashboard", "Meta Ads Manager", "Google Analytics 4", "CRM intern", "Raport client", "Altele"
 ];
 
+// KPI recommendations per data source — shown when evaluator selects a source
+const SOURCE_KPI_GUIDE: Record<string, { kpis: string[]; description: string }> = {
+  "Google Ads Dashboard": {
+    description: "Din Google Ads poti extrage urmatoarele KPI-uri relevante pentru validarea RIFC:",
+    kpis: ["CTR (%)", "CPC (EUR)", "Conversii (#)", "Rata Conversie (%)", "Cost/Conversie (EUR)", "Impression Share (%)", "CPM (EUR)", "View Rate (%)", "CPV (EUR)", "Reach (#)"],
+  },
+  "Meta Ads Manager": {
+    description: "Din Meta Ads Manager (Facebook/Instagram) poti extrage:",
+    kpis: ["Reach (#)", "Impressions (#)", "CPM (EUR)", "Frecventa (#)", "ThruPlay Rate (%)", "CTR (%)", "CPC (EUR)", "Cost/Mesaj (EUR)", "Rata Raspuns (%)", "Engagement Rate (%)", "Cost/Engagement (EUR)"],
+  },
+  "Google Analytics 4": {
+    description: "Din Google Analytics 4 poti extrage date despre comportamentul pe site:",
+    kpis: ["Bounce Rate (%)", "Avg Session Duration (sec)", "Conversii (#)", "Rata Conversie (%)", "Pages/Session (#)", "Landing Page Views (#)", "Timp pe Pagina (sec)"],
+  },
+  "CRM intern": {
+    description: "Din CRM-ul intern poti extrage date despre lead-uri si vanzari:",
+    kpis: ["Conversii/Lead-uri (#)", "Rata Conversie (%)", "Valoare medie comanda (EUR)", "Revenue generat (EUR)", "Cost/Achizitie Client (EUR)"],
+  },
+  "Raport client": {
+    description: "Din raportul clientului poti extrage KPI-uri agregate din campanie:",
+    kpis: ["CTR (%)", "CPC (EUR)", "Conversii (#)", "ROI (%)", "ROAS (x)", "Revenue (EUR)", "Budget consumat (EUR)"],
+  },
+};
+
 function EvaluatorPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -172,6 +196,7 @@ function EvaluatorPageContent() {
   // Screen 3: KPIs
   const [kpis, setKpis] = useState<KpiEntry[]>([]);
   const [kpiStartTime, setKpiStartTime] = useState<number>(0);
+  const [selectedSource, setSelectedSource] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -700,6 +725,73 @@ function EvaluatorPageContent() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Source-based KPI Guide */}
+            <div style={{ padding: "16px 18px", background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0891B2" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Sursa principala de date</span>
+              </div>
+              <p style={{ fontSize: 12, color: "#6B7280", margin: "0 0 10px", lineHeight: 1.5 }}>
+                Selecteaza sursa de date pe care o folosesti pentru aceasta campanie. Vei primi o lista de KPI-uri recomandate pe care le poti adauga.
+              </p>
+              <select
+                value={selectedSource}
+                onChange={e => setSelectedSource(e.target.value)}
+                style={{ ...inputStyle, padding: "10px 12px", fontSize: 13, borderColor: selectedSource ? "#0891B2" : "#d1d5db", maxWidth: 320 }}
+              >
+                <option value="">Alege sursa de date...</option>
+                {DATA_SOURCES.filter(s => s !== "Altele").map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+
+              {selectedSource && SOURCE_KPI_GUIDE[selectedSource] && (() => {
+                const guide = SOURCE_KPI_GUIDE[selectedSource];
+                const existingNames = kpis.map(k => k.kpi_name.toLowerCase());
+                return (
+                <div style={{ marginTop: 12, padding: "14px 16px", background: "#f0fdfa", borderRadius: 8, border: "1px solid #99f6e4" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f766e", marginBottom: 6 }}>
+                    {guide.description}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                    {guide.kpis.map(kpiLabel => {
+                      const namePart = kpiLabel.replace(/\s*\(.*\)$/, "");
+                      const unitMatch = kpiLabel.match(/\(([^)]+)\)$/);
+                      const unit = unitMatch ? unitMatch[1] : "";
+                      const alreadyAdded = existingNames.includes(namePart.toLowerCase());
+                      return (
+                        <button
+                          key={kpiLabel}
+                          disabled={alreadyAdded}
+                          onClick={() => {
+                            if (alreadyAdded) return;
+                            setKpis(prev => [...prev, { kpi_name: namePart, kpi_value: "", kpi_unit: unit, data_source: selectedSource, notes: "" }]);
+                          }}
+                          style={{
+                            padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: alreadyAdded ? "default" : "pointer",
+                            border: alreadyAdded ? "1px solid #86efac" : "1px solid #99f6e4",
+                            background: alreadyAdded ? "#dcfce7" : "#fff",
+                            color: alreadyAdded ? "#166534" : "#0f766e",
+                            opacity: alreadyAdded ? 0.7 : 1,
+                            display: "flex", alignItems: "center", gap: 4,
+                          }}
+                        >
+                          {alreadyAdded ? (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#166534" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+                          )}
+                          {kpiLabel}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 10, color: "#6B7280" }}>
+                    Click pe un KPI pentru a-l adauga automat la evaluare
+                  </div>
+                </div>
+                );
+              })()}
             </div>
 
             {/* Required KPIs */}
