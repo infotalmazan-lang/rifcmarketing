@@ -1305,6 +1305,7 @@ export default function StudiuAdminPage() {
   const [aiRunTab, setAiRunTab] = useState<"run1" | "run2" | "run3">("run1");
   const [aiEditId, setAiEditId] = useState<string | null>(null);
   const [aiSubTab, setAiSubTab] = useState<"main" | "interpretare">("main");
+  const [aiInterpExpanded, setAiInterpExpanded] = useState<Record<number, boolean>>({});
 
   // ── Predictive Validation state ──
   const [predCompanies, setPredCompanies] = useState<PredCompany[]>([]);
@@ -20042,8 +20043,7 @@ export default function StudiuAdminPage() {
               const thS: React.CSSProperties = { padding: "10px 14px", fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: "#6B7280", textTransform: "uppercase" as const, borderBottom: "2px solid #e5e7eb", textAlign: "left" as const };
               const tdS: React.CSSProperties = { padding: "10px 14px", fontSize: 13, borderBottom: "1px solid #f3f4f6", color: "#374151" };
               const sectionCard: React.CSSProperties = { background: "#fff", borderRadius: 16, border: "1px solid #e5e7eb", padding: 28, marginBottom: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" };
-              // Interpretation expand state
-              const [aiInterpExpanded, setAiInterpExpanded] = React.useState<Record<number, boolean>>({});
+              // Interpretation expand toggle
               const toggleInterp = (n: number) => setAiInterpExpanded(prev => ({ ...prev, [n]: !prev[n] }));
 
               const sectionHeader = (num: number, title: string, desc: string, interpText?: string) => (
