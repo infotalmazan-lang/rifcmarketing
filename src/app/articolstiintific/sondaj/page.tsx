@@ -371,6 +371,73 @@ interface AiEvaluation {
   evaluated_at: string;
 }
 
+interface PredCompany {
+  id: string;
+  name: string;
+  industry: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface PredCampaign {
+  id: string;
+  company_id: string;
+  name: string;
+  channel: string;
+  campaign_type: string;
+  period_start: string | null;
+  period_end: string | null;
+  budget_eur: number | null;
+  creative_image_url: string | null;
+  creative_link: string | null;
+  admin_notes: string | null;
+  paired_campaign_id: string | null;
+  eval1_token: string;
+  eval2_token: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface PredEvaluation {
+  id: string;
+  campaign_id: string;
+  evaluator_number: number;
+  evaluator_name: string | null;
+  evaluator_email: string | null;
+  evaluator_experience: string | null;
+  score_r: number | null;
+  score_i: number | null;
+  score_f: number | null;
+  score_cta: number | null;
+  score_c: number | null;
+  comment_r: string | null;
+  comment_i: string | null;
+  comment_f: string | null;
+  comment_cta: string | null;
+  gate_triggered: boolean | null;
+  current_screen: number;
+  time_spent_scoring_sec: number | null;
+  time_spent_kpi_sec: number | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+interface PredKpi {
+  id: string;
+  evaluation_id: string;
+  kpi_name: string;
+  kpi_value: number;
+  kpi_unit: string;
+  data_source: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+
 interface Distribution {
   id: string;
   name: string;
@@ -917,8 +984,8 @@ export default function StudiuAdminPage() {
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
-  const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "cfa" | "consumatori" | "ai" | "additional">("osf");
-  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true, "c-h1": true, "c-h2": true, "c-h3": true, "c-h4": true, "c-h5": true, "c-h6": true, "c-h7": true });
+  const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "cfa" | "consumatori" | "ai" | "additional" | "validare">("osf");
+  const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true, "c-h1": true, "c-h2": true, "c-h3": true, "c-h4": true, "c-h5": true, "c-h6": true, "c-h7": true, "efa-xv": true, "cfa-xv": true });
 
   // ── OSF Collapsible Section Header ──
   const OsfH = ({ id, num, title, color, verdict, children }: { id: string; num: string; title: string; color: string; verdict?: string; children?: React.ReactNode }) => (
@@ -1177,6 +1244,23 @@ export default function StudiuAdminPage() {
   const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, prompt_version: "v1", justification: "" });
   const [aiSaving, setAiSaving] = useState(false);
 
+  // ── Predictive Validation state ──
+  const [predCompanies, setPredCompanies] = useState<PredCompany[]>([]);
+  const [predCampaigns, setPredCampaigns] = useState<PredCampaign[]>([]);
+  const [predEvaluations, setPredEvaluations] = useState<PredEvaluation[]>([]);
+  const [predKpis, setPredKpis] = useState<PredKpi[]>([]);
+  const [predLoading, setPredLoading] = useState(false);
+  const [predSubTab, setPredSubTab] = useState<"main" | "interpretare">("main");
+  const [showAddCompany, setShowAddCompany] = useState(false);
+  const [predCompanyForm, setPredCompanyForm] = useState({ name: "", industry: "Altele", contact_name: "", contact_email: "", notes: "" });
+  const [predExpandedCompany, setPredExpandedCompany] = useState<string | null>(null);
+  const [showAddCampaign, setShowAddCampaign] = useState<string | null>(null); // company_id
+  const [predCampaignForm, setPredCampaignForm] = useState({ name: "", channel: "", campaign_type: "", period_start: "", period_end: "", budget_eur: "", creative_image_url: "", creative_link: "", admin_notes: "" });
+  const [predCopied, setPredCopied] = useState<string | null>(null);
+  const [predSaving, setPredSaving] = useState(false);
+  const [predSearch, setPredSearch] = useState("");
+
+
   // ── Upload helper: XHR PUT for <50MB, tus resumable for >=50MB ──
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [uploadStatus, setUploadStatus] = useState<string>("");
@@ -1399,6 +1483,49 @@ export default function StudiuAdminPage() {
     setExpertLoading(false);
   }, []);
 
+  // ── Predictive Validation constants ──
+  const PRED_CHANNELS = ["Google Ads", "Facebook Ads", "Instagram Ads", "SMS Marketing", "Email Marketing", "Site / Landing Page"];
+  const PRED_TYPES: Record<string, string[]> = {
+    "Google Ads": ["Search", "Display", "YouTube / Pre-roll"],
+    "Facebook Ads": ["Awareness", "Messages", "Traffic (Site)"],
+    "Instagram Ads": ["Boost", "Messages"],
+    "SMS Marketing": ["Promotional"],
+    "Email Marketing": ["Newsletter / Promotional"],
+    "Site / Landing Page": ["Landing Page (GA4)"],
+  };
+  const PRED_KPI_PRESETS: Record<string, { name: string; unit: string }[]> = {
+    "Search": [{ name: "CTR", unit: "%" }, { name: "CPC", unit: "EUR" }, { name: "Conversii", unit: "#" }, { name: "Rata Conversie", unit: "%" }, { name: "Cost/Conversie", unit: "EUR" }, { name: "Impression Share", unit: "%" }],
+    "Display": [{ name: "CTR", unit: "%" }, { name: "CPC", unit: "EUR" }, { name: "Conversii", unit: "#" }, { name: "View-Through Conv", unit: "#" }, { name: "CPM", unit: "EUR" }, { name: "Reach", unit: "#" }],
+    "YouTube / Pre-roll": [{ name: "View Rate", unit: "%" }, { name: "CPV", unit: "EUR" }, { name: "Watch Time", unit: "sec" }, { name: "Earned Actions", unit: "#" }, { name: "Reach", unit: "#" }],
+    "Awareness": [{ name: "Reach", unit: "#" }, { name: "Impressions", unit: "#" }, { name: "CPM", unit: "EUR" }, { name: "Frecventa", unit: "#" }, { name: "ThruPlay Rate", unit: "%" }],
+    "Messages": [{ name: "Cost/Mesaj", unit: "EUR" }, { name: "Rata Raspuns", unit: "%" }, { name: "Conversii", unit: "#" }, { name: "CTR Link", unit: "%" }],
+    "Traffic (Site)": [{ name: "CTR", unit: "%" }, { name: "CPC", unit: "EUR" }, { name: "Landing Page Views", unit: "#" }, { name: "Bounce Rate", unit: "%" }, { name: "Timp pe Pagina", unit: "sec" }],
+    "Boost": [{ name: "Reach", unit: "#" }, { name: "Engagement Rate", unit: "%" }, { name: "Cost/Engagement", unit: "EUR" }, { name: "Saves", unit: "#" }, { name: "Profile Visits", unit: "#" }],
+    "Promotional": [{ name: "Delivery Rate", unit: "%" }, { name: "CTR", unit: "%" }, { name: "Conversii", unit: "#" }, { name: "Opt-out Rate", unit: "%" }, { name: "Cost/SMS", unit: "EUR" }],
+    "Newsletter / Promotional": [{ name: "Open Rate", unit: "%" }, { name: "CTR", unit: "%" }, { name: "Conversii", unit: "#" }, { name: "Unsubscribe Rate", unit: "%" }, { name: "CTOR", unit: "%" }],
+    "Landing Page (GA4)": [{ name: "Bounce Rate", unit: "%" }, { name: "Avg Session Duration", unit: "sec" }, { name: "Conversii", unit: "#" }, { name: "Rata Conversie", unit: "%" }, { name: "Pages/Session", unit: "#" }],
+  };
+  const PRED_INDUSTRIES = ["Telecom / Internet", "FMCG / Retail", "Servicii Medicale / Stomatologie", "Education / EdTech", "HoReCa / Restaurant", "Fashion / Beauty", "IT / SaaS", "Imobiliare", "Auto", "Financiar / Banking", "Entertainment", "Altele"];
+
+  const fetchPredData = useCallback(async () => {
+    setPredLoading(true);
+    try {
+      const [compRes, campRes, evalRes, kpiRes] = await Promise.all([
+        fetch("/api/survey/predictive/companies"),
+        fetch("/api/survey/predictive/campaigns"),
+        fetch("/api/survey/predictive/evaluations"),
+        fetch("/api/survey/predictive/kpis"),
+      ]);
+      const [compData, campData, evalData, kpiData] = await Promise.all([compRes.json(), campRes.json(), evalRes.json(), kpiRes.json()]);
+      if (compData.success) setPredCompanies(compData.companies);
+      if (campData.success) setPredCampaigns(campData.campaigns);
+      if (evalData.success) setPredEvaluations(evalData.evaluations);
+      if (kpiData.success) setPredKpis(kpiData.kpis);
+    } catch { /* ignore */ }
+    setPredLoading(false);
+  }, []);
+
+
   useEffect(() => {
     if (activeTab === "log") fetchLog();
   }, [activeTab, fetchLog]);
@@ -1424,9 +1551,9 @@ export default function StudiuAdminPage() {
   // Fetch CVI + Expert data when Interpretare tab is active (sub-tabs need it)
   useEffect(() => {
     if (activeTab === "interpretare") {
-      fetchExperts(); fetchExpertEvals(); fetchCviData();
+      fetchExperts(); fetchExpertEvals(); fetchCviData(); fetchPredData();
     }
-  }, [activeTab, fetchExperts, fetchExpertEvals, fetchCviData]);
+  }, [activeTab, fetchExperts, fetchExpertEvals, fetchCviData, fetchPredData]);
 
   const saveCviExpert = useCallback(async () => {
     if (!cviExpertForm.name.trim()) return;
@@ -1574,6 +1701,106 @@ export default function StudiuAdminPage() {
     setExpertCopied(expert.id);
     setTimeout(() => setExpertCopied(null), 2000);
   };
+
+  // ── Predictive CRUD helpers ──
+  const savePredCompany = async () => {
+    if (!predCompanyForm.name.trim()) return;
+    setPredSaving(true);
+    try {
+      const res = await fetch("/api/survey/predictive/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(predCompanyForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddCompany(false);
+        setPredCompanyForm({ name: "", industry: "Altele", contact_name: "", contact_email: "", notes: "" });
+        fetchPredData();
+      }
+    } catch { /* ignore */ }
+    setPredSaving(false);
+  };
+
+  const deletePredCompany = async (id: string) => {
+    if (!confirm("Stergi definitiv aceasta companie si toate campaniile ei?")) return;
+    await fetch(`/api/survey/predictive/companies?id=${id}`, { method: "DELETE" });
+    fetchPredData();
+  };
+
+  const savePredCampaign = async (companyId: string) => {
+    if (!predCampaignForm.name.trim() || !predCampaignForm.channel || !predCampaignForm.campaign_type) return;
+    setPredSaving(true);
+    try {
+      const res = await fetch("/api/survey/predictive/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...predCampaignForm, company_id: companyId, budget_eur: predCampaignForm.budget_eur ? Number(predCampaignForm.budget_eur) : null }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowAddCampaign(null);
+        setPredCampaignForm({ name: "", channel: "", campaign_type: "", period_start: "", period_end: "", budget_eur: "", creative_image_url: "", creative_link: "", admin_notes: "" });
+        fetchPredData();
+      }
+    } catch { /* ignore */ }
+    setPredSaving(false);
+  };
+
+  const deletePredCampaign = async (id: string) => {
+    if (!confirm("Stergi aceasta campanie si evaluarile ei?")) return;
+    await fetch(`/api/survey/predictive/campaigns?id=${id}`, { method: "DELETE" });
+    fetchPredData();
+  };
+
+  const copyPredEvalLink = (campaign: PredCampaign, evalNum: 1 | 2) => {
+    const token = evalNum === 1 ? campaign.eval1_token : campaign.eval2_token;
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    const link = `${base}/articolstiintific/sondaj/evaluator?token=${token}`;
+    navigator.clipboard.writeText(link);
+    setPredCopied(`${campaign.id}-${evalNum}`);
+    setTimeout(() => setPredCopied(null), 2000);
+  };
+
+  const getPredEvalStatus = (campaign: PredCampaign, evalNum: 1 | 2) => {
+    const ev = predEvaluations.find(e => e.campaign_id === campaign.id && e.evaluator_number === evalNum);
+    if (!ev) return { label: "NESTARTAT", color: "#6B7280", bg: "#f3f4f6" };
+    if (ev.completed_at) return { label: "COMPLET", color: "#166534", bg: "#dcfce7" };
+    if (ev.current_screen === 2) return { label: "SCORING", color: "#92400e", bg: "#fef3c7" };
+    if (ev.current_screen === 3) return { label: "KPI", color: "#1e40af", bg: "#dbeafe" };
+    return { label: "IDENTIFICARE", color: "#6B7280", bg: "#f3f4f6" };
+  };
+
+  // ICC(3,1) two-way mixed, single measures for 2 raters
+  const _icc = (pairs: [number, number][]): { icc: number; ci_lo: number; ci_hi: number } => {
+    const n = pairs.length;
+    if (n < 3) return { icc: 0, ci_lo: 0, ci_hi: 0 };
+    const k = 2;
+    const grandMean = pairs.reduce((s, [a, b]) => s + a + b, 0) / (n * k);
+    const msR = k * pairs.reduce((s, [a, b]) => s + Math.pow((a + b) / k - grandMean, 2), 0) / (n - 1);
+    const msE = pairs.reduce((s, [a, b]) => {
+      const rowMean = (a + b) / k;
+      return s + Math.pow(a - rowMean, 2) + Math.pow(b - rowMean, 2);
+    }, 0) / (n * (k - 1));
+    const icc = msE === 0 && msR === 0 ? 1 : (msR - msE) / (msR + (k - 1) * msE);
+    // Approximate CI
+    const F = msR / Math.max(msE, 0.001);
+    const df1 = n - 1;
+    const df2 = n * (k - 1);
+    const Flo = F / 2.5; // rough 95% CI approx
+    const Fhi = F * 2.5;
+    const ci_lo = (Flo - 1) / (Flo + k - 1);
+    const ci_hi = (Fhi - 1) / (Fhi + k - 1);
+    return { icc: Math.max(-1, Math.min(1, icc)), ci_lo: Math.max(-1, ci_lo), ci_hi: Math.min(1, ci_hi) };
+  };
+
+  const _iccLevel = (icc: number) => {
+    if (icc >= 0.9) return { label: "Excelent", color: "#166534", bg: "#dcfce7" };
+    if (icc >= 0.75) return { label: "Bun", color: "#1e40af", bg: "#dbeafe" };
+    if (icc >= 0.5) return { label: "Moderat", color: "#92400e", bg: "#fef3c7" };
+    return { label: "Slab", color: "#991b1b", bg: "#fee2e2" };
+  };
+
 
   // ── AI evaluations data ──────────────────────────────────
   const fetchAiEvals = useCallback(async () => {
@@ -5249,6 +5476,7 @@ export default function StudiuAdminPage() {
                     { key: "consumatori" as const, label: "6 Consumatori 3000", color: "#F97316" },
                     { key: "ai" as const, label: "7 AI Scoring", color: "#0EA5E9" },
                     { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
+                    { key: "validare" as const, label: "8 Validare Predictiva", color: "#0891B2" },
                   ] as const).map(t => (
                     <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
                       padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
@@ -6063,6 +6291,7 @@ export default function StudiuAdminPage() {
                   { key: "consumatori" as const, label: "6 Consumatori 3000", color: "#F97316" },
                   { key: "ai" as const, label: "7 AI Scoring", color: "#0EA5E9" },
                   { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
+                  { key: "validare" as const, label: "8 Validare Predictiva", color: "#0891B2" },
                 ] as const).map(t => (
                   <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
                     padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
@@ -13746,7 +13975,7 @@ export default function StudiuAdminPage() {
                           <div style={{ marginBottom: 14 }}>
                             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.5, color: "#1e40af", marginBottom: 6 }}>CE TESTAM</div>
                             <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 8, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
-                              <em>Formula R + (I {"\u00D7"} F) = C prezice cu adevarat claritatea perceputa de consumator? Si daca da, aceasta claritate duce la actiune (CTA)?</em>
+                              <em>Formula R + (I {"\u00D7"} F) = C prezice cu adevarat claritatea evaluata de expertii in marketing? Si daca da, aceasta claritate duce la actiune (CTA)?</em>
                             </div>
                             <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 8 }}>
                               <strong>Lantul cauzal testat:</strong> R activeaza {"\u2192"} I{"\u00D7"}F produce C (Claritate) {"\u2192"} C coreleaza cu CTA (H2) {"\u2192"} Brand modereaza C{"\u2192"}CTA (H3)
@@ -14003,8 +14232,8 @@ export default function StudiuAdminPage() {
                                   {/* Annotation B */}
                                   <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#eff6ff", borderRadius: 4, borderLeft: "3px solid #2563EB", margin: "2px 0 6px" }}>
                                     <strong style={{ color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626" }}>{diffCta > 2 ? "\u2705 CONFIRMAT" : diffCta >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
-                                    <strong>METRICA DECISIVA.</strong> Intentia de actiune (CTA 1-10): ar cumpara consumatorul sau nu? CTA {exH1BelowAvgCta} sub prag vs {exH1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={exH1CohenDCta.toFixed(2)} ({Math.abs(exH1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(exH1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
-                                    {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, consumatorul NU cumpara.</strong>}{" "}
+                                    <strong>METRICA DECISIVA.</strong> Eficienta CTA (1-10): evalueaza expertul CTA-ul ca eficient pentru publicul-tinta? CTA {exH1BelowAvgCta} sub prag vs {exH1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={exH1CohenDCta.toFixed(2)} ({Math.abs(exH1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(exH1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                    {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, expertii evalueaza CTA-ul ca ineficient.</strong>}{" "}
                                     <span style={{ color: "#6B7280" }}>n={exH1CtaBelow.length}+{exH1CtaAbove.length} = evaluari cu CTA valid.</span>
                                   </div>
                                   {/* ROW C: Gate puternic */}
@@ -14116,7 +14345,7 @@ export default function StudiuAdminPage() {
                                   <br />
                                   <span style={{ fontSize: 11 }}>
                                     Testul A (perceptie): Cand R&lt;{EX_GATE}, claritatea perceputa scade cu {diffCp.toFixed(2)} puncte ({exH1BelowAvgC} vs {exH1AboveAvgC}).{" "}
-                                    <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({exH1BelowAvgCta} vs {exH1AboveAvgCta}) — consumatorul nu cumpara.</strong>{" "}
+                                    <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({exH1BelowAvgCta} vs {exH1AboveAvgCta}) — expertii evalueaza CTA-ul ca slab.</strong>{" "}
                                     {strongN >= 3 && <>Testul C (test maxim): Chiar cu I&ge;5, F&ge;5, CTA ramane {strongBelowCta} fara relevanta vs {exH1AboveAvgCta} cu relevanta. <strong>Calitatea NU compenseaza lipsa relevantei.</strong></>}
                                   </span>
                                 </>);
@@ -14178,7 +14407,7 @@ export default function StudiuAdminPage() {
                         <OsfH id="efa-h3" num="OSF H3" title={`Ipoteza 3 \u2014 Brand ca Moderator C\u2192CTA`} color="#D97706" verdict={(() => { const _fzH3e = _fisherZTest(exH3PearsonKnown, exH3PearsonUnknown, exH3Known.length, exH3Unknown.length); return _fzH3e.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "CONFIRMATA" : _fzH3e.p >= 0.05 ? "NEUTRA" : "INVERSATA"; })()}>
                           <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Brandul modereaza relatia C {"\u2192"} CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
                           <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
-                            <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
+                            <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — expertul evalueaza mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
                             <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={exH3Known.length}) vs necunoscut (portocaliu, n={exH3Unknown.length}).{" "}
                             <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
                           </div>
@@ -14236,7 +14465,7 @@ export default function StudiuAdminPage() {
                             );
                           })()}
                           <div style={exCardStyle}>
-                            <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
+                            <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, expertul evalueaza mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
                             {exH3Known.length > 0 && exH3Unknown.length > 0 ? (
                               <>
                               {Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown)
@@ -14640,6 +14869,116 @@ export default function StudiuAdminPage() {
                         })()}
 
 
+
+                        {/* ═══ CROSS-VALIDARE: Expert vs Consumator ═══ */}
+                        {results && results.stimuliResults && results.stimuliResults.length > 0 && (() => {
+                          // Build per-stimulus comparison: expert avg vs consumer avg
+                          const consumerMap = new Map<string, { avg_c: number; avg_c_score: number; avg_cta: number; avg_r: number; avg_i: number; avg_f: number; name: string }>();
+                          results.stimuliResults.filter(s => s.response_count > 0).forEach(s => {
+                            consumerMap.set(s.id, { avg_c: s.avg_c, avg_c_score: s.avg_c_score, avg_cta: s.avg_cta, avg_r: s.avg_r, avg_i: s.avg_i, avg_f: s.avg_f, name: s.name });
+                          });
+                          // Match expert materialAggs with consumer data
+                          const xvRows = materialAggs
+                            .filter(m => consumerMap.has(m.sid))
+                            .map(m => {
+                              const c = consumerMap.get(m.sid)!;
+                              return {
+                                name: m.name || c.name,
+                                exC: exNormCf(m.avg_c),
+                                conC: c.avg_c_score,
+                                exCTA: m.avg_c_score, // expert c_score as proxy (perceived clarity)
+                                conCTA: c.avg_cta,
+                                exR: m.avg_r,
+                                conR: c.avg_r,
+                                exI: m.avg_i,
+                                conI: c.avg_i,
+                                exF: m.avg_f,
+                                conF: c.avg_f,
+                              };
+                            });
+                          if (xvRows.length < 3) return null;
+                          // Correlations
+                          const xvRc = _pearsonR(xvRows.map(r => r.exC), xvRows.map(r => r.conC));
+                          const xvRr = _pearsonR(xvRows.map(r => r.exR), xvRows.map(r => r.conR));
+                          const xvRi = _pearsonR(xvRows.map(r => r.exI), xvRows.map(r => r.conI));
+                          const xvRf = _pearsonR(xvRows.map(r => r.exF), xvRows.map(r => r.conF));
+                          const xvPc = _pValuePearson(xvRc, xvRows.length);
+                          const xvPr = _pValuePearson(xvRr, xvRows.length);
+                          const xvPi = _pValuePearson(xvRi, xvRows.length);
+                          const xvPf = _pValuePearson(xvRf, xvRows.length);
+                          const xvVerdict = (r: number) => Math.abs(r) >= 0.70 ? "CONCORDANTA" : Math.abs(r) >= 0.40 ? "MODERATA" : "DIVERGENTA";
+                          const xvColor = (r: number) => Math.abs(r) >= 0.70 ? "#059669" : Math.abs(r) >= 0.40 ? "#D97706" : "#DC2626";
+                          const xvDims = [
+                            { label: "C (Claritate)", r: xvRc, p: xvPc },
+                            { label: "R (Relevanta)", r: xvRr, p: xvPr },
+                            { label: "I (Interes)", r: xvRi, p: xvPi },
+                            { label: "F (Forma)", r: xvRf, p: xvPf },
+                          ];
+                          return (
+                            <OsfH id="efa-xv" num="XV" title="Cross-Validare: Expert vs Consumator" color="#6366f1" verdict={xvVerdict(xvRc)}>
+                              <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Concordanta evaluare profesionala vs perceptie consumatori <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Cross-Layer Triangulation)</span></div>
+                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #6366f1" }}>
+                                <strong>Ce testeaza:</strong> In ce masura evaluarea profesionala a expertilor (Layer 2A) prezice perceptia reala a consumatorilor (Layer 1). Concordanta inalta valideaza expertiza; divergenta semnaleaza perspective complementare.{" "}
+                                <strong>Metoda:</strong> Pearson r per dimensiune intre mediile per-material ale expertilor si mediile per-material ale consumatorilor (N={xvRows.length} materiale comune).
+                              </div>
+
+                              {/* Correlation cards */}
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+                                {xvDims.map((d, i) => (
+                                  <div key={i} style={{ textAlign: "center" as const, padding: "8px 6px", background: "#fff", borderRadius: 8, border: `1px solid ${xvColor(d.r)}22` }}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600, marginBottom: 2 }}>{d.label}</div>
+                                    <div style={{ fontSize: 20, fontWeight: 900, color: xvColor(d.r), fontFamily: "JetBrains Mono, monospace" }}>r={d.r.toFixed(3)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>R²={( d.r * d.r).toFixed(3)} {_fmtP(d.p)}</div>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: xvColor(d.r), marginTop: 2 }}>{xvVerdict(d.r)}</div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Per-material table */}
+                              <div style={{ overflowX: "auto" as const, marginBottom: 10 }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                                  <thead>
+                                    <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                                      <th style={{ padding: "6px 8px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Material</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert R</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer R</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert I</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer I</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert F</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer F</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert C</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer C</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {xvRows.map((row, i) => (
+                                      <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                        <td style={{ padding: "5px 8px", fontWeight: 600, color: "#374151", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{row.name}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontFamily: "JetBrains Mono, monospace" }}>{row.exR.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{row.conR.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontFamily: "JetBrains Mono, monospace" }}>{row.exI.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{row.conI.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontFamily: "JetBrains Mono, monospace" }}>{row.exF.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{row.conF.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>{row.exC.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>{row.conC.toFixed(1)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Interpretation */}
+                              <div style={{ padding: "10px 14px", background: "#f0f0ff", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
+                                {Math.abs(xvRc) >= 0.70
+                                  ? <><strong style={{ color: "#059669" }}>Concordanta puternica.</strong> Expertii prezic cu acuratete care materiale sunt percepute ca clare de consumatori (r={xvRc.toFixed(3)}). Evaluarea profesionala si perceptia consumatorilor converg — triangularea valideaza ambele surse.</>
+                                  : Math.abs(xvRc) >= 0.40
+                                    ? <><strong style={{ color: "#D97706" }}>Concordanta moderata.</strong> Expertii identifica tendintele generale ale consumatorilor dar nu magnitudinea exacta (r={xvRc.toFixed(3)}). Perspectiva profesionala adauga valoare complementara.</>
+                                    : <><strong style={{ color: "#DC2626" }}>Divergenta.</strong> Evaluarea profesionala difera semnificativ de perceptia consumatorilor (r={xvRc.toFixed(3)}). Aceasta nu invalideaza niciuna dintre surse — semnaleaza ca expertii si consumatorii evalueaza din perspective diferite.</>}
+                              </div>
+                            </OsfH>
+                          );
+                        })()}
                         {/* ═══ TABEL SUMAR IPOTEZE (Academic Summary) ═══ */}
                         {(() => {
                           const _exH7CfNormsT = materialAggs.map(m => exNormCf(m.avg_c));
@@ -16916,7 +17255,7 @@ export default function StudiuAdminPage() {
                           <div style={{ marginBottom: 14 }}>
                             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.5, color: "#1e40af", marginBottom: 6 }}>CE TESTAM</div>
                             <div style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, marginBottom: 8, padding: "6px 10px", background: "#eff6ff", borderRadius: 4 }}>
-                              <em>Formula R + (I {"\u00D7"} F) = C prezice cu adevarat claritatea perceputa de consumator? Si daca da, aceasta claritate duce la actiune (CTA)?</em>
+                              <em>Formula R + (I {"\u00D7"} F) = C prezice cu adevarat claritatea evaluata de expertii in marketing? Si daca da, aceasta claritate duce la actiune (CTA)?</em>
                             </div>
                             <div style={{ fontSize: 10, color: "#374151", lineHeight: 1.5, marginBottom: 8 }}>
                               <strong>Lantul cauzal testat:</strong> R activeaza {"\u2192"} I{"\u00D7"}F produce C (Claritate) {"\u2192"} C coreleaza cu CTA (H2) {"\u2192"} Brand modereaza C{"\u2192"}CTA (H3)
@@ -17173,8 +17512,8 @@ export default function StudiuAdminPage() {
                                   {/* Annotation B */}
                                   <div style={{ gridColumn: "1 / -1", fontSize: 10, color: "#374151", lineHeight: 1.5, padding: "6px 10px", background: "#eff6ff", borderRadius: 4, borderLeft: "3px solid #2563EB", margin: "2px 0 6px" }}>
                                     <strong style={{ color: diffCta > 2 ? "#059669" : diffCta >= 1 ? "#D97706" : "#DC2626" }}>{diffCta > 2 ? "\u2705 CONFIRMAT" : diffCta >= 1 ? "\u26A0\uFE0F PARTIAL" : "\u274C NECONFIRMAT"}</strong>{" — "}
-                                    <strong>METRICA DECISIVA.</strong> Intentia de actiune (CTA 1-10): ar cumpara consumatorul sau nu? CTA {exH1BelowAvgCta} sub prag vs {exH1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={exH1CohenDCta.toFixed(2)} ({Math.abs(exH1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(exH1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
-                                    {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, consumatorul NU cumpara.</strong>}{" "}
+                                    <strong>METRICA DECISIVA.</strong> Eficienta CTA (1-10): evalueaza expertul CTA-ul ca eficient pentru publicul-tinta? CTA {exH1BelowAvgCta} sub prag vs {exH1AboveAvgCta} peste prag = &Delta;{diffCta.toFixed(2)}. Bine: &Delta;&gt;2 | Mediu: 1-2 | Slab: &lt;1. d={exH1CohenDCta.toFixed(2)} ({Math.abs(exH1CohenDCta) >= 0.8 ? "efect mare" : Math.abs(exH1CohenDCta) >= 0.5 ? "efect mediu" : "efect mic"}).{" "}
+                                    {diffCta > 2 && <strong style={{ color: "#059669" }}>Fara relevanta, expertii evalueaza CTA-ul ca ineficient.</strong>}{" "}
                                     <span style={{ color: "#6B7280" }}>n={exH1CtaBelow.length}+{exH1CtaAbove.length} = evaluari cu CTA valid.</span>
                                   </div>
                                   {/* ROW C: Gate puternic */}
@@ -17286,7 +17625,7 @@ export default function StudiuAdminPage() {
                                   <br />
                                   <span style={{ fontSize: 11 }}>
                                     Testul A (perceptie): Cand R&lt;{EX_GATE}, claritatea perceputa scade cu {diffCp.toFixed(2)} puncte ({exH1BelowAvgC} vs {exH1AboveAvgC}).{" "}
-                                    <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({exH1BelowAvgCta} vs {exH1AboveAvgCta}) — consumatorul nu cumpara.</strong>{" "}
+                                    <strong>Testul B (actiune): CTA scade cu {diffCta.toFixed(2)} puncte ({exH1BelowAvgCta} vs {exH1AboveAvgCta}) — expertii evalueaza CTA-ul ca slab.</strong>{" "}
                                     {strongN >= 3 && <>Testul C (test maxim): Chiar cu I&ge;5, F&ge;5, CTA ramane {strongBelowCta} fara relevanta vs {exH1AboveAvgCta} cu relevanta. <strong>Calitatea NU compenseaza lipsa relevantei.</strong></>}
                                   </span>
                                 </>);
@@ -17348,7 +17687,7 @@ export default function StudiuAdminPage() {
                         <OsfH id="efa-h3" num="OSF H3" title={`Ipoteza 3 \u2014 Brand ca Moderator C\u2192CTA`} color="#D97706" verdict={(() => { const _fzH3e = _fisherZTest(exH3PearsonKnown, exH3PearsonUnknown, exH3Known.length, exH3Unknown.length); return _fzH3e.p < 0.05 && Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown) ? "CONFIRMATA" : _fzH3e.p >= 0.05 ? "NEUTRA" : "INVERSATA"; })()}>
                           <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Brandul modereaza relatia C {"\u2192"} CTA <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Moderation Analysis — Brand Familiarity)</span></div>
                           <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 10, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #D97706" }}>
-                            <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — consumatorul judeca mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
+                            <strong>Ce testeaza:</strong> Cand brandul e necunoscut, RIFC devine predictor mai puternic — expertul evalueaza mesajul pur pe calitate. Cand brandul e cunoscut, notorietatea compenseaza un mesaj slab.{" "}
                             <strong>Metoda:</strong> Comparatie Pearson r pe doua subseturi: brand cunoscut (albastru, n={exH3Known.length}) vs necunoscut (portocaliu, n={exH3Unknown.length}).{" "}
                             <strong>Interpretare:</strong> r<sub>necunoscut</sub> &gt; r<sub>cunoscut</sub> = confirmat (RIFC conteaza mai mult fara brand), similar = neutru, invers = brand amplifica.
                           </div>
@@ -17406,7 +17745,7 @@ export default function StudiuAdminPage() {
                             );
                           })()}
                           <div style={exCardStyle}>
-                            <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, consumatorul judeca mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
+                            <strong>H3 — Moderarea brand awareness:</strong> Cand brandul e necunoscut, expertul evalueaza mesajul pur pe baza calitatii lui — RIFC devine predictor mai puternic. Cand brandul e cunoscut, notorietatea compenseaza partial un mesaj slab. Aceasta explica exceptiile unde R mic dar CTA mare.
                             {exH3Known.length > 0 && exH3Unknown.length > 0 ? (
                               <>
                               {Math.abs(exH3PearsonUnknown) > Math.abs(exH3PearsonKnown)
@@ -17810,6 +18149,116 @@ export default function StudiuAdminPage() {
                         })()}
 
 
+
+                        {/* ═══ CROSS-VALIDARE: Expert vs Consumator ═══ */}
+                        {results && results.stimuliResults && results.stimuliResults.length > 0 && (() => {
+                          // Build per-stimulus comparison: expert avg vs consumer avg
+                          const consumerMap = new Map<string, { avg_c: number; avg_c_score: number; avg_cta: number; avg_r: number; avg_i: number; avg_f: number; name: string }>();
+                          results.stimuliResults.filter(s => s.response_count > 0).forEach(s => {
+                            consumerMap.set(s.id, { avg_c: s.avg_c, avg_c_score: s.avg_c_score, avg_cta: s.avg_cta, avg_r: s.avg_r, avg_i: s.avg_i, avg_f: s.avg_f, name: s.name });
+                          });
+                          // Match expert materialAggs with consumer data
+                          const xvRows = materialAggs
+                            .filter(m => consumerMap.has(m.sid))
+                            .map(m => {
+                              const c = consumerMap.get(m.sid)!;
+                              return {
+                                name: m.name || c.name,
+                                exC: exNormCf(m.avg_c),
+                                conC: c.avg_c_score,
+                                exCTA: m.avg_c_score, // expert c_score as proxy (perceived clarity)
+                                conCTA: c.avg_cta,
+                                exR: m.avg_r,
+                                conR: c.avg_r,
+                                exI: m.avg_i,
+                                conI: c.avg_i,
+                                exF: m.avg_f,
+                                conF: c.avg_f,
+                              };
+                            });
+                          if (xvRows.length < 3) return null;
+                          // Correlations
+                          const xvRc = _pearsonR(xvRows.map(r => r.exC), xvRows.map(r => r.conC));
+                          const xvRr = _pearsonR(xvRows.map(r => r.exR), xvRows.map(r => r.conR));
+                          const xvRi = _pearsonR(xvRows.map(r => r.exI), xvRows.map(r => r.conI));
+                          const xvRf = _pearsonR(xvRows.map(r => r.exF), xvRows.map(r => r.conF));
+                          const xvPc = _pValuePearson(xvRc, xvRows.length);
+                          const xvPr = _pValuePearson(xvRr, xvRows.length);
+                          const xvPi = _pValuePearson(xvRi, xvRows.length);
+                          const xvPf = _pValuePearson(xvRf, xvRows.length);
+                          const xvVerdict = (r: number) => Math.abs(r) >= 0.70 ? "CONCORDANTA" : Math.abs(r) >= 0.40 ? "MODERATA" : "DIVERGENTA";
+                          const xvColor = (r: number) => Math.abs(r) >= 0.70 ? "#059669" : Math.abs(r) >= 0.40 ? "#D97706" : "#DC2626";
+                          const xvDims = [
+                            { label: "C (Claritate)", r: xvRc, p: xvPc },
+                            { label: "R (Relevanta)", r: xvRr, p: xvPr },
+                            { label: "I (Interes)", r: xvRi, p: xvPi },
+                            { label: "F (Forma)", r: xvRf, p: xvPf },
+                          ];
+                          return (
+                            <OsfH id="cfa-xv" num="XV" title="Cross-Validare: Expert vs Consumator" color="#6366f1" verdict={xvVerdict(xvRc)}>
+                              <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 2 }}>Concordanta evaluare profesionala vs perceptie consumatori <span style={{ fontSize: 10, fontWeight: 600, color: "#6B7280" }}>(Cross-Layer Triangulation)</span></div>
+                              <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6, marginBottom: 12, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #6366f1" }}>
+                                <strong>Ce testeaza:</strong> In ce masura evaluarea profesionala a expertilor (Layer 2A) prezice perceptia reala a consumatorilor (Layer 1). Concordanta inalta valideaza expertiza; divergenta semnaleaza perspective complementare.{" "}
+                                <strong>Metoda:</strong> Pearson r per dimensiune intre mediile per-material ale expertilor si mediile per-material ale consumatorilor (N={xvRows.length} materiale comune).
+                              </div>
+
+                              {/* Correlation cards */}
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 14 }}>
+                                {xvDims.map((d, i) => (
+                                  <div key={i} style={{ textAlign: "center" as const, padding: "8px 6px", background: "#fff", borderRadius: 8, border: `1px solid ${xvColor(d.r)}22` }}>
+                                    <div style={{ fontSize: 9, color: "#6B7280", fontWeight: 600, marginBottom: 2 }}>{d.label}</div>
+                                    <div style={{ fontSize: 20, fontWeight: 900, color: xvColor(d.r), fontFamily: "JetBrains Mono, monospace" }}>r={d.r.toFixed(3)}</div>
+                                    <div style={{ fontSize: 8, color: "#9CA3AF" }}>R²={( d.r * d.r).toFixed(3)} {_fmtP(d.p)}</div>
+                                    <div style={{ fontSize: 8, fontWeight: 700, color: xvColor(d.r), marginTop: 2 }}>{xvVerdict(d.r)}</div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* Per-material table */}
+                              <div style={{ overflowX: "auto" as const, marginBottom: 10 }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10 }}>
+                                  <thead>
+                                    <tr style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                                      <th style={{ padding: "6px 8px", textAlign: "left" as const, fontWeight: 700, color: "#374151" }}>Material</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert R</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer R</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert I</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer I</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert F</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer F</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#7C3AED" }}>Expert C</th>
+                                      <th style={{ padding: "6px 8px", textAlign: "center" as const, fontWeight: 700, color: "#2563EB" }}>Consumer C</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {xvRows.map((row, i) => (
+                                      <tr key={i} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                                        <td style={{ padding: "5px 8px", fontWeight: 600, color: "#374151", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{row.name}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontFamily: "JetBrains Mono, monospace" }}>{row.exR.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{row.conR.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontFamily: "JetBrains Mono, monospace" }}>{row.exI.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{row.conI.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontFamily: "JetBrains Mono, monospace" }}>{row.exF.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontFamily: "JetBrains Mono, monospace" }}>{row.conF.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#7C3AED", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>{row.exC.toFixed(1)}</td>
+                                        <td style={{ padding: "5px 8px", textAlign: "center" as const, color: "#2563EB", fontWeight: 700, fontFamily: "JetBrains Mono, monospace" }}>{row.conC.toFixed(1)}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Interpretation */}
+                              <div style={{ padding: "10px 14px", background: "#f0f0ff", borderRadius: 8, border: "1px solid #c7d2fe", fontSize: 11, color: "#374151", lineHeight: 1.6 }}>
+                                {Math.abs(xvRc) >= 0.70
+                                  ? <><strong style={{ color: "#059669" }}>Concordanta puternica.</strong> Expertii prezic cu acuratete care materiale sunt percepute ca clare de consumatori (r={xvRc.toFixed(3)}). Evaluarea profesionala si perceptia consumatorilor converg — triangularea valideaza ambele surse.</>
+                                  : Math.abs(xvRc) >= 0.40
+                                    ? <><strong style={{ color: "#D97706" }}>Concordanta moderata.</strong> Expertii identifica tendintele generale ale consumatorilor dar nu magnitudinea exacta (r={xvRc.toFixed(3)}). Perspectiva profesionala adauga valoare complementara.</>
+                                    : <><strong style={{ color: "#DC2626" }}>Divergenta.</strong> Evaluarea profesionala difera semnificativ de perceptia consumatorilor (r={xvRc.toFixed(3)}). Aceasta nu invalideaza niciuna dintre surse — semnaleaza ca expertii si consumatorii evalueaza din perspective diferite.</>}
+                              </div>
+                            </OsfH>
+                          );
+                        })()}
                         {/* ═══ TABEL SUMAR IPOTEZE (Academic Summary) ═══ */}
                         {(() => {
                           const _exH7CfNormsT = materialAggs.map(m => exNormCf(m.avg_c));
@@ -19452,6 +19901,478 @@ export default function StudiuAdminPage() {
                   </table>
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+
+        {/* ═══ VALIDARE PREDICTIVĂ ═══ */}
+        {activeTab === "interpretare" && interpViewMode === "validare" && (() => {
+          const activeCompanies = predCompanies.filter(c => c.is_active);
+          const totalCampaigns = predCampaigns.length;
+          const completedEvals = predEvaluations.filter(e => e.completed_at).length;
+          const campaignsWithBothEvals = predCampaigns.filter(c => {
+            const evs = predEvaluations.filter(e => e.campaign_id === c.id && e.completed_at);
+            return evs.length >= 2;
+          }).length;
+          const progressPct = Math.round((campaignsWithBothEvals / Math.max(totalCampaigns, 1)) * 100);
+          const filteredCompanies = predSearch
+            ? predCompanies.filter(c => c.name.toLowerCase().includes(predSearch.toLowerCase()) || c.industry.toLowerCase().includes(predSearch.toLowerCase()))
+            : predCompanies;
+
+          return (
+            <div>
+              {/* Sub-tab toggle */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+                {([
+                  { key: "main" as const, label: "Administrare" },
+                  { key: "interpretare" as const, label: "Interpretare" },
+                ] as const).map(t => (
+                  <button key={t.key} onClick={() => setPredSubTab(t.key)} style={{
+                    padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: predSubTab === t.key ? 700 : 500,
+                    background: predSubTab === t.key ? "#0891B2" : "#f9fafb",
+                    color: predSubTab === t.key ? "#fff" : "#374151",
+                    border: predSubTab === t.key ? "none" : "1px solid #e5e7eb",
+                    cursor: "pointer",
+                  }}>{t.label}</button>
+                ))}
+              </div>
+
+              {predSubTab === "main" && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                    <div>
+                      <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: 0 }}>Validare Predictiva (Case Study)</h2>
+                      <p style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                        Companii reale trimit creative publicitare — 2 evaluatori independenti scoreaza R/I/F/CTA + introduc date KPI reale.
+                      </p>
+                    </div>
+                    <button style={{ ...S.addCatBtn, background: "#0891B2" }} onClick={() => setShowAddCompany(true)}>
+                      <Plus size={16} />
+                      ADAUGA COMPANIE
+                    </button>
+                  </div>
+
+                  {/* KPI Banner */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 16 }}>
+                    {[
+                      { label: "COMPANII ACTIVE", value: activeCompanies.length, color: "#0891B2" },
+                      { label: "CAMPANII TOTAL", value: totalCampaigns, color: "#6366f1" },
+                      { label: "EVALUARI COMPLETE", value: completedEvals, color: "#059669" },
+                      { label: "CU 2 EVALUARI", value: campaignsWithBothEvals, color: "#D97706" },
+                      { label: "PROGRES", value: `${progressPct}%`, color: "#EC4899" },
+                    ].map((kpi, i) => (
+                      <div key={i} style={{ padding: "14px 16px", borderRadius: 10, background: "#fff", border: "1px solid #e5e7eb", textAlign: "center" }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, color: "#6B7280", marginBottom: 6 }}>{kpi.label}</div>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: kpi.color }}>{kpi.value}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ marginBottom: 20, padding: "10px 14px", background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>Progres evaluari complete (target: 30 campanii)</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#0891B2" }}>{campaignsWithBothEvals}/30</span>
+                    </div>
+                    <div style={{ height: 8, background: "#e5e7eb", borderRadius: 4 }}>
+                      <div style={{ height: 8, background: "#0891B2", borderRadius: 4, width: `${Math.min(100, (campaignsWithBothEvals / 30) * 100)}%`, transition: "width 0.3s" }} />
+                    </div>
+                  </div>
+
+                  {/* Search */}
+                  <div style={{ marginBottom: 16, display: "flex", gap: 8 }}>
+                    <input value={predSearch} onChange={e => setPredSearch(e.target.value)} placeholder="Cauta companie sau industrie..." style={{ flex: 1, padding: "8px 12px", borderRadius: 6, border: "1px solid #d1d5db", fontSize: 13, outline: "none" }} />
+                  </div>
+
+                  {/* Add Company Form */}
+                  {showAddCompany && (
+                    <div style={{ ...S.configCard, borderColor: "#0891B2", borderWidth: 2, marginBottom: 20 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>Companie noua</span>
+                        <button onClick={() => setShowAddCompany(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#6B7280" }}><X size={16} /></button>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                        <input placeholder="Nume companie *" value={predCompanyForm.name} onChange={e => setPredCompanyForm(p => ({ ...p, name: e.target.value }))} style={S.input} />
+                        <select value={predCompanyForm.industry} onChange={e => setPredCompanyForm(p => ({ ...p, industry: e.target.value }))} style={S.input}>
+                          {PRED_INDUSTRIES.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                        </select>
+                        <input placeholder="Contact" value={predCompanyForm.contact_name} onChange={e => setPredCompanyForm(p => ({ ...p, contact_name: e.target.value }))} style={S.input} />
+                        <input placeholder="Email" value={predCompanyForm.contact_email} onChange={e => setPredCompanyForm(p => ({ ...p, contact_email: e.target.value }))} style={S.input} />
+                      </div>
+                      <textarea placeholder="Observatii" value={predCompanyForm.notes} onChange={e => setPredCompanyForm(p => ({ ...p, notes: e.target.value }))} style={{ ...S.input, minHeight: 50 }} />
+                      <button onClick={savePredCompany} disabled={predSaving} style={{ ...S.addCatBtn, marginTop: 10, background: "#0891B2" }}>
+                        {predSaving ? "Se salveaza..." : "Salveaza companie"}
+                      </button>
+                    </div>
+                  )}
+
+                  {predLoading && <div style={{ textAlign: "center", padding: 40, color: "#6B7280" }}>Se incarca...</div>}
+
+                  {/* Companies list */}
+                  {!predLoading && filteredCompanies.map((company, ci) => {
+                    const companyCampaigns = predCampaigns.filter(c => c.company_id === company.id);
+                    const isExpanded = predExpandedCompany === company.id;
+                    return (
+                      <div key={company.id} style={{ marginBottom: 12, border: "1px solid #e5e7eb", borderRadius: 10, background: "#fff", overflow: "hidden" }}>
+                        {/* Company header */}
+                        <div
+                          onClick={() => setPredExpandedCompany(isExpanded ? null : company.id)}
+                          style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", cursor: "pointer", background: isExpanded ? "#f0f9ff" : "#fff", transition: "background 0.15s" }}
+                        >
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#6B7280", width: 24 }}>{ci + 1}</span>
+                          <div style={{ flex: 1 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{company.name}</span>
+                            <span style={{ marginLeft: 8, fontSize: 11, padding: "2px 8px", borderRadius: 4, background: "#dbeafe", color: "#1e40af", fontWeight: 600 }}>{company.industry}</span>
+                          </div>
+                          <span style={{ fontSize: 12, color: "#6B7280", fontWeight: 600 }}>{companyCampaigns.length} campanii</span>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.15s" }}><path d="M6 9l6 6 6-6"/></svg>
+                          <button onClick={e => { e.stopPropagation(); deletePredCompany(company.id); }} style={{ background: "#fee2e2", border: "none", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#DC2626", fontSize: 11, fontWeight: 700 }}>Sterge</button>
+                        </div>
+
+                        {/* Expanded: campaigns */}
+                        {isExpanded && (
+                          <div style={{ padding: "0 16px 16px", borderTop: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0 8px" }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#374151" }}>Campanii ({companyCampaigns.length})</span>
+                              <button onClick={() => { setShowAddCampaign(company.id); setPredCampaignForm({ name: "", channel: "", campaign_type: "", period_start: "", period_end: "", budget_eur: "", creative_image_url: "", creative_link: "", admin_notes: "" }); }} style={{ ...S.addCatBtn, fontSize: 11, padding: "5px 12px", background: "#0891B2" }}>
+                                <Plus size={14} /> Campanie noua
+                              </button>
+                            </div>
+
+                            {/* Add Campaign Form */}
+                            {showAddCampaign === company.id && (
+                              <div style={{ padding: 14, marginBottom: 12, background: "#f0f9ff", borderRadius: 8, border: "1px solid #0891B220" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                                  <input placeholder="Nume campanie *" value={predCampaignForm.name} onChange={e => setPredCampaignForm(p => ({ ...p, name: e.target.value }))} style={S.input} />
+                                  <select value={predCampaignForm.channel} onChange={e => setPredCampaignForm(p => ({ ...p, channel: e.target.value, campaign_type: "" }))} style={S.input}>
+                                    <option value="">Selecteaza canal *</option>
+                                    {PRED_CHANNELS.map(ch => <option key={ch} value={ch}>{ch}</option>)}
+                                  </select>
+                                  {predCampaignForm.channel && (
+                                    <select value={predCampaignForm.campaign_type} onChange={e => setPredCampaignForm(p => ({ ...p, campaign_type: e.target.value }))} style={S.input}>
+                                      <option value="">Selecteaza tip *</option>
+                                      {(PRED_TYPES[predCampaignForm.channel] || []).map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                  )}
+                                  <input placeholder="Budget EUR" type="number" value={predCampaignForm.budget_eur} onChange={e => setPredCampaignForm(p => ({ ...p, budget_eur: e.target.value }))} style={S.input} />
+                                  <input placeholder="Perioada start" type="date" value={predCampaignForm.period_start} onChange={e => setPredCampaignForm(p => ({ ...p, period_start: e.target.value }))} style={S.input} />
+                                  <input placeholder="Perioada end" type="date" value={predCampaignForm.period_end} onChange={e => setPredCampaignForm(p => ({ ...p, period_end: e.target.value }))} style={S.input} />
+                                  <input placeholder="URL imagine creativa" value={predCampaignForm.creative_image_url} onChange={e => setPredCampaignForm(p => ({ ...p, creative_image_url: e.target.value }))} style={S.input} />
+                                  <input placeholder="URL link creativa" value={predCampaignForm.creative_link} onChange={e => setPredCampaignForm(p => ({ ...p, creative_link: e.target.value }))} style={S.input} />
+                                </div>
+                                <textarea placeholder="Observatii admin" value={predCampaignForm.admin_notes} onChange={e => setPredCampaignForm(p => ({ ...p, admin_notes: e.target.value }))} style={{ ...S.input, minHeight: 40, marginBottom: 8 }} />
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button onClick={() => savePredCampaign(company.id)} disabled={predSaving} style={{ ...S.addCatBtn, background: "#0891B2", fontSize: 12 }}>
+                                    {predSaving ? "Se salveaza..." : "Salveaza campanie"}
+                                  </button>
+                                  <button onClick={() => setShowAddCampaign(null)} style={{ ...S.addCatBtn, background: "#f3f4f6", color: "#374151", fontSize: 12 }}>Anuleaza</button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Campaign cards */}
+                            {companyCampaigns.length === 0 && <div style={{ padding: "16px 0", textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Nicio campanie inca. Adauga prima campanie.</div>}
+                            {companyCampaigns.map(campaign => {
+                              const ev1Status = getPredEvalStatus(campaign, 1);
+                              const ev2Status = getPredEvalStatus(campaign, 2);
+                              return (
+                                <div key={campaign.id} style={{ padding: 14, marginBottom: 8, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                                    <div>
+                                      <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{campaign.name}</span>
+                                      <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+                                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "#dbeafe", color: "#1e40af", fontWeight: 700 }}>{campaign.channel}</span>
+                                        <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "#f3e8ff", color: "#7c3aed", fontWeight: 700 }}>{campaign.campaign_type}</span>
+                                        {campaign.budget_eur && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: "#fef3c7", color: "#92400e", fontWeight: 700 }}>{campaign.budget_eur} EUR</span>}
+                                      </div>
+                                    </div>
+                                    <button onClick={() => deletePredCampaign(campaign.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: 11 }}>
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </div>
+
+                                  {/* Evaluator links */}
+                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                                    {([1, 2] as const).map(evalNum => {
+                                      const status = evalNum === 1 ? ev1Status : ev2Status;
+                                      const isCopied = predCopied === `${campaign.id}-${evalNum}`;
+                                      return (
+                                        <div key={evalNum} style={{ padding: "8px 10px", borderRadius: 6, background: "#fff", border: "1px solid #e5e7eb" }}>
+                                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                            <span style={{ fontSize: 11, fontWeight: 700, color: "#374151" }}>Evaluator {evalNum}</span>
+                                            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4, background: status.bg, color: status.color }}>{status.label}</span>
+                                          </div>
+                                          <button
+                                            onClick={() => copyPredEvalLink(campaign, evalNum)}
+                                            style={{ width: "100%", padding: "5px 8px", borderRadius: 4, border: "1px solid #d1d5db", background: isCopied ? "#dcfce7" : "#f9fafb", cursor: "pointer", fontSize: 11, fontWeight: 600, color: isCopied ? "#166534" : "#374151", transition: "all 0.15s" }}
+                                          >
+                                            {isCopied ? "Link copiat!" : "Copiaza link evaluare"}
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* ═══ INTERPRETARE SUB-TAB ═══ */}
+              {predSubTab === "interpretare" && (() => {
+                // Compute statistics from predEvaluations + predKpis
+                const completedPairs = predCampaigns.filter(c => {
+                  const evs = predEvaluations.filter(e => e.campaign_id === c.id && e.completed_at);
+                  return evs.length >= 2;
+                });
+
+                // Per-dimension ICC
+                const dimensions = ["r", "i", "f", "cta", "c"] as const;
+                const iccResults = dimensions.map(dim => {
+                  const pairs: [number, number][] = [];
+                  for (const camp of completedPairs) {
+                    const ev1 = predEvaluations.find(e => e.campaign_id === camp.id && e.evaluator_number === 1 && e.completed_at);
+                    const ev2 = predEvaluations.find(e => e.campaign_id === camp.id && e.evaluator_number === 2 && e.completed_at);
+                    if (ev1 && ev2) {
+                      const key = `score_${dim}` as keyof PredEvaluation;
+                      const v1 = ev1[key] as number | null;
+                      const v2 = ev2[key] as number | null;
+                      if (v1 != null && v2 != null) pairs.push([v1, v2]);
+                    }
+                  }
+                  const result = _icc(pairs);
+                  return { dim: dim.toUpperCase(), ...result, n: pairs.length, level: _iccLevel(result.icc) };
+                });
+
+                // C vs KPI correlations
+                const kpiCorrelations: { kpiName: string; r: number; r2: number; p: number; n: number; verdict: string; color: string }[] = [];
+                const kpiNames = Array.from(new Set(predKpis.map(k => k.kpi_name)));
+                for (const kpiName of kpiNames) {
+                  const cScores: number[] = [];
+                  const kpiValues: number[] = [];
+                  for (const camp of completedPairs) {
+                    const evs = predEvaluations.filter(e => e.campaign_id === camp.id && e.completed_at);
+                    const avgC = evs.reduce((s, e) => s + (e.score_c || 0), 0) / Math.max(evs.length, 1);
+                    const kpi = predKpis.find(k => k.evaluation_id === evs[0]?.id && k.kpi_name === kpiName);
+                    if (kpi && avgC > 0) {
+                      cScores.push(avgC);
+                      kpiValues.push(kpi.kpi_value);
+                    }
+                  }
+                  if (cScores.length >= 5) {
+                    const r = _pearsonR(cScores, kpiValues);
+                    const p = _pValuePearson(r, cScores.length);
+                    const absR = Math.abs(r);
+                    const verdict = p < 0.05 && absR >= 0.4 ? "SEMNIFICATIV" : p < 0.05 && absR >= 0.3 ? "MODERAT" : "NESEMNIFICATIV";
+                    const color = verdict === "SEMNIFICATIV" ? "#166534" : verdict === "MODERAT" ? "#92400e" : "#991b1b";
+                    kpiCorrelations.push({ kpiName, r, r2: r * r, p, n: cScores.length, verdict, color });
+                  }
+                }
+
+                // Per-channel breakdown
+                const channels = Array.from(new Set(predCampaigns.map(c => c.channel)));
+                const channelStats = channels.map(ch => {
+                  const camps = completedPairs.filter(c => c.channel === ch);
+                  const allEvs = camps.flatMap(c => predEvaluations.filter(e => e.campaign_id === c.id && e.completed_at));
+                  const avg = (arr: (number | null)[]) => { const valid = arr.filter((v): v is number => v != null); return valid.length ? valid.reduce((s, v) => s + v, 0) / valid.length : 0; };
+                  return {
+                    channel: ch,
+                    n: camps.length,
+                    avgR: avg(allEvs.map(e => e.score_r)),
+                    avgI: avg(allEvs.map(e => e.score_i)),
+                    avgF: avg(allEvs.map(e => e.score_f)),
+                    avgC: avg(allEvs.map(e => e.score_c)),
+                  };
+                });
+
+                // Gate analysis (R<3 vs R>=3)
+                const gateEvs = predEvaluations.filter(e => e.completed_at && e.score_r != null);
+                const gateLow = gateEvs.filter(e => (e.score_r || 0) < 3);
+                const gateHigh = gateEvs.filter(e => (e.score_r || 0) >= 3);
+                const avgKpi = (evs: PredEvaluation[]) => {
+                  const vals = evs.flatMap(e => predKpis.filter(k => k.evaluation_id === e.id).map(k => k.kpi_value));
+                  return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
+                };
+
+                return (
+                  <div>
+                    <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 4px" }}>Validare Predictiva — Interpretare</h2>
+                    <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 20 }}>
+                      {completedPairs.length} campanii cu evaluari complete din {predCampaigns.length} total | {activeCompanies.length} companii
+                    </p>
+
+                    {completedPairs.length < 5 && (
+                      <div style={{ padding: "16px 20px", background: "#fef3c7", borderRadius: 8, border: "1px solid #fbbf24", marginBottom: 20 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#92400e" }}>
+                          Minimum 5 campanii cu evaluari complete necesare pentru analize statistice. Progres actual: {completedPairs.length}/5
+                        </span>
+                      </div>
+                    )}
+
+                    {/* ICC Inter-Rater */}
+                    <OsfH id="pred-icc" num="IRR" title="ICC Inter-Rater Reliability (2 evaluatori)" color="#0891B2" verdict={iccResults.length > 0 && iccResults[4]?.n >= 3 ? (iccResults[4].icc >= 0.75 ? "BUN/EXCELENT" : iccResults[4].icc >= 0.5 ? "MODERAT" : "SLAB") : "DATE INSUFICIENTE"}>
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                          <thead>
+                            <tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" }}>DIMENSIUNE</th>
+                              <th style={thStyle}>N</th>
+                              <th style={thStyle}>ICC</th>
+                              <th style={thStyle}>CI 95%</th>
+                              <th style={thStyle}>NIVEL</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {iccResults.map(row => (
+                              <tr key={row.dim}>
+                                <td style={{ ...tdStyle, textAlign: "left", fontWeight: 700 }}>{row.dim}</td>
+                                <td style={tdStyle}>{row.n}</td>
+                                <td style={{ ...tdStyle, fontWeight: 700 }}>{row.n >= 3 ? row.icc.toFixed(3) : "—"}</td>
+                                <td style={{ ...tdStyle, fontSize: 11, color: "#6B7280" }}>{row.n >= 3 ? `[${row.ci_lo.toFixed(2)}, ${row.ci_hi.toFixed(2)}]` : "—"}</td>
+                                <td style={tdStyle}>
+                                  {row.n >= 3 ? <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: row.level.bg, color: row.level.color }}>{row.level.label}</span> : <span style={{ fontSize: 10, color: "#9CA3AF" }}>N&lt;3</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </OsfH>
+
+                    {/* C vs KPI Correlations */}
+                    <OsfH id="pred-corr" num="H4" title="Corelatii C vs KPI (Pearson r)" color="#2563EB" verdict={kpiCorrelations.length > 0 ? (kpiCorrelations.some(k => k.verdict === "SEMNIFICATIV") ? "CONFIRMATA" : kpiCorrelations.some(k => k.verdict === "MODERAT") ? "PARTIAL" : "NECONFIRMATA") : "DATE INSUFICIENTE"}>
+                      {kpiCorrelations.length === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Minim 5 perechi C-KPI necesare pentru calcul corelatie.</div>
+                      ) : (
+                        <div style={{ overflowX: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                            <thead>
+                              <tr style={{ background: "#f9fafb" }}>
+                                <th style={{ ...thStyle, textAlign: "left" }}>KPI</th>
+                                <th style={thStyle}>N</th>
+                                <th style={thStyle}>r</th>
+                                <th style={thStyle}>R²</th>
+                                <th style={thStyle}>p</th>
+                                <th style={thStyle}>VERDICT</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {kpiCorrelations.map(row => (
+                                <tr key={row.kpiName}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>{row.kpiName}</td>
+                                  <td style={tdStyle}>{row.n}</td>
+                                  <td style={{ ...tdStyle, fontWeight: 700, color: Math.abs(row.r) >= 0.4 ? "#166534" : "#374151" }}>{row.r.toFixed(3)}</td>
+                                  <td style={tdStyle}>{row.r2.toFixed(3)}</td>
+                                  <td style={{ ...tdStyle, fontWeight: row.p < 0.05 ? 700 : 400, color: row.p < 0.05 ? "#166534" : "#991b1b" }}>{row.p < 0.001 ? "<.001" : row.p.toFixed(3)}</td>
+                                  <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: row.verdict === "SEMNIFICATIV" ? "#dcfce7" : row.verdict === "MODERAT" ? "#fef3c7" : "#fee2e2", color: row.color }}>{row.verdict}</span></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </OsfH>
+
+                    {/* Per-Channel */}
+                    <OsfH id="pred-canal" num="CANAL" title="Analiza per canal publicitar" color="#6366f1" verdict={channelStats.length > 0 ? "DESCRIPTIV" : "DATE INSUFICIENTE"}>
+                      {channelStats.length === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Nicio campanie cu evaluare completa.</div>
+                      ) : (
+                        <div style={{ overflowX: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                            <thead>
+                              <tr style={{ background: "#f9fafb" }}>
+                                <th style={{ ...thStyle, textAlign: "left" }}>CANAL</th>
+                                <th style={thStyle}>N</th>
+                                <th style={thStyle}>R avg</th>
+                                <th style={thStyle}>I avg</th>
+                                <th style={thStyle}>F avg</th>
+                                <th style={thStyle}>C avg</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {channelStats.map(row => (
+                                <tr key={row.channel}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>{row.channel}</td>
+                                  <td style={tdStyle}>{row.n}</td>
+                                  <td style={tdStyle}>{row.avgR.toFixed(2)}</td>
+                                  <td style={tdStyle}>{row.avgI.toFixed(2)}</td>
+                                  <td style={tdStyle}>{row.avgF.toFixed(2)}</td>
+                                  <td style={{ ...tdStyle, fontWeight: 700, color: "#0891B2" }}>{row.avgC.toFixed(2)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </OsfH>
+
+                    {/* Gate Analysis */}
+                    <OsfH id="pred-gate" num="GATE" title="Gate Analysis (R<3 vs R>=3)" color="#DC2626" verdict={gateLow.length > 0 && gateHigh.length > 0 ? "EVIDENTA" : "DATE INSUFICIENTE"}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                        <div style={{ padding: 14, borderRadius: 8, background: "#fee2e2", border: "1px solid #fca5a5" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#991b1b", marginBottom: 4 }}>GATE TRIGGERED (R&lt;3)</div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: "#DC2626" }}>{gateLow.length} evaluari</div>
+                          <div style={{ fontSize: 12, color: "#991b1b", marginTop: 4 }}>KPI mediu: {avgKpi(gateLow).toFixed(2)}</div>
+                        </div>
+                        <div style={{ padding: 14, borderRadius: 8, background: "#dcfce7", border: "1px solid #86efac" }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#166534", marginBottom: 4 }}>R&gt;=3 (NORMAL)</div>
+                          <div style={{ fontSize: 24, fontWeight: 800, color: "#059669" }}>{gateHigh.length} evaluari</div>
+                          <div style={{ fontSize: 12, color: "#166534", marginTop: 4 }}>KPI mediu: {avgKpi(gateHigh).toFixed(2)}</div>
+                        </div>
+                      </div>
+                    </OsfH>
+
+                    {/* Summary */}
+                    <OsfH id="pred-sumar" num="SUMAR" title="Sumar ipoteze validare predictiva" color="#059669" verdict={completedPairs.length >= 5 ? "AGREGATE" : "DATE INSUFICIENTE"}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                        <thead>
+                          <tr style={{ background: "#f9fafb" }}>
+                            <th style={{ ...thStyle, textAlign: "left" }}>IPOTEZA</th>
+                            <th style={thStyle}>VERDICT</th>
+                            <th style={{ ...thStyle, textAlign: "left" }}>DETALII</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>H4: C prezice KPI</td>
+                            <td style={tdStyle}>
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: kpiCorrelations.some(k => k.verdict === "SEMNIFICATIV") ? "#dcfce7" : "#f3f4f6", color: kpiCorrelations.some(k => k.verdict === "SEMNIFICATIV") ? "#166534" : "#6B7280" }}>
+                                {kpiCorrelations.some(k => k.verdict === "SEMNIFICATIV") ? "CONFIRMATA" : kpiCorrelations.length > 0 ? "PARTIAL" : "IN CURS"}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: "left", fontSize: 12 }}>{kpiCorrelations.length} KPI analizate</td>
+                          </tr>
+                          <tr>
+                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>H7: IRR — Concordanta inter-evaluator</td>
+                            <td style={tdStyle}>
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: iccResults[4]?.icc >= 0.75 ? "#dcfce7" : iccResults[4]?.icc >= 0.5 ? "#fef3c7" : "#f3f4f6", color: iccResults[4]?.icc >= 0.75 ? "#166534" : iccResults[4]?.icc >= 0.5 ? "#92400e" : "#6B7280" }}>
+                                {iccResults[4]?.n >= 3 ? (iccResults[4].icc >= 0.75 ? "BUN" : iccResults[4].icc >= 0.5 ? "MODERAT" : "SLAB") : "IN CURS"}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: "left", fontSize: 12 }}>ICC(C) = {iccResults[4]?.n >= 3 ? iccResults[4].icc.toFixed(3) : "—"}</td>
+                          </tr>
+                          <tr>
+                            <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>H5: Gate R&lt;3 diferentiaza KPI</td>
+                            <td style={tdStyle}>
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: gateLow.length > 0 ? "#dcfce7" : "#f3f4f6", color: gateLow.length > 0 ? "#166534" : "#6B7280" }}>
+                                {gateLow.length > 0 && gateHigh.length > 0 ? "EVIDENTA" : "IN CURS"}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: "left", fontSize: 12 }}>{gateLow.length} gate triggered / {gateHigh.length} normal</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </OsfH>
+                  </div>
+                );
+              })()}
             </div>
           );
         })()}
