@@ -438,6 +438,64 @@ interface PredKpi {
   created_at: string;
 }
 
+// ═══ Focus Groups (Stratul 4) ═══
+interface FGGroup {
+  id: string; group_number: number; group_name: string; group_label: string;
+  target_participants: number;
+  session_date: string | null; session_time: string | null;
+  location_type: string | null; location_address: string | null;
+  duration_planned_min: number; duration_actual_min: number | null;
+  recording_device_1: string | null; recording_device_2: string | null;
+  recording_file_1_url: string | null; recording_file_2_url: string | null;
+  participants_present: number | null; post_session_notes: string | null;
+  transcript_file_url: string | null; transcript_word_count: number | null;
+  transcript_status: string; transcript_deadline: string | null;
+  transcript_verified_by: string | null; transcript_verified_pct: number | null;
+  transcript_verification_quality: string | null;
+  anonymization_status: string;
+  coding_status: string; kappa_score: number | null; kappa_level: string | null;
+  overall_status: string; created_at: string; updated_at: string;
+}
+interface FGParticipant {
+  id: string; group_id: string; name: string; email: string | null; phone: string | null;
+  profile_short: string | null; marketing_experience: string | null;
+  consent_signed: boolean; consent_date: string | null;
+  invited_date: string | null; confirmed: boolean; confirmed_date: string | null;
+  present: boolean; anonymous_id: string;
+  member_check_selected: boolean; member_check_done: boolean;
+  member_check_date: string | null; member_check_feedback: string | null;
+  notes: string | null; created_at: string;
+}
+interface FGCode {
+  id: string; group_id: string; participant_id: string | null;
+  transcript_line_start: number | null; transcript_line_end: number | null;
+  timestamp_marker: string | null; quote_text: string;
+  code_coder1: string | null; code_coder1_date: string | null;
+  code_coder2: string | null; code_coder2_date: string | null;
+  code_agreed: string | null;
+  agreement_type: string | null; reconciliation_notes: string | null;
+  theme_id: string | null;
+  rifc_dimension: string | null; discussion_module: number | null;
+  created_at: string;
+}
+interface FGTheme {
+  id: string; theme_number: number; theme_name: string; theme_description: string | null;
+  rifc_dimension: string | null;
+  present_in_groups: Record<string, string>;
+  representative_quote: string | null;
+  representative_participant_anonymous_id: string | null;
+  representative_group: string | null;
+  codes_count: number; groups_count: number;
+  status: string; created_at: string; updated_at: string;
+}
+interface FGStimulus {
+  id: string; group_id: string; stimulus_id: string | null;
+  stimulus_name: string; stimulus_image_url: string | null;
+  c_score: number | null; c_category: string;
+  display_order: number | null;
+  spontaneous_preferred: boolean; spontaneous_notes: string | null;
+  created_at: string;
+}
 
 interface Distribution {
   id: string;
@@ -985,7 +1043,7 @@ export default function StudiuAdminPage() {
   const [interpDrawer, setInterpDrawer] = useState<{ key: string; title: string; value: string; context?: Record<string, unknown> } | null>(null);
   const [interpMonth, setInterpMonth] = useState<string>("all");
   const [interpSource, setInterpSource] = useState<string>("all");
-  const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "cfa" | "consumatori" | "ai" | "additional" | "validare">("osf");
+  const [interpViewMode, setInterpViewMode] = useState<"osf" | "itemi" | "cvi" | "pilot" | "efa" | "cfa" | "consumatori" | "ai" | "additional" | "validare" | "focusGrupuri">("osf");
   const [osfCollapsed, setOsfCollapsed] = useState<Record<string, boolean>>({ h1: true, h2: true, h3: true, h4: true, h5: true, h6: true, h7: true, "efa-h1": true, "efa-h2": true, "efa-h3": true, "efa-h4": true, "efa-h5": true, "efa-h6": true, "efa-h7": true, "c-h1": true, "c-h2": true, "c-h3": true, "c-h4": true, "c-h5": true, "c-h6": true, "c-h7": true, "efa-xv": true, "cfa-xv": true });
 
   // ── OSF Collapsible Section Header ──
@@ -1263,6 +1321,25 @@ export default function StudiuAdminPage() {
   const [predSaving, setPredSaving] = useState(false);
   const [predSearch, setPredSearch] = useState("");
 
+  // ═══ Focus Groups (Stratul 4) state ═══
+  const [fgGroups, setFgGroups] = useState<FGGroup[]>([]);
+  const [fgParticipants, setFgParticipants] = useState<FGParticipant[]>([]);
+  const [fgCodes, setFgCodes] = useState<FGCode[]>([]);
+  const [fgThemes, setFgThemes] = useState<FGTheme[]>([]);
+  const [fgStimuli, setFgStimuli] = useState<FGStimulus[]>([]);
+  const [fgLoading, setFgLoading] = useState(false);
+  const [fgSubTab, setFgSubTab] = useState<"overview" | "grup" | "codare" | "teme" | "interpretare" | "ghid">("overview");
+  const [fgSelectedGroup, setFgSelectedGroup] = useState<string | null>(null);
+  const [fgExpandedSection, setFgExpandedSection] = useState<string | null>("participants");
+  const [fgSaving, setFgSaving] = useState(false);
+  const [fgShowAddParticipant, setFgShowAddParticipant] = useState(false);
+  const [fgParticipantForm, setFgParticipantForm] = useState({ name: "", email: "", phone: "", profile_short: "", marketing_experience: "", notes: "" });
+  const [fgCoderView, setFgCoderView] = useState<"coder1" | "coder2" | "reconcile">("coder1");
+  const [fgShowAddCode, setFgShowAddCode] = useState(false);
+  const [fgCodeForm, setFgCodeForm] = useState({ quote_text: "", participant_id: "", timestamp_marker: "", discussion_module: "", code_text: "", rifc_dimension: "" });
+  const [fgShowAddTheme, setFgShowAddTheme] = useState(false);
+  const [fgThemeForm, setFgThemeForm] = useState({ theme_name: "", theme_description: "", rifc_dimension: "" });
+  const [fgSessionForm, setFgSessionForm] = useState({ session_date: "", session_time: "", location_type: "", location_address: "", recording_device_1: "", recording_device_2: "" });
 
   // ── Upload helper: XHR PUT for <50MB, tus resumable for >=50MB ──
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
@@ -1528,6 +1605,26 @@ export default function StudiuAdminPage() {
     setPredLoading(false);
   }, []);
 
+  // ═══ Focus Groups fetch ═══
+  const fetchFocusData = useCallback(async () => {
+    setFgLoading(true);
+    try {
+      const [gRes, pRes, cRes, tRes, sRes] = await Promise.all([
+        fetch("/api/survey/focus-groups/groups"),
+        fetch("/api/survey/focus-groups/participants"),
+        fetch("/api/survey/focus-groups/codes"),
+        fetch("/api/survey/focus-groups/themes"),
+        fetch("/api/survey/focus-groups/stimuli"),
+      ]);
+      const [gD, pD, cD, tD, sD] = await Promise.all([gRes.json(), pRes.json(), cRes.json(), tRes.json(), sRes.json()]);
+      if (gD.success) setFgGroups(gD.groups);
+      if (pD.success) setFgParticipants(pD.participants);
+      if (cD.success) setFgCodes(cD.codes);
+      if (tD.success) setFgThemes(tD.themes);
+      if (sD.success) setFgStimuli(sD.stimuli);
+    } catch { /* tables may not exist yet */ }
+    setFgLoading(false);
+  }, []);
 
   useEffect(() => {
     if (activeTab === "log") fetchLog();
@@ -1554,9 +1651,9 @@ export default function StudiuAdminPage() {
   // Fetch CVI + Expert data when Interpretare tab is active (sub-tabs need it)
   useEffect(() => {
     if (activeTab === "interpretare") {
-      fetchExperts(); fetchExpertEvals(); fetchCviData(); fetchPredData();
+      fetchExperts(); fetchExpertEvals(); fetchCviData(); fetchPredData(); fetchFocusData();
     }
-  }, [activeTab, fetchExperts, fetchExpertEvals, fetchCviData, fetchPredData]);
+  }, [activeTab, fetchExperts, fetchExpertEvals, fetchCviData, fetchPredData, fetchFocusData]);
 
   const saveCviExpert = useCallback(async () => {
     if (!cviExpertForm.name.trim()) return;
@@ -5529,6 +5626,7 @@ export default function StudiuAdminPage() {
                     { key: "ai" as const, label: "7 AI Scoring", color: "#0EA5E9" },
                     { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                     { key: "validare" as const, label: "8 Validare Predictiva", color: "#0891B2" },
+                    { key: "focusGrupuri" as const, label: "9 Focus Grupuri", color: "#8B5CF6" },
                   ] as const).map(t => (
                     <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
                       padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
@@ -6344,6 +6442,7 @@ export default function StudiuAdminPage() {
                   { key: "ai" as const, label: "7 AI Scoring", color: "#0EA5E9" },
                   { key: "additional" as const, label: "Additional Statistic", color: "#D97706" },
                   { key: "validare" as const, label: "8 Validare Predictiva", color: "#0891B2" },
+                    { key: "focusGrupuri" as const, label: "9 Focus Grupuri", color: "#8B5CF6" },
                 ] as const).map(t => (
                   <button key={t.key} onClick={() => setInterpViewMode(t.key)} style={{
                     padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: interpViewMode === t.key ? 800 : 600,
@@ -20503,6 +20602,775 @@ export default function StudiuAdminPage() {
                   </div>
                 );
               })()}
+            </div>
+          );
+        })()}
+
+        {/* ═══ FOCUS GRUPURI (Stratul 4) ═══ */}
+        {activeTab === "interpretare" && interpViewMode === "focusGrupuri" && (() => {
+          const FG_INCLUSION: Record<string, string[]> = {
+            antreprenori: ["Proprietar sau manager cu decizii de marketing", "Minimum 1 an experienta business", "NU a participat la EFA sau CFA"],
+            useri_generali: ["Adult 18+, rezident MD/RO", "Fara studii sau experienta profesionala in marketing", "NU a participat la EFA sau CFA"],
+            marketeri: ["Minimum 3 ani experienta activa in marketing", "Rol activ: specialist, manager sau consultant", "NU a participat la dezvoltarea RIFC"],
+            studenti: ["Student activ UTM sau USM, program marketing/business", "Varsta 18+", "NU a participat la EFA sau CFA"],
+          };
+          const FG_DISCUSSION_MODULES = [
+            { number: 1, title: "Incalzire", duration: "10 min", purpose: "Calibrarea grupului, climat de deschidere", questions: ["Cand ati vazut ultima data o reclama care v-a oprit din scroll? Ce anume v-a oprit?", "Descrieti cea mai memorabila campanie de marketing pe care ati vazut-o recent.", "Ce va deranjeaza cel mai mult la reclamele pe care le vedeti zilnic?"], note: "Lasa discutia sa curga natural, nu forta ordinea." },
+            { number: 2, title: "Reactie Spontana la Stimuli", duration: "20 min", purpose: "Testarea validitatii ecologice — judecata intuitiva vs scoruri RIFC", questions: ["Care dintre aceste reclame vi se pare ca functioneaza? De ce?", "Care NU functioneaza? Ce lipseste?", "Daca ati vedea asta pe telefon, v-ati opri? De ce da/nu?"], note: "Noteaza care stimuli sunt preferati spontan — vei compara cu scorurile C." },
+            { number: 3, title: "Explorarea Dimensiunilor R, I, F", duration: "25 min", purpose: "Validarea semantica a constructelor", questions: ["Ce inseamna pentru voi ca un mesaj de marketing e RELEVANT?", "Dar INTERESANT — cum definiti asta?", "Si FORMA — designul, formatul — cat de mult conteaza?", "Priviti din nou stimulul X. Evaluati-l pe cele 3 dimensiuni.", "Cum diferentiati intre un mesaj interesant si unul relevant?", "Poate exista o reclama frumoasa dar irelevanta? Dati exemplu."], note: "Asculta daca participantii folosesc concepte similare cu sub-factorii RIFC fara sa le cunoasca." },
+            { number: 4, title: "Testarea Formulei R+(IxF)=C", duration: "15 min", purpose: "Acceptabilitatea conceptuala a modelului multiplicativ", questions: ["Vi se pare logica aceasta formula?", "Credeti ca Forma AMPLIFICA Interesul sau sunt independente?", "Un mesaj extrem de relevant dar plictisitor poate reusi?", "Ce se intampla cu o reclama frumoasa trimisa oamenilor gresiti?", "E corect ca R < 3 = esec automat? Sau e prea strict?"], note: "Noteaza reactiile la Poarta Relevantei — e cel mai controversat element." },
+            { number: 5, title: "Utilitate Practica si Inchidere", duration: "10 min", purpose: "Feedback pentru dezvoltarea RIFC V.2", questions: ["Ati folosi un astfel de instrument inainte de a lansa o campanie?", "Ce ar trebui sa fie diferit ca sa fie util in activitatea voastra zilnica?", "Cat ati plati pentru un astfel de diagnostic? (sau e util doar daca e gratuit?)", "Un singur lucru pe care l-ati retine din discutia de astazi?"], note: "Multumiri + informare despre disponibilitatea rezultatelor studiului." },
+          ];
+          const PRE_SESSION_CHECKLIST = ["Consimtamant semnat de toti participantii", "Sala rezervata", "Stimulii printati / pe ecran", "Dictafoane testate si incarcate", "Ghidul de discutie printat pentru moderator", "Fisa observatorului printata pentru Maria", "Apa / cafea pentru participanti"];
+          const FG_STATUS_COLORS: Record<string, { bg: string; border: string; label: string }> = {
+            recruitment: { bg: "#f9fafb", border: "#d1d5db", label: "Recrutare" },
+            scheduled: { bg: "#eff6ff", border: "#93c5fd", label: "Planificat" },
+            completed: { bg: "#f0fdf4", border: "#86efac", label: "Sesiune realizata" },
+            transcribing: { bg: "#fefce8", border: "#fde047", label: "Transcriere" },
+            coding: { bg: "#f5f3ff", border: "#c4b5fd", label: "Codare" },
+            analyzed: { bg: "#ecfdf5", border: "#34d399", label: "Analizat" },
+          };
+          const selGroup = fgGroups.find(g => g.id === fgSelectedGroup);
+          const selGroupParticipants = fgParticipants.filter(p => p.group_id === fgSelectedGroup);
+          const selGroupCodes = fgCodes.filter(c => c.group_id === fgSelectedGroup);
+          const selGroupStimuli = fgStimuli.filter(s => s.group_id === fgSelectedGroup);
+
+          // Helper: save participant
+          const saveFgParticipant = async () => {
+            if (!fgSelectedGroup || !fgParticipantForm.name.trim()) return;
+            setFgSaving(true);
+            try {
+              const res = await fetch("/api/survey/focus-groups/participants", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ group_id: fgSelectedGroup, ...fgParticipantForm }) });
+              const d = await res.json();
+              if (d.success) { setFgParticipants(prev => [...prev, d.participant]); setFgParticipantForm({ name: "", email: "", phone: "", profile_short: "", marketing_experience: "", notes: "" }); setFgShowAddParticipant(false); }
+            } catch { /* */ }
+            setFgSaving(false);
+          };
+          // Helper: toggle participant field
+          const toggleFgParticipant = async (id: string, field: string, value: boolean) => {
+            try {
+              const updates: Record<string, unknown> = { [field]: value };
+              if (field === "consent_signed" && value) updates.consent_date = new Date().toISOString().split("T")[0];
+              if (field === "confirmed" && value) updates.confirmed_date = new Date().toISOString().split("T")[0];
+              const res = await fetch("/api/survey/focus-groups/participants", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...updates }) });
+              const d = await res.json();
+              if (d.success) setFgParticipants(prev => prev.map(p => p.id === id ? d.participant : p));
+            } catch { /* */ }
+          };
+          // Helper: delete participant
+          const deleteFgParticipant = async (id: string) => {
+            if (!confirm("Stergi participantul?")) return;
+            try { await fetch(`/api/survey/focus-groups/participants?id=${id}`, { method: "DELETE" }); setFgParticipants(prev => prev.filter(p => p.id !== id)); } catch { /* */ }
+          };
+          // Helper: update group
+          const updateFgGroup = async (id: string, fields: Record<string, unknown>) => {
+            try {
+              const res = await fetch("/api/survey/focus-groups/groups", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...fields }) });
+              const d = await res.json();
+              if (d.success) setFgGroups(prev => prev.map(g => g.id === id ? d.group : g));
+            } catch { /* */ }
+          };
+          // Helper: save code
+          const saveFgCode = async () => {
+            if (!fgSelectedGroup || !fgCodeForm.quote_text.trim()) return;
+            setFgSaving(true);
+            try {
+              const payload: Record<string, unknown> = { group_id: fgSelectedGroup, quote_text: fgCodeForm.quote_text };
+              if (fgCodeForm.participant_id) payload.participant_id = fgCodeForm.participant_id;
+              if (fgCodeForm.timestamp_marker) payload.timestamp_marker = fgCodeForm.timestamp_marker;
+              if (fgCodeForm.discussion_module) payload.discussion_module = Number(fgCodeForm.discussion_module);
+              if (fgCodeForm.rifc_dimension) payload.rifc_dimension = fgCodeForm.rifc_dimension;
+              if (fgCoderView === "coder1") { payload.code_coder1 = fgCodeForm.code_text; payload.code_coder1_date = new Date().toISOString(); }
+              else if (fgCoderView === "coder2") { payload.code_coder2 = fgCodeForm.code_text; payload.code_coder2_date = new Date().toISOString(); }
+              const res = await fetch("/api/survey/focus-groups/codes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+              const d = await res.json();
+              if (d.success) { setFgCodes(prev => [...prev, d.code]); setFgCodeForm({ quote_text: "", participant_id: "", timestamp_marker: "", discussion_module: "", code_text: "", rifc_dimension: "" }); setFgShowAddCode(false); }
+            } catch { /* */ }
+            setFgSaving(false);
+          };
+          // Helper: update code
+          const updateFgCode = async (id: string, fields: Record<string, unknown>) => {
+            try {
+              const res = await fetch("/api/survey/focus-groups/codes", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...fields }) });
+              const d = await res.json();
+              if (d.success) setFgCodes(prev => prev.map(c => c.id === id ? d.code : c));
+            } catch { /* */ }
+          };
+          // Helper: save theme
+          const saveFgTheme = async () => {
+            if (!fgThemeForm.theme_name.trim()) return;
+            setFgSaving(true);
+            try {
+              const res = await fetch("/api/survey/focus-groups/themes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(fgThemeForm) });
+              const d = await res.json();
+              if (d.success) { setFgThemes(prev => [...prev, d.theme]); setFgThemeForm({ theme_name: "", theme_description: "", rifc_dimension: "" }); setFgShowAddTheme(false); }
+            } catch { /* */ }
+            setFgSaving(false);
+          };
+          // Helper: Cohen's Kappa
+          const calcKappa = (codes: FGCode[]) => {
+            const withBoth = codes.filter(c => c.code_coder1 && c.code_coder2 && c.agreement_type);
+            if (withBoth.length === 0) return null;
+            const agreed = withBoth.filter(c => c.agreement_type === "identical" || c.agreement_type === "similar").length;
+            const total = withBoth.length;
+            const po = agreed / total;
+            const dims = ["R", "I", "F", "C", "formula", "gate", "archetype", "utility", "other"];
+            let pe = 0;
+            for (const dim of dims) { const p1 = withBoth.filter(c => c.rifc_dimension === dim).length / total; pe += p1 * p1; }
+            const kappa = pe === 1 ? 1 : (po - pe) / (1 - pe);
+            const level = kappa >= 0.80 ? "excelent" : kappa >= 0.60 ? "bun" : kappa >= 0.40 ? "moderat" : "slab";
+            return { kappa: Math.round(kappa * 1000) / 1000, level, total, agreed, po: Math.round(po * 1000) / 10 };
+          };
+
+          return (
+            <div>
+              {/* Sub-tab toggle */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
+                {([
+                  { key: "overview" as const, label: "Overview" },
+                  { key: "grup" as const, label: selGroup ? selGroup.group_label : "Grup" },
+                  { key: "codare" as const, label: "Codare" },
+                  { key: "teme" as const, label: "Teme" },
+                  { key: "interpretare" as const, label: "Interpretare" },
+                  { key: "ghid" as const, label: "Ghid Discutie" },
+                ] as const).map(t => (
+                  <button key={t.key} onClick={() => setFgSubTab(t.key)} style={{
+                    padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: fgSubTab === t.key ? 700 : 500,
+                    background: fgSubTab === t.key ? "#8B5CF6" : "#f9fafb",
+                    color: fgSubTab === t.key ? "#fff" : "#374151",
+                    border: fgSubTab === t.key ? "none" : "1px solid #e5e7eb", cursor: "pointer",
+                  }}>{t.label}</button>
+                ))}
+              </div>
+
+              {fgLoading && <div style={{ padding: 40, textAlign: "center", color: "#6B7280" }}>Se incarca...</div>}
+
+              {/* ═══ OVERVIEW ═══ */}
+              {!fgLoading && fgSubTab === "overview" && (
+                <div>
+                  <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 4px" }}>Focus Grupuri Calitative (Stratul 4)</h2>
+                  <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 4 }}>4 grupuri x 8-10 participanti | Moderator: Dumitru | Observator: Maria</p>
+                  <p style={{ fontSize: 12, color: "#9CA3AF", marginBottom: 20 }}>Limba: Romana | Format: Offline | Analiza: Braun &amp; Clarke (2006)</p>
+
+                  {/* Progress */}
+                  <div style={{ padding: "12px 16px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 20 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>Progres total</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#8B5CF6" }}>{fgGroups.filter(g => g.overall_status === "analyzed").length}/4 grupuri analizate</span>
+                    </div>
+                    <div style={{ height: 8, background: "#e5e7eb", borderRadius: 4 }}>
+                      <div style={{ height: 8, background: "#8B5CF6", borderRadius: 4, width: `${(fgGroups.filter(g => g.overall_status === "analyzed").length / 4) * 100}%`, transition: "width 300ms" }} />
+                    </div>
+                    <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+                      {["Recrutare", "Sesiuni", "Transcriere", "Codare", "Analiza"].map((phase, i) => (
+                        <span key={phase} style={{ fontSize: 10, fontWeight: 600, color: i < fgGroups.filter(g => g.overall_status === "analyzed").length + 1 ? "#8B5CF6" : "#9CA3AF" }}>{phase}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 4 Group cards */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                    {fgGroups.map(g => {
+                      const gParticipants = fgParticipants.filter(p => p.group_id === g.id);
+                      const confirmed = gParticipants.filter(p => p.confirmed).length;
+                      const present = gParticipants.filter(p => p.present).length;
+                      const gCodes = fgCodes.filter(c => c.group_id === g.id);
+                      const sColors = FG_STATUS_COLORS[g.overall_status] || FG_STATUS_COLORS.recruitment;
+                      const kappaData = calcKappa(gCodes);
+                      return (
+                        <div key={g.id} style={{ padding: 16, background: sColors.bg, borderRadius: 10, border: `1px solid ${sColors.border}`, cursor: "pointer" }}
+                          onClick={() => { setFgSelectedGroup(g.id); setFgSubTab("grup"); setFgSessionForm({ session_date: g.session_date || "", session_time: g.session_time || "", location_type: g.location_type || "", location_address: g.location_address || "", recording_device_1: g.recording_device_1 || "", recording_device_2: g.recording_device_2 || "" }); }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                            <div>
+                              <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "#8B5CF6", color: "#fff" }}>G{g.group_number}</span>
+                              <span style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginLeft: 8 }}>{g.group_label}</span>
+                            </div>
+                            <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 4, border: `1px solid ${sColors.border}`, color: "#374151" }}>{sColors.label}</span>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 12 }}>
+                            <div><span style={{ color: "#6B7280" }}>Participanti:</span> <strong>{confirmed}/{g.target_participants}</strong> confirmati</div>
+                            <div><span style={{ color: "#6B7280" }}>Prezenti:</span> <strong>{present > 0 ? present : "—"}</strong></div>
+                            <div><span style={{ color: "#6B7280" }}>Sesiune:</span> <strong>{g.session_date || "Neplanificata"}</strong></div>
+                            <div><span style={{ color: "#6B7280" }}>Transcriere:</span> <strong style={{ color: g.transcript_status === "verified" ? "#166534" : "#92400e" }}>{g.transcript_status === "not_started" ? "Neinceput" : g.transcript_status === "in_progress" ? "In lucru" : g.transcript_status === "transcribed" ? "Transcris" : "Verificat"}</strong></div>
+                            <div><span style={{ color: "#6B7280" }}>Codare:</span> <strong>{g.coding_status === "not_started" ? "Neinceput" : g.coding_status}</strong></div>
+                            <div><span style={{ color: "#6B7280" }}>Kappa:</span> <strong style={{ color: kappaData && kappaData.kappa >= 0.6 ? "#166534" : kappaData ? "#92400e" : "#9CA3AF" }}>{kappaData ? `k = ${kappaData.kappa}` : "—"}</strong></div>
+                          </div>
+                          <div style={{ marginTop: 10, fontSize: 12, color: "#6B7280" }}>Coduri: {gCodes.length} | Teme atribuite: {gCodes.filter(c => c.theme_id).length}</div>
+                          <div style={{ marginTop: 8, textAlign: "right" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "#8B5CF6" }}>Deschide grup &rarr;</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ GROUP DETAIL ═══ */}
+              {!fgLoading && fgSubTab === "grup" && selGroup && (
+                <div>
+                  <button onClick={() => setFgSubTab("overview")} style={{ marginBottom: 12, padding: "6px 14px", borderRadius: 6, border: "1px solid #e5e7eb", background: "#fff", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>&larr; Inapoi la Overview</button>
+                  <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 16px" }}>
+                    <span style={{ padding: "3px 10px", borderRadius: 6, background: "#8B5CF6", color: "#fff", fontSize: 13, marginRight: 8 }}>G{selGroup.group_number}</span>
+                    {selGroup.group_label}
+                  </h2>
+
+                  {/* A. PARTICIPANTI */}
+                  <div style={{ marginBottom: 12 }}>
+                    <button onClick={() => setFgExpandedSection(fgExpandedSection === "participants" ? null : "participants")} style={{ width: "100%", padding: "12px 16px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>A. Participanti ({selGroupParticipants.length}/{selGroup.target_participants})</span>
+                      <span style={{ fontSize: 18, color: "#6B7280" }}>{fgExpandedSection === "participants" ? "−" : "+"}</span>
+                    </button>
+                    {fgExpandedSection === "participants" && (
+                      <div style={{ padding: 16, background: "#fff", borderRadius: "0 0 8px 8px", border: "1px solid #e5e7eb", borderTop: "none" }}>
+                        {/* Inclusion criteria */}
+                        <div style={{ padding: "10px 14px", background: "#eff6ff", borderRadius: 6, border: "1px solid #bfdbfe", marginBottom: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af", marginBottom: 4 }}>Criterii de includere — {selGroup.group_label}</div>
+                          {(FG_INCLUSION[selGroup.group_name] || []).map((c, i) => (
+                            <div key={i} style={{ fontSize: 11, color: "#374151", marginBottom: 2 }}>&#8226; {c}</div>
+                          ))}
+                        </div>
+
+                        {/* Participants table */}
+                        <div style={{ overflowX: "auto", marginBottom: 12 }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead>
+                              <tr style={{ background: "#f9fafb" }}>
+                                <th style={{ ...thStyle, textAlign: "left" }}>ID</th>
+                                <th style={{ ...thStyle, textAlign: "left" }}>Nume</th>
+                                <th style={{ ...thStyle, textAlign: "left" }}>Profil</th>
+                                <th style={thStyle}>Exp.</th>
+                                <th style={thStyle}>Consimtamant</th>
+                                <th style={thStyle}>Confirmat</th>
+                                <th style={thStyle}>Prezent</th>
+                                <th style={thStyle}>Actiuni</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {selGroupParticipants.map(p => (
+                                <tr key={p.id}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 700, color: "#8B5CF6" }}>{p.anonymous_id}</td>
+                                  <td style={{ ...tdStyle, textAlign: "left" }}>{p.name}<br/><span style={{ fontSize: 10, color: "#9CA3AF" }}>{p.email}</span></td>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontSize: 11 }}>{p.profile_short || "—"}</td>
+                                  <td style={tdStyle}>{p.marketing_experience || "—"}</td>
+                                  <td style={tdStyle}><input type="checkbox" checked={p.consent_signed} onChange={e => toggleFgParticipant(p.id, "consent_signed", e.target.checked)} /></td>
+                                  <td style={tdStyle}><input type="checkbox" checked={p.confirmed} onChange={e => toggleFgParticipant(p.id, "confirmed", e.target.checked)} /></td>
+                                  <td style={tdStyle}><input type="checkbox" checked={p.present} onChange={e => toggleFgParticipant(p.id, "present", e.target.checked)} /></td>
+                                  <td style={tdStyle}><button onClick={() => deleteFgParticipant(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: 11, fontWeight: 600 }}>Sterge</button></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Add participant */}
+                        {!fgShowAddParticipant ? (
+                          <button onClick={() => setFgShowAddParticipant(true)} style={{ padding: "8px 14px", borderRadius: 6, border: "1px dashed #d1d5db", background: "#fff", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>+ Adauga participant</button>
+                        ) : (
+                          <div style={{ padding: 12, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb" }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                              <input placeholder="Nume *" value={fgParticipantForm.name} onChange={e => setFgParticipantForm(prev => ({ ...prev, name: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} />
+                              <input placeholder="Email" value={fgParticipantForm.email} onChange={e => setFgParticipantForm(prev => ({ ...prev, email: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} />
+                              <input placeholder="Telefon" value={fgParticipantForm.phone} onChange={e => setFgParticipantForm(prev => ({ ...prev, phone: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} />
+                              <input placeholder="Profil scurt (ex: CEO, 5 ani)" value={fgParticipantForm.profile_short} onChange={e => setFgParticipantForm(prev => ({ ...prev, profile_short: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} />
+                              <select value={fgParticipantForm.marketing_experience} onChange={e => setFgParticipantForm(prev => ({ ...prev, marketing_experience: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }}>
+                                <option value="">Experienta marketing...</option>
+                                <option value="none">Fara</option><option value="1-2">1-2 ani</option><option value="3-5">3-5 ani</option><option value="5-10">5-10 ani</option><option value="10+">10+ ani</option>
+                              </select>
+                            </div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button onClick={saveFgParticipant} disabled={!fgParticipantForm.name.trim() || fgSaving} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: fgParticipantForm.name.trim() ? "#8B5CF6" : "#d1d5db", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{fgSaving ? "Se salveaza..." : "Salveaza"}</button>
+                              <button onClick={() => setFgShowAddParticipant(false)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", fontSize: 12, color: "#6B7280", cursor: "pointer" }}>Anuleaza</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* B. PLANIFICARE SESIUNE */}
+                  <div style={{ marginBottom: 12 }}>
+                    <button onClick={() => setFgExpandedSection(fgExpandedSection === "session" ? null : "session")} style={{ width: "100%", padding: "12px 16px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>B. Planificare Sesiune</span>
+                      <span style={{ fontSize: 18, color: "#6B7280" }}>{fgExpandedSection === "session" ? "−" : "+"}</span>
+                    </button>
+                    {fgExpandedSection === "session" && (
+                      <div style={{ padding: 16, background: "#fff", borderRadius: "0 0 8px 8px", border: "1px solid #e5e7eb", borderTop: "none" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Data sesiune</label><input type="date" value={fgSessionForm.session_date} onChange={e => setFgSessionForm(prev => ({ ...prev, session_date: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Ora</label><input type="time" value={fgSessionForm.session_time} onChange={e => setFgSessionForm(prev => ({ ...prev, session_time: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Locatie</label>
+                            <select value={fgSessionForm.location_type} onChange={e => setFgSessionForm(prev => ({ ...prev, location_type: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }}>
+                              <option value="">Selecteaza...</option><option value="oficiu">Oficiu</option><option value="utm">UTM</option><option value="usm">USM</option><option value="alt">Alt</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Adresa</label><input value={fgSessionForm.location_address} onChange={e => setFgSessionForm(prev => ({ ...prev, location_address: e.target.value }))} placeholder="Adresa exacta..." style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Dispozitiv 1</label><input value={fgSessionForm.recording_device_1} onChange={e => setFgSessionForm(prev => ({ ...prev, recording_device_1: e.target.value }))} placeholder="Ex: iPhone 14" style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Dispozitiv 2</label><input value={fgSessionForm.recording_device_2} onChange={e => setFgSessionForm(prev => ({ ...prev, recording_device_2: e.target.value }))} placeholder="Ex: Zoom H1n" style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                        </div>
+                        <button onClick={() => updateFgGroup(selGroup.id, { ...fgSessionForm, overall_status: fgSessionForm.session_date ? "scheduled" : selGroup.overall_status })} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: "#8B5CF6", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Salveaza sesiunea</button>
+
+                        {/* Stimuli selection */}
+                        <div style={{ marginTop: 16, padding: "12px 14px", background: "#faf5ff", borderRadius: 8, border: "1px solid #ddd6fe" }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#7c3aed", marginBottom: 8 }}>Stimuli selectati ({selGroupStimuli.length}/6)</div>
+                          <div style={{ fontSize: 11, color: "#6B7280", marginBottom: 8 }}>2x Scor C inalt + 2x Scor C mediu + 2x Scor C scazut</div>
+                          {selGroupStimuli.map(s => (
+                            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, fontSize: 12 }}>
+                              <span style={{ padding: "1px 6px", borderRadius: 3, background: s.c_category === "high" ? "#dcfce7" : s.c_category === "medium" ? "#fef3c7" : "#fee2e2", color: s.c_category === "high" ? "#166534" : s.c_category === "medium" ? "#92400e" : "#991b1b", fontSize: 10, fontWeight: 700 }}>{s.c_category.toUpperCase()}</span>
+                              <span>{s.stimulus_name}</span>
+                              {s.c_score != null && <span style={{ color: "#6B7280" }}>C={s.c_score}</span>}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Pre-session checklist */}
+                        <div style={{ marginTop: 16 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Checklist pre-sesiune</div>
+                          {PRE_SESSION_CHECKLIST.map((item, i) => (
+                            <label key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12, color: "#374151", cursor: "pointer" }}>
+                              <input type="checkbox" /> {item}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* C. POST-SESIUNE */}
+                  <div style={{ marginBottom: 12 }}>
+                    <button onClick={() => setFgExpandedSection(fgExpandedSection === "post" ? null : "post")} style={{ width: "100%", padding: "12px 16px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", textAlign: "left", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>C. Post-Sesiune</span>
+                      <span style={{ fontSize: 18, color: "#6B7280" }}>{fgExpandedSection === "post" ? "−" : "+"}</span>
+                    </button>
+                    {fgExpandedSection === "post" && (
+                      <div style={{ padding: 16, background: "#fff", borderRadius: "0 0 8px 8px", border: "1px solid #e5e7eb", borderTop: "none" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Durata reala (min)</label><input type="number" value={selGroup.duration_actual_min || ""} onChange={e => updateFgGroup(selGroup.id, { duration_actual_min: Number(e.target.value) || null })} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Status transcriere</label>
+                            <select value={selGroup.transcript_status} onChange={e => updateFgGroup(selGroup.id, { transcript_status: e.target.value })} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }}>
+                              <option value="not_started">Neinceput</option><option value="in_progress">In lucru</option><option value="transcribed">Transcris</option><option value="verified">Verificat</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Note post-sesiune</label><textarea value={selGroup.post_session_notes || ""} onChange={e => updateFgGroup(selGroup.id, { post_session_notes: e.target.value })} placeholder="Observatii, probleme tehnice, dinamica grupului..." style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12, minHeight: 80 }} /></div>
+                        <div style={{ marginTop: 12 }}>
+                          <button onClick={() => updateFgGroup(selGroup.id, { overall_status: "completed", participants_present: selGroupParticipants.filter(p => p.present).length })} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: "#059669", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Marcheaza sesiunea ca realizata</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ═══ CODARE ═══ */}
+              {!fgLoading && fgSubTab === "codare" && (
+                <div>
+                  <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: "0 0 12px" }}>Codare — {selGroup ? selGroup.group_label : "Selecteaza grup"}</h2>
+                  {/* Group selector */}
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                    {fgGroups.map(g => (
+                      <button key={g.id} onClick={() => setFgSelectedGroup(g.id)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: fgSelectedGroup === g.id ? 700 : 500, background: fgSelectedGroup === g.id ? "#8B5CF6" : "#f9fafb", color: fgSelectedGroup === g.id ? "#fff" : "#374151", border: fgSelectedGroup === g.id ? "none" : "1px solid #e5e7eb", cursor: "pointer" }}>G{g.group_number} {g.group_label}</button>
+                    ))}
+                  </div>
+
+                  {selGroup && (
+                    <div>
+                      {/* Coder toggle */}
+                      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                        {([{ key: "coder1" as const, label: "Codor 1: Dumitru" }, { key: "coder2" as const, label: "Codor 2: Maria" }, { key: "reconcile" as const, label: "Reconciliere" }] as const).map(t => (
+                          <button key={t.key} onClick={() => setFgCoderView(t.key)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: fgCoderView === t.key ? 700 : 500, background: fgCoderView === t.key ? (t.key === "reconcile" ? "#059669" : "#2563EB") : "#f9fafb", color: fgCoderView === t.key ? "#fff" : "#374151", border: fgCoderView === t.key ? "none" : "1px solid #e5e7eb", cursor: "pointer" }}>{t.label}</button>
+                        ))}
+                      </div>
+
+                      {/* Add code button */}
+                      {fgCoderView !== "reconcile" && (
+                        <button onClick={() => setFgShowAddCode(true)} style={{ marginBottom: 12, padding: "8px 14px", borderRadius: 6, border: "1px dashed #d1d5db", background: "#fff", fontSize: 12, fontWeight: 600, color: "#6B7280", cursor: "pointer" }}>+ Adauga cod</button>
+                      )}
+
+                      {/* Add code form */}
+                      {fgShowAddCode && (
+                        <div style={{ padding: 14, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 12 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Cod nou ({fgCoderView === "coder1" ? "Dumitru" : "Maria"})</div>
+                          <textarea placeholder="Citat selectat din transcriere..." value={fgCodeForm.quote_text} onChange={e => setFgCodeForm(prev => ({ ...prev, quote_text: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12, minHeight: 60, marginBottom: 8 }} />
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+                            <select value={fgCodeForm.participant_id} onChange={e => setFgCodeForm(prev => ({ ...prev, participant_id: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "7px 10px", fontSize: 11 }}>
+                              <option value="">Participant...</option>
+                              {selGroupParticipants.map(p => <option key={p.id} value={p.id}>{p.anonymous_id} — {p.name}</option>)}
+                            </select>
+                            <input placeholder="Timestamp (00:23:15)" value={fgCodeForm.timestamp_marker} onChange={e => setFgCodeForm(prev => ({ ...prev, timestamp_marker: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "7px 10px", fontSize: 11 }} />
+                            <select value={fgCodeForm.discussion_module} onChange={e => setFgCodeForm(prev => ({ ...prev, discussion_module: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "7px 10px", fontSize: 11 }}>
+                              <option value="">Modul...</option>
+                              <option value="1">1-Incalzire</option><option value="2">2-Stimuli</option><option value="3">3-Dimensiuni</option><option value="4">4-Formula</option><option value="5">5-Utilitate</option>
+                            </select>
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
+                            <input placeholder="Cod (ex: filtrare_relevanta)" value={fgCodeForm.code_text} onChange={e => setFgCodeForm(prev => ({ ...prev, code_text: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "7px 10px", fontSize: 11 }} />
+                            <select value={fgCodeForm.rifc_dimension} onChange={e => setFgCodeForm(prev => ({ ...prev, rifc_dimension: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "7px 10px", fontSize: 11 }}>
+                              <option value="">Dimensiune RIFC...</option>
+                              <option value="R">R — Relevanta</option><option value="I">I — Interes</option><option value="F">F — Forma</option><option value="C">C — Compozit</option>
+                              <option value="formula">Formula</option><option value="gate">Gate</option><option value="archetype">Arhetip</option><option value="utility">Utilitate</option><option value="other">Altele</option>
+                            </select>
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={saveFgCode} disabled={!fgCodeForm.quote_text.trim() || fgSaving} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: "#8B5CF6", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{fgSaving ? "..." : "Salveaza"}</button>
+                            <button onClick={() => setFgShowAddCode(false)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", fontSize: 12, color: "#6B7280", cursor: "pointer" }}>Anuleaza</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Codes table */}
+                      {fgCoderView !== "reconcile" ? (
+                        <div style={{ overflowX: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead><tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" }}>Citat</th>
+                              <th style={thStyle}>Participant</th>
+                              <th style={thStyle}>Timestamp</th>
+                              <th style={thStyle}>Modul</th>
+                              <th style={thStyle}>Cod {fgCoderView === "coder1" ? "Dumitru" : "Maria"}</th>
+                              <th style={thStyle}>Dim. RIFC</th>
+                            </tr></thead>
+                            <tbody>
+                              {selGroupCodes.map(c => {
+                                const p = fgParticipants.find(pp => pp.id === c.participant_id);
+                                const codeVal = fgCoderView === "coder1" ? c.code_coder1 : c.code_coder2;
+                                return (
+                                  <tr key={c.id}>
+                                    <td style={{ ...tdStyle, textAlign: "left", maxWidth: 300, fontSize: 11 }}>&ldquo;{c.quote_text.slice(0, 120)}{c.quote_text.length > 120 ? "..." : ""}&rdquo;</td>
+                                    <td style={{ ...tdStyle, fontWeight: 700, color: "#8B5CF6" }}>{p?.anonymous_id || "—"}</td>
+                                    <td style={tdStyle}>{c.timestamp_marker || "—"}</td>
+                                    <td style={tdStyle}>{c.discussion_module || "—"}</td>
+                                    <td style={tdStyle}>
+                                      <input
+                                        value={codeVal || ""}
+                                        onChange={e => {
+                                          const field = fgCoderView === "coder1" ? "code_coder1" : "code_coder2";
+                                          const dateField = fgCoderView === "coder1" ? "code_coder1_date" : "code_coder2_date";
+                                          updateFgCode(c.id, { [field]: e.target.value, [dateField]: new Date().toISOString() });
+                                        }}
+                                        placeholder="Cod..."
+                                        style={{ border: "1px solid #d1d5db", borderRadius: 4, outline: "none", padding: "4px 6px", fontSize: 11, width: 140 }}
+                                      />
+                                    </td>
+                                    <td style={tdStyle}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 3, background: c.rifc_dimension === "R" ? "#fee2e2" : c.rifc_dimension === "I" ? "#fef3c7" : c.rifc_dimension === "F" ? "#f3e8ff" : "#f3f4f6", color: "#374151" }}>{c.rifc_dimension || "—"}</span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        /* RECONCILIATION MODE */
+                        <div>
+                          <div style={{ overflowX: "auto" }}>
+                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                              <thead><tr style={{ background: "#f9fafb" }}>
+                                <th style={{ ...thStyle, textAlign: "left" }}>Citat</th>
+                                <th style={thStyle}>Cod Dumitru</th>
+                                <th style={thStyle}>Cod Maria</th>
+                                <th style={thStyle}>Cod Final</th>
+                                <th style={thStyle}>Acord</th>
+                                <th style={thStyle}>Tema</th>
+                              </tr></thead>
+                              <tbody>
+                                {selGroupCodes.filter(c => c.code_coder1 || c.code_coder2).map(c => (
+                                  <tr key={c.id}>
+                                    <td style={{ ...tdStyle, textAlign: "left", maxWidth: 250, fontSize: 11 }}>&ldquo;{c.quote_text.slice(0, 80)}...&rdquo;</td>
+                                    <td style={{ ...tdStyle, fontWeight: 600 }}>{c.code_coder1 || "—"}</td>
+                                    <td style={{ ...tdStyle, fontWeight: 600 }}>{c.code_coder2 || "—"}</td>
+                                    <td style={tdStyle}><input value={c.code_agreed || ""} onChange={e => updateFgCode(c.id, { code_agreed: e.target.value })} style={{ border: "1px solid #d1d5db", borderRadius: 4, outline: "none", padding: "4px 6px", fontSize: 11, width: 120 }} /></td>
+                                    <td style={tdStyle}>
+                                      <select value={c.agreement_type || ""} onChange={e => updateFgCode(c.id, { agreement_type: e.target.value })} style={{ border: "1px solid #d1d5db", borderRadius: 4, outline: "none", padding: "3px 6px", fontSize: 10, width: 100 }}>
+                                        <option value="">...</option><option value="identical">Identic</option><option value="similar">Similar</option><option value="different">Diferit</option><option value="reconciled">Reconciliat</option>
+                                      </select>
+                                    </td>
+                                    <td style={tdStyle}>
+                                      <select value={c.theme_id || ""} onChange={e => updateFgCode(c.id, { theme_id: e.target.value || null })} style={{ border: "1px solid #d1d5db", borderRadius: 4, outline: "none", padding: "3px 6px", fontSize: 10, width: 100 }}>
+                                        <option value="">—</option>
+                                        {fgThemes.map(t => <option key={t.id} value={t.id}>T{t.theme_number}: {t.theme_name.slice(0, 20)}</option>)}
+                                      </select>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Kappa display */}
+                          {(() => {
+                            const kd = calcKappa(selGroupCodes);
+                            if (!kd) return <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Nu exista coduri reconciliate inca.</div>;
+                            return (
+                              <div style={{ marginTop: 16, padding: 16, borderRadius: 10, border: `2px solid ${kd.kappa >= 0.7 ? "#86efac" : kd.kappa >= 0.4 ? "#fde047" : "#fca5a5"}`, background: kd.kappa >= 0.7 ? "#f0fdf4" : kd.kappa >= 0.4 ? "#fefce8" : "#fef2f2" }}>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: "#111827", marginBottom: 4 }}>COHEN&apos;S KAPPA — {selGroup?.group_label}</div>
+                                <div style={{ fontSize: 12 }}>Coduri totale: {kd.total} | Acord: {kd.agreed} ({kd.po}%)</div>
+                                <div style={{ fontSize: 24, fontWeight: 800, color: kd.kappa >= 0.7 ? "#166534" : kd.kappa >= 0.4 ? "#92400e" : "#991b1b", marginTop: 4 }}>
+                                  k = {kd.kappa} — {kd.level.toUpperCase()}
+                                </div>
+                                <div style={{ fontSize: 11, color: "#6B7280", marginTop: 4 }}>Target OSF: k &ge; 0.70 — {kd.kappa >= 0.7 ? "ATINS" : "NEATINS"}</div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ═══ TEME ═══ */}
+              {!fgLoading && fgSubTab === "teme" && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0 }}>Teme — Analiza Tematica Braun &amp; Clarke</h2>
+                    <button onClick={() => setFgShowAddTheme(true)} style={{ padding: "8px 14px", borderRadius: 6, border: "none", background: "#8B5CF6", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>+ Adauga tema</button>
+                  </div>
+
+                  {fgShowAddTheme && (
+                    <div style={{ padding: 14, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 16 }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8, marginBottom: 8 }}>
+                        <input placeholder="Nume tema *" value={fgThemeForm.theme_name} onChange={e => setFgThemeForm(prev => ({ ...prev, theme_name: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} />
+                        <select value={fgThemeForm.rifc_dimension} onChange={e => setFgThemeForm(prev => ({ ...prev, rifc_dimension: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }}>
+                          <option value="">Dimensiune RIFC...</option>
+                          <option value="R">R</option><option value="I">I</option><option value="F">F</option><option value="C">C</option>
+                          <option value="formula">Formula</option><option value="gate">Gate</option><option value="archetype">Arhetip</option><option value="utility">Utilitate</option><option value="other">Altele</option>
+                        </select>
+                      </div>
+                      <textarea placeholder="Descriere (2-3 propozitii)" value={fgThemeForm.theme_description} onChange={e => setFgThemeForm(prev => ({ ...prev, theme_description: e.target.value }))} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12, minHeight: 50, marginBottom: 8 }} />
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button onClick={saveFgTheme} disabled={!fgThemeForm.theme_name.trim() || fgSaving} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: "#8B5CF6", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>{fgSaving ? "..." : "Salveaza"}</button>
+                        <button onClick={() => setFgShowAddTheme(false)} style={{ padding: "8px 16px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", fontSize: 12, color: "#6B7280", cursor: "pointer" }}>Anuleaza</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Theme cards */}
+                  {fgThemes.map(theme => {
+                    const themeCodes = fgCodes.filter(c => c.theme_id === theme.id);
+                    const groupPresence = fgGroups.map(g => {
+                      const gCodes = themeCodes.filter(c => c.group_id === g.id).length;
+                      return { group: g.group_label, strength: gCodes >= 3 ? "strong" : gCodes >= 1 ? "moderate" : "absent" as string, count: gCodes };
+                    });
+                    return (
+                      <div key={theme.id} style={{ padding: 16, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                          <div>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>T{theme.theme_number}: {theme.theme_name}</span>
+                            {theme.rifc_dimension && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: "#f3e8ff", color: "#7c3aed" }}>{theme.rifc_dimension}</span>}
+                            {theme.theme_description && <p style={{ fontSize: 12, color: "#6B7280", marginTop: 4, marginBottom: 0 }}>{theme.theme_description}</p>}
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 600, color: "#6B7280" }}>{themeCodes.length} coduri</span>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                          {groupPresence.map(gp => (
+                            <span key={gp.group} style={{
+                              fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4,
+                              background: gp.strength === "strong" ? "#dcfce7" : gp.strength === "moderate" ? "#fef3c7" : "#f3f4f6",
+                              color: gp.strength === "strong" ? "#166534" : gp.strength === "moderate" ? "#92400e" : "#9CA3AF",
+                            }}>{gp.group}: {gp.count}</span>
+                          ))}
+                        </div>
+                        {theme.representative_quote && (
+                          <div style={{ marginTop: 8, padding: "8px 12px", background: "#f9fafb", borderRadius: 6, borderLeft: "3px solid #8B5CF6", fontSize: 12, fontStyle: "italic", color: "#374151" }}>
+                            &ldquo;{theme.representative_quote}&rdquo; — {theme.representative_participant_anonymous_id || "?"}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {fgThemes.length === 0 && <div style={{ padding: 40, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Nicio tema adaugata inca. Foloseste butonul &quot;+ Adauga tema&quot;.</div>}
+                </div>
+              )}
+
+              {/* ═══ INTERPRETARE ═══ */}
+              {!fgLoading && fgSubTab === "interpretare" && (() => {
+                // 1. Kappa per group
+                const kappaRows = fgGroups.map(g => {
+                  const gCodes = fgCodes.filter(c => c.group_id === g.id);
+                  const kd = calcKappa(gCodes);
+                  return { group: g.group_label, ...(kd || { kappa: 0, level: "—", total: 0, agreed: 0, po: 0 }) };
+                });
+                const allKappa = calcKappa(fgCodes);
+
+                // 2. Themes grouped by RIFC dimension
+                const dimGroups: Record<string, FGTheme[]> = {};
+                for (const t of fgThemes) {
+                  const key = t.rifc_dimension || "other";
+                  if (!dimGroups[key]) dimGroups[key] = [];
+                  dimGroups[key].push(t);
+                }
+                const DIM_LABELS: Record<string, string> = { R: "R — Relevanta", I: "I — Interes", F: "F — Forma", C: "C — Compozit", formula: "Formula R+(IxF)=C", gate: "Poarta Relevantei", archetype: "Arhetipuri", utility: "Utilitate Practica", other: "Teme neasteptate" };
+
+                // 3. Ecological validity
+                const ecoRows = fgStimuli.map(s => ({
+                  name: s.stimulus_name, c_score: s.c_score, c_category: s.c_category,
+                  preferred: s.spontaneous_preferred,
+                  group: fgGroups.find(g => g.id === s.group_id)?.group_label || "?",
+                }));
+                const ecoTotal = ecoRows.length;
+                const ecoCorrect = ecoRows.filter(r => (r.c_category === "high" && r.preferred) || (r.c_category === "low" && !r.preferred)).length;
+                const ecoPct = ecoTotal > 0 ? Math.round((ecoCorrect / ecoTotal) * 100) : 0;
+
+                // 4. Total participants present
+                const totalPresent = fgGroups.reduce((s, g) => s + (g.participants_present || 0), 0);
+
+                return (
+                  <div>
+                    <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 16px" }}>Interpretare Focus Grupuri</h2>
+
+                    {/* 8.1 Kappa Overview */}
+                    <OsfH id="fg-kappa" num="IRR" title="Cohen&apos;s Kappa — Toate grupurile" color="#8B5CF6" verdict={allKappa && allKappa.kappa >= 0.7 ? "ATINS" : "IN CURS"}>
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                          <thead><tr style={{ background: "#f9fafb" }}>
+                            <th style={{ ...thStyle, textAlign: "left" }}>Grup</th>
+                            <th style={thStyle}>Coduri</th>
+                            <th style={thStyle}>Acord %</th>
+                            <th style={thStyle}>k</th>
+                            <th style={thStyle}>Nivel</th>
+                          </tr></thead>
+                          <tbody>
+                            {kappaRows.map(row => (
+                              <tr key={row.group}>
+                                <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>{row.group}</td>
+                                <td style={tdStyle}>{row.total}</td>
+                                <td style={tdStyle}>{row.po}%</td>
+                                <td style={{ ...tdStyle, fontWeight: 700, color: row.kappa >= 0.7 ? "#166534" : row.kappa >= 0.4 ? "#92400e" : "#991b1b" }}>{row.kappa || "—"}</td>
+                                <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: row.level === "excelent" || row.level === "bun" ? "#dcfce7" : row.level === "moderat" ? "#fef3c7" : "#f3f4f6", color: row.level === "excelent" || row.level === "bun" ? "#166534" : row.level === "moderat" ? "#92400e" : "#6B7280" }}>{row.level}</span></td>
+                              </tr>
+                            ))}
+                            {allKappa && (
+                              <tr style={{ borderTop: "2px solid #e5e7eb", fontWeight: 700 }}>
+                                <td style={{ ...tdStyle, textAlign: "left" }}>TOTAL</td>
+                                <td style={tdStyle}>{allKappa.total}</td>
+                                <td style={tdStyle}>{allKappa.po}%</td>
+                                <td style={{ ...tdStyle, color: allKappa.kappa >= 0.7 ? "#166534" : "#92400e" }}>{allKappa.kappa}</td>
+                                <td style={tdStyle}><span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: allKappa.kappa >= 0.7 ? "#dcfce7" : "#fef3c7", color: allKappa.kappa >= 0.7 ? "#166534" : "#92400e" }}>{allKappa.level} — Target k&ge;0.70 {allKappa.kappa >= 0.7 ? "ATINS" : "NEATINS"}</span></td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </OsfH>
+
+                    {/* 8.2 Ecological Validity */}
+                    <OsfH id="fg-eco" num="ECO" title="Validitate Ecologica" color="#059669" verdict={ecoTotal > 0 ? (ecoPct >= 70 ? "INALTA" : ecoPct >= 50 ? "MODERATA" : "SCAZUTA") : "DATE INSUFICIENTE"}>
+                      {ecoTotal === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Niciun stimulus cu date de preferinta spontana.</div>
+                      ) : (
+                        <div>
+                          <div style={{ padding: "10px 14px", background: ecoPct >= 70 ? "#f0fdf4" : "#fefce8", borderRadius: 8, marginBottom: 12 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: ecoPct >= 70 ? "#166534" : "#92400e" }}>Concordanta intuitie vs C: {ecoPct}% ({ecoPct >= 70 ? "INALTA" : ecoPct >= 50 ? "MODERATA" : "SCAZUTA"})</span>
+                          </div>
+                        </div>
+                      )}
+                    </OsfH>
+
+                    {/* 8.3 Themes per RIFC dimension */}
+                    <OsfH id="fg-teme-rifc" num="TEME" title="Teme per Dimensiune RIFC" color="#6366f1" verdict={fgThemes.length > 0 ? "DESCRIPTIV" : "DATE INSUFICIENTE"}>
+                      {Object.entries(dimGroups).map(([dim, themes]) => (
+                        <div key={dim} style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{DIM_LABELS[dim] || dim}:</div>
+                          {themes.map(t => {
+                            const tc = fgCodes.filter(c => c.theme_id === t.id).length;
+                            const tg = fgGroups.filter(g => fgCodes.some(c => c.theme_id === t.id && c.group_id === g.id)).length;
+                            return <div key={t.id} style={{ fontSize: 12, color: "#374151", marginLeft: 16, marginBottom: 2 }}>T{t.theme_number}: {t.theme_name} ({tc} coduri, {tg}/4 grupuri)</div>;
+                          })}
+                        </div>
+                      ))}
+                      {fgThemes.length === 0 && <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Nicio tema definita inca.</div>}
+                    </OsfH>
+
+                    {/* 8.4 Inter-group comparison */}
+                    <OsfH id="fg-comp" num="COMP" title="Comparatie Inter-Grupuri" color="#DC2626" verdict={fgThemes.length > 0 ? "DESCRIPTIV" : "DATE INSUFICIENTE"}>
+                      {fgThemes.length > 0 && (
+                        <div style={{ overflowX: "auto" }}>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead><tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" }}>Tema</th>
+                              {fgGroups.map(g => <th key={g.id} style={thStyle}>{g.group_label}</th>)}
+                            </tr></thead>
+                            <tbody>
+                              {fgThemes.map(theme => (
+                                <tr key={theme.id}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>T{theme.theme_number}: {theme.theme_name}</td>
+                                  {fgGroups.map(g => {
+                                    const count = fgCodes.filter(c => c.theme_id === theme.id && c.group_id === g.id).length;
+                                    const s = count >= 3 ? "strong" : count >= 1 ? "moderate" : "absent";
+                                    return <td key={g.id} style={{ ...tdStyle, background: s === "strong" ? "#dcfce7" : s === "moderate" ? "#fef3c7" : "#f9fafb", fontWeight: 600, color: s === "strong" ? "#166534" : s === "moderate" ? "#92400e" : "#d1d5db" }}>{s === "strong" ? "Puternica" : s === "moderate" ? "Moderata" : "Absenta"}</td>;
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </OsfH>
+
+                    {/* 8.5 Summary */}
+                    <OsfH id="fg-sumar" num="SUM" title="Sumar pentru Manuscris" color="#0891B2" verdict="GENERAT">
+                      <div style={{ padding: 14, background: "#f9fafb", borderRadius: 8, fontSize: 13, lineHeight: 1.8, color: "#374151" }}>
+                        Analiza tematica a 4 focus grupuri (N={totalPresent}) a identificat {fgThemes.length} teme principale.
+                        {allKappa && <> Acordul inter-codori a fost {allKappa.level} (k = {allKappa.kappa}, target k &ge; 0.70).</>}
+                        {fgThemes.filter(t => fgGroups.filter(g => fgCodes.some(c => c.theme_id === t.id && c.group_id === g.id)).length === 4).length > 0 && (
+                          <> Temele cu prezenta universala (toate 4 grupurile): {fgThemes.filter(t => fgGroups.filter(g => fgCodes.some(c => c.theme_id === t.id && c.group_id === g.id)).length === 4).map(t => t.theme_name).join(", ")}.</>
+                        )}
+                        {ecoTotal > 0 && <> Validitatea ecologica a scorurilor RIFC a fost confirmata: {ecoPct}% din preferintele spontane ale participantilor au coincis cu ierarhia scorurilor C calculate.</>}
+                      </div>
+                    </OsfH>
+                  </div>
+                );
+              })()}
+
+              {/* ═══ GHID DISCUTIE ═══ */}
+              {!fgLoading && fgSubTab === "ghid" && (
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, color: "#111827", margin: 0 }}>Ghid de Discutie — Focus Grup RIFC</h2>
+                    <button onClick={() => window.print()} style={{ padding: "8px 14px", borderRadius: 6, border: "none", background: "#8B5CF6", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Printeaza</button>
+                  </div>
+                  <p style={{ fontSize: 12, color: "#6B7280", marginBottom: 20 }}>Confidential — Studiu RIFC osf.io/9y75d</p>
+
+                  {FG_DISCUSSION_MODULES.map(mod => (
+                    <div key={mod.number} style={{ padding: 16, background: "#fff", borderRadius: 10, border: "1px solid #e5e7eb", marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <div>
+                          <span style={{ fontSize: 12, fontWeight: 700, padding: "3px 10px", borderRadius: 5, background: "#8B5CF6", color: "#fff", marginRight: 8 }}>Modul {mod.number}</span>
+                          <span style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>{mod.title}</span>
+                        </div>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>{mod.duration}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#6B7280", marginBottom: 10, fontStyle: "italic" }}>Scop: {mod.purpose}</div>
+                      <div style={{ marginBottom: 10 }}>
+                        {mod.questions.map((q, i) => (
+                          <div key={i} style={{ fontSize: 13, color: "#111827", marginBottom: 6, paddingLeft: 16, position: "relative" }}>
+                            <span style={{ position: "absolute", left: 0, color: "#8B5CF6", fontWeight: 700 }}>{i + 1}.</span>
+                            {q}
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ padding: "8px 12px", background: "#faf5ff", borderRadius: 6, borderLeft: "3px solid #8B5CF6", fontSize: 11, color: "#7c3aed" }}>
+                        <strong>Nota moderator:</strong> {mod.note}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Observer Sheet */}
+                  <div style={{ marginTop: 24 }}>
+                    <h3 style={{ fontSize: 18, fontWeight: 700, color: "#111827", marginBottom: 12 }}>Fisa Observatorului (Maria)</h3>
+                    {["Comportamente non-verbale", "Dinamica grupului", "Teme emergente", "Reactii la stimuli (6 randuri)", "Reactie la formula", "Reactie la Poarta Relevantei"].map(section => (
+                      <div key={section} style={{ padding: 14, background: "#fff", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 8 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{section}</div>
+                        <div style={{ height: 60, background: "#f9fafb", borderRadius: 6, border: "1px dashed #d1d5db" }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })()}
