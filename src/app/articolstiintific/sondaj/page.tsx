@@ -1981,9 +1981,9 @@ export default function StudiuAdminPage() {
           setAiEditId(null);
           setAiForm(prev => ({ stimulus_id: prev.stimulus_id, model_name: prev.model_name, r_score: buf.r_score, i_score: buf.i_score, f_score: buf.f_score, cta_score: buf.cta_score, prompt_version: nextRun, justification: buf.justification }));
         } else {
-          setShowAddAi(false);
-          setAiEditId(null);
-          setAiForm(prev => ({ stimulus_id: prev.stimulus_id, model_name: prev.model_name, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }));
+          // No more buffered runs — keep form open with saved values
+          // Set editId from returned data so next save is a PUT (update) not POST
+          if (data.evaluation?.id) setAiEditId(data.evaluation.id);
         }
         fetchAiEvals();
       } else {
@@ -1994,6 +1994,21 @@ export default function StudiuAdminPage() {
       alert("Eroare de retea la salvare. Verifica conexiunea.");
     }
     setAiSaving(false);
+  };
+
+  // Helper: find existing eval for stimulus+model+run — returns form values or defaults
+  const aiFormFromDb = (stimId: string, model: string, run: string) => {
+    const existing = aiEvals.find(e => e.stimulus_id === stimId && e.model_name === model && e.prompt_version === run);
+    if (existing) {
+      return {
+        stimulus_id: stimId, model_name: model, prompt_version: run,
+        r_score: existing.r_score, i_score: existing.i_score, f_score: existing.f_score,
+        cta_score: existing.cta_score ?? 5,
+        justification: typeof existing.justification === "object" && existing.justification?.text ? existing.justification.text : "",
+        _existingId: existing.id,
+      };
+    }
+    return { stimulus_id: stimId, model_name: model, prompt_version: run, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, justification: "", _existingId: null as string | null };
   };
 
   const startEditAi = (ev: AiEvaluation) => {
@@ -19814,7 +19829,21 @@ export default function StudiuAdminPage() {
                     </button>
                   ))}
                 </div>
-                <button style={{ ...S.addCatBtn, background: "#7C3AED" }} onClick={() => { setAiEditId(null); setAiRunBuffer({}); setAiForm(prev => ({ ...prev, stimulus_id: prev.stimulus_id, model_name: prev.model_name || "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" })); setShowAddAi(true); setAiSubTab("main"); }}>
+                <button style={{ ...S.addCatBtn, background: "#7C3AED" }} onClick={() => {
+                  setAiRunBuffer({});
+                  // If material+model already selected, load existing DB data
+                  const stimId = aiForm.stimulus_id;
+                  const model = aiForm.model_name || "Claude";
+                  if (stimId) {
+                    const db = aiFormFromDb(stimId, model, aiRunTab);
+                    setAiForm({ stimulus_id: db.stimulus_id, model_name: db.model_name, r_score: db.r_score, i_score: db.i_score, f_score: db.f_score, cta_score: db.cta_score, prompt_version: db.prompt_version, justification: db.justification });
+                    if (db._existingId) setAiEditId(db._existingId); else setAiEditId(null);
+                  } else {
+                    setAiEditId(null);
+                    setAiForm(prev => ({ ...prev, stimulus_id: "", model_name: model, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }));
+                  }
+                  setShowAddAi(true); setAiSubTab("main");
+                }}>
                   <Plus size={16} />
                   ADAUGA EVALUARE AI
                 </button>
@@ -19832,35 +19861,62 @@ export default function StudiuAdminPage() {
                   </div>
                   {/* RUN tabs */}
                   <div style={{ display: "flex", gap: 4 }}>
-                    {(["run1", "run2", "run3"] as const).map((run, i) => (
+                    {(["run1", "run2", "run3"] as const).map((run, i) => {
+                      // Check if DB has data for this run
+                      const hasDbData = aiForm.stimulus_id ? aiEvals.some(e => e.stimulus_id === aiForm.stimulus_id && e.model_name === aiForm.model_name && e.prompt_version === run) : false;
+                      const hasBufData = !!aiRunBuffer[run];
+                      return (
                       <button key={run} onClick={() => {
                         if (run === aiRunTab) return;
-                        // Compute new buffer with current run saved, then load target run from it
+                        // Save current unsaved work to buffer
                         const updatedBuffer = { ...aiRunBuffer, [aiRunTab]: { r_score: aiForm.r_score, i_score: aiForm.i_score, f_score: aiForm.f_score, cta_score: aiForm.cta_score, justification: aiForm.justification } };
                         setAiRunBuffer(updatedBuffer);
-                        const buf = updatedBuffer[run];
                         setAiRunTab(run);
-                        setAiEditId(null);
-                        setAiForm(prev => ({ ...prev, r_score: buf?.r_score ?? 5, i_score: buf?.i_score ?? 5, f_score: buf?.f_score ?? 5, cta_score: buf?.cta_score ?? 5, prompt_version: run, justification: buf?.justification ?? "" }));
+                        // Check buffer first, then DB
+                        const buf = updatedBuffer[run];
+                        if (buf) {
+                          setAiEditId(null);
+                          setAiForm(prev => ({ ...prev, r_score: buf.r_score, i_score: buf.i_score, f_score: buf.f_score, cta_score: buf.cta_score, prompt_version: run, justification: buf.justification }));
+                        } else if (aiForm.stimulus_id) {
+                          const db = aiFormFromDb(aiForm.stimulus_id, aiForm.model_name, run);
+                          setAiForm({ stimulus_id: db.stimulus_id, model_name: db.model_name, r_score: db.r_score, i_score: db.i_score, f_score: db.f_score, cta_score: db.cta_score, prompt_version: run, justification: db.justification });
+                          if (db._existingId) setAiEditId(db._existingId); else setAiEditId(null);
+                        } else {
+                          setAiEditId(null);
+                          setAiForm(prev => ({ ...prev, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: run, justification: "" }));
+                        }
                       }} style={{
                         padding: "5px 14px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 1,
                         background: aiRunTab === run ? "#7C3AED" : "#f3f4f6",
                         color: aiRunTab === run ? "#fff" : "#6B7280",
                         border: aiRunTab === run ? "none" : "1px solid #e5e7eb",
                         cursor: "pointer", transition: "all 0.15s",
-                      }}>RUN {i + 1}{aiRunBuffer[run] ? " ●" : ""}</button>
-                    ))}
+                      }}>RUN {i + 1}{hasBufData ? " ●" : hasDbData ? " ✓" : ""}</button>
+                      );
+                    })}
                   </div>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div><label style={S.configLabel}>MATERIAL *</label>
-                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.stimulus_id} onChange={(e) => setAiForm({ ...aiForm, stimulus_id: e.target.value })}>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.stimulus_id} onChange={(e) => {
+                      const newStim = e.target.value;
+                      if (!newStim) { setAiForm(f => ({ ...f, stimulus_id: "" })); return; }
+                      const db = aiFormFromDb(newStim, aiForm.model_name, aiRunTab);
+                      setAiForm({ stimulus_id: db.stimulus_id, model_name: db.model_name, r_score: db.r_score, i_score: db.i_score, f_score: db.f_score, cta_score: db.cta_score, prompt_version: db.prompt_version, justification: db.justification });
+                      if (db._existingId) setAiEditId(db._existingId); else setAiEditId(null);
+                    }}>
                       <option value="">Selecteaza material...</option>
                       {stimuli.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name} ({s.type})</option>)}
                     </select>
                   </div>
                   <div><label style={S.configLabel}>MODEL AI *</label>
-                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.model_name} onChange={(e) => setAiForm({ ...aiForm, model_name: e.target.value })}>
+                    <select style={{ ...S.catEditInput, width: "100%" }} value={aiForm.model_name} onChange={(e) => {
+                      const newModel = e.target.value;
+                      if (!aiForm.stimulus_id) { setAiForm(f => ({ ...f, model_name: newModel })); return; }
+                      const db = aiFormFromDb(aiForm.stimulus_id, newModel, aiRunTab);
+                      setAiForm({ stimulus_id: db.stimulus_id, model_name: db.model_name, r_score: db.r_score, i_score: db.i_score, f_score: db.f_score, cta_score: db.cta_score, prompt_version: db.prompt_version, justification: db.justification });
+                      if (db._existingId) setAiEditId(db._existingId); else setAiEditId(null);
+                    }}>
                       {AI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
