@@ -1969,14 +1969,14 @@ export default function StudiuAdminPage() {
       const data = await res.json();
       console.log("[AI Save] Response:", data);
       if (data.success) {
-        // Clear saved run from buffer
-        setAiRunBuffer(prev => { const next = { ...prev }; delete next[aiRunTab]; return next; });
-        // Check if there's another buffered run to save next
-        const remainingRuns = ["run1", "run2", "run3"].filter(r => r !== aiRunTab && aiRunBuffer[r]) as ("run1" | "run2" | "run3")[];
+        // Compute cleaned buffer (remove saved run) and check for remaining
+        const cleanedBuffer = { ...aiRunBuffer };
+        delete cleanedBuffer[aiRunTab];
+        setAiRunBuffer(cleanedBuffer);
+        const remainingRuns = (["run1", "run2", "run3"] as const).filter(r => r !== aiRunTab && cleanedBuffer[r]);
         if (remainingRuns.length > 0) {
-          // Switch to next buffered run
           const nextRun = remainingRuns[0];
-          const buf = aiRunBuffer[nextRun];
+          const buf = cleanedBuffer[nextRun];
           setAiRunTab(nextRun);
           setAiEditId(null);
           setAiForm(prev => ({ stimulus_id: prev.stimulus_id, model_name: prev.model_name, r_score: buf.r_score, i_score: buf.i_score, f_score: buf.f_score, cta_score: buf.cta_score, prompt_version: nextRun, justification: buf.justification }));
@@ -19834,10 +19834,11 @@ export default function StudiuAdminPage() {
                   <div style={{ display: "flex", gap: 4 }}>
                     {(["run1", "run2", "run3"] as const).map((run, i) => (
                       <button key={run} onClick={() => {
-                        // Save current run scores to buffer before switching
-                        setAiRunBuffer(prev => ({ ...prev, [aiRunTab]: { r_score: aiForm.r_score, i_score: aiForm.i_score, f_score: aiForm.f_score, cta_score: aiForm.cta_score, justification: aiForm.justification } }));
-                        // Load from buffer if exists, else defaults
-                        const buf = aiRunBuffer[run];
+                        if (run === aiRunTab) return;
+                        // Compute new buffer with current run saved, then load target run from it
+                        const updatedBuffer = { ...aiRunBuffer, [aiRunTab]: { r_score: aiForm.r_score, i_score: aiForm.i_score, f_score: aiForm.f_score, cta_score: aiForm.cta_score, justification: aiForm.justification } };
+                        setAiRunBuffer(updatedBuffer);
+                        const buf = updatedBuffer[run];
                         setAiRunTab(run);
                         setAiEditId(null);
                         setAiForm(prev => ({ ...prev, r_score: buf?.r_score ?? 5, i_score: buf?.i_score ?? 5, f_score: buf?.f_score ?? 5, cta_score: buf?.cta_score ?? 5, prompt_version: run, justification: buf?.justification ?? "" }));
@@ -20084,7 +20085,7 @@ export default function StudiuAdminPage() {
                   </div>
                   {interpText && aiInterpExpanded[num] && (
                     <div style={{ marginLeft: 42, marginTop: 8, background: "#f5f3ff", border: "1px solid #ddd6fe", borderRadius: 10, padding: "14px 16px" }}>
-                      <div style={{ fontSize: 12, lineHeight: 1.7, color: "#4c1d95", whiteSpace: "pre-line" as const }}>{interpText}</div>
+                      <div style={{ fontSize: 13, lineHeight: 1.7, color: "#374151", whiteSpace: "pre-line" as const }}>{interpText}</div>
                     </div>
                   )}
                 </div>
@@ -20118,7 +20119,7 @@ export default function StudiuAdminPage() {
                 stimMap[e.stimulus_id][e.model_name].i.push(e.i_score);
                 stimMap[e.stimulus_id][e.model_name].f.push(e.f_score);
                 stimMap[e.stimulus_id][e.model_name].cta.push(e.cta_score ?? 0);
-                stimMap[e.stimulus_id][e.model_name].c.push(e.c_computed);
+                stimMap[e.stimulus_id][e.model_name].c.push(e.c_computed ?? 0);
               });
 
               // Per-stimulus model means
@@ -20324,9 +20325,11 @@ export default function StudiuAdminPage() {
                           const xs: number[] = [];
                           const ys: number[] = [];
                           stimIds.forEach(sid => {
-                            if (stimModelMeans[sid][m1] && stimModelMeans[sid][m2]) {
-                              xs.push(stimModelMeans[sid][m1][dim]);
-                              ys.push(stimModelMeans[sid][m2][dim]);
+                            const v1 = stimModelMeans[sid]?.[m1]?.[dim];
+                            const v2 = stimModelMeans[sid]?.[m2]?.[dim];
+                            if (v1 != null && v2 != null && !isNaN(v1) && !isNaN(v2)) {
+                              xs.push(v1);
+                              ys.push(v2);
                             }
                           });
                           pearson[dim] = _pearsonR(xs, ys);
@@ -20455,13 +20458,19 @@ export default function StudiuAdminPage() {
                           const aiVals: number[] = [];
                           const consVals: number[] = [];
                           commonStimIds.forEach(sid => {
+                            let aiVal: number | undefined;
                             if (model === "Media AI") {
-                              const modelVals = models.map(m => stimModelMeans[sid][m]?.[dim]).filter(v => v != null);
-                              if (modelVals.length > 0) aiVals.push(_mean(modelVals));
+                              const modelVals = models.map(m => stimModelMeans[sid]?.[m]?.[dim]).filter((v): v is number => v != null && !isNaN(v));
+                              if (modelVals.length > 0) aiVal = _mean(modelVals);
                             } else {
-                              if (stimModelMeans[sid][model]) aiVals.push(stimModelMeans[sid][model][dim]);
+                              const v = stimModelMeans[sid]?.[model]?.[dim];
+                              if (v != null && !isNaN(v)) aiVal = v;
                             }
-                            consVals.push(consumerMeans[sid][dim]);
+                            const consVal = consumerMeans[sid]?.[dim];
+                            if (aiVal != null && consVal != null) {
+                              aiVals.push(aiVal);
+                              consVals.push(consVal);
+                            }
                           });
                           const minLen = Math.min(aiVals.length, consVals.length);
                           const xs = aiVals.slice(0, minLen);
@@ -20540,9 +20549,9 @@ export default function StudiuAdminPage() {
                             {/* Grid lines */}
                             {[0, 25, 50, 75, 100].map(v => (
                               <React.Fragment key={v}>
-                                <div style={{ position: "absolute" as const, left: 40, right: 20, top: `${(1 - v / 100) * 85 + 5}%`, height: 1, background: "#e5e7eb" }} />
-                                <div style={{ position: "absolute" as const, left: 22, top: `${(1 - v / 100) * 85 + 3}%`, fontSize: 9, color: "#d1d5db" }}>{v}</div>
-                                <div style={{ position: "absolute" as const, top: 10, bottom: 30, left: `${v * 0.6 + 12}%`, width: 1, background: "#e5e7eb" }} />
+                                <div style={{ position: "absolute" as const, left: 40, right: 20, top: `${(1 - v / 100) * 85 + 5}%`, height: 1, background: "#d1d5db" }} />
+                                <div style={{ position: "absolute" as const, left: 22, top: `${(1 - v / 100) * 85 + 3}%`, fontSize: 9, color: "#9CA3AF", fontWeight: 600 }}>{v}</div>
+                                <div style={{ position: "absolute" as const, top: 10, bottom: 30, left: `${v * 0.6 + 12}%`, width: 1, background: "#d1d5db" }} />
                               </React.Fragment>
                             ))}
                             {/* Data points */}
@@ -20553,7 +20562,7 @@ export default function StudiuAdminPage() {
                               const maxC = 100;
                               const xPct = Math.min(95, Math.max(8, (aiC / maxC) * 60 + 12));
                               const yPct = Math.min(90, Math.max(8, (1 - consC / maxC) * 85 + 5));
-                              return <div key={sid} title={`${stimName(sid)}\nAI: ${aiC.toFixed(1)} | Consumer: ${consC.toFixed(1)}`} style={{ position: "absolute" as const, left: `${xPct}%`, top: `${yPct}%`, width: 10, height: 10, borderRadius: "50%", background: "#7C3AED", border: "2px solid #fff", cursor: "pointer", transform: "translate(-50%, -50%)", opacity: 0.8 }} />;
+                              return <div key={sid} title={`${stimName(sid)}\nAI: ${aiC.toFixed(1)} | Consumer: ${consC.toFixed(1)}`} style={{ position: "absolute" as const, left: `${xPct}%`, top: `${yPct}%`, width: 11, height: 11, borderRadius: "50%", background: "#7C3AED", border: "2px solid #fff", boxShadow: "0 0 0 1px rgba(124,58,237,0.4)", cursor: "pointer", transform: "translate(-50%, -50%)" }} />;
                             })}
                             {/* Diagonal reference line */}
                             <div style={{ position: "absolute" as const, left: "12%", top: "5%", width: "60%", height: "85%", overflow: "hidden", pointerEvents: "none" as const }}>
