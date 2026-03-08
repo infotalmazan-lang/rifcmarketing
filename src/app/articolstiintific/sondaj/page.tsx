@@ -1716,14 +1716,24 @@ export default function StudiuAdminPage() {
       });
       let data = await res.json();
       // Auto-migrate: if table doesn't exist, create it and retry
-      if (!data.success && data.error && (data.error.includes("42P01") || data.error.includes("does not exist") || data.error.includes("relation"))) {
-        await fetch("/api/survey/migrate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ migration: "023" }) });
-        res = await fetch("/api/survey/predictive/companies", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(predCompanyForm),
-        });
-        data = await res.json();
+      if (!data.success && data.error && (data.error.includes("42P01") || data.error.includes("does not exist") || data.error.includes("relation") || data.error.includes("Could not find"))) {
+        const migRes = await fetch("/api/survey/migrate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ migration: "023" }) });
+        const migData = await migRes.json();
+        if (migData.migrated) {
+          // Wait for PostgREST schema cache refresh
+          await new Promise(r => setTimeout(r, 2000));
+          res = await fetch("/api/survey/predictive/companies", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(predCompanyForm),
+          });
+          data = await res.json();
+        } else if (migData.sql) {
+          alert("Tabelele nu exista inca. Ruleaza urmatorul SQL in Supabase Dashboard > SQL Editor, apoi incearca din nou.\n\n(SQL-ul a fost copiat in clipboard)");
+          navigator.clipboard?.writeText(migData.sql);
+          setPredSaving(false);
+          return;
+        }
       }
       if (data.success) {
         setShowAddCompany(false);

@@ -25,6 +25,7 @@ async function ensureTable(supabase: ReturnType<typeof createServiceRole>) {
           CREATE POLICY "${TABLE}_all" ON public.${TABLE} FOR ALL USING (true) WITH CHECK (true);
         END IF;
       END $$;
+      NOTIFY pgrst, 'reload schema';
     `,
   }).then(() => {}, () => {});
 }

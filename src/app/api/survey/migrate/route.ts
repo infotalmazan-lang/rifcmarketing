@@ -291,7 +291,8 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'predictive_kpis' AND policyname = 'predictive_kpis_all') THEN
     CREATE POLICY "predictive_kpis_all" ON public.predictive_kpis FOR ALL USING (true) WITH CHECK (true);
   END IF;
-END $$;`;
+END $$;
+NOTIFY pgrst, 'reload schema';`;
 
         const { error: migErr } = await supabase.rpc("exec_sql", { sql_text: sql }).single();
         if (migErr) {
