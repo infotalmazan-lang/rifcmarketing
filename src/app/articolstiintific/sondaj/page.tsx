@@ -1303,6 +1303,7 @@ export default function StudiuAdminPage() {
   const [aiForm, setAiForm] = useState({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: "run1", justification: "" });
   const [aiSaving, setAiSaving] = useState(false);
   const [aiRunTab, setAiRunTab] = useState<"run1" | "run2" | "run3">("run1");
+  const [aiRunBuffer, setAiRunBuffer] = useState<Record<string, { r_score: number; i_score: number; f_score: number; cta_score: number; justification: string }>>({});
   const [aiEditId, setAiEditId] = useState<string | null>(null);
   const [aiSubTab, setAiSubTab] = useState<"main" | "interpretare">("main");
   const [aiInterpExpanded, setAiInterpExpanded] = useState<Record<number, boolean>>({});
@@ -1968,9 +1969,22 @@ export default function StudiuAdminPage() {
       const data = await res.json();
       console.log("[AI Save] Response:", data);
       if (data.success) {
-        setShowAddAi(false);
-        setAiEditId(null);
-        setAiForm(prev => ({ stimulus_id: prev.stimulus_id, model_name: prev.model_name, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }));
+        // Clear saved run from buffer
+        setAiRunBuffer(prev => { const next = { ...prev }; delete next[aiRunTab]; return next; });
+        // Check if there's another buffered run to save next
+        const remainingRuns = ["run1", "run2", "run3"].filter(r => r !== aiRunTab && aiRunBuffer[r]) as ("run1" | "run2" | "run3")[];
+        if (remainingRuns.length > 0) {
+          // Switch to next buffered run
+          const nextRun = remainingRuns[0];
+          const buf = aiRunBuffer[nextRun];
+          setAiRunTab(nextRun);
+          setAiEditId(null);
+          setAiForm(prev => ({ stimulus_id: prev.stimulus_id, model_name: prev.model_name, r_score: buf.r_score, i_score: buf.i_score, f_score: buf.f_score, cta_score: buf.cta_score, prompt_version: nextRun, justification: buf.justification }));
+        } else {
+          setShowAddAi(false);
+          setAiEditId(null);
+          setAiForm(prev => ({ stimulus_id: prev.stimulus_id, model_name: prev.model_name, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }));
+        }
         fetchAiEvals();
       } else {
         alert("Eroare la salvare: " + (data.error || "Necunoscuta"));
@@ -19800,7 +19814,7 @@ export default function StudiuAdminPage() {
                     </button>
                   ))}
                 </div>
-                <button style={{ ...S.addCatBtn, background: "#7C3AED" }} onClick={() => { setAiEditId(null); setAiForm(prev => ({ ...prev, stimulus_id: prev.stimulus_id, model_name: prev.model_name || "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" })); setShowAddAi(true); setAiSubTab("main"); }}>
+                <button style={{ ...S.addCatBtn, background: "#7C3AED" }} onClick={() => { setAiEditId(null); setAiRunBuffer({}); setAiForm(prev => ({ ...prev, stimulus_id: prev.stimulus_id, model_name: prev.model_name || "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" })); setShowAddAi(true); setAiSubTab("main"); }}>
                   <Plus size={16} />
                   ADAUGA EVALUARE AI
                 </button>
@@ -19819,13 +19833,21 @@ export default function StudiuAdminPage() {
                   {/* RUN tabs */}
                   <div style={{ display: "flex", gap: 4 }}>
                     {(["run1", "run2", "run3"] as const).map((run, i) => (
-                      <button key={run} onClick={() => { setAiRunTab(run); setAiEditId(null); setAiForm(prev => ({ ...prev, r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: run, justification: "" })); }} style={{
+                      <button key={run} onClick={() => {
+                        // Save current run scores to buffer before switching
+                        setAiRunBuffer(prev => ({ ...prev, [aiRunTab]: { r_score: aiForm.r_score, i_score: aiForm.i_score, f_score: aiForm.f_score, cta_score: aiForm.cta_score, justification: aiForm.justification } }));
+                        // Load from buffer if exists, else defaults
+                        const buf = aiRunBuffer[run];
+                        setAiRunTab(run);
+                        setAiEditId(null);
+                        setAiForm(prev => ({ ...prev, r_score: buf?.r_score ?? 5, i_score: buf?.i_score ?? 5, f_score: buf?.f_score ?? 5, cta_score: buf?.cta_score ?? 5, prompt_version: run, justification: buf?.justification ?? "" }));
+                      }} style={{
                         padding: "5px 14px", borderRadius: 6, fontSize: 11, fontWeight: 700, letterSpacing: 1,
                         background: aiRunTab === run ? "#7C3AED" : "#f3f4f6",
                         color: aiRunTab === run ? "#fff" : "#6B7280",
                         border: aiRunTab === run ? "none" : "1px solid #e5e7eb",
                         cursor: "pointer", transition: "all 0.15s",
-                      }}>RUN {i + 1}</button>
+                      }}>RUN {i + 1}{aiRunBuffer[run] ? " ●" : ""}</button>
                     ))}
                   </div>
                 </div>
@@ -19866,7 +19888,7 @@ export default function StudiuAdminPage() {
                     {aiSaving ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Check size={14} />}
                     {aiSaving ? "Se salveaza..." : aiEditId ? "Actualizeaza" : "Salveaza"}
                   </button>
-                  <button style={S.galleryEditBtn} onClick={() => { setShowAddAi(false); setAiEditId(null); setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }); }}><X size={14} /> Anuleaza</button>
+                  <button style={S.galleryEditBtn} onClick={() => { setShowAddAi(false); setAiEditId(null); setAiRunBuffer({}); setAiForm({ stimulus_id: "", model_name: "Claude", r_score: 5, i_score: 5, f_score: 5, cta_score: 5, prompt_version: aiRunTab, justification: "" }); }}><X size={14} /> Anuleaza</button>
                 </div>
               </div>
             )}
