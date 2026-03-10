@@ -1343,6 +1343,7 @@ export default function StudiuAdminPage() {
   const [fgShowAddTheme, setFgShowAddTheme] = useState(false);
   const [fgThemeForm, setFgThemeForm] = useState({ theme_name: "", theme_description: "", rifc_dimension: "" });
   const [fgSessionForm, setFgSessionForm] = useState({ session_date: "", session_time: "", location_type: "", location_address: "", recording_device_1: "", recording_device_2: "" });
+  const [fgExpandedParticipant, setFgExpandedParticipant] = useState<string | null>(null);
 
   // ── Upload helper: XHR PUT for <50MB, tus resumable for >=50MB ──
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
@@ -21605,6 +21606,14 @@ export default function StudiuAdminPage() {
               if (d.success) setFgParticipants(prev => prev.map(p => p.id === id ? d.participant : p));
             } catch { /* */ }
           };
+          // Helper: update participant (generic multi-field)
+          const updateFgParticipantField = async (id: string, fields: Record<string, unknown>) => {
+            try {
+              const res = await fetch("/api/survey/focus-groups/participants", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, ...fields }) });
+              const d = await res.json();
+              if (d.success) setFgParticipants(prev => prev.map(p => p.id === id ? d.participant : p));
+            } catch { /* */ }
+          };
           // Helper: delete participant
           const deleteFgParticipant = async (id: string) => {
             if (!confirm("Stergi participantul?")) return;
@@ -21743,7 +21752,24 @@ export default function StudiuAdminPage() {
                             <div><span style={{ color: "#6B7280" }}>Codare:</span> <strong>{g.coding_status === "not_started" ? "Neinceput" : g.coding_status}</strong></div>
                             <div><span style={{ color: "#6B7280" }}>Kappa:</span> <strong style={{ color: kappaData && kappaData.kappa >= 0.6 ? "#166534" : kappaData ? "#92400e" : "#9CA3AF" }}>{kappaData ? `k = ${kappaData.kappa}` : "—"}</strong></div>
                           </div>
-                          <div style={{ marginTop: 10, fontSize: 12, color: "#6B7280" }}>Coduri: {gCodes.length} | Teme atribuite: {gCodes.filter(c => c.theme_id).length}</div>
+                          <div style={{ marginTop: 10, fontSize: 12, color: "#6B7280" }}>Coduri: {gCodes.length} | Teme atribuite: {gCodes.filter(c => c.theme_id).length} | Stimuli: {fgStimuli.filter(s => s.group_id === g.id).length}/6</div>
+                          {/* Checklist mini progress */}
+                          {(() => {
+                            const checks = [gParticipants.length > 0 && gParticipants.every(p => p.consent_signed), gParticipants.length > 0 && gParticipants.every(p => p.confirmed), !!g.session_date, g.overall_status !== "recruitment" && g.overall_status !== "scheduled", g.transcript_status === "verified", g.coding_status !== "not_started"];
+                            const done = checks.filter(Boolean).length;
+                            const pct = Math.round((done / 6) * 100);
+                            return (
+                              <div style={{ marginTop: 8 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                                  <span style={{ fontSize: 10, color: "#6B7280" }}>Checklist</span>
+                                  <span style={{ fontSize: 10, fontWeight: 700, color: pct === 100 ? "#059669" : "#8B5CF6" }}>{done}/6 ({pct}%)</span>
+                                </div>
+                                <div style={{ height: 4, background: "#e5e7eb", borderRadius: 2 }}>
+                                  <div style={{ width: `${pct}%`, height: "100%", borderRadius: 2, background: pct === 100 ? "#059669" : "#8B5CF6", transition: "width 0.3s" }} />
+                                </div>
+                              </div>
+                            );
+                          })()}
                           <div style={{ marginTop: 8, textAlign: "right" }}>
                             <span style={{ fontSize: 12, fontWeight: 700, color: "#8B5CF6" }}>Deschide grup &rarr;</span>
                           </div>
@@ -21796,7 +21822,8 @@ export default function StudiuAdminPage() {
                             </thead>
                             <tbody>
                               {selGroupParticipants.map(p => (
-                                <tr key={p.id}>
+                                <React.Fragment key={p.id}>
+                                <tr>
                                   <td style={{ ...tdStyle, textAlign: "left", fontWeight: 700, color: "#8B5CF6" }}>{p.anonymous_id}</td>
                                   <td style={{ ...tdStyle, textAlign: "left" }}>{p.name}<br/><span style={{ fontSize: 10, color: "#9CA3AF" }}>{p.email}</span></td>
                                   <td style={{ ...tdStyle, textAlign: "left", fontSize: 11 }}>{p.profile_short || "—"}</td>
@@ -21804,8 +21831,38 @@ export default function StudiuAdminPage() {
                                   <td style={tdStyle}><input type="checkbox" checked={p.consent_signed} onChange={e => toggleFgParticipant(p.id, "consent_signed", e.target.checked)} /></td>
                                   <td style={tdStyle}><input type="checkbox" checked={p.confirmed} onChange={e => toggleFgParticipant(p.id, "confirmed", e.target.checked)} /></td>
                                   <td style={tdStyle}><input type="checkbox" checked={p.present} onChange={e => toggleFgParticipant(p.id, "present", e.target.checked)} /></td>
-                                  <td style={tdStyle}><button onClick={() => deleteFgParticipant(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: 11, fontWeight: 600 }}>Sterge</button></td>
+                                  <td style={tdStyle}>
+                                    <button onClick={() => setFgExpandedParticipant(fgExpandedParticipant === p.id ? null : p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#8B5CF6", fontSize: 11, fontWeight: 600, marginRight: 6 }}>{fgExpandedParticipant === p.id ? "Inchide" : "Detalii"}</button>
+                                    <button onClick={() => deleteFgParticipant(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "#DC2626", fontSize: 11, fontWeight: 600 }}>Sterge</button>
+                                  </td>
                                 </tr>
+                                {fgExpandedParticipant === p.id && (
+                                  <tr><td colSpan={8} style={{ padding: "12px 16px", background: "#faf5ff", borderBottom: "1px solid #e5e7eb" }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: "#7c3aed", marginBottom: 8 }}>Member Check — {p.anonymous_id}</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 2fr", gap: 12, alignItems: "start" }}>
+                                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#374151", cursor: "pointer" }}>
+                                        <input type="checkbox" checked={p.member_check_selected} onChange={e => toggleFgParticipant(p.id, "member_check_selected", e.target.checked)} />
+                                        Selectat MC
+                                      </label>
+                                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#374151", cursor: "pointer" }}>
+                                        <input type="checkbox" checked={p.member_check_done} onChange={e => {
+                                          const updates: Record<string, unknown> = { member_check_done: e.target.checked };
+                                          if (e.target.checked && !p.member_check_date) updates.member_check_date = new Date().toISOString().split("T")[0];
+                                          updateFgParticipantField(p.id, updates);
+                                        }} />
+                                        MC finalizat
+                                      </label>
+                                      <div style={{ fontSize: 11, color: "#6B7280" }}>
+                                        <span style={{ fontWeight: 600 }}>Data:</span> {p.member_check_date || "—"}
+                                      </div>
+                                      <div>
+                                        <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Feedback participant</label>
+                                        <textarea defaultValue={p.member_check_feedback || ""} onBlur={e => updateFgParticipantField(p.id, { member_check_feedback: e.target.value || null })} placeholder="Observatii din member check..." style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "6px 8px", fontSize: 11, minHeight: 40, resize: "vertical" }} />
+                                      </div>
+                                    </div>
+                                  </td></tr>
+                                )}
+                                </React.Fragment>
                               ))}
                             </tbody>
                           </table>
@@ -21902,6 +21959,35 @@ export default function StudiuAdminPage() {
                             </select>
                           </div>
                         </div>
+                        {/* Transcript management fields */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Nr. cuvinte transcriere</label><input type="number" value={selGroup.transcript_word_count || ""} onChange={e => updateFgGroup(selGroup.id, { transcript_word_count: Number(e.target.value) || null })} placeholder="ex: 12500" style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Deadline transcriere</label><input type="date" value={selGroup.transcript_deadline || ""} onChange={e => updateFgGroup(selGroup.id, { transcript_deadline: e.target.value || null })} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} /></div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Verificat de</label>
+                            <select value={selGroup.transcript_verified_by || ""} onChange={e => updateFgGroup(selGroup.id, { transcript_verified_by: e.target.value || null })} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }}>
+                              <option value="">Neselectat</option><option value="Dumitru">Dumitru</option><option value="Maria">Maria</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 12 }}>
+                          <div>
+                            <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Verificare % completat</label>
+                            <input type="number" min={0} max={100} value={selGroup.transcript_verified_pct ?? ""} onChange={e => updateFgGroup(selGroup.id, { transcript_verified_pct: Number(e.target.value) || 0 })} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }} />
+                            <div style={{ height: 4, background: "#e5e7eb", borderRadius: 2, marginTop: 4 }}>
+                              <div style={{ width: `${Math.min(100, selGroup.transcript_verified_pct || 0)}%`, height: "100%", borderRadius: 2, background: (selGroup.transcript_verified_pct || 0) >= 100 ? "#059669" : "#8B5CF6", transition: "width 0.3s" }} />
+                            </div>
+                          </div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Calitate verificare</label>
+                            <select value={selGroup.transcript_verification_quality || ""} onChange={e => updateFgGroup(selGroup.id, { transcript_verification_quality: e.target.value || null })} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }}>
+                              <option value="">Neselectat</option><option value="exact">Exact</option><option value="minor_differences">Diferente minore</option><option value="major_issues">Probleme majore</option>
+                            </select>
+                          </div>
+                          <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Anonimizare</label>
+                            <select value={selGroup.anonymization_status || "not_started"} onChange={e => updateFgGroup(selGroup.id, { anonymization_status: e.target.value })} style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12 }}>
+                              <option value="not_started">Neinceput</option><option value="in_progress">In lucru</option><option value="complete">Complet</option>
+                            </select>
+                          </div>
+                        </div>
                         <div><label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "#374151", marginBottom: 3 }}>Note post-sesiune</label><textarea value={selGroup.post_session_notes || ""} onChange={e => updateFgGroup(selGroup.id, { post_session_notes: e.target.value })} placeholder="Observatii, probleme tehnice, dinamica grupului..." style={{ border: "1px solid #d1d5db", borderRadius: 6, outline: "none", width: "100%", padding: "8px 10px", fontSize: 12, minHeight: 80 }} /></div>
                         <div style={{ marginTop: 12 }}>
                           <button onClick={() => updateFgGroup(selGroup.id, { overall_status: "completed", participants_present: selGroupParticipants.filter(p => p.present).length })} style={{ padding: "8px 16px", borderRadius: 6, border: "none", background: "#059669", color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Marcheaza sesiunea ca realizata</button>
@@ -21922,6 +22008,36 @@ export default function StudiuAdminPage() {
                       <button key={g.id} onClick={() => setFgSelectedGroup(g.id)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: fgSelectedGroup === g.id ? 700 : 500, background: fgSelectedGroup === g.id ? "#8B5CF6" : "#f9fafb", color: fgSelectedGroup === g.id ? "#fff" : "#374151", border: fgSelectedGroup === g.id ? "none" : "1px solid #e5e7eb", cursor: "pointer" }}>G{g.group_number} {g.group_label}</button>
                     ))}
                   </div>
+
+                  {/* Coding quality indicators */}
+                  {selGroup && (() => {
+                    const selGroupCodes = fgCodes.filter(c => c.group_id === selGroup.id);
+                    if (selGroupCodes.length === 0) return null;
+                    const dimColors: Record<string, string> = { R: "#DC2626", I: "#D97706", F: "#7C3AED", C: "#8B5CF6", formula: "#059669", gate: "#2563EB", archetype: "#6366f1", utility: "#0891B2", other: "#9CA3AF" };
+                    const dims = ["R", "I", "F", "C", "formula", "gate", "archetype", "utility", "other"];
+                    const dimCounts = dims.map(d => ({ dim: d, count: selGroupCodes.filter(c => c.rifc_dimension === d).length })).filter(d => d.count > 0);
+                    const modules = [1, 2, 3, 4, 5];
+                    const moduleNames = ["Incalzire", "Stimuli", "Dimensiuni", "Formula", "Utilitate"];
+                    const moduleCounts = modules.map(m => selGroupCodes.filter(c => c.discussion_module === m).length);
+                    const emptyModules = modules.filter((_, i) => moduleCounts[i] === 0);
+                    return (
+                      <div style={{ padding: 12, background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", marginBottom: 12 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#374151", marginBottom: 6 }}>Distributie coduri ({selGroupCodes.length} total)</div>
+                        <div style={{ display: "flex", gap: 2, marginBottom: 6, height: 14, borderRadius: 3, overflow: "hidden" }}>
+                          {dimCounts.map(d => (
+                            <div key={d.dim} style={{ flex: d.count, background: dimColors[d.dim] || "#9CA3AF", minWidth: 6 }} title={`${d.dim}: ${d.count}`} />
+                          ))}
+                        </div>
+                        <div style={{ fontSize: 10, color: "#6B7280", marginBottom: 4 }}>{dimCounts.map(d => `${d.dim}:${d.count}`).join(" | ")}</div>
+                        <div style={{ fontSize: 10, color: "#6B7280" }}>Per modul: {modules.map((m, i) => `M${m}(${moduleCounts[i]})`).join(" | ")}</div>
+                        {emptyModules.length > 0 && (
+                          <div style={{ marginTop: 4, padding: "3px 8px", background: "#fef3c7", borderRadius: 4, fontSize: 10, fontWeight: 600, color: "#92400e" }}>
+                            Atentie: {emptyModules.map(m => `M${m} (${moduleNames[m - 1]})`).join(", ")} fara coduri
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {selGroup && (
                     <div>
@@ -22166,6 +22282,52 @@ export default function StudiuAdminPage() {
                 // 4. Total participants present
                 const totalPresent = fgGroups.reduce((s, g) => s + (g.participants_present || 0), 0);
 
+                // 5. Code frequency per RIFC dimension
+                const freqDims = ["R", "I", "F", "C", "formula", "gate", "archetype", "utility", "other"];
+                const dimFreq = freqDims.map(dim => {
+                  const dimCodes = fgCodes.filter(c => c.rifc_dimension === dim);
+                  const topCodes = Object.entries(
+                    dimCodes.reduce((acc, c) => { const code = c.code_agreed || c.code_coder1 || c.code_coder2 || "?"; acc[code] = (acc[code] || 0) + 1; return acc; }, {} as Record<string, number>)
+                  ).sort((a, b) => b[1] - a[1]).slice(0, 3);
+                  const perGroup = fgGroups.map(g => ({ group: g.group_label, count: fgCodes.filter(c => c.rifc_dimension === dim && c.group_id === g.id).length }));
+                  return { dim, label: DIM_LABELS[dim] || dim, count: dimCodes.length, pct: fgCodes.length > 0 ? Math.round((dimCodes.length / fgCodes.length) * 100) : 0, topCodes, perGroup };
+                });
+                const maxDimCount = Math.max(...dimFreq.map(d => d.count), 1);
+
+                // 6. Saturation analysis: cumulative new themes per group
+                const sortedGroups = [...fgGroups].sort((a, b) => a.group_number - b.group_number);
+                const satRows: { group: string; newThemes: number; cumulative: number; saturated: boolean }[] = [];
+                const seenThemes = new Set<string>();
+                for (const g of sortedGroups) {
+                  const groupThemeIds = new Set(fgCodes.filter(c => c.group_id === g.id && c.theme_id).map(c => c.theme_id!));
+                  let newCount = 0;
+                  groupThemeIds.forEach(tid => { if (!seenThemes.has(tid)) { newCount++; seenThemes.add(tid); } });
+                  satRows.push({ group: g.group_label, newThemes: newCount, cumulative: seenThemes.size, saturated: newCount === 0 });
+                }
+                const saturationReached = satRows.length >= 2 && satRows[satRows.length - 1].newThemes === 0;
+
+                // 7. Qual-quant comparison
+                const qualQuantRows = (() => {
+                  if (!results?.stimuliResults) return [];
+                  const withData = results.stimuliResults.filter((s: { response_count: number }) => s.response_count > 0);
+                  if (withData.length === 0) return [];
+                  const surveyMeans: Record<string, number> = {
+                    R: _mean(withData.map((s: { avg_r: number }) => s.avg_r)),
+                    I: _mean(withData.map((s: { avg_i: number }) => s.avg_i)),
+                    F: _mean(withData.map((s: { avg_f: number }) => s.avg_f)),
+                    C: _mean(withData.map((s: { avg_c: number }) => s.avg_c)),
+                  };
+                  return ["R", "I", "F", "C"].map(dim => {
+                    const themeCount = fgThemes.filter(t => t.rifc_dimension === dim).length;
+                    const codeCount = fgCodes.filter(c => c.rifc_dimension === dim).length;
+                    const surveyMean = surveyMeans[dim] || 0;
+                    const fgEmphasis = fgCodes.length > 0 ? (codeCount / fgCodes.length * 100) : 0;
+                    const normalizedFg = fgEmphasis / 25 * 10;
+                    const agreement = Math.abs(normalizedFg - surveyMean) < 2 ? "Convergent" : normalizedFg > surveyMean ? "FG > Survey" : "Survey > FG";
+                    return { dim, label: DIM_LABELS[dim] || dim, themeCount, codeCount, surveyMean: Math.round(surveyMean * 100) / 100, fgPct: Math.round(fgEmphasis), agreement };
+                  });
+                })();
+
                 return (
                   <div>
                     <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", margin: "0 0 16px" }}>Interpretare Focus Grupuri</h2>
@@ -22218,6 +22380,106 @@ export default function StudiuAdminPage() {
                       )}
                     </OsfH>
 
+                    {/* FREQ — Code Frequency per RIFC dimension */}
+                    <OsfH id="fg-freq" num="FREQ" title="Frecventa Coduri per Dimensiune RIFC" color="#D97706" verdict={fgCodes.length > 0 ? "DESCRIPTIV" : "DATE INSUFICIENTE"}>
+                      {fgCodes.length === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Niciun cod adaugat inca.</div>
+                      ) : (
+                        <div>
+                          {/* CSS bar chart */}
+                          <div style={{ marginBottom: 16 }}>
+                            {dimFreq.filter(d => d.count > 0).map(d => (
+                              <div key={d.dim} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontSize: 12, color: "#374151", minWidth: 140, textAlign: "right" }}>{d.label}</span>
+                                <div style={{ flex: 1, height: 18, background: "#f3f4f6", borderRadius: 4, overflow: "hidden" }}>
+                                  <div style={{ height: "100%", width: `${(d.count / maxDimCount) * 100}%`, background: "#D97706", borderRadius: 4, transition: "width 0.3s" }} />
+                                </div>
+                                <span style={{ fontSize: 11, color: "#6B7280", minWidth: 70, fontFamily: "'JetBrains Mono', monospace" }}>{d.count} ({d.pct}%)</span>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Frequency table */}
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, marginBottom: 16 }}>
+                            <thead><tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" }}>Dimensiune</th>
+                              <th style={thStyle}>Nr. Coduri</th>
+                              <th style={thStyle}>% Total</th>
+                              <th style={{ ...thStyle, textAlign: "left" }}>Top 3 Coduri</th>
+                            </tr></thead>
+                            <tbody>
+                              {dimFreq.filter(d => d.count > 0).map(d => (
+                                <tr key={d.dim}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>{d.label}</td>
+                                  <td style={tdStyle}>{d.count}</td>
+                                  <td style={tdStyle}>{d.pct}%</td>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontSize: 11 }}>{d.topCodes.map(([code, n]) => `${code} (${n})`).join(", ") || "\u2014"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {/* Per-group breakdown */}
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#111827", marginBottom: 8 }}>Distributie per grup:</div>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead><tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" }}>Dimensiune</th>
+                              {fgGroups.map(g => <th key={g.id} style={thStyle}>{g.group_label}</th>)}
+                            </tr></thead>
+                            <tbody>
+                              {dimFreq.filter(d => d.count > 0).map(d => (
+                                <tr key={d.dim}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>{d.label}</td>
+                                  {d.perGroup.map(pg => {
+                                    const isMax = pg.count === Math.max(...d.perGroup.map(p => p.count)) && pg.count > 0;
+                                    return <td key={pg.group} style={{ ...tdStyle, fontWeight: isMax ? 700 : 400, color: isMax ? "#D97706" : "#374151" }}>{pg.count}</td>;
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </OsfH>
+
+                    {/* Q-Q — Qualitative vs Quantitative */}
+                    <OsfH id="fg-qualquant" num="Q-Q" title="Comparatie Calitativ vs Cantitativ" color="#2563EB" verdict={qualQuantRows.length > 0 && fgCodes.length > 0 ? "DESCRIPTIV" : "DATE INSUFICIENTE"}>
+                      {qualQuantRows.length === 0 || fgCodes.length === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Necesita date FG + date sondaj pentru comparatie.</div>
+                      ) : (
+                        <div>
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead><tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" }}>Dimensiune RIFC</th>
+                              <th style={thStyle}>Nr. Teme FG</th>
+                              <th style={thStyle}>Nr. Coduri FG</th>
+                              <th style={thStyle}>% Coduri FG</th>
+                              <th style={thStyle}>Media Survey</th>
+                              <th style={thStyle}>Directie</th>
+                            </tr></thead>
+                            <tbody>
+                              {qualQuantRows.map(row => (
+                                <tr key={row.dim}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>{row.label}</td>
+                                  <td style={tdStyle}>{row.themeCount}</td>
+                                  <td style={tdStyle}>{row.codeCount}</td>
+                                  <td style={tdStyle}>{row.fgPct}%</td>
+                                  <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace" }}>{row.surveyMean}</td>
+                                  <td style={tdStyle}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4,
+                                      background: row.agreement === "Convergent" ? "#dcfce7" : "#fef3c7",
+                                      color: row.agreement === "Convergent" ? "#166534" : "#92400e"
+                                    }}>{row.agreement}</span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          <div style={{ marginTop: 10, padding: "8px 12px", background: "#eff6ff", borderRadius: 6, fontSize: 11, color: "#1e40af" }}>
+                            Convergent = discursul calitativ FG sustine scorurile cantitative din sondaj in aceeasi directie.
+                          </div>
+                        </div>
+                      )}
+                    </OsfH>
+
                     {/* 8.3 Themes per RIFC dimension */}
                     <OsfH id="fg-teme-rifc" num="TEME" title="Teme per Dimensiune RIFC" color="#6366f1" verdict={fgThemes.length > 0 ? "DESCRIPTIV" : "DATE INSUFICIENTE"}>
                       {Object.entries(dimGroups).map(([dim, themes]) => (
@@ -22259,15 +22521,131 @@ export default function StudiuAdminPage() {
                       )}
                     </OsfH>
 
+                    {/* SAT — Data Saturation */}
+                    <OsfH id="fg-saturare" num="SAT" title="Saturare Datelor" color="#059669" verdict={saturationReached ? "CONFIRMATA" : fgThemes.length > 0 ? "IN CURS" : "DATE INSUFICIENTE"}>
+                      {fgThemes.length === 0 ? (
+                        <div style={{ padding: 16, textAlign: "center", color: "#9CA3AF", fontSize: 13 }}>Nicio tema definita inca.</div>
+                      ) : (
+                        <div>
+                          {/* CSS bar visualization */}
+                          <div style={{ display: "flex", alignItems: "flex-end", gap: 16, height: 120, marginBottom: 16, padding: "0 16px" }}>
+                            {satRows.map(row => {
+                              const maxCum = Math.max(...satRows.map(r => r.cumulative), 1);
+                              const h = Math.max(4, (row.cumulative / maxCum) * 100);
+                              return (
+                                <div key={row.group} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#059669" }}>{row.cumulative}</span>
+                                  <div style={{ width: "100%", height: `${h}%`, background: row.saturated ? "#dcfce7" : "#c4b5fd", borderRadius: "4px 4px 0 0", transition: "height 0.3s", border: row.saturated ? "1px solid #86efac" : "1px solid #a78bfa" }} />
+                                  <span style={{ fontSize: 10, fontWeight: 600, color: "#374151" }}>{row.group}</span>
+                                  {row.saturated && <span style={{ fontSize: 9, fontWeight: 700, color: "#059669", background: "#dcfce7", padding: "1px 6px", borderRadius: 3 }}>SATURAT</span>}
+                                  {!row.saturated && <span style={{ fontSize: 9, color: "#6B7280" }}>+{row.newThemes} noi</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* Saturation table */}
+                          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                            <thead><tr style={{ background: "#f9fafb" }}>
+                              <th style={{ ...thStyle, textAlign: "left" }}>Grup</th>
+                              <th style={thStyle}>Teme noi</th>
+                              <th style={thStyle}>Cumulative</th>
+                              <th style={thStyle}>Saturare?</th>
+                            </tr></thead>
+                            <tbody>
+                              {satRows.map(row => (
+                                <tr key={row.group}>
+                                  <td style={{ ...tdStyle, textAlign: "left", fontWeight: 600 }}>{row.group}</td>
+                                  <td style={tdStyle}>{row.newThemes}</td>
+                                  <td style={{ ...tdStyle, fontWeight: 700 }}>{row.cumulative}</td>
+                                  <td style={tdStyle}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 4, background: row.saturated ? "#dcfce7" : "#f3f4f6", color: row.saturated ? "#166534" : "#6B7280" }}>{row.saturated ? "DA" : "Nu inca"}</span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          {saturationReached && (
+                            <div style={{ marginTop: 10, padding: "8px 12px", background: "#f0fdf4", borderRadius: 6, fontSize: 11, fontWeight: 600, color: "#166534" }}>
+                              Saturarea tematica a fost atinsa — ultimul grup nu a generat teme noi.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </OsfH>
+
                     {/* 8.5 Summary */}
                     <OsfH id="fg-sumar" num="SUM" title="Sumar pentru Manuscris" color="#0891B2" verdict="GENERAT">
-                      <div style={{ padding: 14, background: "#f9fafb", borderRadius: 8, fontSize: 13, lineHeight: 1.8, color: "#374151" }}>
-                        Analiza tematica a 4 focus grupuri (N={totalPresent}) a identificat {fgThemes.length} teme principale.
-                        {allKappa && <> Acordul inter-codori a fost {allKappa.level} (k = {allKappa.kappa}, target k &ge; 0.70).</>}
-                        {fgThemes.filter(t => fgGroups.filter(g => fgCodes.some(c => c.theme_id === t.id && c.group_id === g.id)).length === 4).length > 0 && (
-                          <> Temele cu prezenta universala (toate 4 grupurile): {fgThemes.filter(t => fgGroups.filter(g => fgCodes.some(c => c.theme_id === t.id && c.group_id === g.id)).length === 4).map(t => t.theme_name).join(", ")}.</>
-                        )}
-                        {ecoTotal > 0 && <> Validitatea ecologica a scorurilor RIFC a fost confirmata: {ecoPct}% din preferintele spontane ale participantilor au coincis cu ierarhia scorurilor C calculate.</>}
+                      <div style={{ position: "relative" }}>
+                        <button
+                          onClick={() => {
+                            const el = document.getElementById("fg-sumar-text");
+                            if (el) { navigator.clipboard.writeText(el.innerText).then(() => { const btn = document.getElementById("fg-copy-btn"); if (btn) { btn.textContent = "Copiat!"; setTimeout(() => { btn.textContent = "Copiaza"; }, 2000); } }); }
+                          }}
+                          id="fg-copy-btn"
+                          style={{ position: "absolute", top: 8, right: 8, padding: "5px 12px", borderRadius: 6, border: "1px solid #d1d5db", background: "#fff", color: "#374151", fontSize: 11, fontWeight: 600, cursor: "pointer", zIndex: 2 }}
+                        >Copiaza</button>
+                        <div id="fg-sumar-text" style={{ padding: 14, paddingRight: 90, background: "#f9fafb", borderRadius: 8, fontSize: 13, lineHeight: 1.8, color: "#374151" }}>
+                          <p style={{ marginBottom: 10, fontWeight: 600, fontSize: 14 }}>Rezultatele analizei tematice — Focus Grupuri RIFC</p>
+
+                          <p style={{ marginBottom: 8 }}>
+                            Analiza tematica a {fgGroups.length} focus grupuri (N={totalPresent}) a identificat {fgThemes.length} teme principale.
+                            {allKappa && <> Acordul inter-codori (Cohen&apos;s Kappa) a fost {allKappa.level} (k = {allKappa.kappa}, target k &ge; 0.70).</>}
+                          </p>
+
+                          {/* Demographics */}
+                          <p style={{ marginBottom: 8 }}>
+                            <strong>Participanti:</strong>{" "}
+                            {fgGroups.map(g => `${g.group_label} (n=${g.participants_present || 0})`).join(", ")}.
+                            {" "}Total N={totalPresent} participanti din {fgGroups.length} grupuri.
+                          </p>
+
+                          {/* Code frequency per dimension */}
+                          {dimFreq.filter(d => d.count > 0).length > 0 && (
+                            <p style={{ marginBottom: 8 }}>
+                              <strong>Frecventa codurilor per dimensiune RIFC:</strong>{" "}
+                              {dimFreq.filter(d => d.count > 0).map(d => `${d.label}: ${d.count} coduri (${d.pct}%)`).join("; ")}.
+                              {" "}Total: {fgCodes.length} coduri.
+                            </p>
+                          )}
+
+                          {/* Universal themes */}
+                          {fgThemes.filter(t => fgGroups.filter(g => fgCodes.some(c => c.theme_id === t.id && c.group_id === g.id)).length === fgGroups.length).length > 0 && (
+                            <p style={{ marginBottom: 8 }}>
+                              <strong>Teme cu prezenta universala</strong> (toate {fgGroups.length} grupurile):{" "}
+                              {fgThemes.filter(t => fgGroups.filter(g => fgCodes.some(c => c.theme_id === t.id && c.group_id === g.id)).length === fgGroups.length).map(t => t.theme_name).join(", ")}.
+                            </p>
+                          )}
+
+                          {/* Saturation */}
+                          {satRows.length > 0 && (
+                            <p style={{ marginBottom: 8 }}>
+                              <strong>Saturare date:</strong>{" "}
+                              Teme noi cumulative per grup: {satRows.map(r => `${r.group}: +${r.newThemes} (total ${r.cumulative})`).join(", ")}.
+                              {saturationReached
+                                ? " Saturarea teoretica a fost atinsa — ultimul grup nu a generat teme noi."
+                                : " Saturarea teoretica nu a fost inca confirmata."}
+                            </p>
+                          )}
+
+                          {/* Ecological validity */}
+                          {ecoTotal > 0 && (
+                            <p style={{ marginBottom: 8 }}>
+                              <strong>Validitate ecologica:</strong>{" "}
+                              {ecoPct}% din preferintele spontane ale participantilor au coincis cu ierarhia scorurilor C calculate (N={ecoTotal} stimuli evaluati).
+                            </p>
+                          )}
+
+                          {/* Qual-quant convergence */}
+                          {qualQuantRows.length > 0 && (
+                            <p style={{ marginBottom: 8 }}>
+                              <strong>Convergenta calitativ-cantitativ:</strong>{" "}
+                              {qualQuantRows.map(r => `${r.dim} — FG ${r.fgPct}% vs Survey M=${r.surveyMean} (${r.agreement})`).join("; ")}.
+                              {qualQuantRows.every(r => r.agreement === "Convergent")
+                                ? " Convergenta completa intre datele calitative si cantitative."
+                                : ` ${qualQuantRows.filter(r => r.agreement === "Convergent").length}/${qualQuantRows.length} dimensiuni convergente.`}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </OsfH>
                   </div>
